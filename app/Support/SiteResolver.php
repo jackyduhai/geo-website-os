@@ -23,19 +23,26 @@ class SiteResolver
 {
     /**
      * 从 HTTP Request 解析当前 Site
+     *
+     * 安全原则：
+     * - Domain 是生产环境唯一的 Site 识别方式
+     * - site_slug 仅用于 admin 路径或 CLI，不允许在普通 HTTP 请求中通过 Query 任意切站
      */
     public static function resolveFromRequest(Request $request): ?Site
     {
-        // 1. 检查是否有显式 slug（如 /admin/{slug}）
-        $slug = $request->route('site_slug') ?? $request->query('site_slug');
-        if ($slug) {
-            $site = self::findBySlug($slug);
-            if ($site) {
-                return $site;
+        // 1. Admin 路径显式 slug（仅 admin 前缀下生效，防止任意切站）
+        //    admin 路径优先于 domain，因为后台管理员需要跨站点管理
+        if ($request->is('admin/*') || $request->is('admin')) {
+            $slug = $request->route('site_slug') ?? $request->query('site_slug');
+            if ($slug) {
+                $site = self::findBySlug($slug);
+                if ($site) {
+                    return $site;
+                }
             }
         }
 
-        // 2. 检查 domain 匹配
+        // 2. Domain 匹配（生产环境唯一入口）
         $domain = $request->getHost();
         $site = self::findByDomain($domain);
         if ($site) {
