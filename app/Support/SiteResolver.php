@@ -50,7 +50,7 @@ class SiteResolver
         }
 
         // 3. Fallback 到 default site（仅当启用了 fallback）
-        // 多站点安全：默认不 fallback，未知 domain 返回 null
+        // 多站点安全：multi-site 模式默认不 fallback
         if (config('site.default_fallback', false)) {
             return self::default();
         }
