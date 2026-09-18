@@ -1,0 +1,29 @@
+STATUS: BLOCKED
+
+Reason: PHP runtime version mismatch.
+Current PHP: 8.1.34 (ZTS, WinGet)
+Required by vendor/composer/platform_check.php: >= 8.4.1
+Result: php artisan 任何命令均 Fatal error，无法启动 Laravel，测试无法执行。
+
+Attempted commands:
+  php artisan --version → Fatal error: Composer detected issues in your platform
+  php artisan test → 无法执行 (artisan 无法启动)
+  vendor/bin/phpunit → 未执行 (依赖 Laravel 引导，同样会触发 platform check)
+
+Test baseline numbers:
+  Tests: N/A
+  Assertions: N/A
+  Passed: N/A
+  Failed: N/A
+  Skipped: N/A
+  Errors: N/A
+  Duration: N/A
+
+Resolution required before Gate 1 Step 5:
+  1. 安装 PHP >= 8.4.1 (Non-Thread Safe, Windows)
+  2. 安装 Composer
+  3. 重新 composer install 生成匹配的 vendor
+  4. 验证 php artisan --version 正常
+  5. 重新执行 php artisan test 建立真实测试基线
+
+Note: 本阶段不修复环境问题，仅记录。测试失败属于 Baseline Failure，但当前连测试都无法启动，属于环境阻塞而非测试失败。

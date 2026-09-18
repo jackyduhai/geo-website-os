@@ -1,0 +1,9 @@
+commit: ae3fc4ff9f4831ee3c9e0ab3d14329d7b9bdbb3f
+branch: master
+dirty_worktree: clean
+timestamp: 2026-09-18
+latest_commit: baseline: gate1 pre-change snapshot
+tag: gate1-pre-change
+tag_commit: ae3fc4ff9f4831ee3c9e0ab3d14329d7b9bdbb3f
+repository_was_initialized: true (原项目非 git 仓库，本次为首次初始化)
+note: git status --short 无输出，工作区干净。tag 类型为 lightweight tag (cat-file -t 返回 commit)。
