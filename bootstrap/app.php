@@ -42,7 +42,9 @@ return Application::configure(basePath: dirname(__DIR__))
         // SecurityHeaders 必须最外层（prepend）：无论内层是鉴权 302、旧链 301，
         // 还是 CachePage 命中(HIT)/未命中(MISS)/304/BYPASS，响应回程都统一补安全头；
         // 鉴权先于模型绑定后，未登录访问后台的 302 跳转同样必须带 CSP。
+        // ResolveSite 必须在最前面：在任何业务逻辑之前解析并设置 SiteContext
         $middleware->web(prepend: [
+            \App\Http\Middleware\ResolveSite::class,
             \App\Http\Middleware\SecurityHeaders::class,
         ]);
 
