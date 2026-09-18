@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\SiteCacheKey;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Cache;
@@ -35,9 +36,10 @@ class Setting extends Model
         return $this->belongsTo(Site::class);
     }
 
-    // TODO(Phase 5.4-F): CACHE_KEY is global 'example.settings' — must become site-aware: settings:site:{siteId}
-
-    public const CACHE_KEY = 'example.settings';
+    public static function cacheKey(): string
+    {
+        return SiteCacheKey::settings();
+    }
 
     /** 请求级内存缓存：同一请求内多次读取不再反复访问缓存存储（database 驱动下即省掉大量 cache SELECT） */
     private static ?array $requestMemo = null;
@@ -60,7 +62,7 @@ class Setting extends Model
         if (self::$requestMemo !== null) {
             return self::$requestMemo;
         }
-        return self::$requestMemo = Cache::rememberForever(self::CACHE_KEY, function () {
+        return self::$requestMemo = Cache::rememberForever(self::cacheKey(), function () {
             return static::pluck('value', 'key')->toArray();
         });
     }
@@ -68,7 +70,7 @@ class Setting extends Model
     public static function flush(): void
     {
         self::$requestMemo = null;
-        Cache::forget(self::CACHE_KEY);
+        Cache::forget(self::cacheKey());
     }
 
     /**

@@ -4,7 +4,6 @@ namespace App\Support;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
-
 /**
  * 前台整页响应缓存（服务端静态化）。
  * ------------------------------------------------------------------
@@ -25,7 +24,6 @@ class PageCache
     /** 缓存有效期（秒）：发布即失效为主，TTL 仅作自愈兜底。 */
     public const TTL = 21600; // 6 小时
 
-    private const VERSION_KEY = 'pagecache:version';
     private const KEY_PREFIX  = 'pagecache:html:';
 
     /** CSRF token、CSP nonce 与归因隐藏字段的占位符（纯大写，不会与正文冲突）。 */
@@ -50,14 +48,14 @@ class PageCache
 
     public static function version(): int
     {
-        return (int) self::store()->rememberForever(self::VERSION_KEY, fn () => 1);
+        return (int) self::store()->rememberForever(SiteCacheKey::pagecacheVersion(), fn () => 1);
     }
 
-    /** 版本号 +1：所有已缓存页面立即失效。 */
+    /** 版本号 +1：当前站点所有已缓存页面立即失效。 */
     public static function flush(): void
     {
         $store = self::store();
-        $store->forever(self::VERSION_KEY, self::version() + 1);
+        $store->forever(SiteCacheKey::pagecacheVersion(), self::version() + 1);
     }
 
     /** 仅以「主机 + 规范路径」为键；UTM 等投放参数不产生重复副本。 */

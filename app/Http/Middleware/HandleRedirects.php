@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Models\Redirect;
+use App\Support\SiteCacheKey;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -21,8 +22,6 @@ use Symfony\Component\HttpFoundation\Response;
  */
 class HandleRedirects
 {
-    private const CACHE_KEY = 'redirects.active';
-
     public function handle(Request $request, Closure $next): Response
     {
         if ($response = $this->matchRedirect($request)) {
@@ -140,7 +139,7 @@ class HandleRedirects
      */
     private function rules()
     {
-        return Cache::rememberForever(self::CACHE_KEY, function () {
+        return Cache::rememberForever(SiteCacheKey::redirectsActive(), function () {
             $map = collect();
             foreach (Redirect::active()->orderBy('id')->get(['id', 'from_path', 'to_path', 'code']) as $r) {
                 $from = trim((string) $r->from_path);
@@ -187,6 +186,6 @@ class HandleRedirects
 
     public static function flushRules(): void
     {
-        Cache::forget(self::CACHE_KEY);
+        Cache::forget(SiteCacheKey::redirectsActive());
     }
 }

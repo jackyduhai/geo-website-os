@@ -14,6 +14,7 @@ use App\Models\PageBlock;
 use App\Models\Redirect as RedirectRule;
 use App\Models\Setting;
 use App\Support\PageCache;
+use App\Support\SiteCacheKey;
 use App\Support\ExampleUrlGenerator;
 use Illuminate\Routing\UrlGenerator;
 use Illuminate\Support\Facades\Cache;
@@ -161,7 +162,7 @@ class AppServiceProvider extends ServiceProvider
         if (self::$navTreeMemo !== null) {
             return self::$navTreeMemo;
         }
-        return self::$navTreeMemo = Cache::remember('nav.tree', 600, function () {
+        return self::$navTreeMemo = Cache::remember(SiteCacheKey::navTree(), 600, function () {
             return Category::query()
                 ->where('is_active', true)
                 ->where('is_nav', true)
@@ -188,7 +189,7 @@ class AppServiceProvider extends ServiceProvider
         if (self::$blueprintMemo !== null) {
             return self::$blueprintMemo;
         }
-        return self::$blueprintMemo = Cache::remember('main.menu.blueprint', 600, function () {
+        return self::$blueprintMemo = Cache::remember(SiteCacheKey::mainMenuBlueprint(), 600, function () {
             $overrides = Menu::whereNotNull('key')->where('position', 'main')->get()->keyBy('key');
 
             // $dynamic=true 的节点由内容分组驱动（知识中心子项），链接不接受覆盖，请到「内容分组」调整
@@ -283,7 +284,7 @@ class AppServiceProvider extends ServiceProvider
         if (self::$mainMenuMemo !== null) {
             return self::$mainMenuMemo;
         }
-        return self::$mainMenuMemo = Cache::remember('main.menu', 600, function () {
+        return self::$mainMenuMemo = Cache::remember(SiteCacheKey::mainMenu(), 600, function () {
             // 自定义菜单（key 为空）一次性取出，支持两级：
             //  - parent_key 非空：挂到固定一级栏目（蓝图节点）下
             //  - parent_id  非空：挂到自定义一级菜单下
@@ -390,7 +391,7 @@ class AppServiceProvider extends ServiceProvider
         if (self::$footerBlueprintMemo !== null) {
             return self::$footerBlueprintMemo;
         }
-        return self::$footerBlueprintMemo = Cache::remember('footer.blueprint', 600, function () {
+        return self::$footerBlueprintMemo = Cache::remember(SiteCacheKey::footerBlueprint(), 600, function () {
             $overrides = Menu::whereNotNull('key')->where('position', 'footer')->get()->keyBy('key');
 
             $colKeyMap = [
@@ -499,7 +500,7 @@ class AppServiceProvider extends ServiceProvider
         if (self::$footerMenuMemo !== null) {
             return self::$footerMenuMemo;
         }
-        return self::$footerMenuMemo = Cache::remember('footer.menu', 600, function () {
+        return self::$footerMenuMemo = Cache::remember(SiteCacheKey::footerMenu(), 600, function () {
             $customSort = fn ($m) => ((int) $m->sort > 0 ? (int) $m->sort : 1000 + (int) $m->id);
             $anchored = Menu::whereNull('key')
                 ->where('is_active', true)
@@ -550,7 +551,7 @@ class AppServiceProvider extends ServiceProvider
         if (self::$footerExtraMemo !== null) {
             return self::$footerExtraMemo;
         }
-        return self::$footerExtraMemo = Cache::remember('footer.extra', 600, function () {
+        return self::$footerExtraMemo = Cache::remember(SiteCacheKey::footerExtra(), 600, function () {
             $out = [];
             $rows = Menu::active()
                 ->where('position', 'footer')
@@ -601,11 +602,11 @@ class AppServiceProvider extends ServiceProvider
         self::$blueprintMemo = null;
         self::$footerBlueprintMemo = null;
         self::$footerMenuMemo = null;
-        Cache::forget('nav.tree');
-        Cache::forget('main.menu');
-        Cache::forget('main.menu.blueprint');
-        Cache::forget('footer.extra');
-        Cache::forget('footer.blueprint');
-        Cache::forget('footer.menu');
+        Cache::forget(SiteCacheKey::navTree());
+        Cache::forget(SiteCacheKey::mainMenu());
+        Cache::forget(SiteCacheKey::mainMenuBlueprint());
+        Cache::forget(SiteCacheKey::footerExtra());
+        Cache::forget(SiteCacheKey::footerBlueprint());
+        Cache::forget(SiteCacheKey::footerMenu());
     }
 }
