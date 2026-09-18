@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 /**
@@ -37,6 +38,12 @@ class Content extends Model
         static::addGlobalScope('not_slot', function ($builder) {
             $builder->whereNull($builder->getModel()->getTable() . '.slot');
         });
+
+        static::creating(function (self $content) {
+            if ($content->site_id === null && Schema::hasTable('sites')) {
+                $content->site_id = Site::defaultId();
+            }
+        });
     }
 
     protected $casts = [
@@ -53,6 +60,11 @@ class Content extends Model
     ];
 
     // ---------- 关系 ----------
+
+    public function site(): BelongsTo
+    {
+        return $this->belongsTo(Site::class);
+    }
 
     public function category(): BelongsTo
     {

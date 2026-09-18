@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * 栏目
@@ -20,7 +21,21 @@ class Category extends Model
         'parent_id' => 'integer',
     ];
 
+    protected static function booted(): void
+    {
+        static::creating(function (self $category) {
+            if ($category->site_id === null && Schema::hasTable('sites')) {
+                $category->site_id = Site::defaultId();
+            }
+        });
+    }
+
     // ---------- 关系 ----------
+
+    public function site(): BelongsTo
+    {
+        return $this->belongsTo(Site::class);
+    }
 
     public function parent(): BelongsTo
     {

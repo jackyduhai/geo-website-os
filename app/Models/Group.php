@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * 分组（栏目内的二级归集）
@@ -19,8 +20,22 @@ class Group extends Model
         'sort' => 'integer',
     ];
 
+    protected static function booted(): void
+    {
+        static::creating(function (self $group) {
+            if ($group->site_id === null && Schema::hasTable('sites')) {
+                $group->site_id = Site::defaultId();
+            }
+        });
+    }
+
     /** 请求级缓存：知识子栏目在一个请求内被控制器/导航/sitemap/llms 多处复用 */
     private static ?Collection $knowledgeMemo = null;
+
+    public function site(): BelongsTo
+    {
+        return $this->belongsTo(Site::class);
+    }
 
     public function category(): BelongsTo
     {

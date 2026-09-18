@@ -23,13 +23,14 @@ class NarrativeSlotTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        Narrative::flush();
         $this->seed();
     }
 
     /** 直接写入一条 slot 片段 */
     protected function makeSlot(string $key, string $summary, string $body = ''): Content
     {
-        return Content::withoutGlobalScope('not_slot')->create([
+        $content = Content::withoutGlobalScope('not_slot')->create([
             'type'         => 'page',
             'slug'         => Narrative::reservedSlug($key),
             'slot'         => $key,
@@ -43,6 +44,8 @@ class NarrativeSlotTest extends TestCase
             'published_at' => now(),
             'owner'        => 'narrative-cms',
         ]);
+        Narrative::flush();
+        return $content;
     }
 
     public function test_structured_pages_render_default_narrative(): void

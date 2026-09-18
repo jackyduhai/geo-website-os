@@ -3,7 +3,9 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * 站点设置（键值对）
@@ -18,6 +20,22 @@ class Setting extends Model
     protected $casts = [
         'value' => 'json',
     ];
+
+    protected static function booted(): void
+    {
+        static::creating(function (self $setting) {
+            if ($setting->site_id === null && Schema::hasTable('sites')) {
+                $setting->site_id = Site::defaultId();
+            }
+        });
+    }
+
+    public function site(): BelongsTo
+    {
+        return $this->belongsTo(Site::class);
+    }
+
+    // TODO(Phase 5.4-F): CACHE_KEY is global 'example.settings' — must become site-aware: settings:site:{siteId}
 
     public const CACHE_KEY = 'example.settings';
 
