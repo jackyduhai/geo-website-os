@@ -13,6 +13,8 @@ use App\Models\Menu;
 use App\Models\PageBlock;
 use App\Models\Redirect as RedirectRule;
 use App\Models\Setting;
+use App\Contracts\UrlResolverInterface;
+use App\Services\Seo\GenericUrlResolver;
 use App\Support\PageCache;
 use App\Support\SiteCacheKey;
 use App\Support\ExampleUrlGenerator;
@@ -53,6 +55,9 @@ class AppServiceProvider extends ServiceProvider
 
             return $url;
         });
+
+        // Bind generic URL resolver for SeoMeta canonical generation
+        $this->app->bind(UrlResolverInterface::class, GenericUrlResolver::class);
     }
 
     public function boot(): void
