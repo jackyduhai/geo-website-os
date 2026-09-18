@@ -13,6 +13,20 @@
 
 **禁止新增类型**：solution / place / brand（除非正式架构变更）。
 
+### Location Entity 边界
+
+`location` Entity **仅用于**具有独立语义、可独立引用/关联的地点实体（如：工厂地址、门店位置、合作伙伴地点）。
+
+**明确排除**：
+- ❌ 企业销售/服务覆盖区域（salesRegions）→ 存入 `organization.metadata.area_served`
+- ❌ 营销投放区域 → 存入 `organization.metadata.marketing_regions`
+- ❌ 业务覆盖省份/城市列表 → 存入 organization metadata
+
+**判断标准**：
+- 该地点是否有独立的页面/详情？→ 是 → 可以是 location
+- 该地点是否需要被其他 Entity 引用建立关系？→ 是 → 可以是 location
+- 该地点是否只是描述"我们覆盖哪些区域"？→ 否 → 存入 organization.metadata
+
 ---
 
 ## 2. entities 表设计
@@ -99,7 +113,7 @@ UNIQUE(site_id, from_entity_id, to_entity_id, relation_type)
 | `scenes()` | 场景列表 | service |
 | `sceneCombo()` | 场景-产品组合 | entity_relations (uses) |
 | `workshops()` | 生产车间 | organization.metadata |
-| `salesRegions()` | 销售区域 | location / organization.metadata.area_served |
+| `salesRegions()` | 销售区域 | organization.metadata.area_served（**不创建独立 Location Entity**） |
 | `certifications()` | 资质认证 | organization.metadata |
 | `cooperation()` | 合作信息 | organization.metadata / Content |
 | `cases()` | 案例 | Content |
@@ -137,8 +151,7 @@ UNIQUE(site_id, from_entity_id, to_entity_id, relation_type)
 | `scenes[].slug` | service.slug | 直接映射 |
 | `scenes[].name` | service.name | 直接映射 |
 | `scene.combo[]` | entity_relations | service → product (uses) |
-| `salesRegions[]` | location | 独立 Entity |
-| `salesRegions[]` | organization.metadata.area_served | 关联关系 |
+| `salesRegions[]` | organization.metadata.area_served | 存入 organization metadata（不创建独立 Location Entity） |
 
 ### 5.2 不迁移的内容
 
