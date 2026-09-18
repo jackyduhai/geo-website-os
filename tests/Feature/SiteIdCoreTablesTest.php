@@ -148,22 +148,39 @@ class SiteIdCoreTablesTest extends TestCase
         ]);
         $this->assertEquals($siteA->id, $groupA->site_id);
 
-        // Group in Site B referencing Category A: DB allows (no composite FK), but application layer must reject
-        // This test documents the current constraint: DB-level FK only checks category exists, not site match
-        // Application-layer validation is required (recorded as architecture debt)
-        $crossSiteGroup = Group::create([
-            'site_id' => $siteB->id, 'category_id' => $catA->id,
-            'name' => 'Cross Site', 'slug' => 'cross-site',
-        ]);
-        $this->assertNotNull($crossSiteGroup);
+        // Group in Site B referencing Category A (cross-site): MUST BE REJECTED
+        $groupCountBefore = Group::count();
+        try {
+            Group::create([
+                'site_id' => $siteB->id, 'category_id' => $catA->id,
+                'name' => 'Cross Site', 'slug' => 'cross-site',
+            ]);
+            $this->fail('Cross-site Group B -> Category A should have been rejected');
+        } catch (\RuntimeException $e) {
+            $this->assertStringContainsString('Cross-site violation', $e->getMessage());
+        }
 
-        // Verify cross-site reference exists (to be prevented by app-layer validation in future)
+        // Reverse: Group in Site A referencing Category B (cross-site): MUST BE REJECTED
+        try {
+            Group::create([
+                'site_id' => $siteA->id, 'category_id' => $catB->id,
+                'name' => 'Cross Site Rev', 'slug' => 'cross-site-rev',
+            ]);
+            $this->fail('Cross-site Group A -> Category B should have been rejected');
+        } catch (\RuntimeException $e) {
+            $this->assertStringContainsString('Cross-site violation', $e->getMessage());
+        }
+
+        // Verify no orphan/partial data after failed attempts
+        $this->assertEquals($groupCountBefore, Group::count(), 'Failed cross-site attempt left partial data');
+
+        // Verify no cross-site references exist in database
         $crossRefs = DB::select("
             SELECT g.id FROM groups g
             JOIN categories c ON g.category_id = c.id
             WHERE g.site_id != c.site_id
         ");
-        $this->assertGreaterThan(0, count($crossRefs), 'Cross-site reference exists — needs app-layer validation');
+        $this->assertCount(0, $crossRefs, 'Cross-site reference exists in database');
     }
 
     /** @test */

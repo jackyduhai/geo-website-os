@@ -26,6 +26,28 @@ class Group extends Model
             if ($group->site_id === null && Schema::hasTable('sites')) {
                 $group->site_id = Site::defaultId();
             }
+
+            // Cross-site isolation: group's category must belong to the same site
+            if ($group->category_id !== null && Schema::hasTable('sites')) {
+                $category = Category::find($group->category_id);
+                if ($category && $category->site_id !== $group->site_id) {
+                    throw new \RuntimeException(
+                        "Cross-site violation: group site_id={$group->site_id} cannot reference category_id={$group->category_id} belonging to site_id={$category->site_id}"
+                    );
+                }
+            }
+        });
+
+        static::updating(function (self $group) {
+            // Cross-site isolation on update: prevent changing category to another site's category
+            if ($group->isDirty('category_id') && $group->category_id !== null && Schema::hasTable('sites')) {
+                $category = Category::find($group->category_id);
+                if ($category && $category->site_id !== $group->site_id) {
+                    throw new \RuntimeException(
+                        "Cross-site violation: group site_id={$group->site_id} cannot reference category_id={$group->category_id} belonging to site_id={$category->site_id}"
+                    );
+                }
+            }
         });
     }
 
