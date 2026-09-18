@@ -1,4 +1,4 @@
-# Phase 5.6-A: SeoMeta Architecture Design Audit (Revised)
+﻿# Phase 5.6-A: SeoMeta Architecture Design Audit (Final)
 
 ## 1. 现状分析
 
@@ -24,17 +24,6 @@
 - `description` — 实体描述
 - `metadata` — JSON 扩展
 
-### 1.2 现有 Content 图片字段
-
-**当前实际存在：**
-- `cover_id` — 封面图（关联 media 表）
-- `og_image_id` — OG 图片（关联 media 表）
-
-**说明：**
-- 当前没有 `featured_image` 字段
-- 设计文档中提到的 `Content.featured_image` 是逻辑概念，实际对应 `cover_id`
-- 不新增 `featured_image` 字段，沿用现有 `cover_id` 作为 Content 级主图
-
 ---
 
 ## 2. 目标架构
@@ -56,8 +45,8 @@ System (系统级安全默认)
 | 优先级 | 来源 | 说明 |
 |---|---|---|
 | 1 (最高) | SeoMeta 显式设置 | 独立 SeoMeta 记录 |
-| 2 | Content/Entity 内置字段 | seo_title, seo_desc 等 |
-| 3 | Site 级默认 | sites.seo_* |
+| 2 | Content/Entity 内置字段 | seo_title, seo_desc 等（legacy 过渡） |
+| 3 | Site 级默认 | sites 级 SEO 配置 |
 | 4 (最低) | System 安全默认 | 兜底值 |
 
 ---
@@ -82,7 +71,7 @@ seo_metas
 ├── og_type              -- Open Graph 类型 (website/article/product...)
 ├── twitter_card         -- Twitter Card 类型
 ├── noindex              -- 是否禁止索引 (boolean)
-├── nofollow             -- 是否禁止跟踪链接 (boolean)
+├── nofollow            -- 是否禁止跟踪链接 (boolean)
 ├── robots              -- Robots 指令 (JSON: index, follow, max-snippet...)
 ├── schema_type         -- Schema.org 类型覆盖
 ├── metadata            -- JSON 扩展
@@ -100,28 +89,49 @@ seo_metas
 | Content-level | not null | null | 单篇内容 SEO |
 | Entity-level | null | not null | 实体 SEO |
 
-**约束：**
-- 同一时刻 content_id 和 entity_id 只能有一个为 null（或都为 null 表示 Site-level）
-- 不允许出现 content_id 和 entity_id 同时不为 null
+**约束（最终冻结）：**
+- 不允许 content_id 和 entity_id 同时不为 null
+- 允许两种合法组合：
+  - 两者都为 null → Site-level
+  - 只有 content_id 不为 null → Content-level
+  - 只有 entity_id 不为 null → Entity-level
 
-### 3.3 唯一约束
+**SQLite CHECK 约束：**
+```sql
+CHECK (
+    (content_id IS NULL AND entity_id IS NULL)
+    OR
+    (content_id IS NOT NULL AND entity_id IS NULL)
+    OR
+    (content_id IS NULL AND entity_id IS NOT NULL)
+)
+```
+
+### 3.3 唯一约束（最终冻结）
 
 ```sql
 -- Site-level: 每个站点只有一条
-UNIQUE(site_id, content_id, entity_id)
-WHERE content_id IS NULL AND entity_id IS NULL
+CREATE UNIQUE INDEX sites_seo_meta_unique
+ON seo_metas(site_id)
+WHERE content_id IS NULL AND entity_id IS NULL;
 
 -- Content-level: 每个 Content 只有一条
-UNIQUE(site_id, content_id)
-WHERE content_id IS NOT NULL
+CREATE UNIQUE INDEX content_seo_meta_unique
+ON seo_metas(site_id, content_id)
+WHERE content_id IS NOT NULL;
 
 -- Entity-level: 每个 Entity 只有一条
-UNIQUE(site_id, entity_id)
-WHERE entity_id IS NOT NULL
+CREATE UNIQUE INDEX entity_seo_meta_unique
+ON seo_metas(site_id, entity_id)
+WHERE entity_id IS NOT NULL;
 ```
 
-**SQLite 实现方式：**
-使用 partial unique index（5.4-H 已验证此模式可行）
+**保证：**
+- 一个 Site 只能有一个 Site-level SeoMeta
+- 一个 Content 在一个 Site 只能有一个 SeoMeta
+- 一个 Entity 在一个 Site 只能有一个 SeoMeta
+
+**SQLite 实现：** partial unique index（5.4-H 已验证此模式可行）
 
 ### 3.4 索引
 
@@ -141,7 +151,7 @@ INDEX(canonical)
 ```
 SeoMeta.title
     ↓ 如果为空
-Content.seo_title (如果是 Content 类型)
+Content.seo_title (如果是 Content 类型，legacy 过渡)
     ↓ 如果为空
 Content.title (如果是 Content 类型)
     ↓ 如果为空
@@ -157,7 +167,7 @@ System Default: "Site"
 ```
 SeoMeta.description
     ↓ 如果为空
-Content.seo_desc (如果是 Content 类型)
+Content.seo_desc (如果是 Content 类型，legacy 过渡)
     ↓ 如果为空
 Content.summary (如果是 Content 类型)
     ↓ 如果为空
@@ -170,20 +180,27 @@ Site.description (站点级)
 System Default: ""
 ```
 
-### 4.3 canonical
+### 4.3 canonical（最终冻结）
 
+**正式继承链：**
 ```
 SeoMeta.canonical (绝对 URL)
     ↓ 如果为空
-Content.canonical (如果是 Content 类型，绝对 URL)
-    ↓ 如果为空
-UrlResolver::generateCanonical(当前实体)
+UrlResolverInterface::generateCanonical(当前资源)
+    ↓ 基于当前 Site domain + 当前资源类型 + 当前资源 slug
 ```
 
-### 4.4 og:image
+**说明：**
+- 不再有 Content.canonical 作为正式继承层
+- 现有 `contents.canonical` 字段只是 **legacy 过渡字段**
+- 迁移期：SeoMetaResolver 会读取 contents.canonical 作为迁移数据源
+- 迁移完成后：contents.canonical 不再作为正式 SEO 来源
+- 最终所有 canonical 都由 SeoMeta 显式设置或 UrlResolver 自动生成
+
+### 4.4 og:image（最终冻结）
 
 ```
-SeoMeta.og_image_path (相对路径，自动加 Site domain)
+SeoMeta.og_image_path (相对路径)
     ↓ 如果为空
 Content.og_image_id → media.path (如果是 Content 类型)
     ↓ 如果为空
@@ -199,7 +216,8 @@ null (不输出 OG image)
 **说明：**
 - 不使用 `featured_image` 字段名
 - 沿用现有 `cover_id` 作为 Content 级主图
-- OG image 路径统一为相对路径，输出时自动加 Site domain
+- `Entity.metadata.og_image` 是 Entity 通用 metadata 扩展，不是业务专用字段
+- 不新增任何业务专用字段
 
 ### 4.5 og:title
 
@@ -229,7 +247,7 @@ false (默认索引)
 
 ---
 
-## 5. Canonical Resolution Contract
+## 5. Canonical Resolution Contract（最终冻结）
 
 ### 5.1 接口定义
 
@@ -359,13 +377,13 @@ class SeoResult
 
 **现有 contents 表 SEO 字段迁移：**
 
-| 现有字段 | 目标 SeoMeta 字段 |
-|---|---|
-| contents.seo_title | seo_metas.title |
-| contents.seo_desc | seo_metas.description |
-| contents.canonical | seo_metas.canonical |
-| contents.og_image_id | seo_metas.og_image_path (解析 media.path) |
-| contents.noindex | seo_metas.noindex |
+| 现有字段 | 目标 SeoMeta 字段 | 说明 |
+|---|---|---|
+| contents.seo_title | seo_metas.title | legacy 迁移 |
+| contents.seo_desc | seo_metas.description | legacy 迁移 |
+| contents.canonical | seo_metas.canonical | legacy 迁移（迁移后 SeoMeta 接管） |
+| contents.og_image_id | seo_metas.og_image_path | 解析 media.path |
+| contents.noindex | seo_metas.noindex | legacy 迁移 |
 
 **迁移规则：**
 1. 为每个有 SEO 字段的 Content 创建 SeoMeta 记录
@@ -458,7 +476,7 @@ SeoMetaResolver::memo($entityType, $entityId, function() {
 |---|---|
 | title 继承 | SeoMeta → Content → Site → System |
 | description 继承 | SeoMeta → Content → Site → System |
-| canonical 继承 | SeoMeta → Content → UrlResolver |
+| canonical 继承 | SeoMeta → UrlResolver |
 | og:image 继承 | SeoMeta → Content.og_image → Content.cover → Site.logo → null |
 | noindex 继承 | SeoMeta → Content → false |
 
@@ -504,8 +522,9 @@ SeoMetaResolver::memo($entityType, $entityId, function() {
 1. 独立 `seo_metas` 表，三种绑定类型（Site-level / Content-level / Entity-level）
 2. 统一 `SeoMetaResolver` 解析继承链
 3. `UrlResolverInterface` 接口抽象 canonical 生成，不直接依赖 ExampleUrlGenerator
-4. OG image 继承链：SeoMeta → Content.og_image_id → Content.cover_id → Site.logo → null
-5. SiteScope 自动隔离
-6. 现有 contents.seo_* 字段保留作为过渡，后续阶段删除
+4. Canonical 继承链：SeoMeta → UrlResolver（不再有 Content.canonical 作为正式层）
+5. OG image 继承链：SeoMeta → Content.og_image_id → Content.cover_id → Entity.metadata.og_image → Site.logo → null
+6. SiteScope 自动隔离
+7. 现有 contents.seo_* 字段保留作为过渡，后续阶段删除
 
 **下一步：** 5.6-B SeoMeta Schema / Migration
