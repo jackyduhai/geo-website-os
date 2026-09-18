@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use App\Support\BelongsToSite;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Schema;
 
@@ -15,6 +16,8 @@ use Illuminate\Support\Facades\Schema;
  */
 class Fact extends Model
 {
+    use BelongsToSite;
+
     protected $guarded = [];
 
     protected $casts = [
@@ -23,20 +26,6 @@ class Fact extends Model
         'review_due' => 'date',
         'sort' => 'integer',
     ];
-
-    protected static function booted(): void
-    {
-        static::creating(function (self $fact) {
-            if ($fact->site_id === null && Schema::hasTable('sites')) {
-                $fact->site_id = Site::defaultId();
-            }
-        });
-    }
-
-    public function site(): BelongsTo
-    {
-        return $this->belongsTo(Site::class);
-    }
 
     /** 请求级内存缓存：事实只读且在同一请求内被大量复用，避免每个区块都查一次库 */
     private static array $memo = [];

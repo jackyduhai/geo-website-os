@@ -55,7 +55,7 @@ class SiteIdPopulatedTablesTest extends TestCase
         // PageBlock is created by StructureSeeder (16 rows)
         $this->assertEquals(16, PageBlock::count());
         $this->assertEquals(0, PageBlock::whereNull('site_id')->count());
-        $this->assertEquals(16, PageBlock::where('site_id', 1)->count());
+        $this->assertEquals(16, PageBlock::withoutSiteScope()->where('site_id', 1)->count());
 
         // Media/Banner are not seeded (created via admin UI in real DB)
         // Verify they can be created with site_id and default to site 1
@@ -94,7 +94,7 @@ class SiteIdPopulatedTablesTest extends TestCase
             'is_active' => true,
         ]);
         $this->assertEquals($siteA->id, $block->site_id);
-        $this->assertEquals(1, PageBlock::where('site_id', $siteA->id)->count());
+        $this->assertEquals(1, PageBlock::withoutSiteScope()->where('site_id', $siteA->id)->count());
     }
 
     /** @test */
@@ -120,8 +120,8 @@ class SiteIdPopulatedTablesTest extends TestCase
         Banner::create(['site_id' => $siteA->id, 'position' => 'home', 'sort' => 0, 'is_active' => true, 'target' => 0]);
         Banner::create(['site_id' => $siteB->id, 'position' => 'home', 'sort' => 0, 'is_active' => true, 'target' => 0]);
 
-        $this->assertEquals(1, Banner::where('site_id', $siteA->id)->count());
-        $this->assertEquals(1, Banner::where('site_id', $siteB->id)->count());
+        $this->assertEquals(1, Banner::withoutSiteScope()->where('site_id', $siteA->id)->count());
+        $this->assertEquals(1, Banner::withoutSiteScope()->where('site_id', $siteB->id)->count());
     }
 
     /** @test */
@@ -201,7 +201,7 @@ class SiteIdPopulatedTablesTest extends TestCase
         $this->assertEquals(0, PageBlock::whereNull('site_id')->count());
 
         // Verify data integrity: spot-check a known page block
-        $hero = PageBlock::where('page', 'home')->where('type', 'hero')->first();
+        $hero = PageBlock::withoutSiteScope()->where('page', 'home')->where('type', 'hero')->first();
         $this->assertNotNull($hero);
         $this->assertEquals(1, $hero->site_id);
     }

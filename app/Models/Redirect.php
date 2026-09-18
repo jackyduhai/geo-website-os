@@ -3,8 +3,8 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Support\BelongsToSite;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Support\Facades\Schema;
 
 /**
  * 301 / 302 跳转
@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Schema;
  */
 class Redirect extends Model
 {
+    use BelongsToSite;
     protected $guarded = [];
 
     protected $casts = [
@@ -21,19 +22,7 @@ class Redirect extends Model
         'hits'      => 'integer',
     ];
 
-    protected static function booted(): void
-    {
-        static::creating(function (self $redirect) {
-            if ($redirect->site_id === null && Schema::hasTable('sites')) {
-                $redirect->site_id = Site::defaultId();
-            }
-        });
-    }
-
-    public function site(): BelongsTo
-    {
-        return $this->belongsTo(Site::class);
-    }
+    
 
     public function scopeActive($query)
     {

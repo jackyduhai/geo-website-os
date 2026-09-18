@@ -3,8 +3,8 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Support\BelongsToSite;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Support\Facades\Schema;
 
 /**
  * 内容版本快照
@@ -13,28 +13,18 @@ use Illuminate\Support\Facades\Schema;
  */
 class ContentRevision extends Model
 {
+    use BelongsToSite;
     protected $guarded = [];
 
     protected $casts = [
         'snapshot' => 'array',
     ];
 
-    protected static function booted(): void
-    {
-        static::creating(function (self $revision) {
-            if ($revision->site_id === null && Schema::hasTable('sites')) {
-                $revision->site_id = Site::defaultId();
-            }
-        });
-    }
+    
 
     public function content(): BelongsTo
     {
         return $this->belongsTo(Content::class);
     }
 
-    public function site(): BelongsTo
-    {
-        return $this->belongsTo(Site::class);
     }
-}

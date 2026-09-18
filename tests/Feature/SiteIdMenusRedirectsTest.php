@@ -45,7 +45,7 @@ class SiteIdMenusRedirectsTest extends TestCase
         // Same key in different sites: allowed
         Menu::create(['site_id' => $siteA->id, 'label' => 'A1', 'key' => 'main', 'position' => 'main']);
         Menu::create(['site_id' => $siteB->id, 'label' => 'B1', 'key' => 'main', 'position' => 'main']);
-        $this->assertEquals(2, Menu::where('key', 'main')->count());
+        $this->assertEquals(2, Menu::withoutSiteScope()->where('key', 'main')->count());
 
         // Same key in same site: rejected
         $this->expectException(\Illuminate\Database\QueryException::class);
@@ -61,7 +61,7 @@ class SiteIdMenusRedirectsTest extends TestCase
         // Same from_path in different sites: allowed
         Redirect::create(['site_id' => $siteA->id, 'from_path' => '/old', 'to_path' => '/new', 'code' => 301]);
         Redirect::create(['site_id' => $siteB->id, 'from_path' => '/old', 'to_path' => '/other', 'code' => 301]);
-        $this->assertEquals(2, Redirect::where('from_path', '/old')->count());
+        $this->assertEquals(2, Redirect::withoutSiteScope()->where('from_path', '/old')->count());
 
         // Same from_path in same site: rejected
         $this->expectException(\Illuminate\Database\QueryException::class);

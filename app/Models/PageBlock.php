@@ -3,8 +3,8 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Support\BelongsToSite;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Support\Facades\Schema;
 
 /**
  * 首页区块
@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Schema;
  */
 class PageBlock extends Model
 {
+    use BelongsToSite;
     protected $guarded = [];
 
     protected $casts = [
@@ -23,19 +24,7 @@ class PageBlock extends Model
         'page'      => 'string',
     ];
 
-    protected static function booted(): void
-    {
-        static::creating(function (self $block) {
-            if ($block->site_id === null && Schema::hasTable('sites')) {
-                $block->site_id = Site::defaultId();
-            }
-        });
-    }
-
-    public function site(): BelongsTo
-    {
-        return $this->belongsTo(Site::class);
-    }
+    
 
     public function category(): BelongsTo
     {

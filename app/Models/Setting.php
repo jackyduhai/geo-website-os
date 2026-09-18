@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Support\SiteCacheKey;
 use Illuminate\Database\Eloquent\Model;
+use App\Support\BelongsToSite;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Schema;
@@ -16,25 +17,13 @@ use Illuminate\Support\Facades\Schema;
  */
 class Setting extends Model
 {
+    use BelongsToSite;
+
     protected $guarded = [];
 
     protected $casts = [
         'value' => 'json',
     ];
-
-    protected static function booted(): void
-    {
-        static::creating(function (self $setting) {
-            if ($setting->site_id === null && Schema::hasTable('sites')) {
-                $setting->site_id = Site::defaultId();
-            }
-        });
-    }
-
-    public function site(): BelongsTo
-    {
-        return $this->belongsTo(Site::class);
-    }
 
     public static function cacheKey(): string
     {

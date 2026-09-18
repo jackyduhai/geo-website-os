@@ -127,8 +127,8 @@ class SiteIdEmptyTablesTest extends TestCase
         Inquiry::create(['site_id' => $siteA->id, 'name' => 'A User 2', 'phone' => '222', 'message' => 'A2']);
         Inquiry::create(['site_id' => $siteB->id, 'name' => 'B User', 'phone' => '333', 'message' => 'B']);
 
-        $this->assertEquals(2, Inquiry::where('site_id', $siteA->id)->count());
-        $this->assertEquals(1, Inquiry::where('site_id', $siteB->id)->count());
+        $this->assertEquals(2, Inquiry::withoutSiteScope()->where('site_id', $siteA->id)->count());
+        $this->assertEquals(1, Inquiry::withoutSiteScope()->where('site_id', $siteB->id)->count());
     }
 
     // ── Test 8: Model site() 关系正常 ─────────────────────────────

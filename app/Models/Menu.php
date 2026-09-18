@@ -3,9 +3,9 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Support\BelongsToSite;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Support\Facades\Schema;
 
 /**
  * 导航菜单
@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\Schema;
  */
 class Menu extends Model
 {
+    use BelongsToSite;
     protected $guarded = [];
 
     protected $casts = [
@@ -24,19 +25,7 @@ class Menu extends Model
         'parent_id' => 'integer',
     ];
 
-    protected static function booted(): void
-    {
-        static::creating(function (self $menu) {
-            if ($menu->site_id === null && Schema::hasTable('sites')) {
-                $menu->site_id = Site::defaultId();
-            }
-        });
-    }
-
-    public function site(): BelongsTo
-    {
-        return $this->belongsTo(Site::class);
-    }
+    
 
     public function parent(): BelongsTo
     {

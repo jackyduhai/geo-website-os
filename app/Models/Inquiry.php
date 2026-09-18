@@ -3,28 +3,22 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Support\BelongsToSite;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Support\Facades\Schema;
 
 /**
  * 客户留言/询盘
  */
 class Inquiry extends Model
 {
+    use BelongsToSite;
     protected $guarded = [];
 
     protected $casts = [
         'handled_at' => 'datetime',
     ];
 
-    protected static function booted(): void
-    {
-        static::creating(function (self $inquiry) {
-            if ($inquiry->site_id === null && Schema::hasTable('sites')) {
-                $inquiry->site_id = Site::defaultId();
-            }
-        });
-    }
+    
 
     public const TYPES = ['代工合作', '原料采购', '经销代理', '其他咨询'];
 
@@ -49,11 +43,6 @@ class Inquiry extends Model
     public function deviceLabel(): string
     {
         return self::DEVICE_LABEL[$this->device_type] ?? ($this->device_type ?: '未知');
-    }
-
-    public function site(): BelongsTo
-    {
-        return $this->belongsTo(Site::class);
     }
 
     /**

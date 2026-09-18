@@ -97,22 +97,22 @@ class SiteIdCoreTablesTest extends TestCase
             'site_id' => $siteB->id, 'type' => 'article', 'title' => 'Test B',
             'slug' => 'shared-slug', 'status' => 'draft',
         ]);
-        $this->assertEquals(2, Content::where('slug', 'shared-slug')->count());
+        $this->assertEquals(2, DB::table('contents')->where('slug', 'shared-slug')->count());
 
         // categories: unique(site_id, slug)
         Category::create(['site_id' => $siteA->id, 'name' => 'Cat A', 'slug' => 'cat-shared', 'type' => 'list']);
         Category::create(['site_id' => $siteB->id, 'name' => 'Cat B', 'slug' => 'cat-shared', 'type' => 'list']);
-        $this->assertEquals(2, Category::where('slug', 'cat-shared')->count());
+        $this->assertEquals(2, DB::table('categories')->where('slug', 'cat-shared')->count());
 
         // facts: unique(site_id, key)
         Fact::create(['site_id' => $siteA->id, 'key' => 'fact-shared', 'label' => 'F', 'value' => 'V']);
         Fact::create(['site_id' => $siteB->id, 'key' => 'fact-shared', 'label' => 'F', 'value' => 'V']);
-        $this->assertEquals(2, Fact::where('key', 'fact-shared')->count());
+        $this->assertEquals(2, DB::table('facts')->where('key', 'fact-shared')->count());
 
         // settings: unique(site_id, key)
         Setting::create(['site_id' => $siteA->id, 'key' => 'set-shared', 'value' => 'V', 'group' => 'general', 'type' => 'text']);
         Setting::create(['site_id' => $siteB->id, 'key' => 'set-shared', 'value' => 'V', 'group' => 'general', 'type' => 'text']);
-        $this->assertEquals(2, Setting::where('key', 'set-shared')->count());
+        $this->assertEquals(2, DB::table('settings')->where('key', 'set-shared')->count());
     }
 
     /** @test */

@@ -1,7 +1,7 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
-use App\Models\PageBlock;
+use Illuminate\Support\Facades\DB;
 
 /**
  * 首页整体装修：补齐 stats/capabilities/workshops/steps 区块，
@@ -9,7 +9,7 @@ use App\Models\PageBlock;
  */
 return new class extends Migration
 {
-    public function up(): void
+    public function up()
     {
         $defaults = [
             'stats' => ['sort' => 20, 'title' => null, 'subtitle' => null, 'items' => []],
@@ -54,24 +54,33 @@ return new class extends Migration
         ];
 
         foreach ($defaults as $type => $cfg) {
-            $block = PageBlock::firstOrNew(['page' => 'home', 'type' => $type]);
-            $block->sort = $cfg['sort'];
-            if (! $block->exists) {
-                $block->is_active = true;
-                $block->limit = $block->limit ?: 6;
-                $block->title = $cfg['title'] ?? null;
-                $block->subtitle = $cfg['subtitle'] ?? null;
+            $existing = DB::table('page_blocks')->where('page', 'home')->where('type', $type)->first();
+
+            if ($existing) {
+                DB::table('page_blocks')->where('id', $existing->id)->update([
+                    'sort' => $cfg['sort'],
+                ]);
+            } else {
+                DB::table('page_blocks')->insert([
+                    'page' => 'home',
+                    'type' => $type,
+                    'sort' => $cfg['sort'],
+                    'is_active' => true,
+                    'limit' => 6,
+                    'title' => $cfg['title'] ?? null,
+                    'subtitle' => $cfg['subtitle'] ?? null,
+                    'content' => !empty($cfg['items']) ? json_encode(['items' => $cfg['items']], JSON_UNESCAPED_UNICODE) : null,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
             }
-            if (! empty($cfg['items']) && blank($block->content)) {
-                $block->content = json_encode(['items' => $cfg['items']], JSON_UNESCAPED_UNICODE);
-            }
-            $block->save();
         }
     }
 
-    public function down(): void
+    public function down()
     {
-        PageBlock::where('page', 'home')
+        DB::table('page_blocks')
+            ->where('page', 'home')
             ->whereIn('type', ['stats', 'capabilities', 'workshops', 'steps'])
             ->delete();
     }

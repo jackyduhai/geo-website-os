@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use App\Support\BelongsToSite;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Schema;
 
@@ -13,6 +14,8 @@ use Illuminate\Support\Facades\Schema;
  */
 class Group extends Model
 {
+    use BelongsToSite;
+
     protected $guarded = [];
 
     protected $casts = [
@@ -22,14 +25,10 @@ class Group extends Model
 
     protected static function booted(): void
     {
+        // Cross-site isolation: group's category must belong to the same site
         static::creating(function (self $group) {
-            if ($group->site_id === null && Schema::hasTable('sites')) {
-                $group->site_id = Site::defaultId();
-            }
-
-            // Cross-site isolation: group's category must belong to the same site
             if ($group->category_id !== null && Schema::hasTable('sites')) {
-                $category = Category::find($group->category_id);
+                $category = Category::withoutSiteScope()->find($group->category_id);
                 if ($category && $category->site_id !== $group->site_id) {
                     throw new \RuntimeException(
                         "Cross-site violation: group site_id={$group->site_id} cannot reference category_id={$group->category_id} belonging to site_id={$category->site_id}"
@@ -41,7 +40,7 @@ class Group extends Model
         static::updating(function (self $group) {
             // Cross-site isolation on update: prevent changing category to another site's category
             if ($group->isDirty('category_id') && $group->category_id !== null && Schema::hasTable('sites')) {
-                $category = Category::find($group->category_id);
+                $category = Category::withoutSiteScope()->find($group->category_id);
                 if ($category && $category->site_id !== $group->site_id) {
                     throw new \RuntimeException(
                         "Cross-site violation: group site_id={$group->site_id} cannot reference category_id={$group->category_id} belonging to site_id={$category->site_id}"
@@ -53,11 +52,6 @@ class Group extends Model
 
     /** 请求级缓存：知识子栏目在一个请求内被控制器/导航/sitemap/llms 多处复用 */
     private static ?Collection $knowledgeMemo = null;
-
-    public function site(): BelongsTo
-    {
-        return $this->belongsTo(Site::class);
-    }
 
     public function category(): BelongsTo
     {
