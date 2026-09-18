@@ -1,79 +1,66 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\DB;
 
 return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('seo_metas', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('site_id')->constrained('sites')->cascadeOnDelete();
-            $table->foreignId('content_id')->nullable()->constrained('contents')->cascadeOnDelete();
-            $table->foreignId('entity_id')->nullable()->constrained('entities')->cascadeOnDelete();
-            $table->string('title')->nullable();
-            $table->text('description')->nullable();
-            $table->json('keywords')->nullable();
-            $table->string('canonical')->nullable();
-            $table->string('og_title')->nullable();
-            $table->text('og_description')->nullable();
-            $table->string('og_image_path')->nullable();
-            $table->string('og_type')->default('website');
-            $table->string('twitter_card')->default('summary_large_image');
-            $table->boolean('noindex')->default(false);
-            $table->boolean('nofollow')->default(false);
-            $table->json('robots')->nullable();
-            $table->string('schema_type')->nullable();
-            $table->json('metadata')->nullable();
-            $table->timestamps();
-
-            $table->index('site_id');
-            $table->index('content_id');
-            $table->index('entity_id');
-            $table->index('canonical');
-        });
-
-        // SQLite CHECK constraint for three-state binding
-        \DB::statement("
-            CREATE TRIGGER seo_metas_binding_check BEFORE INSERT ON seo_metas
-            BEGIN
-                SELECT CASE
-                    WHEN (NEW.content_id IS NULL AND NEW.entity_id IS NULL) THEN 0
-                    WHEN (NEW.content_id IS NOT NULL AND NEW.entity_id IS NULL) THEN 0
-                    WHEN (NEW.content_id IS NULL AND NEW.entity_id IS NOT NULL) THEN 0
-                    ELSE RAISE(ABORT, 'Invalid seo_metas binding: content_id and entity_id cannot both be non-null')
-                END;
-            END;
+        // Create table with CHECK constraint directly (SQLite supports CHECK in CREATE TABLE)
+        DB::statement("
+            CREATE TABLE seo_metas (
+                id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                site_id INTEGER NOT NULL,
+                content_id INTEGER NULL,
+                entity_id INTEGER NULL,
+                title VARCHAR NULL,
+                description TEXT NULL,
+                keywords TEXT NULL,
+                canonical VARCHAR NULL,
+                og_title VARCHAR NULL,
+                og_description TEXT NULL,
+                og_image_path VARCHAR NULL,
+                og_type VARCHAR NOT NULL DEFAULT 'website',
+                twitter_card VARCHAR NOT NULL DEFAULT 'summary_large_image',
+                noindex TINYINT(1) NOT NULL DEFAULT 0,
+                nofollow TINYINT(1) NOT NULL DEFAULT 0,
+                robots TEXT NULL,
+                schema_type VARCHAR NULL,
+                metadata TEXT NULL,
+                created_at DATETIME NULL,
+                updated_at DATETIME NULL,
+                CONSTRAINT chk_seo_metas_binding CHECK (
+                    (content_id IS NULL AND entity_id IS NULL)
+                    OR (content_id IS NOT NULL AND entity_id IS NULL)
+                    OR (content_id IS NULL AND entity_id IS NOT NULL)
+                ),
+                FOREIGN KEY(site_id) REFERENCES sites(id) ON DELETE CASCADE,
+                FOREIGN KEY(content_id) REFERENCES contents(id) ON DELETE CASCADE,
+                FOREIGN KEY(entity_id) REFERENCES entities(id) ON DELETE CASCADE
+            )
         ");
 
-        \DB::statement("
-            CREATE TRIGGER seo_metas_binding_check_update BEFORE UPDATE ON seo_metas
-            BEGIN
-                SELECT CASE
-                    WHEN (NEW.content_id IS NULL AND NEW.entity_id IS NULL) THEN 0
-                    WHEN (NEW.content_id IS NOT NULL AND NEW.entity_id IS NULL) THEN 0
-                    WHEN (NEW.content_id IS NULL AND NEW.entity_id IS NOT NULL) THEN 0
-                    ELSE RAISE(ABORT, 'Invalid seo_metas binding: content_id and entity_id cannot both be non-null')
-                END;
-            END;
-        ");
+        // Standard indexes
+        DB::statement('CREATE INDEX seo_metas_site_id_index ON seo_metas(site_id)');
+        DB::statement('CREATE INDEX seo_metas_content_id_index ON seo_metas(content_id)');
+        DB::statement('CREATE INDEX seo_metas_entity_id_index ON seo_metas(entity_id)');
+        DB::statement('CREATE INDEX seo_metas_canonical_index ON seo_metas(canonical)');
 
         // Partial unique indexes
-        \DB::statement("
+        DB::statement("
             CREATE UNIQUE INDEX sites_seo_meta_unique
             ON seo_metas(site_id)
             WHERE content_id IS NULL AND entity_id IS NULL;
         ");
 
-        \DB::statement("
+        DB::statement("
             CREATE UNIQUE INDEX content_seo_meta_unique
             ON seo_metas(site_id, content_id)
             WHERE content_id IS NOT NULL;
         ");
 
-        \DB::statement("
+        DB::statement("
             CREATE UNIQUE INDEX entity_seo_meta_unique
             ON seo_metas(site_id, entity_id)
             WHERE entity_id IS NOT NULL;
@@ -82,11 +69,13 @@ return new class extends Migration
 
     public function down(): void
     {
-        \DB::statement('DROP INDEX IF EXISTS entity_seo_meta_unique;');
-        \DB::statement('DROP INDEX IF EXISTS content_seo_meta_unique;');
-        \DB::statement('DROP INDEX IF EXISTS sites_seo_meta_unique;');
-        \DB::statement('DROP TRIGGER IF EXISTS seo_metas_binding_check_update;');
-        \DB::statement('DROP TRIGGER IF EXISTS seo_metas_binding_check;');
-        Schema::dropIfExists('seo_metas');
+        DB::statement('DROP INDEX IF EXISTS entity_seo_meta_unique;');
+        DB::statement('DROP INDEX IF EXISTS content_seo_meta_unique;');
+        DB::statement('DROP INDEX IF EXISTS sites_seo_meta_unique;');
+        DB::statement('DROP INDEX IF EXISTS seo_metas_canonical_index;');
+        DB::statement('DROP INDEX IF EXISTS seo_metas_entity_id_index;');
+        DB::statement('DROP INDEX IF EXISTS seo_metas_content_id_index;');
+        DB::statement('DROP INDEX IF EXISTS seo_metas_site_id_index;');
+        DB::statement('DROP TABLE IF EXISTS seo_metas;');
     }
 };
