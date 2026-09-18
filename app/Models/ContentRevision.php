@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * 内容版本快照
@@ -21,7 +22,7 @@ class ContentRevision extends Model
     protected static function booted(): void
     {
         static::creating(function (self $revision) {
-            if ($revision->site_id === null) {
+            if ($revision->site_id === null && Schema::hasTable('sites')) {
                 $revision->site_id = Site::defaultId();
             }
         });

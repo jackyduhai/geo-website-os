@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * GEOFlow 对接日志
@@ -22,7 +23,7 @@ class SyncLog extends Model
     protected static function booted(): void
     {
         static::creating(function (self $log) {
-            if ($log->site_id === null) {
+            if ($log->site_id === null && Schema::hasTable('sites')) {
                 $log->site_id = Site::defaultId();
             }
         });

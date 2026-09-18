@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * Banner 轮播
@@ -21,6 +22,20 @@ class Banner extends Model
         'start_at'  => 'datetime',
         'end_at'    => 'datetime',
     ];
+
+    protected static function booted(): void
+    {
+        static::creating(function (self $banner) {
+            if ($banner->site_id === null && Schema::hasTable('sites')) {
+                $banner->site_id = Site::defaultId();
+            }
+        });
+    }
+
+    public function site(): BelongsTo
+    {
+        return $this->belongsTo(Site::class);
+    }
 
     public function image(): BelongsTo
     {
