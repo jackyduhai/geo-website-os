@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
  * GEOFlow 对接日志
@@ -17,6 +18,15 @@ class SyncLog extends Model
     protected $casts = [
         'payload' => 'array',
     ];
+
+    protected static function booted(): void
+    {
+        static::creating(function (self $log) {
+            if ($log->site_id === null) {
+                $log->site_id = Site::defaultId();
+            }
+        });
+    }
 
     public function scopeRecent($query, int $days = 7)
     {
@@ -39,5 +49,10 @@ class SyncLog extends Model
             'message'     => $data['message'] ?? null,
             'payload'     => $data['payload'] ?? null,
         ]);
+    }
+
+    public function site(): BelongsTo
+    {
+        return $this->belongsTo(Site::class);
     }
 }

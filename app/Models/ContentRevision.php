@@ -18,8 +18,22 @@ class ContentRevision extends Model
         'snapshot' => 'array',
     ];
 
+    protected static function booted(): void
+    {
+        static::creating(function (self $revision) {
+            if ($revision->site_id === null) {
+                $revision->site_id = Site::defaultId();
+            }
+        });
+    }
+
     public function content(): BelongsTo
     {
         return $this->belongsTo(Content::class);
+    }
+
+    public function site(): BelongsTo
+    {
+        return $this->belongsTo(Site::class);
     }
 }
