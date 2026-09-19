@@ -4,7 +4,10 @@ namespace App\Services\Geo;
 
 use App\Models\Category;
 use App\Models\Content;
+use App\Models\SeoMeta;
 use App\Support\Facts;
+use App\Support\SiteContext;
+use Illuminate\Support\Collection;
 
 /**
  * sitemap.xml 生成器（v0.7：按 Facts 驱动的新 IA 重建）
@@ -68,10 +71,12 @@ class SitemapBuilder
         }
         // 仅收录知识分类下的文章（扁平 /knowledge/{slug}）；旧产品综述/公司内容已被
         // config 页取代，不进 sitemap，避免跨分类重复地址。
-        $knowledgeArticles = Content::published()
-            ->where('noindex', false)
-            ->whereHas('category', fn ($q) => $q->where('slug', 'knowledge'))
-            ->orderByDesc('published_at')->get();
+        $knowledgeArticles = $this->filterIndexable(
+            Content::published()
+                ->where('noindex', false)
+                ->whereHas('category', fn ($q) => $q->where('slug', 'knowledge'))
+                ->orderByDesc('published_at')->get()
+        );
         foreach ($knowledgeArticles as $article) {
             $add(
                 url('/knowledge/' . $article->slug),
@@ -95,12 +100,14 @@ class SitemapBuilder
 
         // 后台发布的全部文章（知识类已在上面以 0.6 收录，此处自动去重；新闻等其余栏目在此补齐）。
         // 仅收录归属启用栏目的文章，避免停用栏目下的内容泄漏进 sitemap。
-        $extraArticles = Content::published()
-            ->where('noindex', false)
-            ->whereHas('category', fn ($q) => $q->where('is_active', true))
-            ->with('category')
-            ->orderByDesc('published_at')
-            ->get();
+        $extraArticles = $this->filterIndexable(
+            Content::published()
+                ->where('noindex', false)
+                ->whereHas('category', fn ($q) => $q->where('is_active', true))
+                ->with('category')
+                ->orderByDesc('published_at')
+                ->get()
+        );
         foreach ($extraArticles as $article) {
             $add(
                 $article->url(),
@@ -111,6 +118,23 @@ class SitemapBuilder
         }
 
         return $this->toXml($urls);
+    }
+
+    /**
+     * 可索引判定统一来源（冻结链）：SeoMeta.noindex → Content.noindex → false。
+     * contents.noindex 已在 SQL 层排除；此处补 SeoMeta 层显式 noindex 的内容。
+     */
+    protected function filterIndexable(Collection $articles): Collection
+    {
+        $siteId = SiteContext::currentSite()?->id;
+        $noindexIds = SeoMeta::query()
+            ->where('site_id', $siteId)
+            ->whereIn('content_id', $articles->pluck('id'))
+            ->where('noindex', true)
+            ->pluck('content_id')
+            ->all();
+
+        return $articles->reject(fn ($a) => in_array($a->id, $noindexIds, true))->values();
     }
 
     protected function toXml(array $urls): string
