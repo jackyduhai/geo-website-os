@@ -30,7 +30,7 @@ class HomeBuilderTest extends TestCase
 
         // 迁移 000011 写入的默认能力点与车间条目应渲染
         $this->assertStringContainsString('配方定制', $html);
-        $this->assertStringContainsString('Sample Spice粉碎车间', $html);
+        $this->assertStringContainsString('原料处理车间', $html); // 迁移默认条目已中性化（P-STEP 02）
         $this->assertStringContainsString('需求对接', $html);
     }
 

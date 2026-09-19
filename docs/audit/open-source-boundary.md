@@ -36,11 +36,17 @@
 
 | # | 位置 | 问题 | 消解 STEP |
 |---|---|---|---|
-| C1 | `Api/HealthController:19` `'service' => 'example-site'` | 健康检查端点硬编码业务服务名（通用运维接口） | STEP 02 |
+| C1 | `Api/HealthController:19` `'service' => 'example-site'` | 健康检查端点硬编码业务服务名（通用运维接口） | **✅ STEP 02 已修**（→ `geo-os`，FreshBootTest 锁定） |
 | C2 | `Support/SystemAuthorization:42` `admin@example.test` 硬编码 email 授权 | 超管判定绑定业务种子账号，安装器无法用其他管理员邮箱 | STEP 03（Bootstrap Contract：授权规则改为角色/标记，不绑邮箱） |
-| C3 | `public/img/wechat-qr.png` 等业务资产 | 业务二维码/logo 在通用 public 目录 | STEP 02（移入 Demo 主题/媒体） |
+| C3 | `public/img/wechat-qr.png` 等业务资产 | 业务二维码/logo 在通用 public 目录 | STEP 05（Theme 资产边界：随主题归属迁移） |
 | C4 | `SiteCacheKey:125` `'example.settings'` | legacy 清理列表中的历史 key 字符串——仅用于 forget 旧 key，属兼容清理数据而非运行时 key 生成；保留但需注释定性 | 无需修改（已注释） |
-| C5 | `CanonicalizeSlash` 注释中 `orleans-801` 示例 | 纯注释示例 | STEP 02 顺手中性化 |
+| C5 | `CanonicalizeSlash` 注释中 `orleans-801` 示例 | 纯注释示例 | **✅ STEP 02 已中性化** |
+| C6 | 历史迁移 `000011 / 000012 / 000013 / 000015` 种业务文案 | 迁移层携带业务装修文案（新发现） | **✅ STEP 02 已中性化**（产品无外部部署，无升级兼容风险；ADR 见下） |
+
+> **ADR（P-STEP 02）：历史迁移数据种子原地中性化。**
+> 依据：产品未对外发布、无已迁移的外部环境，修改迁移字符串值不产生
+> schema/升级兼容风险；而「fresh install 含业务文案」直接违反 STEP 03 Gate。
+> 仅替换字符串值，不改结构、不改字段；受影响的两个测试断言随预期行为同步更新。
 
 ## 4. Demo / Fixture 边界（现状 → STEP 02 目标）
 
@@ -60,6 +66,6 @@
 
 - 通用层清单完整 ✅（§1）
 - 业务层清单完整 ✅（§1/§2）
-- Demo/Fixture 边界明确 ✅（§4）
-- Core pollution = 0：**当前不成立** —— 实测发现 C1/C2/C3 三个真实污染点，
-  已登记消解计划；STEP 02/03 完成后复测归零。
+- Demo/Fixture 边界明确 ✅（§4，DemoSeeder 落地）
+- Core pollution：C1/C5/C6 已消解（STEP 02），迁移种子与运维端点实测 0 业务文案；
+  C2/C3 按计划移交 STEP 03/05。

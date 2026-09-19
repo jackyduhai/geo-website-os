@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\Schema;
 /**
  * 事实库 facts（单一事实源）
  *
- * 来源：《Example GEO 事实母稿 v1.0》已核定 18 项。
+ * 来源：业务事实母稿（Demo 数据，经核定后入库）。
  * 作用：
  *   1. 内容编辑时可引用（contents.fact_refs），页面渲染时校验口径一致；
  *   2. llms.txt 的「主体信息」节、JSON-LD 的 Organization 节点均由本表生成；

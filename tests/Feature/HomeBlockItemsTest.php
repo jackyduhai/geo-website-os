@@ -91,6 +91,6 @@ class HomeBlockItemsTest extends TestCase
     {
         $html = $this->get('/')->getContent();
         // 四大车间说明不应因字段升级而丢失
-        $this->assertStringContainsString('Sample Spice粉碎车间', $html);
+        $this->assertStringContainsString('原料处理车间', $html); // 迁移默认条目已中性化（P-STEP 02）
     }
 }

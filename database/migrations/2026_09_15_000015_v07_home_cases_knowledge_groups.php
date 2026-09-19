@@ -39,11 +39,11 @@ return new class extends Migration
         if ($knowledge) {
             $groups = [
                 ['slug' => 'selection', 'name' => '选料指南', 'sort' => 10,
-                 'description' => '如何认识与挑选Sample SnackSample Marinade、Sample Breading、撒料'],
+                 'description' => '如何认识与挑选核心产品与原料'],
                 ['slug' => 'process', 'name' => '工艺与配方', 'sort' => 20,
-                 'description' => '腌制工艺、配比逻辑与配方定制过程'],
+                 'description' => '工艺流程、配比逻辑与配方定制过程'],
                 ['slug' => 'business', 'name' => '开店与经营', 'sort' => 30,
-                 'description' => 'Sample Snack创业、代工合作与门店经营参考'],
+                 'description' => '开店创业、代工合作与门店经营参考'],
             ];
             $groupMap = [];
             foreach ($groups as $g) {

@@ -26,12 +26,12 @@ return new class extends Migration
             ],
             'differentiators' => [
                 'sort' => 55,
-                'title' => '为什么品牌选择Example，而不是通货拌料',
-                'subtitle' => '差异不在价格，在风味定制能力与从样品到大货的一致性。',
+                'title' => '为什么选择源头工厂，而不是通货拌料',
+                'subtitle' => '差异不在价格，在产品定制能力与从样品到大货的一致性。',
                 'items' => [
-                    ['icon' => 'sliders', 'title' => '定向研发，非通货拼配', 'text' => '按你的品类与目标口味定制配方，不做千店一味的通用拌料'],
-                    ['icon' => 'factory', 'title' => '打样到量产一体', 'text' => '研发与四大车间同厂协同，样品风味与大货一致，避免换厂走样'],
-                    ['icon' => 'package', 'title' => '五大产品体系协同', 'text' => 'Sample Marinade、Sample Breading、撒料、特殊风味、调理鸡肉一站配齐，减少对接成本'],
+                    ['icon' => 'sliders', 'title' => '定向研发，非通货拼配', 'text' => '按你的品类与目标规格定制配方，不做千店一味的通用拌料'],
+                    ['icon' => 'factory', 'title' => '打样到量产一体', 'text' => '研发与生产线同厂协同，样品规格与大货一致，避免换厂走样'],
+                    ['icon' => 'package', 'title' => '产品体系协同', 'text' => '多品类产品一站配齐，减少对接成本'],
                     ['icon' => 'shield',  'title' => '稳定批次，全程溯源', 'text' => '标准化工艺、批批留样检测，供货稳定、来源可查'],
                 ],
             ],

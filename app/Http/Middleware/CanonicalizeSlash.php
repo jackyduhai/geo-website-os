@@ -14,7 +14,7 @@ use Symfony\Component\HttpFoundation\Response;
  * ------------------------------------------------------------------
  * 交付包 URL 规范：
  *   - 目录型页面（列表 / 栏目 / 单页）以「/」结尾：/products/、/solutions/night-market/
- *   - 详情型页面不带尾斜杠：/products/orleans-801、/knowledge/{article}
+ *   - 详情型页面不带尾斜杠：/products/{product}、/knowledge/{article}
  *
  * 固定路由通过 ->defaults('_slash', 1) 声明自己是目录型；未声明即详情型（无斜杠）。
  * 动态路由（knowledge.channel 同时承载频道列表与扁平文章、page 统一分发器同时承载

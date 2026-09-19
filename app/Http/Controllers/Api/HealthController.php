@@ -16,7 +16,7 @@ class HealthController extends Controller
     {
         return response()->json([
             'status'  => 'ok',
-            'service' => 'example-site',
+            'service' => 'geo-os',
             'time'    => now()->toIso8601String(),
             'db'      => [
                 'contents'  => Content::count(),
