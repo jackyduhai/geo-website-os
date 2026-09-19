@@ -5,6 +5,7 @@ namespace App\Services\Seo;
 use App\Contracts\UrlResolverInterface;
 use App\Models\Content;
 use App\Models\Entity;
+use App\Models\Media;
 use App\Models\SeoMeta;
 use App\Models\Site;
 use App\Support\SiteContext;
@@ -53,17 +54,23 @@ class SeoMetaResolver
 
         $fallback = $this->siteFallback($site);
 
+        // OG Image: SeoMeta -> Content.og_image_id -> Content.cover_id -> Site
+        $ogImage = $seoMeta?->og_image_path
+            ?? $this->resolveContentOgImage($content)
+            ?? $fallback['ogImage'];
+
         return new SeoResult(
             title: $seoMeta?->title ?? $content->seo_title ?? $content->title ?? $fallback['title'],
             description: $seoMeta?->description ?? $content->seo_desc ?? $content->summary ?? $fallback['description'],
             keywords: $seoMeta?->keywords ?? [],
-            canonical: $seoMeta?->canonical ?? $content->canonical ?? $this->urlResolver->generateCanonical('content', [
+            // Canonical: SeoMeta -> UrlResolver (no Content.canonical as formal layer)
+            canonical: $seoMeta?->canonical ?? $this->urlResolver->generateCanonical('content', [
                 'type' => $content->type,
                 'slug' => $content->slug,
             ]),
             ogTitle: $seoMeta?->og_title ?? ($seoMeta?->title ?? $content->seo_title ?? $content->title ?? $fallback['title']),
             ogDescription: $seoMeta?->og_description ?? ($seoMeta?->description ?? $content->seo_desc ?? $content->summary ?? $fallback['description']),
-            ogImage: $seoMeta?->og_image_path ?? $content->og_image_path ?? $content->cover_path ?? $fallback['ogImage'],
+            ogImage: $ogImage,
             ogType: $seoMeta?->og_type ?? 'article',
             twitterCard: $seoMeta?->twitter_card ?? 'summary_large_image',
             noindex: $seoMeta?->noindex ?? ($content->noindex ?? false),
@@ -88,7 +95,7 @@ class SeoMetaResolver
         $fallback = $this->siteFallback($site);
 
         $metadata = $entity->metadata ?? [];
-        $ogImage = $metadata['og_image'] ?? null;
+        $entityOgImage = $metadata['og_image'] ?? null;
 
         return new SeoResult(
             title: $seoMeta?->title ?? $entity->name ?? $fallback['title'],
@@ -100,7 +107,7 @@ class SeoMetaResolver
             ]),
             ogTitle: $seoMeta?->og_title ?? ($seoMeta?->title ?? $entity->name ?? $fallback['title']),
             ogDescription: $seoMeta?->og_description ?? ($seoMeta?->description ?? $entity->summary ?? $entity->description ?? $fallback['description']),
-            ogImage: $seoMeta?->og_image_path ?? $ogImage ?? $fallback['ogImage'],
+            ogImage: $seoMeta?->og_image_path ?? $entityOgImage ?? $fallback['ogImage'],
             ogType: $seoMeta?->og_type ?? 'website',
             twitterCard: $seoMeta?->twitter_card ?? 'summary_large_image',
             noindex: $seoMeta?->noindex ?? false,
@@ -111,7 +118,31 @@ class SeoMetaResolver
     }
 
     /**
-     * Find site-level SeoMeta, return empty array if not found
+     * Resolve content OG image via Media relationship
+     */
+    private function resolveContentOgImage(Content $content): ?string
+    {
+        // Try og_image_id first
+        if ($content->og_image_id) {
+            $media = Media::find($content->og_image_id);
+            if ($media) {
+                return $media->path;
+            }
+        }
+
+        // Try cover_id second
+        if ($content->cover_id) {
+            $media = Media::find($content->cover_id);
+            if ($media) {
+                return $media->path;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Find site-level SeoMeta
      */
     private function findSiteLevelSeo(Site $site): ?SeoMeta
     {

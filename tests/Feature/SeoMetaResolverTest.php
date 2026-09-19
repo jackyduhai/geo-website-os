@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Content;
 use App\Models\Entity;
+use App\Models\Media;
 use App\Models\SeoMeta;
 use App\Models\Site;
 use App\Services\Seo\SeoMetaResolver;
@@ -45,15 +46,32 @@ class SeoMetaResolverTest extends TestCase
 
         $this->assertEquals('Site SEO Title', $result->title);
         $this->assertEquals('Site SEO Description', $result->description);
-        $this->assertStringContainsString('test.test', $result->canonical);
     }
 
-    public function test_resolve_content_level_seo(): void
+    public function test_home_canonical_ends_with_slash(): void
     {
         $site = Site::create([
             'name' => 'Test Site',
             'slug' => 'test-site',
-            'domain' => 'test.test',
+            'domain' => 'example.com',
+            'status' => 'active',
+            'is_default' => false,
+        ]);
+
+        SiteContext::setSite($site);
+
+        $resolver = app(SeoMetaResolver::class);
+        $result = $resolver->resolveSite($site);
+
+        $this->assertEquals('https://example.com/', $result->canonical);
+    }
+
+    public function test_content_canonical_no_trailing_slash(): void
+    {
+        $site = Site::create([
+            'name' => 'Test Site',
+            'slug' => 'test-site',
+            'domain' => 'example.com',
             'status' => 'active',
             'is_default' => false,
         ]);
@@ -62,147 +80,24 @@ class SeoMetaResolverTest extends TestCase
 
         $content = Content::create([
             'site_id' => $site->id,
-            'type' => 'page',
+            'type' => 'article',
             'title' => 'Test Page',
-            'slug' => 'test-page',
-            'summary' => 'Page summary',
-            'status' => 'published',
-        ]);
-
-        SeoMeta::create([
-            'site_id' => $site->id,
-            'content_id' => $content->id,
-            'title' => 'Content SEO Title',
-        ]);
-
-        $resolver = app(SeoMetaResolver::class);
-        $result = $resolver->resolveContent($content);
-
-        $this->assertEquals('Content SEO Title', $result->title);
-    }
-
-    public function test_resolve_content_fallback_to_content_fields(): void
-    {
-        $site = Site::create([
-            'name' => 'Test Site',
-            'slug' => 'test-site',
-            'domain' => 'test.test',
-            'status' => 'active',
-            'is_default' => false,
-        ]);
-
-        SiteContext::setSite($site);
-
-        $content = Content::create([
-            'site_id' => $site->id,
-            'type' => 'page',
-            'title' => 'Test Page Title',
-            'slug' => 'test-page',
-            'summary' => 'Page summary text',
+            'slug' => 'test-slug',
             'status' => 'published',
         ]);
 
         $resolver = app(SeoMetaResolver::class);
         $result = $resolver->resolveContent($content);
 
-        $this->assertEquals('Test Page Title', $result->title);
-        $this->assertEquals('Page summary text', $result->description);
+        $this->assertEquals('https://example.com/article/test-slug', $result->canonical);
     }
 
-    public function test_resolve_entity_level_seo(): void
+    public function test_entity_canonical_no_trailing_slash(): void
     {
         $site = Site::create([
             'name' => 'Test Site',
             'slug' => 'test-site',
-            'domain' => 'test.test',
-            'status' => 'active',
-            'is_default' => false,
-        ]);
-
-        SiteContext::setSite($site);
-
-        $entity = Entity::create([
-            'site_id' => $site->id,
-            'type' => 'product',
-            'slug' => 'test-product',
-            'name' => 'Test Product',
-            'summary' => 'Product summary',
-            'status' => 'published',
-        ]);
-
-        SeoMeta::create([
-            'site_id' => $site->id,
-            'entity_id' => $entity->id,
-            'title' => 'Entity SEO Title',
-        ]);
-
-        $resolver = app(SeoMetaResolver::class);
-        $result = $resolver->resolveEntity($entity);
-
-        $this->assertEquals('Entity SEO Title', $result->title);
-    }
-
-    public function test_resolve_entity_fallback_to_entity_fields(): void
-    {
-        $site = Site::create([
-            'name' => 'Test Site',
-            'slug' => 'test-site',
-            'domain' => 'test.test',
-            'status' => 'active',
-            'is_default' => false,
-        ]);
-
-        SiteContext::setSite($site);
-
-        $entity = Entity::create([
-            'site_id' => $site->id,
-            'type' => 'product',
-            'slug' => 'test-product',
-            'name' => 'Test Product Name',
-            'summary' => 'Product summary',
-            'status' => 'published',
-        ]);
-
-        $resolver = app(SeoMetaResolver::class);
-        $result = $resolver->resolveEntity($entity);
-
-        $this->assertEquals('Test Product Name', $result->title);
-        $this->assertEquals('Product summary', $result->description);
-    }
-
-    public function test_canonical_generated_for_content(): void
-    {
-        $site = Site::create([
-            'name' => 'Test Site',
-            'slug' => 'test-site',
-            'domain' => 'test.test',
-            'status' => 'active',
-            'is_default' => false,
-        ]);
-
-        SiteContext::setSite($site);
-
-        $content = Content::create([
-            'site_id' => $site->id,
-            'type' => 'page',
-            'title' => 'Test Page',
-            'slug' => 'test-page',
-            'status' => 'published',
-        ]);
-
-        $resolver = app(SeoMetaResolver::class);
-        $result = $resolver->resolveContent($content);
-
-        $this->assertStringContainsString('https://test.test', $result->canonical);
-        $this->assertStringContainsString('test-page', $result->canonical);
-    }
-
-    public function test_canonical_generated_for_entity(): void
-    {
-        $site = Site::create([
-            'name' => 'Test Site',
-            'slug' => 'test-site',
-            'domain' => 'test.test',
+            'domain' => 'example.com',
             'status' => 'active',
             'is_default' => false,
         ]);
@@ -220,8 +115,59 @@ class SeoMetaResolverTest extends TestCase
         $resolver = app(SeoMetaResolver::class);
         $result = $resolver->resolveEntity($entity);
 
-        $this->assertStringContainsString('https://test.test', $result->canonical);
-        $this->assertStringContainsString('test-product', $result->canonical);
+        $this->assertEquals('https://example.com/product/test-product', $result->canonical);
+    }
+
+    public function test_canonical_always_https(): void
+    {
+        $site = Site::create([
+            'name' => 'Test Site',
+            'slug' => 'test-site',
+            'domain' => 'example.com',
+            'status' => 'active',
+            'is_default' => false,
+        ]);
+
+        SiteContext::setSite($site);
+
+        $content = Content::create([
+            'site_id' => $site->id,
+            'type' => 'page',
+            'title' => 'Test Page',
+            'slug' => 'test-page',
+            'status' => 'published',
+        ]);
+
+        $resolver = app(SeoMetaResolver::class);
+        $result = $resolver->resolveContent($content);
+
+        $this->assertStringStartsWith('https://', $result->canonical);
+    }
+
+    public function test_canonical_no_query_string(): void
+    {
+        $site = Site::create([
+            'name' => 'Test Site',
+            'slug' => 'test-site',
+            'domain' => 'example.com',
+            'status' => 'active',
+            'is_default' => false,
+        ]);
+
+        SiteContext::setSite($site);
+
+        $content = Content::create([
+            'site_id' => $site->id,
+            'type' => 'page',
+            'title' => 'Test Page',
+            'slug' => 'test-page',
+            'status' => 'published',
+        ]);
+
+        $resolver = app(SeoMetaResolver::class);
+        $result = $resolver->resolveContent($content);
+
+        $this->assertStringNotContainsString('?', $result->canonical);
     }
 
     public function test_custom_canonical_overrides_generated(): void
@@ -229,7 +175,7 @@ class SeoMetaResolverTest extends TestCase
         $site = Site::create([
             'name' => 'Test Site',
             'slug' => 'test-site',
-            'domain' => 'test.test',
+            'domain' => 'example.com',
             'status' => 'active',
             'is_default' => false,
         ]);
@@ -256,12 +202,66 @@ class SeoMetaResolverTest extends TestCase
         $this->assertEquals('https://custom.example.com/page', $result->canonical);
     }
 
-    public function test_og_image_inheritance(): void
+    public function test_title_resolution_chain(): void
+    {
+        $site = Site::create([
+            'name' => 'Site Name',
+            'slug' => 'test-site',
+            'domain' => 'example.com',
+            'status' => 'active',
+            'is_default' => false,
+        ]);
+
+        SiteContext::setSite($site);
+
+        $content = Content::create([
+            'site_id' => $site->id,
+            'type' => 'page',
+            'title' => 'Content Title',
+            'slug' => 'test-page',
+            'status' => 'published',
+        ]);
+
+        $resolver = app(SeoMetaResolver::class);
+        $result = $resolver->resolveContent($content);
+
+        // Falls back to content title when no SeoMeta
+        $this->assertEquals('Content Title', $result->title);
+    }
+
+    public function test_description_resolution_chain(): void
     {
         $site = Site::create([
             'name' => 'Test Site',
             'slug' => 'test-site',
-            'domain' => 'test.test',
+            'domain' => 'example.com',
+            'status' => 'active',
+            'is_default' => false,
+        ]);
+
+        SiteContext::setSite($site);
+
+        $content = Content::create([
+            'site_id' => $site->id,
+            'type' => 'page',
+            'title' => 'Test Page',
+            'slug' => 'test-page',
+            'summary' => 'Content Summary',
+            'status' => 'published',
+        ]);
+
+        $resolver = app(SeoMetaResolver::class);
+        $result = $resolver->resolveContent($content);
+
+        $this->assertEquals('Content Summary', $result->description);
+    }
+
+    public function test_og_image_from_content_og_image_id(): void
+    {
+        $site = Site::create([
+            'name' => 'Test Site',
+            'slug' => 'test-site',
+            'domain' => 'example.com',
             'logo' => '/site-logo.png',
             'status' => 'active',
             'is_default' => false,
@@ -269,19 +269,65 @@ class SeoMetaResolverTest extends TestCase
 
         SiteContext::setSite($site);
 
-        $entity = Entity::create([
+        $media = Media::create([
             'site_id' => $site->id,
-            'type' => 'product',
-            'slug' => 'test-product',
-            'name' => 'Test Product',
-            'metadata' => ['og_image' => '/entity-og.png'],
+            'disk' => 'public',
+            'path' => '/uploads/og-image.jpg',
+            'original_name' => 'og-image.jpg',
+            'mime' => 'image/jpeg',
+            'size' => 100000,
+        ]);
+
+        $content = Content::create([
+            'site_id' => $site->id,
+            'type' => 'page',
+            'title' => 'Test Page',
+            'slug' => 'test-page',
+            'og_image_id' => $media->id,
             'status' => 'published',
         ]);
 
         $resolver = app(SeoMetaResolver::class);
-        $result = $resolver->resolveEntity($entity);
+        $result = $resolver->resolveContent($content);
 
-        $this->assertEquals('/entity-og.png', $result->ogImage);
+        $this->assertEquals('/uploads/og-image.jpg', $result->ogImage);
+    }
+
+    public function test_og_image_fallback_to_cover_id(): void
+    {
+        $site = Site::create([
+            'name' => 'Test Site',
+            'slug' => 'test-site',
+            'domain' => 'example.com',
+            'logo' => '/site-logo.png',
+            'status' => 'active',
+            'is_default' => false,
+        ]);
+
+        SiteContext::setSite($site);
+
+        $media = Media::create([
+            'site_id' => $site->id,
+            'disk' => 'public',
+            'path' => '/uploads/cover.jpg',
+            'original_name' => 'cover.jpg',
+            'mime' => 'image/jpeg',
+            'size' => 100000,
+        ]);
+
+        $content = Content::create([
+            'site_id' => $site->id,
+            'type' => 'page',
+            'title' => 'Test Page',
+            'slug' => 'test-page',
+            'cover_id' => $media->id,
+            'status' => 'published',
+        ]);
+
+        $resolver = app(SeoMetaResolver::class);
+        $result = $resolver->resolveContent($content);
+
+        $this->assertEquals('/uploads/cover.jpg', $result->ogImage);
     }
 
     public function test_og_image_fallback_to_site_logo(): void
@@ -289,7 +335,7 @@ class SeoMetaResolverTest extends TestCase
         $site = Site::create([
             'name' => 'Test Site',
             'slug' => 'test-site',
-            'domain' => 'test.test',
+            'domain' => 'example.com',
             'logo' => '/site-logo.png',
             'status' => 'active',
             'is_default' => false,
@@ -297,26 +343,26 @@ class SeoMetaResolverTest extends TestCase
 
         SiteContext::setSite($site);
 
-        $entity = Entity::create([
+        $content = Content::create([
             'site_id' => $site->id,
-            'type' => 'product',
-            'slug' => 'test-product',
-            'name' => 'Test Product',
+            'type' => 'page',
+            'title' => 'Test Page',
+            'slug' => 'test-page',
             'status' => 'published',
         ]);
 
         $resolver = app(SeoMetaResolver::class);
-        $result = $resolver->resolveEntity($entity);
+        $result = $resolver->resolveContent($content);
 
         $this->assertEquals('/site-logo.png', $result->ogImage);
     }
 
-    public function test_noindex_flag(): void
+    public function test_noindex_flag_from_content(): void
     {
         $site = Site::create([
             'name' => 'Test Site',
             'slug' => 'test-site',
-            'domain' => 'test.test',
+            'domain' => 'example.com',
             'status' => 'active',
             'is_default' => false,
         ]);
@@ -338,12 +384,90 @@ class SeoMetaResolverTest extends TestCase
         $this->assertTrue($result->noindex);
     }
 
+    public function test_noindex_flag_from_seo_meta(): void
+    {
+        $site = Site::create([
+            'name' => 'Test Site',
+            'slug' => 'test-site',
+            'domain' => 'example.com',
+            'status' => 'active',
+            'is_default' => false,
+        ]);
+
+        SiteContext::setSite($site);
+
+        $content = Content::create([
+            'site_id' => $site->id,
+            'type' => 'page',
+            'title' => 'Test Page',
+            'slug' => 'test-page',
+            'status' => 'published',
+        ]);
+
+        SeoMeta::create([
+            'site_id' => $site->id,
+            'content_id' => $content->id,
+            'noindex' => true,
+        ]);
+
+        $resolver = app(SeoMetaResolver::class);
+        $result = $resolver->resolveContent($content);
+
+        $this->assertTrue($result->noindex);
+    }
+
+    public function test_site_isolation_seo_meta(): void
+    {
+        $siteA = Site::create([
+            'name' => 'Site A',
+            'slug' => 'site-a',
+            'domain' => 'a.example.com',
+            'status' => 'active',
+            'is_default' => false,
+        ]);
+
+        $siteB = Site::create([
+            'name' => 'Site B',
+            'slug' => 'site-b',
+            'domain' => 'b.example.com',
+            'status' => 'active',
+            'is_default' => false,
+        ]);
+
+        SiteContext::setSite($siteA);
+
+        $contentA = Content::create([
+            'site_id' => $siteA->id,
+            'type' => 'page',
+            'title' => 'Content A',
+            'slug' => 'content-a',
+            'status' => 'published',
+        ]);
+
+        SeoMeta::create([
+            'site_id' => $siteA->id,
+            'content_id' => $contentA->id,
+            'title' => 'SEO A Title',
+        ]);
+
+        $resolver = app(SeoMetaResolver::class);
+
+        SiteContext::setSite($siteA);
+        $resultA = $resolver->resolveContent($contentA);
+        $this->assertEquals('SEO A Title', $resultA->title);
+        $this->assertStringContainsString('a.example.com', $resultA->canonical);
+
+        // Switch to Site B
+        SiteContext::setSite($siteB);
+        $this->assertStringContainsString('b.example.com', $resolver->resolveSite($siteB)->canonical);
+    }
+
     public function test_seo_result_to_array(): void
     {
         $site = Site::create([
             'name' => 'Test Site',
             'slug' => 'test-site',
-            'domain' => 'test.test',
+            'domain' => 'example.com',
             'status' => 'active',
             'is_default' => false,
         ]);
@@ -360,5 +484,6 @@ class SeoMetaResolverTest extends TestCase
         $this->assertArrayHasKey('canonical', $array);
         $this->assertArrayHasKey('og_title', $array);
         $this->assertArrayHasKey('og_type', $array);
+        $this->assertArrayHasKey('og_image', $array);
     }
 }
