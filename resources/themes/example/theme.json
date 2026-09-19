@@ -1,0 +1,5 @@
+{
+    "name": "Example Theme",
+    "version": "1.0.0",
+    "description": "Minimal example theme demonstrating the theme contract: overrides layouts/site and site/home only, consumes normalized $seo and view data, no engine internals."
+}

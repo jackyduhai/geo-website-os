@@ -73,6 +73,10 @@ class AppServiceProvider extends ServiceProvider
         \App\Models\Scopes\SiteScope::resetRequestMemo();
         \App\Support\SiteCacheKey::resetRequestMemo();
         \App\Services\Seo\SeoMetaResolver::resetRequestMemo();
+        \App\Support\Theme\ThemeManager::resetRequestMemo();
+
+        // 主题架构（P-STEP 05）：激活主题的视图目录前置（同名覆盖 + 基础视图回退）
+        \App\Support\Theme\ThemeManager::register();
         self::$navTreeMemo = null;
         self::$mainMenuMemo = null;
         self::$footerExtraMemo = null;
