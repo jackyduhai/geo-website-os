@@ -122,6 +122,11 @@ class AppServiceProvider extends ServiceProvider
                 $view->with('leadAttr', []);
             }
         });
+
+        // SEO 头部归一化（STEP 02）：布局头部只消费归一化后的 $seo，
+        // Blade 不再读取 Setting / URL 生成器或自行拼接 SEO 兜底。
+        // 须注册在全局 siteSettings composer 之后，保证遗留兜底设置已就位。
+        View::composer('layouts.site', \App\Http\View\SeoHeadComposer::class);
     }
 
     /**

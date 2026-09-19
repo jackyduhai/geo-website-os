@@ -4,32 +4,30 @@
 <meta charset="utf-8">
 <script nonce="{{ $cspNonce ?? '' }}">document.documentElement.classList.add('js');</script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>{{ $seo['title_full'] ?? ((!empty($seo['title']) ? $seo['title'] . ' - ' : '') . ($siteSettings['seo_title_suffix'] ?? $siteSettings['site_name'] ?? '')) }}</title>
-<meta name="description" content="{{ $seo['description'] ?? ($siteSettings['seo_default_desc'] ?? '') }}">
+<title>{{ $seo['title_full'] }}</title>
+<meta name="description" content="{{ $seo['description'] }}">
 @if(!empty($seo['noindex']))
 <meta name="robots" content="noindex, follow">
 @else
 <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1">
 @endif
-<link rel="canonical" href="{{ $seo['canonical'] ?? url()->current() }}">
+<link rel="canonical" href="{{ $seo['canonical'] }}">
 
-@php
-  $ogImage = $seo['image'] ?? ($siteSettings['seo_og_image'] ?? null) ?: asset('img/og-default.png');
-  $ogTitle = $seo['title_full'] ?? ($seo['title'] ?? ($siteSettings['site_name'] ?? 'Example Food'));
-@endphp
+{{-- SEO 头部唯一消费点：$seo 由 SeoHeadComposer 归一化（Controller SeoResult → 站点级 Resolution → 遗留设置兜底）。
+     Blade 在此不做任何 SEO 计算或回读（STEP 02 单一来源）。 --}}
 <meta property="og:locale" content="zh_CN">
-<meta property="og:type" content="{{ $seo['type'] ?? 'website' }}">
-<meta property="og:title" content="{{ $ogTitle }}">
-<meta property="og:description" content="{{ $seo['description'] ?? ($siteSettings['seo_default_desc'] ?? '') }}">
-<meta property="og:url" content="{{ $seo['canonical'] ?? url()->current() }}">
-<meta property="og:site_name" content="{{ $siteSettings['site_name'] ?? 'Example Food' }}">
-<meta property="og:image" content="{{ $ogImage }}">
+<meta property="og:type" content="{{ $seo['type'] }}">
+<meta property="og:title" content="{{ $seo['og_title'] }}">
+<meta property="og:description" content="{{ $seo['og_description'] }}">
+<meta property="og:url" content="{{ $seo['canonical'] }}">
+<meta property="og:site_name" content="{{ $seo['og_site_name'] }}">
+<meta property="og:image" content="{{ $seo['og_image'] }}">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="{{ $ogTitle }}">
-<meta name="twitter:description" content="{{ $seo['description'] ?? ($siteSettings['seo_default_desc'] ?? '') }}">
-<meta name="twitter:image" content="{{ $ogImage }}">
+<meta name="twitter:card" content="{{ $seo['twitter_card'] }}">
+<meta name="twitter:title" content="{{ $seo['og_title'] }}">
+<meta name="twitter:description" content="{{ $seo['og_description'] }}">
+<meta name="twitter:image" content="{{ $seo['og_image'] }}">
 @if(!empty($seo['published']))
 <meta property="article:published_time" content="{{ $seo['published'] }}">
 @endif
