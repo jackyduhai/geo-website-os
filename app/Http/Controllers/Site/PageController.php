@@ -140,7 +140,7 @@ class PageController extends Controller
             'related' => $related,
             'schemas' => [
                 $schema->organization(),
-                $schema->article($content),
+                $schema->article($content, $seoResult),
                 $schema->faqPage($content),
                 $schema->breadcrumb($crumbList),
             ],

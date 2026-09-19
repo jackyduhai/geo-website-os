@@ -4,34 +4,38 @@ namespace App\Services\Geo;
 
 use App\Models\Category;
 use App\Models\Content;
-use App\Models\Fact;
+use App\Models\Entity;
 use App\Models\Setting;
-use App\Support\Facts;
+use App\Services\Seo\SeoMetaResolver;
+use App\Services\Seo\SeoResult;
+use App\Support\SiteContext;
 use Illuminate\Support\Str;
 
 /**
- * JSON-LD 结构化数据生成器
+ * JSON-LD 结构化数据生成器（STEP 05 统一 Schema 输出层）
  *
  * 铁律：结构化数据必须由模板生成，禁止手写。
  * 理由：一个引号错误会让整段 schema 作废，而它又不可见，很难发现。
  *
  * 一致性要求：本类输出的每个字段都必须能在页面上找到对应的可见内容，
  * 不允许出现「schema 里有、页面上没有」的字段。
+ *
+ * 数据源边界（冻结）：
+ *   - 主体字段：Entity / Content / Category / Site（正式数据模型）
+ *   - SEO 字段：SeoMetaResolver → SeoResult（description / canonical / og:image）
+ *   - 站点配置：Setting（后台可运营项，如 geo_org_logo / contact_phone）
+ *   - 站点扩展：Site.metadata['organization' / 'web_site']（通用 JSON 扩展，
+ *     承载 legalName / address / knowsAbout 等无正式字段的组织属性；
+ *     业务值由 Seeder / 后台写入，Core 不含任何业务专属数据或兜底文案）
+ *   - 禁止：直读业务事实库（Facts / facts 配置）作为 Schema 数据源
  */
 class SchemaBuilder
 {
-    protected array $facts;
     protected array $settings;
 
     public function __construct()
     {
-        $this->facts = Fact::publicMap();
         $this->settings = Setting::allCached();
-    }
-
-    protected function fact(string $key, string $default = ''): string
-    {
-        return (string) ($this->facts[$key] ?? $default);
     }
 
     protected function setting(string $key, string $default = ''): string
@@ -41,12 +45,42 @@ class SchemaBuilder
 
     protected function orgName(): string
     {
-        return $this->setting('geo_org_name') ?: ($this->fact('FACT-COMPANY-001') ?: 'Example Food Co., Ltd.');
+        $site = SiteContext::currentSite();
+
+        return $this->setting('geo_org_name') ?: (string) ($site?->name ?? '');
+    }
+
+    protected function siteName(): string
+    {
+        $site = SiteContext::currentSite();
+
+        return $this->setting('site_name') ?: (string) ($site?->name ?? '');
     }
 
     protected function baseUrl(): string
     {
+        // 与 Canonical 同源：优先当前 Site.domain（HTTPS），开发环境回退 app.url
+        $site = SiteContext::currentSite();
+        if ($site && trim((string) $site->domain) !== '') {
+            return 'https://' . rtrim($site->domain, '/');
+        }
+
         return rtrim(config('app.url'), '/');
+    }
+
+    /** Site.metadata 通用扩展读取 */
+    protected function siteExtension(string $namespace): array
+    {
+        $metadata = SiteContext::currentSite()?->metadata ?? [];
+
+        return is_array($metadata[$namespace] ?? null) ? $metadata[$namespace] : [];
+    }
+
+    protected function seo(): ?SeoResult
+    {
+        $site = SiteContext::currentSite();
+
+        return $site ? app(SeoMetaResolver::class)->resolveSite($site) : null;
     }
 
     // ---------------------------------------------------------------
@@ -55,6 +89,8 @@ class SchemaBuilder
 
     public function organization(): array
     {
+        $ext = $this->siteExtension('organization');
+
         $data = [
             '@context' => 'https://schema.org',
             '@type'    => 'Organization',
@@ -74,66 +110,75 @@ class SchemaBuilder
 
         if ($tel = $this->setting('contact_phone')) {
             $data['telephone'] = $tel;
+        } elseif (! empty($ext['telephone'])) {
+            $data['telephone'] = (string) $ext['telephone'];
         }
 
-        if ($addr = $this->setting('contact_address')) {
-            $data['address'] = [
-                '@type'           => 'PostalAddress',
-                'streetAddress'   => $addr,
-                'addressLocality' => 'Sample City市',
-                'addressRegion'   => 'Sample Province省',
-                'addressCountry'  => 'CN',
-            ];
+        $data += $this->organizationAddress($ext);
+
+        if (! empty($ext['legal_name'])) {
+            $data['legalName'] = (string) $ext['legal_name'];
         }
 
-        if ($founded = $this->fact('FACT-COMPANY-003')) {
-            $data['foundingDate'] = $this->toIsoDate($founded);
+        if (! empty($ext['founding_date'])) {
+            $data['foundingDate'] = (string) $ext['founding_date'];
         }
 
-        if ($desc = $this->setting('site_description')) {
-            $data['description'] = $desc;
+        if (! empty($ext['area_served']) && is_array($ext['area_served'])) {
+            $data['areaServed'] = array_map(
+                fn ($r) => ['@type' => 'Place', 'name' => (string) $r],
+                array_values($ext['area_served'])
+            );
         }
 
-        // ---- 以下用 Facts（facts.yaml 权威数据源）补全 / 兜底，保证实体信息完整 ----
-        $company = Facts::company();
-
-        $data['legalName'] = $company['name'];
-        if (empty($data['telephone']) && ! empty($company['phone'])) {
-            $data['telephone'] = $company['phone'];
-        }
-        if (empty($data['address']) && ! empty($company['address']['full'])) {
-            $data['address'] = [
-                '@type'           => 'PostalAddress',
-                'streetAddress'   => $company['address']['street'] ?? $company['address']['full'],
-                'addressLocality' => $company['address']['city'] ?? 'Sample City市',
-                'addressRegion'   => $company['address']['province'] ?? 'Sample Province省',
-                'addressCountry'  => $company['address']['country'] ?? 'CN',
-            ];
-        }
-        // 成立时间（ISO 年-月），Facts 为权威口径
-        if (! empty($company['founded'])) {
-            $data['foundingDate'] = $company['founded'];
-        }
-        // 服务区域：全国七大销售区域
-        $regions = Facts::salesRegions();
-        if ($regions) {
-            $data['areaServed'] = array_map(fn ($r) => ['@type' => 'Place', 'name' => $r . '地区'], $regions);
-        }
         // 联系点（与可见电话一致）
-        if (! empty($company['phone'])) {
+        $contactTel = (string) ($data['telephone'] ?? '');
+        if ($contactTel !== '') {
             $data['contactPoint'] = [[
                 '@type'       => 'ContactPoint',
-                'telephone'   => $company['phone_tel'] ?? $company['phone'],
+                'telephone'   => $contactTel,
                 'contactType' => 'customer service',
                 'areaServed'  => 'CN',
                 'availableLanguage' => ['zh-CN'],
             ]];
         }
 
-        // knowsAbout：让 AI 知道这个实体的专业领域
-        $data['knowsAbout'] = ['中式Sample SnackSample Marinade', '鸡架Sample Marinade', 'Sample Breading撒料', '调理鸡肉制品', 'OEM/ODM 代工'];
+        if (! empty($ext['knows_about']) && is_array($ext['knows_about'])) {
+            $data['knowsAbout'] = array_values(array_map('strval', $ext['knows_about']));
+        }
 
-        return $data;
+        if (! empty($ext['same_as']) && is_array($ext['same_as'])) {
+            $data['sameAs'] = array_values(array_map('strval', $ext['same_as']));
+        }
+
+        if ($desc = $this->setting('site_description')) {
+            $data['description'] = $desc;
+        }
+
+        return array_filter($data, fn ($v) => $v !== null && $v !== '');
+    }
+
+    /** 组织地址：Setting 街道 + metadata 补充行政区的通用组合，不含任何业务硬编码 */
+    protected function organizationAddress(array $ext): array
+    {
+        $extAddress = is_array($ext['address'] ?? null) ? $ext['address'] : [];
+
+        $street = $this->setting('contact_address') ?: (string) ($extAddress['street'] ?? '');
+        if ($street === '' && $extAddress === []) {
+            return [];
+        }
+
+        $address = ['@type' => 'PostalAddress'];
+        if ($street !== '') {
+            $address['streetAddress'] = $street;
+        }
+        foreach (['locality' => 'addressLocality', 'region' => 'addressRegion', 'country' => 'addressCountry'] as $k => $schemaKey) {
+            if (! empty($extAddress[$k])) {
+                $address[$schemaKey] = (string) $extAddress[$k];
+            }
+        }
+
+        return ['address' => $address];
     }
 
     public function website(): array
@@ -142,7 +187,7 @@ class SchemaBuilder
             '@context'        => 'https://schema.org',
             '@type'           => 'WebSite',
             '@id'             => $this->baseUrl() . '/#website',
-            'name'            => $this->setting('site_name', 'Example Food'),
+            'name'            => $this->siteName(),
             'url'             => $this->baseUrl() . '/',
             'inLanguage'      => 'zh-CN',
             'publisher'       => ['@id' => $this->baseUrl() . '/#organization'],
@@ -161,22 +206,28 @@ class SchemaBuilder
     // 内容页
     // ---------------------------------------------------------------
 
-    public function article(Content $c): array
+    public function article(Content $c, ?SeoResult $seo = null): array
     {
+        $seo ??= app(SeoMetaResolver::class)->resolveContent($c);
+
         $data = [
             '@context'         => 'https://schema.org',
             '@type'            => $c->type === 'product' ? 'Product' : 'Article',
             '@id'              => $c->url() . '#main',
-            'headline'         => $c->title,
-            'name'             => $c->title,
-            'description'      => $c->metaDescription(),
+            'headline'         => $seo->title,
+            'name'             => $seo->title,
+            'description'      => $seo->description,
             'inLanguage'       => 'zh-CN',
             'mainEntityOfPage' => [
                 '@type' => 'WebPage',
-                '@id'   => $c->canonicalUrl(),
+                '@id'   => $seo->canonical,
             ],
             'publisher'        => ['@id' => $this->baseUrl() . '/#organization'],
         ];
+
+        if ($seo->ogImage) {
+            $data['image'] = $this->absolute($seo->ogImage);
+        }
 
         if ($c->published_at) {
             $data['datePublished'] = $c->published_at->toIso8601String();
@@ -189,9 +240,78 @@ class SchemaBuilder
 
         // 产品页补充品牌与制造商
         if ($c->type === 'product') {
-            $data['brand'] = ['@type' => 'Brand', 'name' => $this->setting('site_name', 'Example')];
+            $data['brand'] = ['@type' => 'Brand', 'name' => $this->siteName()];
             $data['manufacturer'] = ['@id' => $this->baseUrl() . '/#organization'];
             $data['category'] = $c->category?->name;
+        }
+
+        return array_filter($data, fn ($v) => $v !== null && $v !== '');
+    }
+
+    // ---------------------------------------------------------------
+    // Entity 通用 Schema（Entity Type 冻结枚举 → schema.org 类型）
+    // ---------------------------------------------------------------
+
+    private const ENTITY_SCHEMA_TYPES = [
+        Entity::TYPE_ORGANIZATION => 'Organization',
+        Entity::TYPE_PERSON       => 'Person',
+        Entity::TYPE_PRODUCT      => 'Product',
+        Entity::TYPE_SERVICE      => 'Service',
+        Entity::TYPE_LOCATION     => 'Place',
+        Entity::TYPE_TOPIC        => 'WebPage',
+    ];
+
+    /**
+     * 按资源类型生成通用实体 Schema。
+     * 数据源：Entity 正式字段 + SeoMetaResolver::resolveEntity（description /
+     * canonical / og:image）+ Entity.metadata 通用扩展（sameAs / address 等）。
+     */
+    public function entity(Entity $e, ?SeoResult $seo = null): ?array
+    {
+        $schemaType = self::ENTITY_SCHEMA_TYPES[$e->type] ?? null;
+        if ($schemaType === null) {
+            return null;
+        }
+
+        $seo ??= app(SeoMetaResolver::class)->resolveEntity($e);
+        $metadata = is_array($e->metadata) ? $e->metadata : [];
+
+        $data = [
+            '@context'   => 'https://schema.org',
+            '@type'      => $schemaType,
+            '@id'        => $seo->canonical . '#entity',
+            'name'       => $seo->title,
+            'description' => $seo->description,
+            'url'        => $seo->canonical,
+            'inLanguage' => 'zh-CN',
+        ];
+
+        if ($seo->ogImage) {
+            $data['image'] = $this->absolute($seo->ogImage);
+        }
+
+        if (! empty($metadata['same_as']) && is_array($metadata['same_as'])) {
+            $data['sameAs'] = array_values(array_map('strval', $metadata['same_as']));
+        }
+
+        if (! empty($metadata['address']) && is_array($metadata['address'])) {
+            $a = $metadata['address'];
+            $data['address'] = array_filter([
+                '@type'           => 'PostalAddress',
+                'streetAddress'   => $a['street'] ?? null,
+                'addressLocality' => $a['locality'] ?? null,
+                'addressRegion'   => $a['region'] ?? null,
+                'addressCountry'  => $a['country'] ?? null,
+            ]);
+        }
+
+        if (! empty($metadata['geo']) && is_array($metadata['geo'])
+            && isset($metadata['geo']['lat'], $metadata['geo']['lng'])) {
+            $data['geo'] = [
+                '@type'     => 'GeoCoordinates',
+                'latitude'  => $metadata['geo']['lat'],
+                'longitude' => $metadata['geo']['lng'],
+            ];
         }
 
         return array_filter($data, fn ($v) => $v !== null && $v !== '');
@@ -322,17 +442,5 @@ class SchemaBuilder
             return $path;
         }
         return $this->baseUrl() . '/' . ltrim($path, '/');
-    }
-
-    /** 把「2017 年 3 月」这类中文日期转成 ISO 格式，失败则返回空 */
-    protected function toIsoDate(string $text): string
-    {
-        if (preg_match('/(\d{4})\s*年\s*(\d{1,2})\s*月/', $text, $m)) {
-            return sprintf('%04d-%02d-01', (int) $m[1], (int) $m[2]);
-        }
-        if (preg_match('/(\d{4})/', $text, $m)) {
-            return $m[1] . '-01-01';
-        }
-        return '';
     }
 }
