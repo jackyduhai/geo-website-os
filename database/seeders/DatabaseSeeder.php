@@ -20,6 +20,7 @@ class DatabaseSeeder extends Seeder
             [
                 'name'     => '管理员',
                 'password' => Hash::make('Example@2026'),
+                'is_super_admin' => true,
             ]
         );
 

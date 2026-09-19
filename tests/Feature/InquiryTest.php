@@ -21,7 +21,7 @@ class InquiryTest extends TestCase
             \Database\Seeders\ContentSeeder::class,
         ]);
         User::create([
-            'name' => '管理员', 'email' => 'admin@demo-tenant-a.local', 'password' => bcrypt('secret123'),
+            'name' => '管理员', 'email' => 'admin@demo-tenant-a.local', 'password' => bcrypt('secret123'), 'is_super_admin' => true,
         ]);
     }
 

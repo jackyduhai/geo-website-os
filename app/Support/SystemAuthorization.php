@@ -37,9 +37,9 @@ class SystemAuthorization
             return true;
         }
 
-        // 目前没有 RBAC 系统，临时通过 email 判断
-        // TODO: Phase 5.4-I 后续接入正式 RBAC
-        if ($user->email === 'admin@example.test') {
+        // 安装器（geo:install）创建的首个管理员：显式超管标记（P-STEP 03）。
+        // 取代原「按业务种子邮箱硬编码判定」——超管身份属于用户数据，不属于代码。
+        if (! empty($user->is_super_admin)) {
             return true;
         }
 

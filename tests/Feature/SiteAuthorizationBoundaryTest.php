@@ -50,11 +50,25 @@ class SiteAuthorizationBoundaryTest extends TestCase
 
     public function test_admin_can_cross_site(): void
     {
+        // 超管授权由显式标记决定（P-STEP 03：geo:install 创建的首个管理员），
+        // 不再按任何特定邮箱硬编码判定。
         $admin = new \App\Models\User();
         $admin->id = 1;
-        $admin->email = 'admin@demo-tenant-a.local';
+        $admin->email = 'owner@installer.test';
+        $admin->is_super_admin = true;
 
         $this->assertTrue(SystemAuthorization::canCrossSite($admin));
+    }
+
+    public function test_same_email_without_flag_cannot_cross_site(): void
+    {
+        // 邮箱本身不授予任何权限（业务种子邮箱同理）
+        $plain = new \App\Models\User();
+        $plain->id = 3;
+        $plain->email = 'admin@demo-tenant-a.local';
+        $plain->is_super_admin = false;
+
+        $this->assertFalse(SystemAuthorization::canCrossSite($plain));
     }
 
     public function test_regular_user_cannot_cross_site(): void
