@@ -116,7 +116,7 @@ class AppServiceProvider extends ServiceProvider
             // 全站主 CTA 文案：后台「基础信息 → 主 CTA 按钮文案」可改，留空回退 config 默认
             $view->with('ctaText', trim((string) ($settings['nav_cta_text'] ?? '')) !== ''
                 ? $settings['nav_cta_text']
-                : (config('copy.nav.cta') ?? '免费获取样品'));
+                : (config('copy.nav.cta') ?? 'Contact us'));
             $view->with('publicFacts', Fact::publicMap());
             // 留言归因（首次落地页 / 外部来源 / UTM），由 CaptureAttribution 写入 session
             if (session()->isStarted()) {

@@ -17,6 +17,10 @@ class FactoryController extends Controller
     public function show(SchemaBuilder $schema)
     {
         $company    = Facts::company();
+        // 配置契约降级（P-STEP 04）：无业务数据时该业务页不渲染（404），不抛错
+        if (empty($company)) {
+            abort(404);
+        }
         $workshops  = Facts::workshops();
         $regions    = Facts::salesRegions();
         $certsReady = Facts::certificationsReady();

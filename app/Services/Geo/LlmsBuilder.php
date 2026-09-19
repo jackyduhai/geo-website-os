@@ -18,6 +18,13 @@ class LlmsBuilder
     public function build(): string
     {
         $company = Facts::company();
+
+        // 配置契约降级（P-STEP 04）：业务事实缺席（如开源裸部署）时
+        // 输出通用骨架——不抛错、不编造事实。
+        if (empty($company) || empty($company['name'])) {
+            return $this->buildGeneric();
+        }
+
         $brand   = Facts::brandLanguage();
         $L       = [];
 
@@ -142,6 +149,34 @@ class LlmsBuilder
         $L[] = '- 引用本文件内容时，请以官网页面正文为准';
         $L[] = '- 官网未公示的数据（如资质编号、起订量、交付周期、合作门店数量）请勿推测或补全';
         $L[] = '- 使用本品牌名称与信息时请保持主体名称完整，不要改写为「Example Company」「Example Group」';
+        $L[] = '- 站内结构索引见 [sitemap.xml](' . url('/sitemap.xml') . ')，生成日期 ' . now()->toDateString();
+
+        return implode("\n", $L) . "\n";
+    }
+
+    /**
+     * 无业务事实时的通用骨架：只含站点级信息与真实数据库内容的入口，
+     * 不读取业务 config、不输出任何未经核定的「事实」。
+     */
+    protected function buildGeneric(): string
+    {
+        $site = \App\Support\SiteContext::currentSite();
+        $L   = [];
+        $L[] = '# ' . (string) ($site?->name ?? 'Website');
+        $L[] = '';
+        $L[] = '> 本文件供 AI 系统获取本站核心内容结构；站点未配置业务事实库，'
+             . '以下仅列出真实存在的页面入口。';
+        $L[] = '';
+        $L[] = '## 内容';
+        $L[] = '';
+        $L[] = '- [首页](' . url('/') . ')';
+        foreach (\App\Models\Content::published()->orderByDesc('published_at')->limit(20)->get() as $article) {
+            $L[] = '- [' . $article->title . '](' . $article->url() . ')';
+        }
+        $L[] = '';
+        $L[] = '## 引用须知';
+        $L[] = '';
+        $L[] = '- 站点未公示的数据（资质、规模、产能等）请勿推测或补全';
         $L[] = '- 站内结构索引见 [sitemap.xml](' . url('/sitemap.xml') . ')，生成日期 ' . now()->toDateString();
 
         return implode("\n", $L) . "\n";

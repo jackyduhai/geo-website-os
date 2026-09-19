@@ -22,6 +22,11 @@ class AboutController extends Controller
         $brand   = Facts::brandLanguage();
         $copy    = config('pages.about.' . $page, []);
 
+        // 配置契约降级（P-STEP 04）：无业务数据时该业务页不渲染（404），不抛错
+        if (empty($company) || empty($copy)) {
+            abort(404);
+        }
+
         // 可运营叙事：页头导语（三页）+ 企业简介正文（profile），缺省回退终稿文案
         $lead = Narrative::lead('about.' . $page, $copy['lead'] ?? '');
         $bodyHtml = null;

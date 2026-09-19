@@ -17,6 +17,10 @@ class CooperationController extends Controller
     public function show(SchemaBuilder $schema)
     {
         $coop = Facts::cooperation();
+        // 配置契约降级（P-STEP 04）：无业务数据时该业务页不渲染（404），不抛错
+        if (empty($coop)) {
+            abort(404);
+        }
         $faqs = config('pages.cooperation_faqs', []);
         $url  = url('/cooperation/');
         $lead = Narrative::lead('cooperation.lead', config('pages.narrative.cooperation.lead', ''));
