@@ -528,3 +528,93 @@ SeoMetaResolver::memo($entityType, $entityId, function() {
 7. 现有 contents.seo_* 字段保留作为过渡，后续阶段删除
 
 **下一步：** 5.6-B SeoMeta Schema / Migration
+
+---
+
+## 14. 架构修订：Content 与 Entity 为平行资源（5.6-C Final）
+
+### 14.1 修订背景
+
+经架构审查确认：
+- **Content** 和 **Entity** 是两类平行资源
+- 当前数据模型中：
+  - `contents` 表没有 `entity_id` 外键
+  - Content Model 没有 `entity()` 关系
+  - 不存在 Content → Entity 的正式数据库关联
+
+因此，原"跨资源统一继承链"设计需要修正为**按资源类型独立 Resolution Context**。
+
+### 14.2 Content SEO Resolution Chain（最终版）
+
+**Title:**
+```
+SeoMeta.title → Content.seo_title → Content.title → Site.name → System ("Website")
+```
+
+**Description:**
+```
+SeoMeta.description → Content.seo_desc → Content.summary → Site.description → System ("")
+```
+
+**Canonical:**
+```
+SeoMeta.canonical → UrlResolverInterface (generateCanonical)
+```
+
+**OG Image:**
+```
+SeoMeta.og_image_path → Content.og_image_id → Media.path → Content.cover_id → Media.path → Site.logo → null
+```
+
+**Noindex:**
+```
+SeoMeta.noindex → Content.noindex → false
+```
+
+### 14.3 Entity SEO Resolution Chain（最终版）
+
+**Title:**
+```
+SeoMeta.title → Entity.name → Site.name → System ("Website")
+```
+
+**Description:**
+```
+SeoMeta.description → Entity.summary → Entity.description → Site.description → System ("")
+```
+
+**Canonical:**
+```
+SeoMeta.canonical → UrlResolverInterface (generateCanonical)
+```
+
+**OG Image:**
+```
+SeoMeta.og_image_path → Entity.metadata.og_image → Site.logo → null
+```
+
+### 14.4 架构规则（冻结）
+
+1. **Content 与 Entity 为平行资源**
+   - 两者不存在正式数据库关联
+   - SEO Resolution 按资源类型独立进行
+
+2. **Resolver 只能沿正式定义的关系解析**
+   - 不得使用 slug/name 匹配等猜测方式建立隐式关联
+   - 不得在不存在显式 Relation 的情况下进行跨资源 fallback
+
+3. **Content SEO 不得读取 Entity 作为 fallback**
+   - Content Resolution 链中不包含 Entity.name / Entity.summary
+   - 这是架构约束，不是实现遗漏
+
+4. **未来 Content → Entity Resolution 需要独立架构阶段批准**
+   - 必须先建立正式 Relation Contract
+   - 再经过架构审查后才能加入 Resolution 链
+
+### 14.5 架构防回归测试
+
+`test_content_does_not_fallback_to_related_entity`
+
+- 验证 Content SEO Resolution 不读取 Entity 数据
+- 防止未来实现误将隐式 Entity 关联加入 Resolution 链
+- 这是架构约束的测试守护
