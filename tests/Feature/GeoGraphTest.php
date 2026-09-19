@@ -182,16 +182,19 @@ class GeoGraphTest extends TestCase
 
     public function test_content_seo_resolution_flows_into_graph(): void
     {
-        \App\Models\Content::create([
+        $content = \App\Models\Content::create([
             'site_id' => $this->site->id, 'type' => 'page', 'slug' => 'about-page',
-            'title' => 'About Title', 'seo_title' => 'About SEO Title',
-            'summary' => 'About summary', 'status' => 'published', 'published_at' => now(),
-            'noindex' => true,
+            'title' => 'About Title', 'summary' => 'About summary',
+            'status' => 'published', 'published_at' => now(),
+        ]);
+        // P0-B 后 noindex 唯一来源：SeoMeta
+        \App\Models\SeoMeta::create([
+            'site_id' => $this->site->id, 'content_id' => $content->id, 'noindex' => true,
         ]);
 
         $node = collect($this->graph()['contents'])->firstWhere('slug', 'about-page');
 
-        $this->assertSame('About SEO Title', $node['title'], '内容标题走统一 Resolution 链');
+        $this->assertSame('About Title', $node['title'], '内容标题走统一 Resolution 链');
         $this->assertSame('About summary', $node['description']);
         $this->assertTrue($node['noindex'], 'noindex 必须显式暴露给机器消费方');
         $this->assertSame('https://example.com/page/about-page', $node['canonical']);

@@ -211,10 +211,8 @@ class ContentController extends Controller
             'geo_explanation'  => ['nullable', 'string'],
             'geo_boundary'     => ['nullable', 'string'],
 
-            'seo_title'    => ['nullable', 'string', 'max:70'],
-            'seo_desc'     => ['nullable', 'string', 'max:180'],
-            'canonical'    => ['nullable', 'string', 'max:255'],
-            'noindex'      => ['nullable', 'boolean'],
+            // legacy SEO 字段（seo_title/seo_desc/canonical/noindex）已随 P0-B 移除：
+            // 内容级 SEO 由独立 SeoMeta 管理（SeoMetaResolver 统一 Resolution）。
             'lock_manual'  => ['nullable', 'boolean'],
 
             'owner'        => ['nullable', 'string', 'max:60'],
@@ -273,7 +271,6 @@ class ContentController extends Controller
         $data['geo_key_facts'] = $keyFacts;
 
         $data['fact_refs'] = array_values((array) $request->input('fact_refs', []));
-        $data['noindex'] = $request->boolean('noindex');
         $data['lock_manual'] = $request->boolean('lock_manual');
 
         // 封面图：直接上传即入媒体库并关联；勾选移除则清空。未上传也未移除时保持原封面。
@@ -313,7 +310,7 @@ class ContentController extends Controller
                 'title', 'slug', 'summary', 'body', 'type', 'category_id', 'group_id',
                 'geo_conclusion', 'geo_explanation', 'geo_evidence', 'geo_boundary',
                 'geo_faq', 'geo_key_facts', 'fact_refs', 'owner', 'reviewed_at',
-                'review_due', 'source_note', 'seo_title', 'seo_desc', 'canonical', 'noindex',
+                'review_due', 'source_note',
                 'status', 'published_at',
             ]),
         ]);

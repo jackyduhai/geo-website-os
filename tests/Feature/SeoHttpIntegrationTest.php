@@ -134,9 +134,7 @@ class SeoHttpIntegrationTest extends TestCase
         $category = $this->category('news');
         $content = $this->content($category, 'resolver-article', [
             'title'     => 'Content Title',
-            'seo_title' => 'Content SEO Title',
             'summary'   => 'Content Summary',
-            'seo_desc'  => 'Content SEO Desc',
             'cover_id'  => $cover->id,
         ]);
 
@@ -145,16 +143,16 @@ class SeoHttpIntegrationTest extends TestCase
         $html = $this->get('/news/resolver-article')->assertOk()->getContent();
 
         // <title>：Content 页不传 title_full，站点后缀由布局层统一拼接，
-        // 但前缀必须是 Resolver 的 title（Content SEO Title 优先于 Content.title）。
+        // 但前缀必须是 Resolver 的 title（无 SeoMeta 时取 Content.title）。
         $this->assertStringContainsString('<title>' . $expected->title, $html);
-        $this->assertSame('Content SEO Title', $expected->title);
-        $this->assertSame('Content SEO Desc', $expected->description);
+        $this->assertSame('Content Title', $expected->title);
+        $this->assertSame('Content Summary', $expected->description);
         $this->assertStringContainsString('<meta name="description" content="' . $expected->description . '">', $html);
         $this->assertStringContainsString('<link rel="canonical" href="' . $expected->canonical . '">', $html);
         // canonical：HTTPS、无查询串、内容页无尾斜杠，且来自 UrlResolver 而非旧 URL 生成器
         $this->assertSame('https://example.com/news/resolver-article', $expected->canonical);
         $this->assertStringContainsString('<meta property="og:title" content="' . $expected->ogTitle . '">', $html);
-        $this->assertSame('Content SEO Title', $expected->ogTitle);
+        $this->assertSame('Content Title', $expected->ogTitle);
         $this->assertStringContainsString('<meta property="og:description" content="' . $expected->ogDescription . '">', $html);
         $this->assertStringContainsString('<meta property="og:image" content="' . $expected->ogImage . '">', $html);
         $this->assertSame('/uploads/cover.jpg', $expected->ogImage);
@@ -181,8 +179,7 @@ class SeoHttpIntegrationTest extends TestCase
         $category = $this->category('news');
         $content = $this->content($category, 'override-article', [
             'title'     => 'Content Title',
-            'seo_title' => 'Content SEO Title',
-            'seo_desc'  => 'Content SEO Desc',
+            'summary'   => 'Content Summary',
             'cover_id'  => $cover->id,
         ]);
 
@@ -216,32 +213,20 @@ class SeoHttpIntegrationTest extends TestCase
     // 4. Content fallback：无 SeoMeta 时 HTML 沿继承链回退
     // ---------------------------------------------------------------
 
-    public function test_content_falls_back_to_seo_fields_then_title_in_html(): void
+    public function test_content_falls_back_to_summary_in_html(): void
     {
-        // 无 SeoMeta：Content.seo_title / seo_desc 是第二优先级
+        // P0-B 后链：SeoMeta → Content.title / summary → Site → System
+        // 无 SeoMeta 时：标题取 Content.title，描述取 Content.summary。
         $category = $this->category('news');
-        $this->content($category, 'legacy-seo-article', [
-            'title'     => 'Plain Title',
-            'seo_title' => 'Legacy SEO Title',
-            'seo_desc'  => 'Legacy SEO Desc',
+        $this->content($category, 'plain-article', [
+            'title'   => 'Plain Title Only',
+            'summary' => 'Plain Summary',
         ]);
-
-        $html = $this->get('/news/legacy-seo-article')->assertOk()->getContent();
-
-        $this->assertStringContainsString('<title>Legacy SEO Title', $html);
-        $this->assertStringContainsString('<meta name="description" content="Legacy SEO Desc">', $html);
-    }
-
-    public function test_content_falls_back_to_title_then_site_in_html(): void
-    {
-        // 无 SeoMeta、无 seo_title：标题取 Content.title；无 summary/seo_desc：描述回退 Site.description
-        $category = $this->category('news');
-        $this->content($category, 'plain-article', ['title' => 'Plain Title Only']);
 
         $html = $this->get('/news/plain-article')->assertOk()->getContent();
 
         $this->assertStringContainsString('<title>Plain Title Only', $html);
-        $this->assertStringContainsString('<meta name="description" content="Site Description">', $html);
+        $this->assertStringContainsString('<meta name="description" content="Plain Summary">', $html);
     }
 
     // ---------------------------------------------------------------
@@ -255,9 +240,7 @@ class SeoHttpIntegrationTest extends TestCase
         $this->content($category, 'knowledge-article', [
             'type'      => 'article',
             'title'     => 'Knowledge Article Title',
-            'seo_title' => 'Knowledge SEO Title',
             'summary'   => 'Knowledge Summary',
-            'seo_desc'  => 'Knowledge SEO Desc',
             'cover_id'  => $cover->id,
         ]);
 
@@ -265,8 +248,8 @@ class SeoHttpIntegrationTest extends TestCase
 
         // /knowledge/{slug} 命中 KnowledgeController::channel，非栏目 slug
         // 转交 PageController::dispatch → resolveContent → Blade。SEO 必须仍是 Resolver 输出。
-        $this->assertStringContainsString('<title>Knowledge SEO Title', $html);
-        $this->assertStringContainsString('<meta name="description" content="Knowledge SEO Desc">', $html);
+        $this->assertStringContainsString('<title>Knowledge Article Title', $html);
+        $this->assertStringContainsString('<meta name="description" content="Knowledge Summary">', $html);
         $this->assertStringContainsString('<link rel="canonical" href="https://example.com/article/knowledge-article">', $html);
         $this->assertStringContainsString('<meta property="og:image" content="/uploads/knowledge-cover.jpg">', $html);
         $this->assertStringContainsString('<meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1">', $html);

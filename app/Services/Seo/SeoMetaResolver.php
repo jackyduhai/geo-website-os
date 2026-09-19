@@ -166,9 +166,9 @@ class SeoMetaResolver
             ?? $this->mediaPath($content->cover_id)
             ?? $fallback['ogImage'];
 
-        // Title chain: SeoMeta -> Content.seo_title -> Content.title -> Site -> System
+        // Title chain (P-STEP 07 后)：SeoMeta -> Content.title -> Site -> System
+        // （legacy Content.seo_title 层随 P0-B backfill 完成后移除，见 ADR）
         $title = $seoMeta?->title
-            ?? $content->seo_title
             ?? $content->title
             ?? $fallback['title'];
 
@@ -180,9 +180,8 @@ class SeoMetaResolver
             $title = self::SYSTEM_DEFAULT_TITLE;
         }
 
-        // Description chain: SeoMeta -> Content.seo_desc -> Content.summary -> Site -> System
+        // Description chain (P-STEP 07 后)：SeoMeta -> Content.summary -> Site -> System
         $description = $seoMeta?->description
-            ?? $content->seo_desc
             ?? $content->summary
             ?? $fallback['description'];
 
@@ -207,7 +206,7 @@ class SeoMetaResolver
             ogImage: $ogImage,
             ogType: $seoMeta?->og_type ?? 'article',
             twitterCard: $seoMeta?->twitter_card ?? 'summary_large_image',
-            noindex: $seoMeta?->noindex ?? ($content->noindex ?? false),
+            noindex: $seoMeta?->noindex ?? false,
             nofollow: $seoMeta?->nofollow ?? false,
             robots: $seoMeta?->robots ?? [],
             schemaType: $seoMeta?->schema_type ?? null

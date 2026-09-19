@@ -41,7 +41,6 @@ class SeoMetaResolverTest extends TestCase
             'site_id' => $site->id,
             'type' => 'page',
             'title' => 'Content Title',
-            'seo_title' => 'Content SEO Title',
             'slug' => 'test-page',
             'status' => 'published',
         ]);
@@ -58,7 +57,7 @@ class SeoMetaResolverTest extends TestCase
         $this->assertEquals('SeoMeta Title', $result->title);
     }
 
-    public function test_title_content_seo_title_second_priority(): void
+    public function test_title_content_title_second_priority(): void
     {
         $site = Site::create([
             'name' => 'Site Name',
@@ -74,7 +73,6 @@ class SeoMetaResolverTest extends TestCase
             'site_id' => $site->id,
             'type' => 'page',
             'title' => 'Content Title',
-            'seo_title' => 'Content SEO Title',
             'slug' => 'test-page',
             'status' => 'published',
         ]);
@@ -82,7 +80,7 @@ class SeoMetaResolverTest extends TestCase
         $resolver = app(SeoMetaResolver::class);
         $result = $resolver->resolveContent($content);
 
-        $this->assertEquals('Content SEO Title', $result->title);
+        $this->assertEquals('Content Title', $result->title);
     }
 
     public function test_title_content_title_third_priority(): void
@@ -184,7 +182,6 @@ class SeoMetaResolverTest extends TestCase
             'site_id' => $site->id,
             'type' => 'page',
             'title' => 'Content Title',
-            'seo_desc' => 'Content SEO Desc',
             'summary' => 'Content Summary',
             'slug' => 'test-page',
             'status' => 'published',
@@ -202,36 +199,7 @@ class SeoMetaResolverTest extends TestCase
         $this->assertEquals('SeoMeta Description', $result->description);
     }
 
-    public function test_description_content_seo_desc_second_priority(): void
-    {
-        $site = Site::create([
-            'name' => 'Site Name',
-            'slug' => 'test-site',
-            'domain' => 'example.com',
-            'description' => 'Site Description',
-            'status' => 'active',
-            'is_default' => false,
-        ]);
-
-        SiteContext::setSite($site);
-
-        $content = Content::create([
-            'site_id' => $site->id,
-            'type' => 'page',
-            'title' => 'Content Title',
-            'seo_desc' => 'Content SEO Desc',
-            'summary' => 'Content Summary',
-            'slug' => 'test-page',
-            'status' => 'published',
-        ]);
-
-        $resolver = app(SeoMetaResolver::class);
-        $result = $resolver->resolveContent($content);
-
-        $this->assertEquals('Content SEO Desc', $result->description);
-    }
-
-    public function test_description_content_summary_third_priority(): void
+    public function test_description_content_summary_second_priority(): void
     {
         $site = Site::create([
             'name' => 'Site Name',
@@ -418,10 +386,10 @@ class SeoMetaResolverTest extends TestCase
          * Therefore Content SEO resolution chain does NOT include Entity.name / Entity.summary.
          *
          * This test verifies that Content resolution follows:
-         * SeoMeta -> Content.seo_title -> Content.title -> Site -> System
+         * SeoMeta -> Content.title -> Site -> System
          *
          * NOT:
-         * SeoMeta -> Content.seo_title -> Content.title -> Entity.name -> Site -> System
+         * SeoMeta -> Content.title -> Entity.name -> Site -> System
          *
          * The 5.6-A frozen contract mentions "Entity.name" in Content chain,
          * but current architecture has no Content -> Entity binding.
@@ -730,8 +698,9 @@ class SeoMetaResolverTest extends TestCase
     // noindex Tests
     // ==========================================
 
-    public function test_noindex_flag_from_content(): void
+    public function test_noindex_defaults_false_without_seo_meta(): void
     {
+        // P0-B 后：contents.noindex 列已删除，noindex 唯一来源是 SeoMeta.noindex
         $site = Site::create([
             'name' => 'Test Site',
             'slug' => 'test-site',
@@ -747,14 +716,13 @@ class SeoMetaResolverTest extends TestCase
             'type' => 'page',
             'title' => 'Test Page',
             'slug' => 'test-page',
-            'noindex' => true,
             'status' => 'published',
         ]);
 
         $resolver = app(SeoMetaResolver::class);
         $result = $resolver->resolveContent($content);
 
-        $this->assertTrue($result->noindex);
+        $this->assertFalse($result->noindex);
     }
 
     public function test_noindex_flag_from_seo_meta(): void

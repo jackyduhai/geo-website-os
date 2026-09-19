@@ -169,7 +169,7 @@ class V0911CmsAlignmentTest extends TestCase
         $this->assertStringNotContainsString('/about/company/', $sitemap);
         $this->assertStringNotContainsString('/products/chinese-marinade/', $sitemap);
 
-        // noindex 文章不进 sitemap
+        // noindex 文章不进 sitemap（P0-B 后 noindex 唯一来源：SeoMeta）
         $knowledge = Category::where('slug', 'knowledge')->firstOrFail();
         $hidden = new Content();
         $hidden->category_id = $knowledge->id;
@@ -178,8 +178,10 @@ class V0911CmsAlignmentTest extends TestCase
         $hidden->status = 'published';
         $hidden->published_at = now();
         $hidden->body = '正文。';
-        $hidden->noindex = true;
         $hidden->save();
+        \App\Models\SeoMeta::create([
+            'site_id' => $hidden->site_id, 'content_id' => $hidden->id, 'noindex' => true,
+        ]);
 
         $sitemap2 = $this->get('/sitemap.xml')->assertOk()->getContent();
         $this->assertStringNotContainsString('/knowledge/noindex-article', $sitemap2);

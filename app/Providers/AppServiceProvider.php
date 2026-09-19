@@ -17,7 +17,7 @@ use App\Contracts\UrlResolverInterface;
 use App\Services\Seo\GenericUrlResolver;
 use App\Support\PageCache;
 use App\Support\SiteCacheKey;
-use App\Support\ExampleUrlGenerator;
+use App\Support\GeoUrlGenerator;
 use Illuminate\Routing\UrlGenerator;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\View;
@@ -35,7 +35,7 @@ class AppServiceProvider extends ServiceProvider
             $routes = $app['router']->getRoutes();
             $app->instance('routes', $routes);
 
-            $url = new ExampleUrlGenerator(
+            $url = new GeoUrlGenerator(
                 $routes,
                 $app->rebinding('request', function ($app, $request) {
                     $app['url']->setRequest($request);

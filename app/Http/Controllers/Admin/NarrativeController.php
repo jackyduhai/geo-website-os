@@ -101,7 +101,6 @@ class NarrativeController extends Controller
                 'status'      => 'published',
                 'published_at' => now(),
                 'owner'       => 'narrative-cms',
-                'noindex'     => false,
                 'external_id' => null,
                 'external_source' => null,
                 'synced_at'   => null,

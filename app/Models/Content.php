@@ -46,7 +46,6 @@ class Content extends Model
         'geo_faq'       => 'array',
         'geo_key_facts' => 'array',
         'fact_refs'     => 'array',
-        'noindex'       => 'boolean',
         'lock_manual'   => 'boolean',
         'published_at'  => 'datetime',
         'synced_at'     => 'datetime',

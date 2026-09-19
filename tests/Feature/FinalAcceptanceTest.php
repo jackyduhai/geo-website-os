@@ -179,7 +179,7 @@ class FinalAcceptanceTest extends TestCase
         $content = \App\Models\Content::create([
             'site_id' => SiteContext::currentSite()->id, 'category_id' => $category->id,
             'type' => 'article', 'slug' => 'override-flow',
-            'title' => 'Plain Title', 'seo_title' => 'Legacy SEO Title',
+            'title' => 'Plain Title',
             'status' => 'published', 'published_at' => now(),
         ]);
         \App\Models\SeoMeta::create([

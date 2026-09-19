@@ -77,7 +77,11 @@ class SitemapRobotsTest extends TestCase
 
     public function test_sitemap_excludes_noindex_draft_and_inactive_category(): void
     {
-        $this->knowledgeContent('legacy-noindex', ['noindex' => true]);
+        // P0-B 后 noindex 唯一来源是 SeoMeta（contents.noindex 列已删除）
+        $noindexArticle = $this->knowledgeContent('legacy-noindex');
+        \App\Models\SeoMeta::create([
+            'site_id' => $this->site->id, 'content_id' => $noindexArticle->id, 'noindex' => true,
+        ]);
         $this->knowledgeContent('draft-article', ['status' => 'draft']);
 
         $inactive = Category::create([
@@ -97,14 +101,15 @@ class SitemapRobotsTest extends TestCase
         $this->assertNotContains(url('/archived-cat/inactive-cat-article'), $locs);
     }
 
-    public function test_sitemap_excludes_seo_meta_noindex_content(): void
+    public function test_sitemap_includes_indexable_content_with_seo_meta(): void
     {
-        $article = $this->knowledgeContent('seometa-noindex');
+        // 对照：有 SeoMeta 但未 noindex 的内容正常收录
+        $article = $this->knowledgeContent('seometa-ok');
         \App\Models\SeoMeta::create([
-            'site_id' => $this->site->id, 'content_id' => $article->id, 'noindex' => true,
+            'site_id' => $this->site->id, 'content_id' => $article->id, 'noindex' => false,
         ]);
 
-        $this->assertNotContains(url('/knowledge/seometa-noindex'), $this->locs());
+        $this->assertContains(url('/knowledge/seometa-ok'), $this->locs());
     }
 
     public function test_sitemap_is_site_scoped(): void

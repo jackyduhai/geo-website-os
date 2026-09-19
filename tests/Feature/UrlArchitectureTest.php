@@ -13,7 +13,7 @@ use Tests\TestCase;
  *
  * URL 责任边界（详见 docs/audit/url-architecture-boundaries.md）：
  *   - Canonical（SEO 规范地址）：UrlResolverInterface / GenericUrlResolver，唯一来源
- *   - 站内业务 URL：Demo Tenant AUrlGenerator（全局 url()，5.12 替换）
+ *   - 站内业务 URL：GeoUrlGenerator（原 Demo Tenant AUrlGenerator，P0-A 已通用化替换）
  *   - 语义公开路径：Content::url() / Category::url()（栏目路径 + slug）
  *   - 地址规范化：CanonicalizeSlash（尾斜杠）+ HandleRedirects（后台 301/302 规则）
  *

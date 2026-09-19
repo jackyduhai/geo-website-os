@@ -152,11 +152,8 @@
 
     {{-- ============ SEO ============ --}}
     <div class="card">
-      <h2><span class="label-with-tip">SEO 设置 <x-admin-tip text="两项均为可选项，留空则按标题、摘要规则自动生成。"/></span></h2>
-      <div class="form-row"><label><span class="label-with-tip">SEO Title <x-admin-tip text="浏览器标签与搜索结果标题，建议不超过 60 字。"/></span></label>
-        <input type="text" name="seo_title" value="{{ old('seo_title',$content->seo_title) }}"></div>
-      <div class="form-row mb-0"><label><span class="label-with-tip">Meta Description <x-admin-tip text="搜索结果摘要，建议不超过 150 字；留空取正文摘要。"/></span></label>
-        <textarea name="seo_desc" rows="2">{{ old('seo_desc',$content->seo_desc) }}</textarea></div>
+      <h2><span class="label-with-tip">SEO 设置</span></h2>
+      <p class="tbl-note">内容级 SEO（标题 / 描述 / canonical / noindex）由「SEO 元数据（SeoMeta）」统一管理，遵循继承链自动解析，此处不再单独维护。</p>
     </div>
   </div>
 
@@ -218,10 +215,8 @@
         <input type="date" name="review_due" value="{{ old('review_due', optional($content->review_due)->format('Y-m-d')) }}"></div>
       <div class="form-row"><label>来源 / 备注</label>
         <input type="text" name="source_note" value="{{ old('source_note',$content->source_note) }}" placeholder="如：企业内部资料 / 官网"></div>
-      <label class="checkline"><input type="checkbox" name="lock_manual" value="1" @checked(old('lock_manual',$content->lock_manual))>
+      <label class="checkline mb-0"><input type="checkbox" name="lock_manual" value="1" @checked(old('lock_manual',$content->lock_manual))>
         🔒 人工锁定（GEOFlow 等外部推送不得覆盖本页）</label>
-      <label class="checkline mb-0"><input type="checkbox" name="noindex" value="1" @checked(old('noindex',$content->noindex))>
-        noindex（不被搜索引擎收录，仅特殊页面使用）</label>
     </div>
 
     <div class="save-bar">

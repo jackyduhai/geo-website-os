@@ -73,7 +73,6 @@ class SitemapBuilder
         // config 页取代，不进 sitemap，避免跨分类重复地址。
         $knowledgeArticles = $this->filterIndexable(
             Content::published()
-                ->where('noindex', false)
                 ->whereHas('category', fn ($q) => $q->where('slug', 'knowledge'))
                 ->with('category.parent')
                 ->orderByDesc('published_at')->get()
@@ -103,7 +102,6 @@ class SitemapBuilder
         // 仅收录归属启用栏目的文章，避免停用栏目下的内容泄漏进 sitemap。
         $extraArticles = $this->filterIndexable(
             Content::published()
-                ->where('noindex', false)
                 ->whereHas('category', fn ($q) => $q->where('is_active', true))
                 ->with('category.parent')
                 ->orderByDesc('published_at')
