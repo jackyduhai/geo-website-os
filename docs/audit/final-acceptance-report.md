@@ -2,6 +2,13 @@
 
 > 执行模式：连续执行授权（STEP 01–10），每阶段 Gate PASS 后自动推进。
 > 基线：5.6-C（243eafa，500 tests / 1738 assertions）；STEP 01 起点 = 5.6-D 收尾（03726a8）。
+>
+> **复核结论（2026-09-19）：✅ PASS — GEO OS SEO/GEO Engine READY 正式接受。**
+> 反向审计确认：10 阶段 Gate 成立、571/2211/0/0 回归、架构未被破坏
+> （Content ↛ Entity、Resolver 不猜关系、SeoMeta=Override 层、平行资源、
+> Schema/GEO 不复制 Facts、Blade 零 SEO 计算、Sitemap 统一判定、多站隔离）。
+> Performance 结论边界：本地功能级基线，**不等价于生产压测结论**。
+> 两项债务特别标记（见 §6）。
 
 ## 1. 阶段完成状态
 
@@ -65,14 +72,25 @@ Sitemap/Robots 6、剩余 Controller SEO 12、终验 13。
 
 ## 6. Remaining Technical Debt（明确登记，不阻塞）
 
-1. `contents.seo_*` / `canonical` / `noindex` legacy 列与 Admin UI 保留（backfill 与
-   删列按 legacy-seo-source-audit.md 计划独立执行）。
-2. `ExampleUrlGenerator` 全局替换（5.12，需先建行为对拍测试）。
-3. 语义路径 vs canonical 形态双轨收敛（5.12）。
+**⚠️ P0 盯防项（复核特别标记）：**
+
+1. **ExampleUrlGenerator 双轨收敛**：当前 GenericUrlResolver（canonical）与
+   ExampleUrlGenerator（业务 url()）并存且都参与 URL 生成。必须在替换前完成
+   行为对拍并收敛，否则长期形成「SEO URL 一套、业务 URL 一套」，背离
+   Generic URL Architecture 目标。
+2. **contents.seo_* legacy 列**：现在不删是正确的。顺序必须保持：
+   Legacy field → 确认所有 Consumer → SeoMeta 完整承接 → 数据迁移 →
+   行为对拍 → 删除。**绝对不要跳步直接删。**
+
+**其余登记项：**
+
+3. 语义路径 vs canonical 形态双轨收敛（随 P0-1 一并处理）。
 4. 固定 IA 页逐页 SeoMeta 运营需先扩展绑定契约（经架构审查）。
 5. 长驻进程（queue worker）边界需补记忆化复位；SeoMeta 独立写入路径需挂 PageCache 失效。
 6. Blade 头部遗留设置兜底（seo_title_suffix / seo_default_desc / seo_og_image）
    在 SeoHeadComposer 单点保留，站点级 SeoMeta.title 接管后移除。
+7. **Performance 结论边界**：STEP 09 数据为本地功能级性能基线，
+   不能等价于生产环境压测结论（Performance Engineering PASS ≠ 容量证明）。
 
 ## 7. Final Risk List
 
