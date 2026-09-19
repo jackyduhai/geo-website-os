@@ -139,31 +139,8 @@ class Content extends Model
         }));
     }
 
-    // ---------- SEO 辅助 ----------
-
-    /** 最终用于 <title> 的文本 */
-    public function metaTitle(): string
-    {
-        return trim((string) $this->seo_title) !== ''
-            ? $this->seo_title
-            : $this->title;
-    }
-
-    /** 最终用于 meta description 的文本 */
-    public function metaDescription(): string
-    {
-        $text = trim((string) $this->seo_desc) !== '' ? $this->seo_desc : (string) $this->summary;
-        if ($text === '') {
-            $text = (string) $this->geo_conclusion;
-        }
-        return Str::limit(strip_tags($text), 150, '');
-    }
-
-    /** 规范链接 */
-    public function canonicalUrl(): string
-    {
-        return trim((string) $this->canonical) !== '' ? $this->canonical : $this->url();
-    }
+    // SEO Resolution 已统一收敛至 SeoMetaResolver（5.6-C 冻结契约）；
+    // legacy 辅助方法 metaTitle/metaDescription/canonicalUrl 已删除（STEP 08）。
 
     /** 前台地址：/{栏目完整路径}/{slug}，语义化且唯一 */
     public function url(): string
