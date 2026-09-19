@@ -4,7 +4,6 @@ namespace Tests\Feature;
 
 use App\Models\Content;
 use App\Models\Entity;
-use App\Models\Media;
 use App\Models\SeoMeta;
 use App\Models\Site;
 use App\Services\Seo\SeoMetaResolver;
@@ -407,6 +406,64 @@ class SeoMetaResolverTest extends TestCase
     }
 
     // ==========================================
+    // Cross-Entity Resolution Architecture Test
+    // ==========================================
+
+    public function test_content_does_not_fallback_to_related_entity(): void
+    {
+        /**
+         * Architecture Note:
+         * In current data model, Content and Entity have NO formal database relationship.
+         * Content has no entity_id foreign key.
+         * Therefore Content SEO resolution chain does NOT include Entity.name / Entity.summary.
+         *
+         * This test verifies that Content resolution follows:
+         * SeoMeta -> Content.seo_title -> Content.title -> Site -> System
+         *
+         * NOT:
+         * SeoMeta -> Content.seo_title -> Content.title -> Entity.name -> Site -> System
+         *
+         * The 5.6-A frozen contract mentions "Entity.name" in Content chain,
+         * but current architecture has no Content -> Entity binding.
+         * This needs architecture confirmation before implementation.
+         */
+
+        $site = Site::create([
+            'name' => 'Site Name',
+            'slug' => 'test-site',
+            'domain' => 'example.com',
+            'status' => 'active',
+            'is_default' => false,
+        ]);
+
+        SiteContext::setSite($site);
+
+        $entity = Entity::create([
+            'site_id' => $site->id,
+            'type' => 'product',
+            'slug' => 'test-product',
+            'name' => 'Entity Product Name',
+            'status' => 'published',
+        ]);
+
+        $content = Content::create([
+            'site_id' => $site->id,
+            'type' => 'page',
+            'title' => '',
+            'slug' => 'test-page',
+            'status' => 'published',
+        ]);
+
+        $resolver = app(SeoMetaResolver::class);
+        $result = $resolver->resolveContent($content);
+
+        // Falls back to Site Name, NOT Entity Product Name
+        // Because Content has no entity_id relationship
+        $this->assertEquals('Site Name', $result->title);
+        $this->assertNotEquals('Entity Product Name', $result->title);
+    }
+
+    // ==========================================
     // Canonical Tests
     // ==========================================
 
@@ -581,7 +638,7 @@ class SeoMetaResolverTest extends TestCase
 
         SiteContext::setSite($site);
 
-        $media = Media::create([
+        $media = \App\Models\Media::create([
             'site_id' => $site->id,
             'disk' => 'public',
             'path' => '/uploads/og-image.jpg',
@@ -618,7 +675,7 @@ class SeoMetaResolverTest extends TestCase
 
         SiteContext::setSite($site);
 
-        $media = Media::create([
+        $media = \App\Models\Media::create([
             'site_id' => $site->id,
             'disk' => 'public',
             'path' => '/uploads/cover.jpg',
@@ -777,7 +834,6 @@ class SeoMetaResolverTest extends TestCase
         $this->assertEquals('SEO A Title', $resultA->title);
         $this->assertStringContainsString('a.example.com', $resultA->canonical);
 
-        // Switch to Site B
         SiteContext::setSite($siteB);
         $this->assertStringContainsString('b.example.com', $resolver->resolveSite($siteB)->canonical);
     }
