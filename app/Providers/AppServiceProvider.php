@@ -74,9 +74,13 @@ class AppServiceProvider extends ServiceProvider
         \App\Support\SiteCacheKey::resetRequestMemo();
         \App\Services\Seo\SeoMetaResolver::resetRequestMemo();
         \App\Support\Theme\ThemeManager::resetRequestMemo();
+        \App\Support\Plugins\PluginManager::resetRequestMemo();
 
         // 主题架构（P-STEP 05）：激活主题的视图目录前置（同名覆盖 + 基础视图回退）
         \App\Support\Theme\ThemeManager::register();
+
+        // 插件架构（P-STEP 06）：boot 全部启用插件的 ServiceProvider
+        \App\Support\Plugins\PluginManager::register();
         self::$navTreeMemo = null;
         self::$mainMenuMemo = null;
         self::$footerExtraMemo = null;

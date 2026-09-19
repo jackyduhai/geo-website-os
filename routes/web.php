@@ -94,6 +94,8 @@ Route::post('/inquiry', [InquiryController::class, 'store'])
     ->middleware('throttle:6,1')->name('inquiry.store');
 
 // ---------- 栏目与内容（统一分发：知识文章、新闻等 DB 长文） ----------
+// plugins/ 前缀属于插件层（P-STEP 06 契约）：由插件自有路由承接，
+// 不进入统一分发器；未匹配的插件路径自然 404。
 Route::get('/{path}', [PageController::class, 'dispatch'])
-    ->where('path', '^(?!admin(?:/|$)|api(?:/|$)).+')
+    ->where('path', '^(?!admin(?:/|$)|api(?:/|$)|plugins(?:/|$)).+')
     ->name('page');

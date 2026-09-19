@@ -1,0 +1,6 @@
+{
+    "name": "Hello Example Plugin",
+    "version": "1.0.0",
+    "description": "Minimal example plugin demonstrating the extension contract: self-contained provider, own route prefix, no core modification.",
+    "provider": "Plugin\\Hello\\Providers\\HelloServiceProvider"
+}
