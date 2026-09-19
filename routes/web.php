@@ -36,6 +36,7 @@ Route::get('/sitemap.xml', [FeedController::class, 'sitemap'])->name('geo.sitema
 Route::get('/llms.txt',    [FeedController::class, 'llms'])->name('geo.llms');
 Route::get('/robots.txt',  [FeedController::class, 'robots'])->name('geo.robots');
 Route::get('/feed.xml',    [FeedController::class, 'rss'])->name('geo.rss');
+Route::get('/geo.json',    [FeedController::class, 'graph'])->name('geo.graph');
 
 // ---------- 搜索 ----------
 Route::get('/search', [SearchController::class, 'index'])->name('search');

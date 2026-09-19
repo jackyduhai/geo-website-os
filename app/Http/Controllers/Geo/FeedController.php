@@ -3,11 +3,12 @@
 namespace App\Http\Controllers\Geo;
 
 use App\Http\Controllers\Controller;
+use App\Services\Geo\GeoGraphBuilder;
 use App\Services\Geo\LlmsBuilder;
 use App\Services\Geo\SitemapBuilder;
 
 /**
- * GEO 产出：sitemap.xml / llms.txt / robots.txt / feed.xml
+ * GEO 产出：sitemap.xml / llms.txt / robots.txt / feed.xml / geo.json
  *
  * 全部动态生成，内容变更即生效，不需要手工维护文件。
  * robots.txt 里的爬虫清单在 config/geo.php 维护。
@@ -26,6 +27,17 @@ class FeedController extends Controller
     {
         return response($builder->build(), 200, [
             'Content-Type'  => 'text/plain; charset=UTF-8',
+            'Cache-Control' => 'public, max-age=3600',
+        ]);
+    }
+
+    /**
+     * 机器可读知识结构（STEP 06）：正式数据模型（主体/关系/内容/事实/SEO）的
+     * 统一 GEO 输出，site-scoped，供 AI 检索与生成引擎直接消费。
+     */
+    public function graph(GeoGraphBuilder $builder)
+    {
+        return response()->json($builder->build(), 200, [
             'Cache-Control' => 'public, max-age=3600',
         ]);
     }
