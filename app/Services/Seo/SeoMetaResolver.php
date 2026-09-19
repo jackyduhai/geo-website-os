@@ -15,9 +15,115 @@ class SeoMetaResolver
     private const SYSTEM_DEFAULT_TITLE = 'Website';
     private const SYSTEM_DEFAULT_DESCRIPTION = '';
 
+    /**
+     * 请求级记忆化（STEP 09）：同一请求内解析结果不变。
+     * 值为 false 表示「已查询、不存在」的负缓存，避免同请求内重复查库。
+     * 由 AppServiceProvider::boot 逐请求复位（FPM/serve 进程复用 static）。
+     */
+    private static array $siteSeoMemo = [];     // site_id => SeoMeta|false
+    private static array $contentSeoMemo = [];  // "site:content" => SeoMeta|false
+    private static array $entitySeoMemo = [];   // "site:entity" => SeoMeta|false
+    private static array $mediaPathMemo = [];   // media_id => ?string
+
     public function __construct(
         private UrlResolverInterface $urlResolver
     ) {}
+
+    public static function resetRequestMemo(): void
+    {
+        self::$siteSeoMemo = [];
+        self::$contentSeoMemo = [];
+        self::$entitySeoMemo = [];
+        self::$mediaPathMemo = [];
+    }
+
+    /** 批量预载 Content 级 SeoMeta（列表/图结构输出场景，消除 N+1） */
+    public function preloadContentSeoMetas(iterable $contents): void
+    {
+        $idsBySite = [];
+        foreach ($contents as $c) {
+            $idsBySite[$c->site_id][] = $c->id;
+        }
+        foreach ($idsBySite as $siteId => $ids) {
+            $found = SeoMeta::query()->where('site_id', $siteId)->whereIn('content_id', $ids)->get()
+                ->keyBy('content_id');
+            foreach ($ids as $id) {
+                self::$contentSeoMemo["{$siteId}:{$id}"] = $found->get($id) ?? false;
+            }
+        }
+    }
+
+    /** 批量预载 Entity 级 SeoMeta */
+    public function preloadEntitySeoMetas(iterable $entities): void
+    {
+        $idsBySite = [];
+        foreach ($entities as $e) {
+            $idsBySite[$e->site_id][] = $e->id;
+        }
+        foreach ($idsBySite as $siteId => $ids) {
+            $found = SeoMeta::query()->where('site_id', $siteId)->whereIn('entity_id', $ids)->get()
+                ->keyBy('entity_id');
+            foreach ($ids as $id) {
+                self::$entitySeoMemo["{$siteId}:{$id}"] = $found->get($id) ?? false;
+            }
+        }
+    }
+
+    /** 批量预载 Media path（OG 图片解析链） */
+    public function preloadMediaPaths(iterable $mediaIds): void
+    {
+        $ids = collect($mediaIds)->filter()->unique()->values();
+        $missing = $ids->reject(fn ($id) => array_key_exists((string) $id, self::$mediaPathMemo)
+            || array_key_exists($id, self::$mediaPathMemo));
+        if ($missing->isNotEmpty()) {
+            Media::query()->whereIn('id', $missing)->get()->each(function (Media $m) {
+                self::$mediaPathMemo[$m->id] = $m->path;
+            });
+        }
+        foreach ($ids as $id) {
+            if (! array_key_exists($id, self::$mediaPathMemo)) {
+                self::$mediaPathMemo[$id] = null;
+            }
+        }
+    }
+
+    private function contentSeoMeta(int $siteId, int $contentId): ?SeoMeta
+    {
+        $key = "{$siteId}:{$contentId}";
+        if (! array_key_exists($key, self::$contentSeoMemo)) {
+            self::$contentSeoMemo[$key] = SeoMeta::query()
+                ->where('site_id', $siteId)
+                ->where('content_id', $contentId)
+                ->first() ?? false;
+        }
+
+        return self::$contentSeoMemo[$key] ?: null;
+    }
+
+    private function entitySeoMeta(int $siteId, int $entityId): ?SeoMeta
+    {
+        $key = "{$siteId}:{$entityId}";
+        if (! array_key_exists($key, self::$entitySeoMemo)) {
+            self::$entitySeoMemo[$key] = SeoMeta::query()
+                ->where('site_id', $siteId)
+                ->where('entity_id', $entityId)
+                ->first() ?? false;
+        }
+
+        return self::$entitySeoMemo[$key] ?: null;
+    }
+
+    private function mediaPath(?int $mediaId): ?string
+    {
+        if ($mediaId === null) {
+            return null;
+        }
+        if (! array_key_exists($mediaId, self::$mediaPathMemo)) {
+            self::$mediaPathMemo[$mediaId] = Media::find($mediaId)?->path;
+        }
+
+        return self::$mediaPathMemo[$mediaId];
+    }
 
     /**
      * Resolve SEO meta for site-level
@@ -50,16 +156,14 @@ class SeoMetaResolver
     {
         $site = SiteContext::currentSite();
 
-        $seoMeta = SeoMeta::query()
-            ->where('site_id', $content->site_id)
-            ->where('content_id', $content->id)
-            ->first();
+        $seoMeta = $this->contentSeoMeta($content->site_id, $content->id);
 
         $fallback = $this->siteFallback($site);
 
         // OG Image: SeoMeta -> Content.og_image_id -> Content.cover_id -> Site
         $ogImage = $seoMeta?->og_image_path
-            ?? $this->resolveContentOgImage($content)
+            ?? $this->mediaPath($content->og_image_id)
+            ?? $this->mediaPath($content->cover_id)
             ?? $fallback['ogImage'];
 
         // Title chain: SeoMeta -> Content.seo_title -> Content.title -> Site -> System
@@ -117,10 +221,7 @@ class SeoMetaResolver
     {
         $site = SiteContext::currentSite();
 
-        $seoMeta = SeoMeta::query()
-            ->where('site_id', $entity->site_id)
-            ->where('entity_id', $entity->id)
-            ->first();
+        $seoMeta = $this->entitySeoMeta($entity->site_id, $entity->id);
 
         $fallback = $this->siteFallback($site);
 
@@ -159,39 +260,19 @@ class SeoMetaResolver
     }
 
     /**
-     * Resolve content OG image via Media relationship
-     */
-    private function resolveContentOgImage(Content $content): ?string
-    {
-        // Try og_image_id first
-        if ($content->og_image_id) {
-            $media = Media::find($content->og_image_id);
-            if ($media) {
-                return $media->path;
-            }
-        }
-
-        // Try cover_id second
-        if ($content->cover_id) {
-            $media = Media::find($content->cover_id);
-            if ($media) {
-                return $media->path;
-            }
-        }
-
-        return null;
-    }
-
-    /**
      * Find site-level SeoMeta
      */
     private function findSiteLevelSeo(Site $site): ?SeoMeta
     {
-        return SeoMeta::query()
-            ->where('site_id', $site->id)
-            ->whereNull('content_id')
-            ->whereNull('entity_id')
-            ->first();
+        if (! array_key_exists($site->id, self::$siteSeoMemo)) {
+            self::$siteSeoMemo[$site->id] = SeoMeta::query()
+                ->where('site_id', $site->id)
+                ->whereNull('content_id')
+                ->whereNull('entity_id')
+                ->first() ?? false;
+        }
+
+        return self::$siteSeoMemo[$site->id] ?: null;
     }
 
     /**

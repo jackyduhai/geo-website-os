@@ -60,13 +60,20 @@ class GeoGraphBuilder
         ])->values()->all();
     }
 
-    /** 主体：全部 published entity，SEO 字段经 resolveEntity 统一解析 */
+    /** 主体：全部 published entity，SEO 字段经 resolveEntity 统一解析（批量预载消除 N+1） */
     protected function entities(): array
     {
-        return Entity::query()
+        $entities = Entity::query()
             ->where('status', Entity::STATUS_PUBLISHED)
             ->orderBy('type')->orderBy('slug')
-            ->get()
+            ->get();
+
+        $this->resolver->preloadEntitySeoMetas($entities);
+        $this->resolver->preloadMediaPaths($entities->map(
+            fn (Entity $e) => is_array($e->metadata) ? ($e->metadata['og_image'] ?? null) : null
+        ));
+
+        return $entities
             ->map(fn (Entity $e) => $this->entityNode($e))
             ->all();
     }
@@ -88,39 +95,55 @@ class GeoGraphBuilder
         ];
     }
 
-    /** 正式关系：仅输出两端均为当前站点主体的显式 EntityRelation */
+    /** 正式关系：仅输出两端均为当前站点主体的显式 EntityRelation（批量取两端实体，消除 N+1） */
     protected function relations(): array
     {
         $siteId = SiteContext::currentSite()?->id;
 
-        return EntityRelation::query()
+        $relations = EntityRelation::query()
             ->where('site_id', $siteId)
             ->orderBy('sort_order')
+            ->get();
+
+        $entityIds = $relations->flatMap(fn ($r) => [$r->from_entity_id, $r->to_entity_id])->unique();
+        $published = Entity::query()
+            ->whereIn('id', $entityIds)
+            ->where('status', Entity::STATUS_PUBLISHED)
             ->get()
-            ->map(fn (EntityRelation $r) => [
-                'from'          => $this->entityRef($r->from_entity_id),
-                'to'            => $this->entityRef($r->to_entity_id),
-                'relation_type' => $r->relation_type,
-                'sort_order'    => $r->sort_order,
-            ])
-            ->filter(fn ($r) => $r['from'] !== null && $r['to'] !== null)
+            ->keyBy('id');
+
+        return $relations
+            ->map(function (EntityRelation $r) use ($published) {
+                $from = $published->get($r->from_entity_id);
+                $to = $published->get($r->to_entity_id);
+                if (! $from || ! $to) {
+                    return null;
+                }
+
+                return [
+                    'from'          => 'entity/' . $from->type . '/' . $from->slug,
+                    'to'            => 'entity/' . $to->type . '/' . $to->slug,
+                    'relation_type' => $r->relation_type,
+                    'sort_order'    => $r->sort_order,
+                ];
+            })
+            ->filter()
             ->values()
             ->all();
     }
 
-    protected function entityRef(int $entityId): ?string
-    {
-        $e = Entity::query()->where('status', Entity::STATUS_PUBLISHED)->find($entityId);
-
-        return $e ? 'entity/' . $e->type . '/' . $e->slug : null;
-    }
-
-    /** 内容：published content，标题/摘要走统一 SEO Resolution（SeoMeta → Content → Site） */
+    /** 内容：published content，标题/摘要走统一 SEO Resolution（批量预载消除 N+1） */
     protected function contents(): array
     {
-        return Content::published()
-            ->orderByDesc('published_at')
-            ->get()
+        $contents = Content::published()->orderByDesc('published_at')->get();
+
+        $this->resolver->preloadContentSeoMetas($contents);
+        $this->resolver->preloadMediaPaths($contents->flatMap(
+            fn (Content $c) => [$c->og_image_id, $c->cover_id]
+        ));
+        $contents->load('category.parent');
+
+        return $contents
             ->map(function (Content $c) {
                 $seo = $this->resolver->resolveContent($c);
 

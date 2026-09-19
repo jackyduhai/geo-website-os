@@ -70,6 +70,9 @@ class AppServiceProvider extends ServiceProvider
         Group::flushKnowledgeMemo();
         \App\Support\Narrative::flush();
         \App\Support\Copy::flush();
+        \App\Models\Scopes\SiteScope::resetRequestMemo();
+        \App\Support\SiteCacheKey::resetRequestMemo();
+        \App\Services\Seo\SeoMetaResolver::resetRequestMemo();
         self::$navTreeMemo = null;
         self::$mainMenuMemo = null;
         self::$footerExtraMemo = null;

@@ -18,18 +18,30 @@ use Illuminate\Support\Facades\Schema;
  */
 class SiteCacheKey
 {
+    /** 请求级记忆化：同一请求内站点 ID 不变，避免每次拼 key 都做 schema 内省 + 查库 */
+    private static ?int $siteIdMemo = null;
+
     /**
      * 获取当前站点 ID（单站点模式下为 default site）
      */
     public static function currentSiteId(): int
     {
-        if (Schema::hasTable('sites')) {
-            $id = Site::defaultId();
-            if ($id !== null) {
-                return $id;
-            }
+        if (self::$siteIdMemo !== null) {
+            return self::$siteIdMemo;
         }
-        return 1;
+
+        $id = 1;
+        if (Schema::hasTable('sites')) {
+            $id = Site::defaultId() ?? 1;
+        }
+
+        return self::$siteIdMemo = $id;
+    }
+
+    /** 请求级记忆化复位（AppServiceProvider::boot 调用） */
+    public static function resetRequestMemo(): void
+    {
+        self::$siteIdMemo = null;
     }
 
     /**

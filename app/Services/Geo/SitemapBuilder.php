@@ -75,6 +75,7 @@ class SitemapBuilder
             Content::published()
                 ->where('noindex', false)
                 ->whereHas('category', fn ($q) => $q->where('slug', 'knowledge'))
+                ->with('category.parent')
                 ->orderByDesc('published_at')->get()
         );
         foreach ($knowledgeArticles as $article) {
@@ -94,7 +95,7 @@ class SitemapBuilder
 
         // 后台可运营的自定义栏目（如新闻 /news/）：启用的列表/产品型栏目页收录；
         // 单页型（type=single）直接渲染其下文章，规范地址是文章 URL，故不重复收录栏目地址。
-        foreach (Category::where('is_active', true)->where('type', '!=', 'single')->orderBy('sort')->get() as $category) {
+        foreach (Category::where('is_active', true)->where('type', '!=', 'single')->with('parent')->orderBy('sort')->get() as $category) {
             $add($category->url(), 'weekly', '0.5');
         }
 
@@ -104,7 +105,7 @@ class SitemapBuilder
             Content::published()
                 ->where('noindex', false)
                 ->whereHas('category', fn ($q) => $q->where('is_active', true))
-                ->with('category')
+                ->with('category.parent')
                 ->orderByDesc('published_at')
                 ->get()
         );
