@@ -38,7 +38,7 @@ class PageController extends Controller
 
         // 2) 栏目
         if ($category = $this->matchCategory($segments)) {
-            return $this->renderCategory($request, $category, $schema);
+            return $this->renderCategory($request, $category, $schema, $seoResolver);
         }
 
         abort(404);
@@ -157,7 +157,7 @@ class PageController extends Controller
         ]);
     }
 
-    protected function renderCategory(Request $request, Category $category, SchemaBuilder $schema)
+    protected function renderCategory(Request $request, Category $category, SchemaBuilder $schema, SeoMetaResolver $seoResolver)
     {
         $crumbs = [];
         $chain = [];
@@ -178,7 +178,7 @@ class PageController extends Controller
                 ->orderByDesc('published_at')
                 ->first();
             if ($page) {
-                return $this->renderContent($page, $schema);
+                return $this->renderContent($page, $schema, $seoResolver);
             }
         }
 
