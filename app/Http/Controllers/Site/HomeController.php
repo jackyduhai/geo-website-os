@@ -8,8 +8,10 @@ use App\Models\Content;
 use App\Models\Fact;
 use App\Models\PageBlock;
 use App\Services\Geo\SchemaBuilder;
+use App\Services\Seo\SeoMetaResolver;
 use App\Support\Facts;
 use App\Support\HomeBlockDefaults;
+use App\Support\SiteContext;
 use Illuminate\Http\Request;
 
 /**
@@ -21,7 +23,7 @@ use Illuminate\Http\Request;
  */
 class HomeController extends Controller
 {
-    public function index(Request $request, SchemaBuilder $schema)
+    public function index(Request $request, SchemaBuilder $schema, SeoMetaResolver $seoResolver)
     {
         $blocks = PageBlock::forPage('home')->active()->with('category')->get();
         $byType = $blocks->keyBy('type');
@@ -96,15 +98,29 @@ class HomeController extends Controller
             $data['schemas'][] = $schema->faqPageFromList($faqPairs, url('/'));
         }
 
-        $siteName = (string) \App\Models\Setting::get('site_name', 'Example Food');
-        $slogan   = (string) \App\Models\Setting::get('site_slogan', $company['slogan'] ?? '');
-        $data['seo'] = [
-            'title_full'  => $siteName . ($slogan !== '' ? ' - ' . $slogan : ''),
-            'description' => (string) \App\Models\Setting::get('seo_default_desc', $this->defaultDesc($company)),
-            'canonical'   => url('/'),
-            'noindex'     => false,
-            'type'        => 'website',
-        ];
+        // SEO: 使用 SeoMetaResolver 统一解析
+        $currentSite = SiteContext::currentSite();
+        if ($currentSite) {
+            $seoResult = $seoResolver->resolveSite($currentSite);
+            $data['seo'] = [
+                'title'       => $seoResult->title,
+                'title_full'  => $seoResult->title,
+                'description' => $seoResult->description,
+                'canonical'   => $seoResult->canonical,
+                'noindex'     => $seoResult->noindex,
+                'type'        => $seoResult->ogType,
+                'image'       => $seoResult->ogImage,
+            ];
+        } else {
+            // Fallback: 开发环境兼容
+            $data['seo'] = [
+                'title_full'  => 'Website',
+                'description' => '',
+                'canonical'   => url('/'),
+                'noindex'     => false,
+                'type'        => 'website',
+            ];
+        }
 
         return view('site.home', $data);
     }
@@ -223,10 +239,5 @@ class HomeController extends Controller
             ['num' => count(Facts::workshops()), 'unit' => '大', 'label' => '自有生产车间'],
             ['num' => count(Facts::salesRegions()), 'unit' => '大区', 'label' => '全国销售覆盖'],
         ];
-    }
-
-    private function defaultDesc(array $company): string
-    {
-        return 'Example Food Co., Ltd.，深耕中式Sample Snack调味二十年，自有四大车间，提供Sample SnackSample Marinade、Sample Breading撒料、调味香精与调理鸡肉的配方定制、OEM/ODM 代工与经销合作。';
     }
 }

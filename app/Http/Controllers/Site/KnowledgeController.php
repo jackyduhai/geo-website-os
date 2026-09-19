@@ -7,6 +7,7 @@ use App\Models\Category;
 use App\Models\Content;
 use App\Models\Group;
 use App\Services\Geo\SchemaBuilder;
+use App\Services\Seo\SeoMetaResolver;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 
@@ -33,13 +34,13 @@ class KnowledgeController extends Controller
         return $this->render($schema, $items, null, '知识中心：选料、工艺配方与开店经营指南', $request);
     }
 
-    public function channel(string $channel, SchemaBuilder $schema, Request $request, PageController $page)
+    public function channel(string $channel, SchemaBuilder $schema, Request $request, PageController $page, SeoMetaResolver $seoResolver)
     {
         $group = Group::knowledgeChannels()->firstWhere('slug', $channel);
         // 不是启用栏目时，可能是扁平的知识文章 /knowledge/{slug}：转交统一分发器，
         // 由其按内容/栏目判定，仍找不到才 404（路由正则已放宽，不能在此直接 404）。
         if (! $group) {
-            return $page->dispatch($request, 'knowledge/' . $channel, $schema);
+            return $page->dispatch($request, 'knowledge/' . $channel, $schema, $seoResolver);
         }
 
         $items = Content::published()->with(['category', 'group', 'cover'])

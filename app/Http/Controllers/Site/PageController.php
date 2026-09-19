@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\Content;
 use App\Services\Geo\SchemaBuilder;
+use App\Services\Seo\SeoMetaResolver;
 use Illuminate\Http\Request;
 
 /**
@@ -21,7 +22,7 @@ use Illuminate\Http\Request;
  */
 class PageController extends Controller
 {
-    public function dispatch(Request $request, string $path, SchemaBuilder $schema)
+    public function dispatch(Request $request, string $path, SchemaBuilder $schema, SeoMetaResolver $seoResolver)
     {
         $segments = array_values(array_filter(explode('/', trim($path, '/'))));
         if (empty($segments)) {
@@ -32,7 +33,7 @@ class PageController extends Controller
         $slug    = (string) end($segments);
         $catSegs = array_slice($segments, 0, -1);
         if ($content = $this->matchContent($slug, $catSegs)) {
-            return $this->renderContent($content, $schema);
+            return $this->renderContent($content, $schema, $seoResolver);
         }
 
         // 2) 栏目
@@ -97,7 +98,7 @@ class PageController extends Controller
     // 渲染
     // ---------------------------------------------------------------
 
-    protected function renderContent(Content $content, SchemaBuilder $schema)
+    protected function renderContent(Content $content, SchemaBuilder $schema, SeoMetaResolver $seoResolver)
     {
         // 路径不匹配则跳到规范地址，避免同一内容多入口
         $requested = '/' . implode('/', array_slice(
@@ -130,6 +131,9 @@ class PageController extends Controller
             ->limit(4)
             ->get();
 
+        // SEO: 使用 SeoMetaResolver
+        $seoResult = $seoResolver->resolveContent($content);
+
         return view('site.content', [
             'content' => $content,
             'crumbs'  => $crumbList,
@@ -141,13 +145,14 @@ class PageController extends Controller
                 $schema->breadcrumb($crumbList),
             ],
             'seo' => [
-                'title'       => $content->metaTitle(),
-                'description' => $content->metaDescription(),
-                'canonical'   => $content->canonicalUrl(),
-                'noindex'     => $content->noindex,
+                'title'       => $seoResult->title,
+                'description' => $seoResult->description,
+                'canonical'   => $seoResult->canonical,
+                'noindex'     => $seoResult->noindex,
                 'type'        => 'article',
                 'published'   => $content->published_at?->toIso8601String(),
                 'modified'    => $content->updated_at?->toIso8601String(),
+                'image'       => $seoResult->ogImage,
             ],
         ]);
     }
