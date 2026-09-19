@@ -12,6 +12,9 @@ use App\Support\SiteContext;
 
 class SeoMetaResolver
 {
+    private const SYSTEM_DEFAULT_TITLE = 'Website';
+    private const SYSTEM_DEFAULT_DESCRIPTION = '';
+
     public function __construct(
         private UrlResolverInterface $urlResolver
     ) {}
@@ -24,12 +27,12 @@ class SeoMetaResolver
         $seoMeta = $this->findSiteLevelSeo($site);
 
         return new SeoResult(
-            title: $seoMeta?->title ?? $site->name,
-            description: $seoMeta?->description ?? $site->description,
+            title: $seoMeta?->title ?? $site->name ?? self::SYSTEM_DEFAULT_TITLE,
+            description: $seoMeta?->description ?? $site->description ?? self::SYSTEM_DEFAULT_DESCRIPTION,
             keywords: $seoMeta?->keywords ?? [],
             canonical: $seoMeta?->canonical ?? $this->urlResolver->generateCanonical('home'),
-            ogTitle: $seoMeta?->og_title ?? ($seoMeta?->title ?? $site->name),
-            ogDescription: $seoMeta?->og_description ?? ($seoMeta?->description ?? $site->description),
+            ogTitle: $seoMeta?->og_title ?? ($seoMeta?->title ?? $site->name ?? self::SYSTEM_DEFAULT_TITLE),
+            ogDescription: $seoMeta?->og_description ?? ($seoMeta?->description ?? $site->description ?? self::SYSTEM_DEFAULT_DESCRIPTION),
             ogImage: $seoMeta?->og_image_path ?? $site->logo,
             ogType: $seoMeta?->og_type ?? 'website',
             twitterCard: $seoMeta?->twitter_card ?? 'summary_large_image',
@@ -59,17 +62,44 @@ class SeoMetaResolver
             ?? $this->resolveContentOgImage($content)
             ?? $fallback['ogImage'];
 
+        // Title chain: SeoMeta -> Content.seo_title -> Content.title -> Site -> System
+        $title = $seoMeta?->title
+            ?? $content->seo_title
+            ?? $content->title
+            ?? $fallback['title'];
+
+        // Handle empty strings (treat as null)
+        if (empty($title)) {
+            $title = $fallback['title'];
+        }
+        if (empty($title)) {
+            $title = self::SYSTEM_DEFAULT_TITLE;
+        }
+
+        // Description chain: SeoMeta -> Content.seo_desc -> Content.summary -> Site -> System
+        $description = $seoMeta?->description
+            ?? $content->seo_desc
+            ?? $content->summary
+            ?? $fallback['description'];
+
+        if (empty($description)) {
+            $description = $fallback['description'];
+        }
+        if (empty($description)) {
+            $description = self::SYSTEM_DEFAULT_DESCRIPTION;
+        }
+
         return new SeoResult(
-            title: $seoMeta?->title ?? $content->seo_title ?? $content->title ?? $fallback['title'],
-            description: $seoMeta?->description ?? $content->seo_desc ?? $content->summary ?? $fallback['description'],
+            title: $title,
+            description: $description,
             keywords: $seoMeta?->keywords ?? [],
             // Canonical: SeoMeta -> UrlResolver (no Content.canonical as formal layer)
             canonical: $seoMeta?->canonical ?? $this->urlResolver->generateCanonical('content', [
                 'type' => $content->type,
                 'slug' => $content->slug,
             ]),
-            ogTitle: $seoMeta?->og_title ?? ($seoMeta?->title ?? $content->seo_title ?? $content->title ?? $fallback['title']),
-            ogDescription: $seoMeta?->og_description ?? ($seoMeta?->description ?? $content->seo_desc ?? $content->summary ?? $fallback['description']),
+            ogTitle: $seoMeta?->og_title ?? ($seoMeta?->title ?? $title),
+            ogDescription: $seoMeta?->og_description ?? ($seoMeta?->description ?? $description),
             ogImage: $ogImage,
             ogType: $seoMeta?->og_type ?? 'article',
             twitterCard: $seoMeta?->twitter_card ?? 'summary_large_image',
@@ -97,16 +127,27 @@ class SeoMetaResolver
         $metadata = $entity->metadata ?? [];
         $entityOgImage = $metadata['og_image'] ?? null;
 
+        // Title chain: SeoMeta -> Entity.name -> Site -> System
+        $title = $seoMeta?->title
+            ?? $entity->name
+            ?? $fallback['title'];
+
+        // Description chain: SeoMeta -> Entity.summary -> Entity.description -> Site -> System
+        $description = $seoMeta?->description
+            ?? $entity->summary
+            ?? $entity->description
+            ?? $fallback['description'];
+
         return new SeoResult(
-            title: $seoMeta?->title ?? $entity->name ?? $fallback['title'],
-            description: $seoMeta?->description ?? $entity->summary ?? $entity->description ?? $fallback['description'],
+            title: $title,
+            description: $description,
             keywords: $seoMeta?->keywords ?? [],
             canonical: $seoMeta?->canonical ?? $this->urlResolver->generateCanonical('entity', [
                 'type' => $entity->type,
                 'slug' => $entity->slug,
             ]),
-            ogTitle: $seoMeta?->og_title ?? ($seoMeta?->title ?? $entity->name ?? $fallback['title']),
-            ogDescription: $seoMeta?->og_description ?? ($seoMeta?->description ?? $entity->summary ?? $entity->description ?? $fallback['description']),
+            ogTitle: $seoMeta?->og_title ?? ($seoMeta?->title ?? $title),
+            ogDescription: $seoMeta?->og_description ?? ($seoMeta?->description ?? $description),
             ogImage: $seoMeta?->og_image_path ?? $entityOgImage ?? $fallback['ogImage'],
             ogType: $seoMeta?->og_type ?? 'website',
             twitterCard: $seoMeta?->twitter_card ?? 'summary_large_image',
@@ -161,8 +202,8 @@ class SeoMetaResolver
         $seo = $this->findSiteLevelSeo($site);
 
         return [
-            'title' => $seo?->title ?? $site->name,
-            'description' => $seo?->description ?? $site->description,
+            'title' => $seo?->title ?? $site->name ?? self::SYSTEM_DEFAULT_TITLE,
+            'description' => $seo?->description ?? $site->description ?? self::SYSTEM_DEFAULT_DESCRIPTION,
             'ogImage' => $seo?->og_image_path ?? $site->logo,
         ];
     }

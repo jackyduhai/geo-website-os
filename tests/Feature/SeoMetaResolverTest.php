@@ -22,31 +22,393 @@ class SeoMetaResolverTest extends TestCase
         SiteContext::clear();
     }
 
-    public function test_resolve_site_level_seo(): void
+    // ==========================================
+    // Title Resolution Chain Tests
+    // ==========================================
+
+    public function test_title_seo_meta_highest_priority(): void
     {
         $site = Site::create([
-            'name' => 'Test Site',
+            'name' => 'Site Name',
             'slug' => 'test-site',
-            'domain' => 'test.test',
-            'description' => 'Site description',
+            'domain' => 'example.com',
             'status' => 'active',
             'is_default' => false,
         ]);
 
         SiteContext::setSite($site);
 
+        $content = Content::create([
+            'site_id' => $site->id,
+            'type' => 'page',
+            'title' => 'Content Title',
+            'seo_title' => 'Content SEO Title',
+            'slug' => 'test-page',
+            'status' => 'published',
+        ]);
+
         SeoMeta::create([
             'site_id' => $site->id,
-            'title' => 'Site SEO Title',
-            'description' => 'Site SEO Description',
+            'content_id' => $content->id,
+            'title' => 'SeoMeta Title',
         ]);
 
         $resolver = app(SeoMetaResolver::class);
-        $result = $resolver->resolveSite($site);
+        $result = $resolver->resolveContent($content);
 
-        $this->assertEquals('Site SEO Title', $result->title);
-        $this->assertEquals('Site SEO Description', $result->description);
+        $this->assertEquals('SeoMeta Title', $result->title);
     }
+
+    public function test_title_content_seo_title_second_priority(): void
+    {
+        $site = Site::create([
+            'name' => 'Site Name',
+            'slug' => 'test-site',
+            'domain' => 'example.com',
+            'status' => 'active',
+            'is_default' => false,
+        ]);
+
+        SiteContext::setSite($site);
+
+        $content = Content::create([
+            'site_id' => $site->id,
+            'type' => 'page',
+            'title' => 'Content Title',
+            'seo_title' => 'Content SEO Title',
+            'slug' => 'test-page',
+            'status' => 'published',
+        ]);
+
+        $resolver = app(SeoMetaResolver::class);
+        $result = $resolver->resolveContent($content);
+
+        $this->assertEquals('Content SEO Title', $result->title);
+    }
+
+    public function test_title_content_title_third_priority(): void
+    {
+        $site = Site::create([
+            'name' => 'Site Name',
+            'slug' => 'test-site',
+            'domain' => 'example.com',
+            'status' => 'active',
+            'is_default' => false,
+        ]);
+
+        SiteContext::setSite($site);
+
+        $content = Content::create([
+            'site_id' => $site->id,
+            'type' => 'page',
+            'title' => 'Content Title',
+            'slug' => 'test-page',
+            'status' => 'published',
+        ]);
+
+        $resolver = app(SeoMetaResolver::class);
+        $result = $resolver->resolveContent($content);
+
+        $this->assertEquals('Content Title', $result->title);
+    }
+
+    public function test_title_site_name_fourth_priority(): void
+    {
+        $site = Site::create([
+            'name' => 'Site Name',
+            'slug' => 'test-site',
+            'domain' => 'example.com',
+            'status' => 'active',
+            'is_default' => false,
+        ]);
+
+        SiteContext::setSite($site);
+
+        $content = Content::create([
+            'site_id' => $site->id,
+            'type' => 'page',
+            'title' => '',
+            'slug' => 'test-page',
+            'status' => 'published',
+        ]);
+
+        $resolver = app(SeoMetaResolver::class);
+        $result = $resolver->resolveContent($content);
+
+        $this->assertEquals('Site Name', $result->title);
+    }
+
+    public function test_title_system_fallback(): void
+    {
+        $site = Site::create([
+            'name' => '',
+            'slug' => 'test-site',
+            'domain' => 'example.com',
+            'status' => 'active',
+            'is_default' => false,
+        ]);
+
+        SiteContext::setSite($site);
+
+        $content = Content::create([
+            'site_id' => $site->id,
+            'type' => 'page',
+            'title' => '',
+            'slug' => 'test-page',
+            'status' => 'published',
+        ]);
+
+        $resolver = app(SeoMetaResolver::class);
+        $result = $resolver->resolveContent($content);
+
+        $this->assertEquals('Website', $result->title);
+    }
+
+    // ==========================================
+    // Description Resolution Chain Tests
+    // ==========================================
+
+    public function test_description_seo_meta_highest_priority(): void
+    {
+        $site = Site::create([
+            'name' => 'Site Name',
+            'slug' => 'test-site',
+            'domain' => 'example.com',
+            'description' => 'Site Description',
+            'status' => 'active',
+            'is_default' => false,
+        ]);
+
+        SiteContext::setSite($site);
+
+        $content = Content::create([
+            'site_id' => $site->id,
+            'type' => 'page',
+            'title' => 'Content Title',
+            'seo_desc' => 'Content SEO Desc',
+            'summary' => 'Content Summary',
+            'slug' => 'test-page',
+            'status' => 'published',
+        ]);
+
+        SeoMeta::create([
+            'site_id' => $site->id,
+            'content_id' => $content->id,
+            'description' => 'SeoMeta Description',
+        ]);
+
+        $resolver = app(SeoMetaResolver::class);
+        $result = $resolver->resolveContent($content);
+
+        $this->assertEquals('SeoMeta Description', $result->description);
+    }
+
+    public function test_description_content_seo_desc_second_priority(): void
+    {
+        $site = Site::create([
+            'name' => 'Site Name',
+            'slug' => 'test-site',
+            'domain' => 'example.com',
+            'description' => 'Site Description',
+            'status' => 'active',
+            'is_default' => false,
+        ]);
+
+        SiteContext::setSite($site);
+
+        $content = Content::create([
+            'site_id' => $site->id,
+            'type' => 'page',
+            'title' => 'Content Title',
+            'seo_desc' => 'Content SEO Desc',
+            'summary' => 'Content Summary',
+            'slug' => 'test-page',
+            'status' => 'published',
+        ]);
+
+        $resolver = app(SeoMetaResolver::class);
+        $result = $resolver->resolveContent($content);
+
+        $this->assertEquals('Content SEO Desc', $result->description);
+    }
+
+    public function test_description_content_summary_third_priority(): void
+    {
+        $site = Site::create([
+            'name' => 'Site Name',
+            'slug' => 'test-site',
+            'domain' => 'example.com',
+            'description' => 'Site Description',
+            'status' => 'active',
+            'is_default' => false,
+        ]);
+
+        SiteContext::setSite($site);
+
+        $content = Content::create([
+            'site_id' => $site->id,
+            'type' => 'page',
+            'title' => 'Content Title',
+            'summary' => 'Content Summary',
+            'slug' => 'test-page',
+            'status' => 'published',
+        ]);
+
+        $resolver = app(SeoMetaResolver::class);
+        $result = $resolver->resolveContent($content);
+
+        $this->assertEquals('Content Summary', $result->description);
+    }
+
+    public function test_description_site_description_fourth_priority(): void
+    {
+        $site = Site::create([
+            'name' => 'Site Name',
+            'slug' => 'test-site',
+            'domain' => 'example.com',
+            'description' => 'Site Description',
+            'status' => 'active',
+            'is_default' => false,
+        ]);
+
+        SiteContext::setSite($site);
+
+        $content = Content::create([
+            'site_id' => $site->id,
+            'type' => 'page',
+            'title' => 'Content Title',
+            'summary' => '',
+            'slug' => 'test-page',
+            'status' => 'published',
+        ]);
+
+        $resolver = app(SeoMetaResolver::class);
+        $result = $resolver->resolveContent($content);
+
+        $this->assertEquals('Site Description', $result->description);
+    }
+
+    public function test_description_system_fallback(): void
+    {
+        $site = Site::create([
+            'name' => 'Site Name',
+            'slug' => 'test-site',
+            'domain' => 'example.com',
+            'description' => '',
+            'status' => 'active',
+            'is_default' => false,
+        ]);
+
+        SiteContext::setSite($site);
+
+        $content = Content::create([
+            'site_id' => $site->id,
+            'type' => 'page',
+            'title' => 'Content Title',
+            'summary' => '',
+            'slug' => 'test-page',
+            'status' => 'published',
+        ]);
+
+        $resolver = app(SeoMetaResolver::class);
+        $result = $resolver->resolveContent($content);
+
+        $this->assertEquals('', $result->description);
+    }
+
+    // ==========================================
+    // Entity Resolution Chain Tests
+    // ==========================================
+
+    public function test_entity_title_seo_meta_highest_priority(): void
+    {
+        $site = Site::create([
+            'name' => 'Site Name',
+            'slug' => 'test-site',
+            'domain' => 'example.com',
+            'status' => 'active',
+            'is_default' => false,
+        ]);
+
+        SiteContext::setSite($site);
+
+        $entity = Entity::create([
+            'site_id' => $site->id,
+            'type' => 'product',
+            'slug' => 'test-product',
+            'name' => 'Entity Name',
+            'status' => 'published',
+        ]);
+
+        SeoMeta::create([
+            'site_id' => $site->id,
+            'entity_id' => $entity->id,
+            'title' => 'SeoMeta Title',
+        ]);
+
+        $resolver = app(SeoMetaResolver::class);
+        $result = $resolver->resolveEntity($entity);
+
+        $this->assertEquals('SeoMeta Title', $result->title);
+    }
+
+    public function test_entity_title_entity_name_second_priority(): void
+    {
+        $site = Site::create([
+            'name' => 'Site Name',
+            'slug' => 'test-site',
+            'domain' => 'example.com',
+            'status' => 'active',
+            'is_default' => false,
+        ]);
+
+        SiteContext::setSite($site);
+
+        $entity = Entity::create([
+            'site_id' => $site->id,
+            'type' => 'product',
+            'slug' => 'test-product',
+            'name' => 'Entity Name',
+            'status' => 'published',
+        ]);
+
+        $resolver = app(SeoMetaResolver::class);
+        $result = $resolver->resolveEntity($entity);
+
+        $this->assertEquals('Entity Name', $result->title);
+    }
+
+    public function test_entity_description_summary_then_description(): void
+    {
+        $site = Site::create([
+            'name' => 'Site Name',
+            'slug' => 'test-site',
+            'domain' => 'example.com',
+            'status' => 'active',
+            'is_default' => false,
+        ]);
+
+        SiteContext::setSite($site);
+
+        $entity = Entity::create([
+            'site_id' => $site->id,
+            'type' => 'product',
+            'slug' => 'test-product',
+            'name' => 'Entity Name',
+            'summary' => 'Entity Summary',
+            'description' => 'Entity Description',
+            'status' => 'published',
+        ]);
+
+        $resolver = app(SeoMetaResolver::class);
+        $result = $resolver->resolveEntity($entity);
+
+        $this->assertEquals('Entity Summary', $result->description);
+    }
+
+    // ==========================================
+    // Canonical Tests
+    // ==========================================
 
     public function test_home_canonical_ends_with_slash(): void
     {
@@ -202,59 +564,9 @@ class SeoMetaResolverTest extends TestCase
         $this->assertEquals('https://custom.example.com/page', $result->canonical);
     }
 
-    public function test_title_resolution_chain(): void
-    {
-        $site = Site::create([
-            'name' => 'Site Name',
-            'slug' => 'test-site',
-            'domain' => 'example.com',
-            'status' => 'active',
-            'is_default' => false,
-        ]);
-
-        SiteContext::setSite($site);
-
-        $content = Content::create([
-            'site_id' => $site->id,
-            'type' => 'page',
-            'title' => 'Content Title',
-            'slug' => 'test-page',
-            'status' => 'published',
-        ]);
-
-        $resolver = app(SeoMetaResolver::class);
-        $result = $resolver->resolveContent($content);
-
-        // Falls back to content title when no SeoMeta
-        $this->assertEquals('Content Title', $result->title);
-    }
-
-    public function test_description_resolution_chain(): void
-    {
-        $site = Site::create([
-            'name' => 'Test Site',
-            'slug' => 'test-site',
-            'domain' => 'example.com',
-            'status' => 'active',
-            'is_default' => false,
-        ]);
-
-        SiteContext::setSite($site);
-
-        $content = Content::create([
-            'site_id' => $site->id,
-            'type' => 'page',
-            'title' => 'Test Page',
-            'slug' => 'test-page',
-            'summary' => 'Content Summary',
-            'status' => 'published',
-        ]);
-
-        $resolver = app(SeoMetaResolver::class);
-        $result = $resolver->resolveContent($content);
-
-        $this->assertEquals('Content Summary', $result->description);
-    }
+    // ==========================================
+    // OG Image Tests
+    // ==========================================
 
     public function test_og_image_from_content_og_image_id(): void
     {
@@ -357,6 +669,10 @@ class SeoMetaResolverTest extends TestCase
         $this->assertEquals('/site-logo.png', $result->ogImage);
     }
 
+    // ==========================================
+    // noindex Tests
+    // ==========================================
+
     public function test_noindex_flag_from_content(): void
     {
         $site = Site::create([
@@ -416,6 +732,10 @@ class SeoMetaResolverTest extends TestCase
         $this->assertTrue($result->noindex);
     }
 
+    // ==========================================
+    // Site Isolation Tests
+    // ==========================================
+
     public function test_site_isolation_seo_meta(): void
     {
         $siteA = Site::create([
@@ -461,6 +781,10 @@ class SeoMetaResolverTest extends TestCase
         SiteContext::setSite($siteB);
         $this->assertStringContainsString('b.example.com', $resolver->resolveSite($siteB)->canonical);
     }
+
+    // ==========================================
+    // SeoResult toArray
+    // ==========================================
 
     public function test_seo_result_to_array(): void
     {
