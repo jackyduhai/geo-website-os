@@ -8,7 +8,7 @@ use App\Support\Facts;
 use App\Support\Narrative;
 
 /**
- * 应用场景（六类客户生意分诊，config/facts 驱动）
+ * 应用场景（按客户应用类型分诊，config/facts 驱动）
  * 取代旧 ScenarioController / config('scenarios')，URL 由 /scenarios 迁到 /solutions。
  */
 class SolutionController extends Controller
@@ -17,6 +17,10 @@ class SolutionController extends Controller
     {
         $scenes = Facts::scenes();
         $lead = Narrative::lead('solutions.index.lead', config('pages.narrative.solutions_index.lead', ''));
+        $company    = Facts::company();
+        $brandName  = ! empty($company['brand']) ? $company['brand'] : ($company['name'] ?? '');
+        $sceneCnt   = count($scenes);
+        $sceneNames = implode('、', array_map(fn ($s) => $s['name'], $scenes));
         $crumbs = [
             ['name' => '首页', 'url' => url('/')],
             ['name' => '应用场景', 'url' => url('/solutions/')],
@@ -25,7 +29,7 @@ class SolutionController extends Controller
         $itemList = [
             '@context'        => 'https://schema.org',
             '@type'           => 'ItemList',
-            'name'            => 'Example六类应用场景',
+            'name'            => $brandName . '应用场景',
             'itemListElement' => array_values(array_map(function ($s, $i) {
                 return [
                     '@type'    => 'ListItem',
@@ -46,8 +50,8 @@ class SolutionController extends Controller
                 $itemList,
             ])),
             'seo' => [
-                'title'       => '你的店属于哪一类？六类门店Sample Marinade组合方案',
-                'description' => 'Sample Snack创业小店、夜市烧烤、连锁外卖、中餐食堂、轻食健身、卤味烤串六类场景，给出对应Sample MarinadeSample Breading撒料组合、为什么这么配与真实工艺参数。',
+                'title'       => '应用场景：' . $sceneCnt . '类行业解决方案',
+                'description' => '覆盖' . $sceneNames . '等' . $sceneCnt . '类应用场景，给出对应产品组合、选型理由与关键工艺参数。',
                 'canonical'   => url('/solutions/'),
                 'noindex'     => false,
                 'type'        => 'website',

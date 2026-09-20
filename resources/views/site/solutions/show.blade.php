@@ -11,7 +11,7 @@
   } elseif ($keyProduct) {
       foreach (($keyProduct['key_params'] ?? []) as $kp) { $paramRows[] = ['label' => $kp['label'], 'value' => $kp['value']]; }
   }
-  // 区块 6 出餐流程：P0 核心产品有分步 params 时展示
+  // 区块 6 使用流程：P0 核心产品有分步 params 时展示
   $flowSteps = [];
   if (! $isP2 && $keyProduct) {
       foreach (($keyProduct['params'] ?? []) as $p) {
@@ -56,7 +56,7 @@
   <div class="wrap">
     <div class="sec-head">
       <span class="eyebrow">COMBO · 推荐组合</span>
-      <h2 class="sec-h">这套组合，正好覆盖你的出品</h2>
+      <h2 class="sec-h">这套组合，正好覆盖你的需求</h2>
       @if(!empty($scene['combo_reason']))<p class="sec-sub">{{ $scene['combo_reason'] }}</p>@endif
     </div>
     <div class="prod-grid combo-grid">
@@ -74,7 +74,7 @@
   <div class="wrap-narrow">
     <div class="sec-head">
       <span class="eyebrow accent">PARAMETERS · 关键参数</span>
-      <h2 class="sec-h">{{ $isP2 ? '用法与配比原则' : '一组可直接复现的参数' }}</h2>
+      <h2 class="sec-h">{{ $isP2 ? '用法与参数原则' : '一组可直接复现的参数' }}</h2>
     </div>
     @include('site._param_table', ['rows' => $paramRows])
     @if(!$isP2 && !empty($scene['key_param_display']))
@@ -84,13 +84,13 @@
 </section>
 @endif
 
-{{-- 6. 出餐流程建议 --}}
+{{-- 6. 使用流程建议 --}}
 @if(!empty($flowSteps))
 <section class="sec">
   <div class="wrap">
     <div class="sec-head">
-      <span class="eyebrow">WORKFLOW · 出餐流程</span>
-      <h2 class="sec-h">照着这套流程出餐</h2>
+      <span class="eyebrow">WORKFLOW · 使用流程</span>
+      <h2 class="sec-h">照着这套流程落地</h2>
     </div>
     @include('site._process_steps', ['steps' => $flowSteps])
   </div>

@@ -29,8 +29,8 @@
       <div><dt>厂区地址</dt><dd>{{ $company['address']['full'] }}</dd></div>
       <div><dt>厂区面积</dt><dd>{{ $company['area_display'] }}</dd></div>
       <div><dt>年产能</dt><dd>{{ $company['annual_capacity_display'] }}</dd></div>
-      <div><dt>生产车间</dt><dd>Sample Spice粉碎 / 预制调理肉 / 固体调味料 / 食用香精</dd></div>
-      <div><dt>销售区域</dt><dd>东北、华北、华东、华中、西北、西南、华南七大区域</dd></div>
+      <div><dt>生产车间</dt><dd>{{ collect($workshops)->pluck('name')->implode(' / ') }}</dd></div>
+      <div><dt>销售区域</dt><dd>{{ implode('、', $regions) }}</dd></div>
       <div><dt>官方电话</dt><dd>{{ $company['phone'] }}</dd></div>
     </dl>
   </div>

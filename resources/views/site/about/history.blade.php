@@ -8,7 +8,7 @@
 <section class="page-hero">
   <div class="wrap-narrow">
     <span class="eyebrow">HISTORY · 发展历程</span>
-    <h1 class="ph-h">从 2017 年到现在</h1>
+    <h1 class="ph-h">从 {{ substr($company['founded'] ?? '', 0, 4) ?: date('Y') }} 年到现在</h1>
     <p class="ph-lead">{{ $lead }}</p>
   </div>
 </section>

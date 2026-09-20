@@ -1,7 +1,7 @@
-{{-- S05 四大车间（重音段：左叙述+关键数据，右 2×2 能力格；可后台装修，无实拍图时用统一线性图标） --}}
+{{-- S05 核心车间（重音段：左叙述+关键数据，右 2×2 能力格；可后台装修，无实拍图时用统一线性图标） --}}
 @php
   $ws = $workshopItems ?? ($workshops ?? []);
-  $wsIcons = ['leaf', 'drumstick', 'jar', 'flask'];
+  $wsIcons = ['package', 'sliders', 'gear', 'shield', 'factory'];
   $wsStats = collect($stats ?? [])->filter(fn ($s) => in_array(($s['unit'] ?? ''), ['㎡', '吨'], true))->values();
 @endphp
 @if(count($ws))
@@ -9,8 +9,8 @@
   <div class="wrap-wide grid ws-layout" style="gap:56px;align-items:center;grid-template-columns:0.92fr 1.08fr">
     <div class="reveal">
       <span class="eyebrow">CAPABILITY · 核心能力</span>
-      <h2 class="sec-h">{{ $blk->title ?: '四大车间一体协同，风味从研发到量产闭环' }}</h2>
-      <p class="sec-sub">{{ $blk->subtitle ?: 'Sample Spice粉碎、预制调理肉、固体调味料、食用香精四大车间全面投产，支撑从配方到成品的一体化交付。' }}</p>
+      <h2 class="sec-h">{{ $blk->title ?: count($ws).' 个车间一体协同，从研发到量产闭环' }}</h2>
+      <p class="sec-sub">{{ $blk->subtitle ?: '自有生产车间全面投产，支撑从研发到成品的一体化交付。' }}</p>
       @if($wsStats->count())
       <div class="ws-facts">
         @foreach($wsStats as $s)

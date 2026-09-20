@@ -4,7 +4,7 @@
   <div class="wrap grid g2 ws-layout" style="gap:56px;align-items:center">
     <div class="reveal">
       <span class="eyebrow">WHO WE ARE · 我们是谁</span>
-      <h2 class="sec-h">{{ $blk->title ?: '专注中式Sample Snack风味的调味研发与生产源头工厂' }}</h2>
+      <h2 class="sec-h">{{ $blk->title ?: '专注产品研发与制造的源头工厂' }}</h2>
       <p class="sec-sub">{{ $siteSettings['site_description'] ?? '' }}</p>
       <div class="actions" style="margin-top:30px">
         <a class="btn" href="{{ url('/factory/') }}">看研发与工厂实力<span class="arr">→</span></a>

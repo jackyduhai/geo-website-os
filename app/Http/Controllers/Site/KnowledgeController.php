@@ -31,7 +31,7 @@ class KnowledgeController extends Controller
         }
         $items = $query->orderByDesc('published_at')->paginate(self::PER_PAGE);
 
-        return $this->render($schema, $items, null, '知识中心：选料、工艺配方与开店经营指南', $request);
+        return $this->render($schema, $items, null, '知识中心：选型、工艺施工与采购合作指南', $request);
     }
 
     public function channel(string $channel, SchemaBuilder $schema, Request $request, PageController $page, SeoMetaResolver $seoResolver)
@@ -97,7 +97,7 @@ class KnowledgeController extends Controller
             ])),
             'seo' => [
                 'title'       => $title,
-                'description' => 'Example知识中心：中式Sample SnackSample Marinade选料指南、腌制工艺与配方、开店与经营经验，帮助餐饮创业者与连锁品牌把出品做稳定。',
+                'description' => '知识中心：产品选型、工艺与施工、采购与合作内容，帮助客户把材料用对、把生产做稳定。',
                 'canonical'   => $canonical,
                 'noindex'     => false,
                 'type'        => 'website',

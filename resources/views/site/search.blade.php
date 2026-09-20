@@ -11,7 +11,7 @@
 
 <div class="wrap" style="padding-top:26px;padding-bottom:40px">
   <form action="{{ url('/search') }}" method="get" style="display:flex;gap:12px;max-width:600px;margin-bottom:30px">
-    <input type="search" name="q" value="{{ $q }}" placeholder="输入关键词，如「Sample SnackSample Marinade」「OEM 代工」"
+    <input type="search" name="q" value="{{ $q }}" placeholder="输入关键词，如「产品名称」「定制代工」"
            style="flex:1;padding:13px 16px;border:1.5px solid var(--line);border-radius:var(--radius-sm);
                   font-size:15px;background:var(--surface);color:var(--ink);font-family:inherit">
     <button class="btn" type="submit">搜索</button>

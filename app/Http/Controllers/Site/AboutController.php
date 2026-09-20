@@ -82,8 +82,10 @@ class AboutController extends Controller
                 $schema->breadcrumb($crumbs),
             ])),
             'seo' => [
-                'title'       => $titles[$page] . '｜Example Food Co., Ltd.',
-                'description' => $copy['meta_desc'] ?? 'Example Food Co., Ltd.，深耕中式Sample Snack调味二十年，四大车间自有生产，提供Sample SnackSample Marinade、Sample Breading撒料与调理鸡肉 OEM/ODM 代工。',
+                'title'       => $titles[$page] . '｜' . ($company['name'] ?? ''),
+                'description' => $copy['meta_desc'] ?? (($company['name'] ?? '') . '，'
+                    . ($company['industry'] ?? '') . '领域制造商，自有厂区与生产车间，'
+                    . '提供配方定制研发与 OEM / ODM 代工。'),
                 'canonical'   => url('/about/' . $page . '/'),
                 'noindex'     => false,
                 'type'        => 'website',

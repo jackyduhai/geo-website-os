@@ -16,16 +16,16 @@ class DatabaseSeeder extends Seeder
 
         // 管理员账号：首次登录后请立即修改密码
         $user = User::updateOrCreate(
-            ['email' => 'admin@example.test'],
+            ['email' => 'admin@example.com'],
             [
                 'name'     => '管理员',
-                'password' => Hash::make('Example@2026'),
+                'password' => Hash::make('Admin@123456'),
                 'is_super_admin' => true,
             ]
         );
 
         $this->command->info(sprintf(
-            '后台账号：%s，初始密码 Example@2026（登录后请立即修改）',
+            '后台账号：%s，初始密码 Admin@123456（仅用于本地演示，登录后请立即修改）',
             $user->email
         ));
     }

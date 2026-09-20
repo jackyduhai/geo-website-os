@@ -153,7 +153,7 @@ class HeroModeTest extends TestCase
         $blk->save();
 
         $html = $this->get('/')->getContent();
-        $this->assertStringContainsString('年产能约 8,000 吨', $html); // 默认口径兜底
+        $this->assertStringContainsString('年产能约 1,200 吨', $html); // 默认口径兜底
     }
 
     public function test_mode_c_split_renders_copy_and_image_together_with_single_h1(): void
@@ -176,7 +176,7 @@ class HeroModeTest extends TestCase
         $this->assertStringNotContainsString('<section class="hb"', $html);
         $this->assertStringNotContainsString('hero-split-media', $html);
         // 价值主张文案在初始 HTML（SSR，利于 SEO/GEO），且整页唯一 H1
-        $this->assertStringContainsString('一站式代工', $html);
+        $this->assertStringContainsString('一站式定制制造', $html);
         $this->assertSame(1, substr_count($html, '<h1'));
     }
 

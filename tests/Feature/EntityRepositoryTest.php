@@ -321,8 +321,8 @@ class EntityRepositoryTest extends TestCase
         Entity::create([
             'site_id' => $site->id,
             'type' => 'product',
-            'slug' => 'crispy-chicken',
-            'name' => 'Crispy Chicken Marinade',
+            'slug' => 'industrial-coating',
+            'name' => 'Industrial Coating',
             'status' => 'published',
         ]);
 
@@ -334,9 +334,9 @@ class EntityRepositoryTest extends TestCase
             'status' => 'published',
         ]);
 
-        $results = $this->repo->search('Crispy');
+        $results = $this->repo->search('Coating');
         $this->assertCount(1, $results);
-        $this->assertEquals('crispy-chicken', $results->first()->slug);
+        $this->assertEquals('industrial-coating', $results->first()->slug);
     }
 
     public function test_search_respects_type_filter(): void

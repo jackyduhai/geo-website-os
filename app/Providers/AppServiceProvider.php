@@ -475,11 +475,12 @@ class AppServiceProvider extends ServiceProvider
                 $items = [];
                 if ($isContact) {
                     // 联系列：热线 / 业务手机（设置驱动，无值则不显示）/ 地址 / 二维码
+                    $hotline = (string) (\App\Support\Facts::company()['phone'] ?? '');
                     $si = 0;
-                    $items[] = $applyItem('ft-contact-hotline', ['type' => 'text', 'label' => '全国合作热线', 'href' => 'tel:+86400-000-0000'], ++$si * 10, true);
+                    $items[] = $applyItem('ft-contact-hotline', ['type' => 'text', 'label' => '合作热线', 'href' => $hotline !== '' ? 'tel:' . $hotline : ''], ++$si * 10, true);
                     $items[] = $applyItem('ft-contact-mobile', ['type' => 'text', 'label' => '业务手机'], ++$si * 10, true, true);
                     $items[] = $applyItem('ft-contact-address', ['type' => 'text', 'label' => '厂区地址'], ++$si * 10, true);
-                    $items[] = $applyItem('ft-contact-qr', ['type' => 'qr', 'label' => '加微信要样品'], ++$si * 10, true);
+                    $items[] = $applyItem('ft-contact-qr', ['type' => 'qr', 'label' => '扫码联系'], ++$si * 10, true);
                 } else {
                     $si = 0;
                     foreach ((array) ($col['items'] ?? []) as $raw) {

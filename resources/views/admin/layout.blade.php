@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="csrf-token" content="{{ csrf_token() }}">
 <meta name="robots" content="noindex,nofollow">
-<title>@yield('title', '仪表盘') · Example Admin</title>
+<title>@yield('title', '仪表盘') · GEO Website OS 后台</title>
 <link rel="stylesheet" href="{{ asset('css/admin.css') }}?v={{ filemtime(public_path('css/admin.css')) }}">
 @stack('head')
 </head>
@@ -54,8 +54,8 @@
 <div class="layout">
   <aside class="side" id="adminSide">
     <a class="brand" href="{{ route('admin.dashboard') }}">
-      <img src="{{ asset('img/logo.png') }}" alt="Example">
-      <span>Example Admin</span>
+      <img src="{{ asset('img/logo.png') }}" alt="GEO Website OS">
+      <span>GEO Website OS 后台</span>
     </a>
 
     <nav class="side-nav" aria-label="后台主导航">

@@ -4,7 +4,7 @@
   <div class="wrap-wide">
     <div class="sec-head center">
       <span class="eyebrow">CASES · 合作剪影</span>
-      <h2 class="sec-h">{{ $blk->title ?? '不同生意，都在用同一套稳定标准' }}</h2>
+      <h2 class="sec-h">{{ $blk->title ?? '不同场景，都在用同一套稳定标准' }}</h2>
       <p class="sec-sub">{{ $blk->subtitle ?? '为保护客户经营信息，以下均做匿名处理，仅呈现业态与所用产品组合。' }}</p>
     </div>
     <div class="case-grid">

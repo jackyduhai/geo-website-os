@@ -23,3 +23,19 @@ Homestead.json
 Homestead.yaml
 Thumbs.db
 dist/
+
+/_shots/
+/_ref/
+
+# 本地数据库与历史审计二进制快照（可能含真实业务数据，禁止入库）
+*.sqlite
+*.sqlite-journal
+*.db
+docs/audit/*.zip
+docs/audit/*.bak
+
+# 一次性临时脚本/输出（项目根）
+/_*.php
+/_*.ps1
+/_*.txt
+/_*.html

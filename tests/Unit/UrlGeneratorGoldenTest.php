@@ -8,7 +8,7 @@ use Tests\TestCase;
 /**
  * P-STEP 07 / P0-A：URL Generator 行为对拍（Golden Tests）。
  *
- * 行为盘点结论：原 Demo Tenant AUrlGenerator 仅有一个通用行为——
+ * 行为盘点结论：旧站点专属 UrlGenerator 仅有一个通用行为——
  * 「调用方传入以 / 结尾的目录型路径时，保住尾斜杠」（框架 UrlGenerator::format
  * 会剥掉尾斜杠）；详情型路径、文件路径、query、fragment 完全不动。
  * 该行为与业务无关，属通用 URL 契约。
@@ -32,7 +32,7 @@ class UrlGeneratorGoldenTest extends TestCase
         return [
             // 实测捕获的现行为：root 输出主机根（框架会剥掉 '/ 尾斜杠'），见专用用例
             'directory keeps slash'       => ['/products/', '/products/'],
-            'detail no slash added'       => ['/products/orleans-801', '/products/orleans-801'],
+            'detail no slash added'       => ['/products/epoxy-primer-100', '/products/epoxy-primer-100'],
             'file path untouched'         => ['/sitemap.xml', '/sitemap.xml'],
             'nested directory keeps slash' => ['/knowledge/selection/', '/knowledge/selection/'],
             'query preserved'             => ['/search?q=abc', '/search?q=abc'],
@@ -75,8 +75,8 @@ class UrlGeneratorGoldenTest extends TestCase
 
     public function test_detail_path_with_query_gets_no_slash(): void
     {
-        $url = $this->gen->to('/products/orleans-801?ref=x');
+        $url = $this->gen->to('/products/epoxy-primer-100?ref=x');
 
-        $this->assertStringEndsWith('/products/orleans-801?ref=x', $url);
+        $this->assertStringEndsWith('/products/epoxy-primer-100?ref=x', $url);
     }
 }

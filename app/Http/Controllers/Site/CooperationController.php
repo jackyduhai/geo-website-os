@@ -8,7 +8,7 @@ use App\Support\Facts;
 use App\Support\Narrative;
 
 /**
- * 合作方式：定制研发 / OEM·ODM 代工 / 经销合作 三模式 + 五步流程 + 6 条 FAQ。
+ * 合作方式：定制研发 / OEM·ODM 代工 / 经销合作 等合作模式 + 合作流程 + FAQ。
  * 结构化数据来自 config/facts（facts.yaml），FAQ 为 config/pages 终稿；
  * MOQ、打样/交付周期未核定前对应字段隐藏，不输出占位符。
  */
@@ -25,19 +25,25 @@ class CooperationController extends Controller
         $url  = url('/cooperation/');
         $lead = Narrative::lead('cooperation.lead', config('pages.narrative.cooperation.lead', ''));
 
+        $company     = Facts::company();
+        $typeNames   = implode('、', array_map(fn ($t) => $t['name'], $coop['types'] ?? []));
+        $typeCnt     = count($coop['types'] ?? []);
+        $stepCnt     = count($coop['process'] ?? []);
+        $workshopCnt = count(Facts::workshops());
+
         $crumbs = [
             ['name' => '首页', 'url' => url('/')],
             ['name' => '合作方式', 'url' => $url],
         ];
 
-        // 五步流程 → HowTo
+        // 合作流程 → HowTo（步数由 process 数据驱动）
         $howTo = null;
         if (! empty($coop['process'])) {
             $howTo = [
                 '@context' => 'https://schema.org',
                 '@type'    => 'HowTo',
                 '@id'      => $url . '#howto',
-                'name'     => '从需求沟通到持续供货的五步合作流程',
+                'name'     => '从需求沟通到持续供货的' . $stepCnt . '步合作流程',
                 'step'     => array_map(function ($s, $i) {
                     return [
                         '@type'    => 'HowToStep',
@@ -62,7 +68,9 @@ class CooperationController extends Controller
             ])),
             'seo' => [
                 'title'       => '合作方式：定制研发、OEM/ODM 代工与经销',
-                'description' => 'Example提供配方定制研发、OEM/ODM 代工与经销合作三种方式，自有四大车间、年产能约 8,000 吨，五步完成从需求沟通到稳定供货。',
+                'description' => ($company['name'] ?? '') . '提供' . $typeNames . $typeCnt
+                    . '种合作方式，自有' . $workshopCnt . '大车间、年产能'
+                    . ($company['annual_capacity_display'] ?? '') . '，' . $stepCnt . '步完成从需求沟通到稳定供货。',
                 'canonical'   => $url,
                 'noindex'     => false,
                 'type'        => 'website',

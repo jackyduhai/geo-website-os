@@ -62,10 +62,10 @@ class SiteAuthorizationBoundaryTest extends TestCase
 
     public function test_same_email_without_flag_cannot_cross_site(): void
     {
-        // 邮箱本身不授予任何权限（业务种子邮箱同理）
+        // 邮箱本身不授予任何权限（显式超管标记才授权）
         $plain = new \App\Models\User();
         $plain->id = 3;
-        $plain->email = 'admin@demo-tenant-a.local';
+        $plain->email = 'staff@example.test';
         $plain->is_super_admin = false;
 
         $this->assertFalse(SystemAuthorization::canCrossSite($plain));

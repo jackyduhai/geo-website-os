@@ -40,24 +40,24 @@
 <link rel="apple-touch-icon" href="{{ asset('apple-touch-icon.png') }}">
 <style>
 /* ============================================================
-   Example Website · Design System v0.6（全站唯一一套，禁止页面另起样式）
-   方法借鉴现代 SaaS / Generic Design：8 点网格、干净中性阶、清晰字阶、
-   去盒子化、品牌色克制、轻动效。VI 标准：酉合红 #D70E18 / 鲜萃绿 #00943F。
-   主行动(CTA)统一用绿 #007A33，红仅用于品牌强调与错误态（D02）。
+   GEO Website OS · Design System（全站唯一一套，禁止页面另起样式）
+   方法借鉴现代 SaaS 设计：8 点网格、干净中性阶、清晰字阶、
+   去盒子化、品牌色克制、轻动效。默认主色为中性蓝、辅色 / CTA 为稳重绿，
+   均可在后台「外观与主题」覆盖；红仅用于错误态。
    ============================================================ */
 :root{
-  /* 品牌色（可被后台主题覆盖，默认值即 VI 标准） */
-  --brand: {{ $siteSettings['theme_primary'] ?? '#D70E18' }};
-  --brand-dark: {{ $siteSettings['theme_primary_dark'] ?? '#B50C15' }};
-  --brand-active:#9C0A12;
-  --brand-soft:#FDE8E9;
-  --accent: {{ $siteSettings['theme_accent'] ?? '#00943F' }};
-  --accent-dark:#007A33;
-  --accent-soft:#E6F4EC;
-  /* 主行动色（绿，唯一主 CTA 色） */
-  --cta:#007A33;
-  --cta-dark:#00692B;
-  --cta-soft:#E6F4EC;
+  /* 品牌色（可被后台主题覆盖，默认值为中性产品配色） */
+  --brand: {{ $siteSettings['theme_primary'] ?? '#2563EB' }};
+  --brand-dark: {{ $siteSettings['theme_primary_dark'] ?? '#1D4ED8' }};
+  --brand-active:#1E40AF;
+  --brand-soft:#EAF1FE;
+  --accent: {{ $siteSettings['theme_accent'] ?? '#0E9F6E' }};
+  --accent-dark:#0B7A55;
+  --accent-soft:#E4F6F0;
+  /* 主行动色（稳重绿，唯一主 CTA 色） */
+  --cta:#059669;
+  --cta-dark:#047857;
+  --cta-soft:#E6F6F0;
   /* 干净中性阶（承担约 70% 界面：白/浅灰） */
   --bg: {{ $siteSettings['theme_bg'] ?? '#FFFFFF' }};
   --surface: {{ $siteSettings['theme_surface'] ?? '#FFFFFF' }};
@@ -71,9 +71,9 @@
   --line-soft:#F0F0F0;
   --footer-bg:#1A1A1A;
   --footer-ink:#BFBFBF;
-  /* 语义色 */
+  /* 语义色（错误态独立为红，不随品牌主色变化） */
   --warning:#E6A23C;
-  --error:var(--brand);
+  --error:#DC2626;
   /* 圆角分级（克制：默认 8、大卡 12，禁 >16，pill 仅 chip） */
   --radius-xs:4px;
   --radius-sm:6px;
@@ -146,7 +146,7 @@ nav[role=navigation]{margin-top:8px}
   border-radius:var(--radius-sm);font-weight:600;font-size:15px;line-height:1.2;
   padding:12px 24px;border:1px solid transparent;
   transition:background var(--motion-base),border-color var(--motion-base),color var(--motion-base),box-shadow var(--motion-base),transform var(--motion-base);}
-/* 主按钮：实心鲜萃绿（每屏主行动唯一；红不做主 CTA，D02） */
+/* 主按钮：实心强调色（每屏主行动唯一；主品牌色不做主 CTA，D02） */
 .btn,.btn-primary{background:var(--cta);color:#fff;border-color:var(--cta);}
 .btn:hover,.btn-primary:hover{background:var(--cta-dark);border-color:var(--cta-dark);color:#fff;transform:translateY(-1px);}
 .btn:active,.btn-primary:active{background:var(--cta-dark);transform:translateY(0);}
@@ -926,7 +926,7 @@ a.prod-card:hover .prod-img.is-empty .ph-chip{transform:scale(1.06);}
   display:inline-flex;gap:6px;align-items:center;}
 .prod-tag{font-size:12px;color:var(--ink-faint);letter-spacing:.04em;}
 
-/* S03 五大体系：2 大（各半行）+ 3 小（各 1/3） */
+/* S03 产品体系：feature 卡各占半行，普通卡各占 1/3（数量由数据决定） */
 .pgrid{grid-template-columns:repeat(6,1fr);gap:20px;}
 .pgrid .pcard-feature{grid-column:span 3;flex-direction:column;align-items:flex-start;gap:0;padding:28px;}
 .pgrid .pcard-feature .feat-ic{width:56px;height:56px;margin-bottom:18px;}
@@ -1274,9 +1274,9 @@ a.ft-v:hover{color:#fff;}
 <header class="hd" id="siteHeader">
   <input type="checkbox" id="nav-toggle" aria-label="{{ config('copy.nav.ariaLabels.openMenu') ?? '打开导航菜单' }}">
   <div class="wrap hd-in">
-    <a class="logo" href="{{ url('/') }}" aria-label="{{ $siteSettings['site_name'] ?? 'Example Food' }}首页">
+    <a class="logo" href="{{ url('/') }}" aria-label="{{ $siteSettings['site_name'] ?? config('app.name') }}首页">
       <img src="{{ asset(!empty($siteSettings['geo_org_logo']) ? $siteSettings['geo_org_logo'] : 'img/logo.png') }}"
-           alt="{{ $siteSettings['site_name'] ?? 'Example Food' }}" height="40">
+           alt="{{ $siteSettings['site_name'] ?? config('app.name') }}" height="40">
     </a>
     <nav aria-label="{{ config('copy.nav.ariaLabels.primaryNav') ?? '主导航' }}"><ul class="nav" id="primary-nav" style="margin:0;padding:0;">
       @foreach(($mainMenu ?? []) as $m)
@@ -1362,10 +1362,10 @@ a.ft-v:hover{color:#fff;}
       $ftBrand['companyName'] ?? null,
   ]));
   $ftLegal = $footer['legal'] ?? [];
-  $ftPhone = trim((string) ($siteSettings['contact_phone'] ?? '')) ?: '400-000-0000';
+  $ftPhone = trim((string) ($siteSettings['contact_phone'] ?? ''));
   $ftMobile = trim((string) ($siteSettings['contact_mobile'] ?? ''));
-  $ftAddress = trim((string) ($siteSettings['contact_address'] ?? '')) ?: 'Sample Province省Sample City市沈河区 Example Street 39';
-  $ftQrSrc = trim((string) ($siteSettings['contact_wechat_qr'] ?? '')) ?: 'img/wechat-qr.png';
+  $ftAddress = trim((string) ($siteSettings['contact_address'] ?? ''));
+  $ftQrSrc = trim((string) ($siteSettings['contact_wechat_qr'] ?? ''));
   $ftTel = fn ($v) => 'tel:' . preg_replace('/[^0-9]/', '', (string) $v);
   // 相对路径走 url()，tel/mailto/http/锚点原样
   $ftHref = function ($h) {
@@ -1379,7 +1379,7 @@ a.ft-v:hover{color:#fff;}
     <div class="ft-grid">
       <div class="ft-brand">
         <img src="{{ asset(!empty($siteSettings['geo_org_logo']) ? $siteSettings['geo_org_logo'] : 'img/logo.png') }}"
-             alt="{{ $siteSettings['site_name'] ?? 'Example Food' }}" height="40">
+             alt="{{ $siteSettings['site_name'] ?? config('app.name') }}" height="40">
         <p class="ft-desc">{{ \App\Support\Copy::footerSlogan() }}</p>
         @if(!empty($ftFacts))
           <ul class="ft-facts">
@@ -1400,10 +1400,12 @@ a.ft-v:hover{color:#fff;}
           <ul>
             @foreach($colItems as $l)
               @if(($l['type'] ?? '') === 'qr')
+                @if(!empty($ftQrSrc))
                 <li class="ft-qr">
-                  <img src="{{ asset($ftQrSrc) }}" alt="微信二维码" width="104" height="104" loading="lazy">
-                  <span>{{ $l['name'] ?? $l['label'] ?? '加微信要样品' }}</span>
+                  <img src="{{ asset($ftQrSrc) }}" alt="联系二维码" width="104" height="104" loading="lazy">
+                  <span>{{ $l['name'] ?? $l['label'] ?? '扫码联系' }}</span>
                 </li>
+                @endif
               @elseif(($l['type'] ?? '') === 'text')
                 @php
                   // 联系列值由站点设置驱动（覆盖层只改显示名称/显隐）
@@ -1416,6 +1418,11 @@ a.ft-v:hover{color:#fff;}
                   } else {
                       $lValue = $l['value'] ?? ($l['name'] ?? '');
                       $lHref = $l['url'] ?? '';
+                  }
+                  // 热线 / 手机 / 地址无值时整行不渲染（不输出空标签）
+                  if (in_array($l['key'] ?? '', ['ft-contact-hotline', 'ft-contact-mobile', 'ft-contact-address'], true)
+                      && trim((string) $lValue) === '') {
+                      continue;
                   }
                 @endphp
                 <li class="ft-contact-line{{ ($l['key'] ?? '') === 'ft-contact-address' ? ' ft-contact-line--wrap' : '' }}">
@@ -1442,7 +1449,7 @@ a.ft-v:hover{color:#fff;}
       @endif
     </div>
     <div class="ft-btm">
-      <span>{{ $ftLegal['copyright'] ?? ('© ' . date('Y') . ' ' . ($siteSettings['site_name'] ?? 'Example Food Co., Ltd.')) }}</span>
+      <span>{{ $ftLegal['copyright'] ?? ('© ' . date('Y') . ' ' . ($siteSettings['site_name'] ?? config('app.name'))) }}</span>
       @if(!empty($ftLegal['icp']))
         <span><a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener">{{ $ftLegal['icp'] }}</a></span>
       @elseif(!empty($siteSettings['icp_number']))

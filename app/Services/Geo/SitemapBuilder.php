@@ -14,8 +14,8 @@ use Illuminate\Support\Collection;
  *
  * 判据：只收录「真实可访问（返回 200）且有实质正文」的规范地址。
  *   - 目录型带尾斜杠、详情型不带，与 CanonicalizeSlash / canonical 完全一致；
- *   - 仅 6 款核心产品有独立详情页（ProductController@show 对非核心产品 404），
- *     其余产品只在体系页内以锚点呈现，不进 sitemap；
+ *   - 仅标记为核心（core）的产品有独立详情页（ProductController@show 对非核心产品 404），
+ *     其余产品只在产品系列页内以锚点呈现，不进 sitemap；
  *   - 不建案例中心，故不输出 /cases/；
  *   - 知识文章 URL 扁平为 /knowledge/{slug}。
  * lastmod 由内容变更驱动，不写死。
@@ -40,11 +40,11 @@ class SitemapBuilder
         // 首页
         $add(url('/'), 'daily', '1.0');
 
-        // 产品中心：总览 + 达到独立成页门槛（≥4 款）的体系页 + 6 款核心产品详情
+        // 产品中心：总览 + 含产品的系列独立页 + 核心产品详情
         $add(url('/products/'), 'weekly', '0.9');
         foreach (Facts::productLines() as $line) {
             $lineSlug = $line['slug'];
-            if (count(Facts::productsByLine($lineSlug)) >= 4) {
+            if (count(Facts::productsByLine($lineSlug)) >= 1) {
                 $add(url('/products/' . $lineSlug . '/'), 'weekly', '0.8');
             }
         }
@@ -54,7 +54,7 @@ class SitemapBuilder
             }
         }
 
-        // 应用场景：总览 + 六类
+        // 应用场景：总览 + 各场景详情
         $add(url('/solutions/'), 'monthly', '0.9');
         foreach (Facts::scenes() as $scene) {
             $add(url('/solutions/' . $scene['slug'] . '/'), 'monthly', '0.8');

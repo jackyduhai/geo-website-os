@@ -9,8 +9,8 @@ use App\Support\Narrative;
 
 /**
  * 工厂与资质（独立一级页面，config/facts 驱动）
- * 硬规则：SC 编号 / 执行标准号缺失时，资质区块整体隐藏；车间无实拍图时不渲染图片，
- * 不使用渲染图占位；七大区域用纯文字（无合规地图前不放地图）。
+ * 硬规则：资质编号 / 执行标准号缺失时，资质区块整体隐藏；车间无实拍图时不渲染图片，
+ * 不使用渲染图占位；销售区域用纯文字（无合规地图前不放地图）。
  */
 class FactoryController extends Controller
 {
@@ -26,14 +26,16 @@ class FactoryController extends Controller
         $certsReady = Facts::certificationsReady();
         $steps      = config('pages.factory_steps', []);
 
+        $workshopNames = implode('、', array_map(fn ($w) => $w['name'], $workshops));
+
         // 可运营叙事：页头导语（默认含投产时间，硬数据仍读 facts）
-        $defaultLead = '从Sample Spice粉碎到固体调味料，四个车间都在自己厂里。不外包，不做贸易。'
+        $defaultLead = $workshopNames . '，' . count($workshops) . '个车间都在自己厂里。不外包，不做贸易。'
             . ($company['established_production_display'] ?? '') . '全面投产。';
         $lead = Narrative::lead('factory.lead', $defaultLead);
 
         // 5 条信任数据（全部源自 facts，不虚构）
         $stats = [
-            ['num' => (int) $company['tech_experience_years'], 'unit' => '年', 'label' => '中式Sample Snack调味深耕'],
+            ['num' => (int) ($company['tech_experience_years'] ?? 0), 'unit' => '年', 'label' => ($company['industry'] ?? '') . '领域经验'],
             ['num' => (int) $company['area_sqm'], 'unit' => '㎡', 'label' => '自有生产厂区'],
             ['num' => (int) $company['annual_capacity_tons'], 'unit' => '吨', 'label' => '年成品产能'],
             ['num' => count($workshops), 'unit' => '大', 'label' => '自有生产车间'],
@@ -73,8 +75,10 @@ class FactoryController extends Controller
                 $schema->breadcrumb($crumbs),
             ], $imageObjects))),
             'seo' => [
-                'title'       => '工厂与资质：9000㎡四大车间与年8000吨产能',
-                'description' => 'Sample CityExample Food自有约 9,000 ㎡ 厂区，设Sample Spice粉碎、预制调理肉、固体调味料、食用香精四大车间，年产能约 8,000 吨成品，覆盖全国七大销售区域。',
+                'title'       => '工厂与资质：' . ($company['area_display'] ?? '') . '厂区、' . count($workshops) . '大车间',
+                'description' => ($company['name'] ?? '') . '自有' . ($company['area_display'] ?? '') . '厂区，设'
+                    . $workshopNames . count($workshops) . '大车间，年产能' . ($company['annual_capacity_display'] ?? '')
+                    . '，覆盖全国' . count($regions) . '大销售区域。',
                 'canonical'   => url('/factory/'),
                 'noindex'     => false,
                 'type'        => 'website',

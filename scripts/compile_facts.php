@@ -3,16 +3,16 @@
 /**
  * 事实源编译脚本（可复现构建工具）
  * ------------------------------------------------------------------
- * 输入（全站唯一事实源，交付包）：
- *   Example Website开发交付包/02-data/facts.yaml
- *   Example Website开发交付包/02-data/copy-global.json
+ * 输入（事实源数据目录，通过命令行参数显式传入）：
+ *   <data-dir>/facts.yaml
+ *   <data-dir>/copy-global.json
  *
  * 输出（Laravel 配置，代码与 Schema 的唯一读取入口）：
  *   config/facts.php   -> config('facts....')
  *   config/copy.php    -> config('copy....')
  *
  * 运行：
- *   php scripts/compile_facts.php [交付包02-data目录]
+ *   php scripts/compile_facts.php <事实源数据目录>
  *
  * 铁律：页面 / Schema / feeds 一律读 config('facts')，不得再硬编码；
  *      事实更新只改 facts.yaml，然后重跑本脚本。
@@ -23,7 +23,11 @@ require __DIR__ . '/../vendor/autoload.php';
 use Symfony\Component\Yaml\Yaml;
 
 $root    = dirname(__DIR__);
-$dataDir = $argv[1] ?? 'D:/73466/2026-09-15-08-43-26/Example Website开发交付包/02-data';
+$dataDir = $argv[1] ?? null;
+if ($dataDir === null || ! is_dir($dataDir)) {
+    fwrite(STDERR, "用法: php scripts/compile_facts.php <事实源数据目录（含 facts.yaml / copy-global.json）>\n");
+    exit(1);
+}
 $dataDir = rtrim(str_replace('\\', '/', $dataDir), '/');
 
 $factsPath = $dataDir . '/facts.yaml';

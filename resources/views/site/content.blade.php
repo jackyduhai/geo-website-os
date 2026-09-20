@@ -109,7 +109,7 @@
     <section class="sec" style="padding:34px 0 10px">
       <div class="cta-band" style="text-align:center">
         <h2 style="font-size:23px">需要配方定制、样品打样或 OEM 代工咨询？</h2>
-        <p style="margin-left:auto;margin-right:auto">业务团队会结合你的品类与风味需求，对接打样与代工方案。</p>
+        <p style="margin-left:auto;margin-right:auto">业务团队会结合你的产品与工艺需求，对接打样与代工方案。</p>
         <div class="cta-row" style="justify-content:center">
           <span class="cta-phone">{{ $siteSettings['contact_phone'] }}</span>
           <a class="btn-ghost btn-lg" href="{{ url('/contact/contact-us') }}">在线留言</a>

@@ -2,13 +2,13 @@
 @section('title', $seo['title'])
 @section('meta_description', $seo['description'])
 
-@php $wsIcons = ['leaf', 'drumstick', 'jar', 'flask']; @endphp
+@php $wsIcons = ['package', 'sliders', 'gear', 'shield', 'factory']; @endphp
 
 @section('content')
 <section class="page-hero">
   <div class="wrap-narrow">
     <span class="eyebrow">FACTORY · 工厂与资质</span>
-    <h1 class="ph-h">自有约 {{ number_format($company['area_sqm']) }} ㎡ 厂区，四大车间，年产能约 {{ number_format($company['annual_capacity_tons']) }} 吨</h1>
+    <h1 class="ph-h">自有约 {{ number_format($company['area_sqm']) }} ㎡ 厂区，{{ count($workshops) }} 个车间，年产能约 {{ number_format($company['annual_capacity_tons']) }} 吨</h1>
     <p class="ph-lead">{{ $lead }}</p>
   </div>
 </section>
@@ -25,12 +25,12 @@
   </div>
 </section>
 
-{{-- 四大车间（无实拍图时用统一线性图标，不渲染示意图占位） --}}
+{{-- 生产车间（无实拍图时用统一线性图标，不渲染示意图占位） --}}
 <section class="sec">
   <div class="wrap-wide">
     <div class="sec-head">
-      <span class="eyebrow">WORKSHOPS · 四大车间</span>
-      <h2 class="sec-h">四个车间，全在自己厂里</h2>
+      <span class="eyebrow">WORKSHOPS · 生产车间</span>
+      <h2 class="sec-h">{{ count($workshops) }} 个车间，全在自己厂里</h2>
     </div>
     <div class="ws-grid4">
       @foreach($workshops as $i => $w)
@@ -48,13 +48,13 @@
   </div>
 </section>
 
-{{-- 生产流程五步 --}}
+{{-- 生产流程 --}}
 @if(!empty($steps))
 <section class="sec sec-tint">
   <div class="wrap">
     <div class="sec-head">
       <span class="eyebrow">PROCESS · 生产流程</span>
-      <h2 class="sec-h">从原料到成品的五步生产流程</h2>
+      <h2 class="sec-h">从原料到成品的 {{ count($steps) }} 步生产流程</h2>
     </div>
     @include('site._process_steps', ['steps' => $steps])
   </div>
@@ -75,12 +75,12 @@
 </section>
 @endif
 
-{{-- 七大销售区域（纯文字，无合规地图前不放地图） --}}
+{{-- 销售覆盖区域（纯文字，无合规地图前不放地图） --}}
 <section class="sec {{ $certsReady ? 'sec-tint' : '' }}">
   <div class="wrap-narrow">
     <div class="sec-head">
       <span class="eyebrow">COVERAGE · 销售覆盖</span>
-      <h2 class="sec-h">覆盖全国七大销售区域</h2>
+      <h2 class="sec-h">覆盖全国 {{ count($regions) }} 大销售区域</h2>
     </div>
     <div class="region-tags">
       @foreach($regions as $r)<em>{{ $r }}</em>@endforeach

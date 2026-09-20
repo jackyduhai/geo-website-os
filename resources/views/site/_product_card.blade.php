@@ -3,14 +3,8 @@
 @php
   $isCore = \App\Support\Facts::isCoreProduct($p['slug']);
   $href = $isCore ? url('/products/' . $p['slug']) : url('/products/#' . ($p['line'] ?? ''));
-  $lineIcon = [
-    'seasoning'        => 'flame',
-    'prepared-chicken' => 'drumstick',
-    'flavor'           => 'sparkle',
-    'coating'          => 'shaker',
-    'spices'           => 'beaker',
-  ];
-  $icon = $lineIcon[$p['line'] ?? ''] ?? 'default';
+  // 无产品图时使用数据自带 icon 或中性占位图标，不在此绑定具体产品线 slug
+  $icon = $p['icon'] ?? 'default';
   $img = $p['image'] ?? null;
 @endphp
 <a class="prod-card" href="{{ $href }}">

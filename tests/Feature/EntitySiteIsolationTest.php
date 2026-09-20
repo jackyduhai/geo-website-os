@@ -360,13 +360,13 @@ class EntitySiteIsolationTest extends TestCase
             'name' => 'Meta',
             'status' => 'draft',
             'metadata' => [
-                'features' => ['tender', 'crispy'],
-                'applications' => ['fried chicken', 'popcorn chicken'],
+                'features' => ['durable', 'resistant'],
+                'applications' => ['metal equipment', 'structural parts'],
             ],
         ]);
 
         $fresh = Entity::find($entity->id);
         $this->assertIsArray($fresh->metadata);
-        $this->assertContains('tender', $fresh->metadata['features']);
+        $this->assertContains('durable', $fresh->metadata['features']);
     }
 }

@@ -26,15 +26,15 @@ class EntityRelationDeepTest extends TestCase
 
         $service = Entity::create([
             'type' => 'service',
-            'slug' => 'fried-chicken-service',
-            'name' => 'Fried Chicken Service',
+            'slug' => 'coating-service',
+            'name' => 'Coating Service',
             'status' => 'published',
         ]);
 
         $product = Entity::create([
             'type' => 'product',
-            'slug' => 'crispy-breading',
-            'name' => 'Crispy Breading',
+            'slug' => 'protective-coating',
+            'name' => 'Protective Coating',
             'status' => 'published',
         ]);
 

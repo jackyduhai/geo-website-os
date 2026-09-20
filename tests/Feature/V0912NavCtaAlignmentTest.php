@@ -30,17 +30,17 @@ class V0912NavCtaAlignmentTest extends TestCase
 
     public function test_nav_cta_text_setting_is_seeded(): void
     {
-        $this->assertSame('免费获取样品', Setting::allCached()['nav_cta_text'] ?? null);
+        $this->assertSame('获取产品方案', Setting::allCached()['nav_cta_text'] ?? null);
     }
 
     public function test_header_and_hero_cta_label_follows_setting_with_fallback(): void
     {
-        Setting::set('nav_cta_text', '一键免费拿样');
+        Setting::set('nav_cta_text', '一键获取方案');
         Setting::flush();
 
         $html = $this->get('/')->assertOk()->getContent();
-        $this->assertStringContainsString('一键免费拿样', $html);
-        $this->assertStringNotContainsString('免费获取样品', $html);
+        $this->assertStringContainsString('一键获取方案', $html);
+        $this->assertStringNotContainsString('获取产品方案', $html);
 
         // 留空回退 config 默认口径
         Setting::set('nav_cta_text', '');
@@ -52,8 +52,8 @@ class V0912NavCtaAlignmentTest extends TestCase
     public function test_general_settings_endpoint_persists_nav_cta_text(): void
     {
         $this->actingAs($this->admin)->put('/admin/settings/general', [
-            'site_name'      => 'Example Food',
-            'nav_cta_text'   => '立即申请样品',
+            'site_name'      => '示例制造',
+            'nav_cta_text'   => '立即获取方案',
             'site_slogan'    => '',
             'site_description' => '',
             'site_short_name' => '',
@@ -61,7 +61,7 @@ class V0912NavCtaAlignmentTest extends TestCase
             'police_number'  => '',
         ])->assertRedirect();
 
-        $this->assertSame('立即申请样品', Setting::allCached()['nav_cta_text'] ?? null);
+        $this->assertSame('立即获取方案', Setting::allCached()['nav_cta_text'] ?? null);
     }
 
     public function test_active_custom_main_menu_renders_external_and_inactive_hidden(): void

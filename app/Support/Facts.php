@@ -16,14 +16,19 @@ namespace App\Support;
 class Facts
 {
     /** 拥有完整八区块详情页的核心产品（其余产品只在体系列表以卡片出现） */
-    public const CORE_PRODUCTS = [
-        'orleans-801',
-        'american-fried-chicken-marinade',
-        'korean-fried-chicken-marinade',
-        'sample-city-chicken-frame-marinade',
-        'taiwanese-chicken-cutlet-marinade',
-        'golden-crispy-coating',
-    ];
+    /**
+     * 核心产品 slug 列表（拥有独立详情页，进入路由白名单 / sitemap / llms）。
+     *
+     * 由产品数据中的 core 标志驱动（见 config/facts.php 每个产品的 core 字段），
+     * 不在代码中写死任何具体产品 slug，以便不同站点替换事实数据后自动生效。
+     */
+    public static function coreProductSlugs(): array
+    {
+        return array_values(array_map(
+            fn ($p) => $p['slug'],
+            array_filter(self::products(), fn ($p) => ! empty($p['core']))
+        ));
+    }
 
     private static ?array $productBySlug = null;
     private static ?array $sceneBySlug = null;
@@ -94,7 +99,12 @@ class Facts
 
     public static function isCoreProduct(?string $slug): bool
     {
-        return in_array($slug, self::CORE_PRODUCTS, true);
+        if (! $slug) {
+            return false;
+        }
+        $product = self::product($slug);
+
+        return $product !== null && ! empty($product['core']);
     }
 
     /** 某体系下全部产品（保持 facts 中的出现顺序） */

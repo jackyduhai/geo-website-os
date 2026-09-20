@@ -1,9 +1,12 @@
 <?php
 
 /**
- * 自动生成，请勿手改。
- * 来源：copy-global.json
- * 生成：scripts/compile_facts.php（修改事实后重跑该脚本）
+ * GEO Website OS 内置 Example 全局文案（导航 / 页脚 / 表单 / 404 / 合规词表）。
+ *
+ * 虚构、行业中性的示例内容，仅用于开箱演示；部署者应通过后台「站点设置 / 菜单装修」
+ * 或替换本文件写入自有内容。联系电话、地址等默认留空，前台整体隐藏对应区块。
+ *
+ * 本文件可由 scripts/compile_facts.php 从结构化数据源重新生成。
  */
 
 return array (
@@ -19,28 +22,18 @@ return array (
         array (
           0 => 
           array (
-            'label' => 'Sample SnackSample Marinade（固态调味料）',
-            'href' => '/products/seasoning/',
+            'label' => '工业防护涂料',
+            'href' => '/products/coatings/',
           ),
           1 => 
           array (
-            'label' => '鸡肉半成品',
-            'href' => '/products/prepared-chicken/',
+            'label' => '工业胶粘剂',
+            'href' => '/products/adhesives/',
           ),
           2 => 
           array (
-            'label' => '调味香精',
-            'href' => '/products/flavor/',
-          ),
-          3 => 
-          array (
-            'label' => 'Sample SnackSample BreadingSample Marinade',
-            'href' => '/products/coating/',
-          ),
-          4 => 
-          array (
-            'label' => 'Sample Spice',
-            'href' => '/products/spices/',
+            'label' => '功能助剂',
+            'href' => '/products/additives/',
           ),
         ),
       ),
@@ -52,33 +45,18 @@ return array (
         array (
           0 => 
           array (
-            'label' => 'Sample Snack创业小店',
-            'href' => '/solutions/fried-chicken-shop/',
+            'label' => '装备制造',
+            'href' => '/solutions/equipment-manufacturing/',
           ),
           1 => 
           array (
-            'label' => '夜市 / 烧烤摊',
-            'href' => '/solutions/night-market/',
+            'label' => '建筑工程',
+            'href' => '/solutions/construction-infrastructure/',
           ),
           2 => 
           array (
-            'label' => '连锁快餐 / 外卖',
-            'href' => '/solutions/chain-fastfood/',
-          ),
-          3 => 
-          array (
-            'label' => '中餐酒楼 / 食堂',
-            'href' => '/solutions/canteen/',
-          ),
-          4 => 
-          array (
-            'label' => '轻食 / 健身渠道',
-            'href' => '/solutions/light-meal/',
-          ),
-          5 => 
-          array (
-            'label' => '卤味 / 烤串店',
-            'href' => '/solutions/grill-skewer/',
+            'label' => '汽车零部件',
+            'href' => '/solutions/automotive-parts/',
           ),
         ),
       ),
@@ -113,17 +91,17 @@ return array (
         array (
           0 => 
           array (
-            'label' => '选料指南',
+            'label' => '选型指南',
             'href' => '/knowledge/selection/',
           ),
           1 => 
           array (
-            'label' => '工艺与配方',
+            'label' => '工艺与施工',
             'href' => '/knowledge/process/',
           ),
           2 => 
           array (
-            'label' => '开店与经营',
+            'label' => '采购与合作',
             'href' => '/knowledge/business/',
           ),
         ),
@@ -157,17 +135,17 @@ return array (
         ),
       ),
     ),
-    'cta' => '免费获取样品',
+    'cta' => '获取报价与样品',
     'ctaMobile' => '获取样品',
-    'phone' => '400-000-0000',
-    'phoneTel' => '+86400-000-0000',
+    'phone' => '',
+    'phoneTel' => '',
     'ariaLabels' => 
     array (
       'primaryNav' => '主导航',
       'mobileNav' => '导航菜单',
       'openMenu' => '打开导航菜单',
       'closeMenu' => '关闭导航菜单',
-      'phone' => '拨打全国合作热线 400-000-0000',
+      'phone' => '拨打合作热线',
     ),
   ),
   'footer' => 
@@ -181,28 +159,18 @@ return array (
         array (
           0 => 
           array (
-            'label' => 'Sample SnackSample Marinade（固态调味料）',
-            'href' => '/products/seasoning/',
+            'label' => '工业防护涂料',
+            'href' => '/products/coatings/',
           ),
           1 => 
           array (
-            'label' => '鸡肉半成品',
-            'href' => '/products/prepared-chicken/',
+            'label' => '工业胶粘剂',
+            'href' => '/products/adhesives/',
           ),
           2 => 
           array (
-            'label' => '调味香精',
-            'href' => '/products/flavor/',
-          ),
-          3 => 
-          array (
-            'label' => 'Sample SnackSample BreadingSample Marinade',
-            'href' => '/products/coating/',
-          ),
-          4 => 
-          array (
-            'label' => 'Sample Spice',
-            'href' => '/products/spices/',
+            'label' => '功能助剂',
+            'href' => '/products/additives/',
           ),
         ),
       ),
@@ -213,33 +181,18 @@ return array (
         array (
           0 => 
           array (
-            'label' => 'Sample Snack创业小店',
-            'href' => '/solutions/fried-chicken-shop/',
+            'label' => '装备制造',
+            'href' => '/solutions/equipment-manufacturing/',
           ),
           1 => 
           array (
-            'label' => '夜市 / 烧烤摊',
-            'href' => '/solutions/night-market/',
+            'label' => '建筑工程',
+            'href' => '/solutions/construction-infrastructure/',
           ),
           2 => 
           array (
-            'label' => '连锁快餐 / 外卖',
-            'href' => '/solutions/chain-fastfood/',
-          ),
-          3 => 
-          array (
-            'label' => '中餐酒楼 / 食堂',
-            'href' => '/solutions/canteen/',
-          ),
-          4 => 
-          array (
-            'label' => '轻食 / 健身渠道',
-            'href' => '/solutions/light-meal/',
-          ),
-          5 => 
-          array (
-            'label' => '卤味 / 烤串店',
-            'href' => '/solutions/grill-skewer/',
+            'label' => '汽车零部件',
+            'href' => '/solutions/automotive-parts/',
           ),
         ),
       ),
@@ -288,45 +241,45 @@ return array (
           0 => 
           array (
             'type' => 'text',
-            'label' => '全国合作热线',
-            'value' => '400-000-0000',
-            'href' => 'tel:+86400-000-0000',
+            'label' => '合作热线',
+            'value' => '',
+            'href' => '',
           ),
           1 => 
           array (
             'type' => 'text',
             'label' => '厂区地址',
-            'value' => 'Sample Province省Sample City市沈河区 Example Street 39',
+            'value' => '',
           ),
           2 => 
           array (
             'type' => 'qr',
-            'label' => '加微信要样品',
+            'label' => '扫码联系',
           ),
         ),
       ),
     ),
     'brandColumn' => 
     array (
-      'companyName' => 'Example Food Co., Ltd.',
-      'slogan' => '用真诚心，做好每一份鸡肉',
+      'companyName' => '示例制造有限公司',
+      'slogan' => '以稳定品质，服务每一次制造',
       'logoVariant' => 'inverse',
     ),
     'factBlock' => 
     array (
-      'companyName' => 'Example Food Co., Ltd.',
-      'founded' => '2017 年 3 月',
-      'establishedProduction' => '2018 年 3 月（四大车间全面投产）',
-      'address' => 'Sample Province省Sample City市沈河区 Example Street 39',
-      'area' => '约 9,000 平方米',
-      'capacity' => '约 8,000 吨成品',
-      'workshops' => 'Sample Spice粉碎 / 预制调理肉 / 固体调味料 / 食用香精',
+      'companyName' => '示例制造有限公司',
+      'founded' => '2014 年 6 月',
+      'establishedProduction' => '2015 年 9 月（主要产线投产）',
+      'address' => '示例省示例市示例区示例大道 1 号',
+      'area' => '约 12,000 平方米',
+      'capacity' => '约 1,200 吨成品',
+      'workshops' => '原料处理 / 配料混合 / 成型加工 / 品控包装',
       'salesRegions' => '东北、华北、华东、华中、西北、西南、华南七大区域',
-      'phone' => '400-000-0000',
+      'phone' => '',
     ),
     'legal' => 
     array (
-      'copyright' => '© 2026 Example Food Co., Ltd.',
+      'copyright' => '© 2026 示例制造有限公司',
       'icp' => NULL,
       'scLicense' => NULL,
       'standardCode' => NULL,
@@ -338,18 +291,18 @@ return array (
   ),
   'bottomCta' => 
   array (
-    'title' => '先拿一份样品试试',
-    'desc' => '说清你的产品和口味方向，我们安排寄样。',
-    'primaryCta' => '免费获取样品',
+    'title' => '先获取一份试样',
+    'desc' => '说明你的材料、性能要求与预计用量，我们安排试样与报价。',
+    'primaryCta' => '获取报价与样品',
     'secondaryCta' => '获取定制方案',
-    'phone' => '400-000-0000',
+    'phone' => '',
     'overrides' => 
     array (
       'factory' => 
       array (
         'primaryCta' => '预约工厂参观',
-        'secondaryCta' => '免费获取样品',
-        'note' => '全站唯一允许的变体。工厂页访客意向度最高，「来厂看看」比「寄样」更能推进成交。',
+        'secondaryCta' => '获取报价与样品',
+        'note' => '工厂页访客意向更明确，「来厂看看」比「寄样」更能推进合作。',
       ),
     ),
   ),
@@ -380,28 +333,26 @@ return array (
         'error' => '请选择客户类型',
         'options' => 
         array (
-          0 => 'Sample Snack创业小店',
-          1 => '夜市·烧烤摊',
-          2 => '连锁快餐·外卖',
-          3 => '中餐酒楼·食堂',
-          4 => '轻食·健身渠道',
-          5 => '卤味·烤串店',
-          6 => '经销商',
-          7 => '其他',
+          0 => '装备制造',
+          1 => '建筑工程',
+          2 => '汽车零部件',
+          3 => '工业品牌方',
+          4 => '经销商',
+          5 => '其他',
         ),
       ),
       'note' => 
       array (
         'label' => '需求简述（选填）',
-        'placeholder' => '想做什么口味方向？大概什么用量？',
+        'placeholder' => '需要什么材料或性能？大概用量？',
         'required' => false,
       ),
     ),
-    'submit' => '提交，我要样品',
+    'submit' => '提交需求',
     'submitting' => '提交中…',
     'privacy' => '我们只用你的信息联系你，不会用于其他用途。',
     'success' => '已收到，我们会尽快联系你。',
-    'error' => '提交没成功，请直接致电 400-000-0000。',
+    'error' => '提交没成功，请稍后重试，或通过页面上的其他方式联系我们。',
   ),
   'states' => 
   array (
@@ -419,11 +370,11 @@ return array (
     'desc' => '可能是链接变了，或者地址打错了。',
     'primaryCta' => '回到首页',
     'secondaryCta' => '看看产品',
-    'phoneLabel' => '或者直接打电话：',
+    'phoneLabel' => '或者直接联系我们：',
   ),
   'compliance' => 
   array (
-    'bannedInCopy' => 
+    'banned_terms' => 
     array (
       0 => '全国销量第一',
       1 => '全国销量领先',
@@ -438,20 +389,28 @@ return array (
       10 => '顶级',
       11 => '极致',
       12 => '唯一',
-      13 => 'Sample Chain同款',
-      14 => 'Sample Person同款',
-      15 => 'Sample Port同款',
     ),
-    'forbiddenCta' => 
+    'banned_comparisons' => 
     array (
-      0 => '了解更多',
-      1 => '查看更多',
-      2 => '点击这里',
-      3 => '详情',
-      4 => '立即体验',
-      5 => '马上抢',
-      6 => '限时',
     ),
-    'note' => '以上词汇不得出现在任何页面文案与按钮文案中。构建时应加入扫描校验。',
+    'vague_terms' => 
+    array (
+      0 => '多年',
+      1 => '大量',
+      2 => '众多客户',
+    ),
+    'canonical_values' => 
+    array (
+      'company' => '示例制造有限公司',
+      'industry' => '工业材料制造',
+      'address' => '示例省示例市示例区示例大道 1 号',
+      'phone' => '',
+    ),
+    'forbidden_practices' => 
+    array (
+      0 => '不虚构资质与认证',
+      1 => '不使用未授权的第三方品牌',
+      2 => '不宣称未经证实的性能指标',
+    ),
   ),
 );

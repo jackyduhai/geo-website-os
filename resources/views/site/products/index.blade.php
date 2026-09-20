@@ -8,7 +8,7 @@
 <section class="page-hero">
   <div class="wrap-narrow">
     <span class="eyebrow">PRODUCTS · 产品中心</span>
-    <h1 class="ph-h">Sample SnackSample Marinade、Sample Breading撒料与调理鸡肉，五大产品体系</h1>
+    <h1 class="ph-h">{{ count($lines) }} 大产品系列，覆盖从研发到量产的完整需求</h1>
     <p class="ph-lead">{{ $lead }}</p>
   </div>
 </section>
@@ -21,7 +21,7 @@
           <h2 class="sec-h">{{ $line['name'] }}<span class="pcard-count">{{ count($line['products']) }} 款</span></h2>
           <p class="sec-sub">{{ $line['desc'] ?? '' }}</p>
         </div>
-        @if(count($line['products']) >= 4)
+        @if(count($line['products']) >= 1)
           <a class="btn-text" href="{{ url('/products/' . $line['slug'] . '/') }}">查看该系列<span class="arr">→</span></a>
         @endif
       </div>

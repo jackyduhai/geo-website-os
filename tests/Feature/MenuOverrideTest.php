@@ -41,7 +41,7 @@ class MenuOverrideTest extends TestCase
             ->assertSee('固定主导航栏目')
             ->assertSee('固定页脚栏目')
             ->assertSee('产品中心')
-            ->assertSee('Sample Snack创业小店')
+            ->assertSee('装备制造')
             ->assertSee('联系我们');
     }
 
@@ -52,8 +52,8 @@ class MenuOverrideTest extends TestCase
 
         $products = $this->top('产品中心');
         $childNames = array_column($products['children'], 'name');
-        $this->assertContains('Sample Spice', $childNames);
-        $this->assertCount(5, $childNames);
+        $this->assertContains('工业防护涂料', $childNames);
+        $this->assertCount(3, $childNames);
     }
 
     public function test_override_renames_fixed_top(): void
@@ -69,13 +69,13 @@ class MenuOverrideTest extends TestCase
     public function test_override_hides_fixed_child(): void
     {
         $this->actingAs($this->admin)->post('/admin/menus/override', [
-            'key' => 'products-spices', 'label' => '',
+            'key' => 'products-coatings', 'label' => '',
             // 不提交 is_active => 视为隐藏
         ])->assertRedirect();
 
         $childNames = array_column($this->top('产品中心')['children'], 'name');
-        $this->assertNotContains('Sample Spice', $childNames);
-        $this->assertCount(4, $childNames);
+        $this->assertNotContains('工业防护涂料', $childNames);
+        $this->assertCount(2, $childNames);
     }
 
     public function test_override_reorders_tops(): void
@@ -168,9 +168,9 @@ class MenuOverrideTest extends TestCase
 
         $products = $this->top('产品中心');
         $names = array_column($products['children'], 'name');
-        // 固定 5 个子项在前，自定义子项追加在最后
+        // 固定 3 个子项在前，自定义子项追加在最后
         $this->assertSame('产品定制', end($names));
-        $this->assertCount(6, $names);
+        $this->assertCount(4, $names);
     }
 
     public function test_anchored_child_under_products_shows_in_page_subnav(): void
@@ -188,14 +188,14 @@ class MenuOverrideTest extends TestCase
 
         // 产品总览与系列页 Tab 条都应包含自定义项
         $this->get('/products/')->assertOk()->assertSee('产品定制');
-        $this->get('/products/seasoning/')->assertOk()->assertSee('产品定制');
+        $this->get('/products/coatings/')->assertOk()->assertSee('产品定制');
     }
 
     public function test_hidden_fixed_child_disappears_from_subnav_too(): void
     {
         // 导航覆盖层隐藏固定子项后，页面内二级 Tab 必须同步隐藏（同一数据源）
         $this->actingAs($this->admin)->post('/admin/menus/override', [
-            'key' => 'products-spices', 'label' => '',
+            'key' => 'products-coatings', 'label' => '',
         ])->assertRedirect();
         AppServiceProvider::forgetNavCache();
 
@@ -205,7 +205,7 @@ class MenuOverrideTest extends TestCase
             $html
         );
         preg_match('/<div class="wrap subnav-in".*?<\/div>\s*<\/div>/s', $html, $m);
-        $this->assertStringNotContainsString('Sample Spice', $m[0]);
+        $this->assertStringNotContainsString('工业防护涂料', $m[0]);
     }
 
     public function test_anchored_child_renders_inline_under_fixed_row_on_admin_page(): void
@@ -311,14 +311,14 @@ class MenuOverrideTest extends TestCase
     public function test_override_repoints_fixed_child_to_internal_path(): void
     {
         $this->actingAs($this->admin)->post('/admin/menus/override', [
-            'position' => 'main', 'key' => 'products-spices',
+            'position' => 'main', 'key' => 'products-coatings',
             'label' => '', 'url' => '/knowledge/process/',
             'is_active' => 1,
         ])->assertRedirect();
 
-        $spices = collect($this->top('产品中心')['children'])->firstWhere('name', 'Sample Spice');
-        $this->assertStringEndsWith('/knowledge/process/', $spices['url']);
-        $this->assertFalse($spices['external']);
+        $coatings = collect($this->top('产品中心')['children'])->firstWhere('name', '工业防护涂料');
+        $this->assertStringEndsWith('/knowledge/process/', $coatings['url']);
+        $this->assertFalse($coatings['external']);
     }
 
     public function test_dynamic_knowledge_child_cannot_have_link_overridden(): void
@@ -367,7 +367,7 @@ class MenuOverrideTest extends TestCase
         // 改页脚列标题
         $this->actingAs($this->admin)->post('/admin/menus/override', [
             'position' => 'footer', 'key' => 'ft-col-about',
-            'label' => '了解Example', 'is_active' => 1,
+            'label' => '了解产品', 'is_active' => 1,
         ])->assertRedirect();
         // 改页脚链接
         $this->actingAs($this->admin)->post('/admin/menus/override', [
@@ -378,7 +378,7 @@ class MenuOverrideTest extends TestCase
 
         AppServiceProvider::forgetNavCache();
         $about = collect(AppServiceProvider::footerMenu())->firstWhere('key', 'ft-col-about');
-        $this->assertSame('了解Example', $about['title']);
+        $this->assertSame('了解产品', $about['title']);
         $coop = collect($about['items'])->firstWhere('name', '合作方式');
         $this->assertSame('https://example.com/coop', $coop['url']);
         $this->assertTrue($coop['external']);
@@ -459,12 +459,12 @@ class MenuOverrideTest extends TestCase
         // 改页脚列标题会产生 key=ft-col-* 的覆盖行，它绝不能出现在「快捷入口」
         $this->actingAs($this->admin)->post('/admin/menus/override', [
             'position' => 'footer', 'key' => 'ft-col-about',
-            'label' => '了解Example', 'is_active' => 1,
+            'label' => '了解产品', 'is_active' => 1,
         ])->assertRedirect();
 
         AppServiceProvider::forgetNavCache();
         $extra = AppServiceProvider::footerExtra();
-        $this->assertNotContains('了解Example', array_column($extra, 'name'));
+        $this->assertNotContains('了解产品', array_column($extra, 'name'));
     }
 
     public function test_footer_override_unknown_key_rejected(): void

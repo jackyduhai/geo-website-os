@@ -46,7 +46,7 @@ Route::get('/', [HomeController::class, 'index'])->name('home');
 
 // 路由参数白名单（全部来自 facts，单一事实源，禁止手写枚举）
 $lineRe  = collect(Facts::productLines())->pluck('slug')->implode('|');
-$coreRe  = implode('|', Facts::CORE_PRODUCTS);
+$coreRe  = implode('|', Facts::coreProductSlugs());
 $sceneRe = collect(Facts::scenes())->pluck('slug')->implode('|');
 
 // ---------- 产品中心 ----------

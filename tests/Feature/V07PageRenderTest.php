@@ -27,7 +27,7 @@ class V07PageRenderTest extends TestCase
         return [
             'home'             => ['/'],
             'products-index'   => ['/products/'],
-            'seasoning-line'   => ['/products/seasoning/'],
+            'coatings-line'    => ['/products/coatings/'],
             'solutions-index'  => ['/solutions/'],
             'factory'          => ['/factory/'],
             'cooperation'      => ['/cooperation/'],
@@ -51,14 +51,14 @@ class V07PageRenderTest extends TestCase
         $this->assertSame(1, substr_count($res->content(), '<h1'), $path . ' H1 数量异常');
     }
 
-    public function test_six_core_products_render(): void
+    public function test_core_products_render(): void
     {
-        foreach (Facts::CORE_PRODUCTS as $slug) {
+        foreach (Facts::coreProductSlugs() as $slug) {
             $this->get('/products/' . $slug)->assertOk();
         }
     }
 
-    public function test_six_scenes_render(): void
+    public function test_scenes_render(): void
     {
         foreach (Facts::scenes() as $scene) {
             $this->get('/solutions/' . $scene['slug'] . '/')->assertOk();

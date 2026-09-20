@@ -21,7 +21,7 @@ class InquiryTest extends TestCase
             \Database\Seeders\ContentSeeder::class,
         ]);
         User::create([
-            'name' => '管理员', 'email' => 'admin@demo-tenant-a.local', 'password' => bcrypt('secret123'), 'is_super_admin' => true,
+            'name' => '管理员', 'email' => 'admin@example.test', 'password' => bcrypt('secret123'), 'is_super_admin' => true,
         ]);
     }
 
@@ -30,10 +30,10 @@ class InquiryTest extends TestCase
         return array_merge([
             'name'        => '张经理',
             'phone'       => '13800001111',
-            'company'     => '某Sample Snack店',
+            'company'     => '某装备制造厂',
             'demand_type' => '代工合作',
             'monthly_use' => '每月 1 吨',
-            'message'     => '想做一款东北孜然风味的Sample SnackSample Marinade，需要代工。',
+            'message'     => '需要一批用于设备外壳防护的工业涂料，寻求代工合作。',
         ], $override);
     }
 

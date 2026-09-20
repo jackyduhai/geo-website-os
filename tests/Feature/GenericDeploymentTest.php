@@ -249,9 +249,9 @@ class GenericDeploymentTest extends TestCase
     public function test_different_business_can_use_same_entity_structure(): void
     {
         $siteA = Site::create([
-            'name' => 'Food Seasoning Co',
-            'slug' => 'food-seasoning',
-            'domain' => 'food.test',
+            'name' => 'Packaging Materials Co',
+            'slug' => 'packaging-materials',
+            'domain' => 'packaging.test',
             'status' => 'active',
             'is_default' => false,
         ]);
@@ -268,16 +268,16 @@ class GenericDeploymentTest extends TestCase
             Entity::create([
                 'site_id' => $siteA->id,
                 'type' => 'organization',
-                'slug' => 'food-seasoning-co',
-                'name' => 'Food Seasoning Co',
+                'slug' => 'packaging-materials-co',
+                'name' => 'Packaging Materials Co',
                 'status' => 'published',
             ]);
 
             Entity::create([
                 'site_id' => $siteA->id,
                 'type' => 'product',
-                'slug' => 'marinade-mix',
-                'name' => 'Marinade Mix',
+                'slug' => 'corrugated-box',
+                'name' => 'Corrugated Box',
                 'status' => 'published',
             ]);
         });
@@ -301,9 +301,9 @@ class GenericDeploymentTest extends TestCase
         });
 
         SiteContext::setSite($siteA);
-        $foodProducts = $this->repo->getProducts();
-        $this->assertCount(1, $foodProducts);
-        $this->assertEquals('Marinade Mix', $foodProducts->first()->name);
+        $pkgProducts = $this->repo->getProducts();
+        $this->assertCount(1, $pkgProducts);
+        $this->assertEquals('Corrugated Box', $pkgProducts->first()->name);
 
         SiteContext::setSite($siteB);
         $engProducts = $this->repo->getProducts();

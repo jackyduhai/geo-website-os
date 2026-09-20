@@ -76,7 +76,7 @@
       </div>
 
       <div class="geo-layer">
-        <h3><span class="label-with-tip">② 解释层 <x-admin-tip text="说明为什么、怎么做，包含关键实体与参数（工艺 / 规格 / 口味 / 产能 / 交付）。"/></span></h3>
+        <h3><span class="label-with-tip">② 解释层 <x-admin-tip text="说明为什么、怎么做，包含关键实体与参数（工艺 / 规格 / 参数 / 产能 / 交付）。"/></span></h3>
         <textarea name="geo_explanation" rows="4">{{ old('geo_explanation',$content->geo_explanation) }}</textarea>
       </div>
 
@@ -87,7 +87,7 @@
             <div class="repeat-row">
               <div class="repeat-item">
                 <input type="text" name="ev_label[]" value="{{ $ev['label'] ?? '' }}" placeholder="参数名（如 年产能）">
-                <input type="text" name="ev_value[]" value="{{ $ev['value'] ?? '' }}" placeholder="值（如 约 8000 吨）">
+                <input type="text" name="ev_value[]" value="{{ $ev['value'] ?? '' }}" placeholder="值（如 具体数值）">
                 <input type="text" name="ev_source[]" value="{{ $ev['source'] ?? '' }}" placeholder="来源（必填，如 事实库）">
                 <input type="text" name="ev_url[]" value="{{ $ev['url'] ?? '' }}" placeholder="来源 URL（可空）">
                 <button type="button" class="btn btn-sm btn-danger del-repeat">删</button>
@@ -140,7 +140,7 @@
             <div class="repeat-row">
               <div class="repeat-item kf">
                 <input type="text" name="kf_key[]" value="{{ $kf['key'] ?? '' }}" placeholder="事实名（如 年产能）">
-                <input type="text" name="kf_value[]" value="{{ $kf['value'] ?? '' }}" placeholder="事实值（如 约 8,000 吨）">
+                <input type="text" name="kf_value[]" value="{{ $kf['value'] ?? '' }}" placeholder="事实值（如 具体数值）">
                 <button type="button" class="btn btn-sm btn-danger del-repeat">删</button>
               </div>
             </div>

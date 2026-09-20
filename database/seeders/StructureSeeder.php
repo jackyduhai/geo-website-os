@@ -28,16 +28,16 @@ class StructureSeeder extends Seeder
                 'name'        => '知识中心',
                 'slug'        => 'knowledge',
                 'type'        => 'list',
-                'description' => '选料指南、工艺与配方、开店与经营类内容，供餐饮经营者参考。',
+                'description' => '选型指南、工艺参数与应用案例类内容，供采购与技术选型参考。',
                 'sort'        => 30,
                 // v0.9.11：知识子栏目以锁定 IA 三栏目为唯一来源（数据驱动前台/导航/sitemap/llms）
                 'groups'      => [
-                    ['name' => '选料指南', 'slug' => 'selection', 'sort' => 10,
-                     'description' => '如何认识与挑选Sample SnackSample Marinade、Sample Breading、撒料。'],
+                    ['name' => '选型指南', 'slug' => 'selection', 'sort' => 10,
+                     'description' => '如何认识与挑选涂料、胶粘剂与功能性助剂。'],
                     ['name' => '工艺与配方', 'slug' => 'process', 'sort' => 20,
-                     'description' => '腌制工艺、配比逻辑与配方定制过程。'],
-                    ['name' => '开店与经营', 'slug' => 'business', 'sort' => 30,
-                     'description' => 'Sample Snack创业、代工合作与门店经营参考。'],
+                     'description' => '生产工艺、参数逻辑与配方定制过程。'],
+                    ['name' => '选型与应用', 'slug' => 'business', 'sort' => 30,
+                     'description' => '选型落地、代工合作与稳定供应参考。'],
                 ],
             ],
             [
@@ -98,13 +98,13 @@ class StructureSeeder extends Seeder
 
         // ---------- 首页区块（顺序即前台呈现顺序） ----------
         $blocks = [
-            ['hero',      'Example Food', '中式Sample SnackSample Marinade与调理鸡肉 OEM 代工', 1, null],
+            ['hero',      '', '', 1, null],
             ['facts',     '主体事实',   '可直接核验的基础信息',            2, null],
             // products 区块为手工/装修驱动，不绑定栏目（结构化产品走 facts 静态页）
-            ['products',  '产品体系',   '五大产品体系，从Sample Marinade到Sample Breading的完整风味方案', 3, null],
-            ['knowledge', '知识中心',   '腌制工艺与门店应用参考',          4, 'knowledge'],
+            ['products',  '产品体系',   '覆盖不同应用场景的产品系列',      3, null],
+            ['knowledge', '知识中心',   '选型与工艺应用参考',              4, 'knowledge'],
             ['news',      '新闻动态',   '公司动态与行业信息',              5, 'news'],
-            ['cta',       '联系我们',   '配方定制、样品打样与 OEM 代工咨询', 6, null],
+            ['cta',       '联系我们',   '配方定制、打样与 OEM/ODM 代工咨询', 6, null],
         ];
         $sort = 0;
         foreach ($blocks as $b) {

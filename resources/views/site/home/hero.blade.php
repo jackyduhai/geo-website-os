@@ -3,18 +3,28 @@
      B · 图片 Banner 轮播（读取“展示→Banner 轮播”里首页顶部且启用、有图的条目，多图轮播，SSR 全量输出）。
      B 模式若无可用 Banner，自动回退 A，绝不留白。整页始终只有一个 H1（B 模式取第一张主标题）。 --}}
 @php
-  $siteName = $siteSettings['site_name'] ?? 'Example Food';
+  $siteName = $siteSettings['site_name'] ?? config('app.name');
   $blkCfg = $blk->cfg();
   $heroMode = $blkCfg['mode'] ?? 'A';
   $heroAutoplay = ! empty($blkCfg['autoplay']);
 
-  $defaultTitle = '中式Sample SnackSample Marinade与调理鸡肉，从配方到量产的一站式代工';
+  // 默认口径全部由通用 Facts 数据派生，不在此写死任何具体企业 / 行业信息
+  $company = $company ?? \App\Support\Facts::company();
+  $heroWsCount = count(\App\Support\Facts::workshops());
+  $heroRegionCount = count(\App\Support\Facts::salesRegions());
+  $heroYears = (int) ($company['tech_experience_years'] ?? 0);
+  $heroCustomers = implode('、', array_slice($company['target_customers'] ?? [], 0, 3));
+  $heroBrand = $company['brand'] ?? ($company['name'] ?? config('app.name'));
+  $heroCapacity = number_format((int) ($company['annual_capacity_tons'] ?? 0));
+  $defaultKicker = $heroBrand . ($heroYears > 0 ? ' · 深耕行业 ' . $heroYears . ' 年' : ' · 源头制造工厂');
+
+  $defaultTitle = $heroBrand . '，从研发到量产的一站式定制制造';
   $heroTitle = $blk->title ?? null;
   if (blank($heroTitle) || trim((string) $heroTitle) === trim((string) $siteName)) {
       $heroTitle = $defaultTitle;
   }
-  // A/C 共用说明正文：后台「首页装修」可编辑，留空回退核定默认口径
-  $defaultLead = '自有约 9,000 ㎡ 厂区、四大生产车间，年产能约 8,000 吨。为Sample Snack门店、连锁品牌与经销商提供配方定制研发、OEM/ODM 代工与稳定供货，覆盖全国七大销售区域。';
+  // A/C 共用说明正文：后台「首页装修」可编辑，留空回退由 Facts 派生的默认口径
+  $defaultLead = '自有约 ' . number_format((int) ($company['area_sqm'] ?? 0)) . ' ㎡ 厂区、' . $heroWsCount . ' 个生产车间，年产能约 ' . $heroCapacity . ' 吨。为' . $heroCustomers . '等客户提供定制研发、OEM / ODM 代工与稳定供货，销售覆盖全国 ' . $heroRegionCount . ' 大区域。';
   $heroLead = trim((string) ($blkCfg['lead'] ?? '')) !== '' ? trim((string) $blkCfg['lead']) : $defaultLead;
 
   // B 模式可用 Banner：必须有图；控制器已按启用 + 投放位置=home_top 过滤
@@ -163,7 +173,7 @@
       <span class="hi-veil" aria-hidden="true"></span>
       <div class="wrap hi-in">
         <div class="hi-copy">
-          <span class="hi-kicker">{{ $blk->subtitle ?: 'Example Food Co., Ltd. · 中式Sample Snack调味二十年' }}</span>
+          <span class="hi-kicker">{{ $blk->subtitle ?: $defaultKicker }}</span>
           {{-- 逐幻灯文案层（grid 堆叠，同 index 与背景一起淡入；首图 H1，其余 div 保证整页唯一 H1） --}}
           <div class="hi-copystack">
             @foreach($cSlides as $ci => $cs)
@@ -185,9 +195,9 @@
             @endforeach
           </div>
           <ul class="hi-trust">
-            <li>@include('site._icon', ['name' => 'clock', 'size' => 16]) 中式Sample Snack调味深耕二十年</li>
-            <li>@include('site._icon', ['name' => 'sliders', 'size' => 16]) 定向配方 · 快速打样</li>
-            <li>@include('site._icon', ['name' => 'factory', 'size' => 16]) 四大车间 · 年产能约 8,000 吨</li>
+            <li>@include('site._icon', ['name' => 'clock', 'size' => 16]) {{ $heroYears > 0 ? '深耕行业 ' . $heroYears . ' 年' : '多年行业经验' }}</li>
+            <li>@include('site._icon', ['name' => 'sliders', 'size' => 16]) 定向研发 · 快速打样</li>
+            <li>@include('site._icon', ['name' => 'factory', 'size' => 16]) {{ $heroWsCount }} 个车间 · 年产能约 {{ $heroCapacity }} 吨</li>
           </ul>
         </div>
       </div>
@@ -229,7 +239,7 @@
   <section class="hero-split reveal in" id="top">
     <div class="wrap hero-in">
       <div class="hero-copy">
-        <span class="hero-kicker-line">{{ $blk->subtitle ?: 'Example Food Co., Ltd. · 中式Sample Snack调味二十年' }}</span>
+        <span class="hero-kicker-line">{{ $blk->subtitle ?: $defaultKicker }}</span>
         <h1 class="hero-title">{{ $heroTitle }}</h1>
         <p class="hero-lead">{{ $heroLead }}</p>
         <div class="actions">
@@ -240,26 +250,23 @@
           @endif
         </div>
         <ul class="hero-trust">
-          <li>@include('site._icon', ['name' => 'clock', 'size' => 16]) 中式Sample Snack调味深耕二十年</li>
-          <li>@include('site._icon', ['name' => 'sliders', 'size' => 16]) 定向配方 · 快速打样</li>
-          <li>@include('site._icon', ['name' => 'factory', 'size' => 16]) 四大车间 · 年产能约 8,000 吨</li>
+          <li>@include('site._icon', ['name' => 'clock', 'size' => 16]) {{ $heroYears > 0 ? '深耕行业 ' . $heroYears . ' 年' : '多年行业经验' }}</li>
+          <li>@include('site._icon', ['name' => 'sliders', 'size' => 16]) 定向研发 · 快速打样</li>
+          <li>@include('site._icon', ['name' => 'factory', 'size' => 16]) {{ $heroWsCount }} 个车间 · 年产能约 {{ $heroCapacity }} 吨</li>
         </ul>
       </div>
       <div class="hero-visual">
-        <div class="param-card" aria-label="标准化配比示例：Sample Flavor 801 Sample Marinade">
+        @php $pcName = $heroProduct['short_name'] ?? ($heroProduct['name'] ?? ''); @endphp
+        <div class="param-card" aria-label="标准化参数示例{{ $pcName !== '' ? '：' . $pcName : '' }}">
           <div class="pc-head">
-            <strong>标准化配比示例 · Sample Flavor 801</strong>
-            <span>工艺参数，连锁可直接复现</span>
+            <strong>标准化参数示例{{ $pcName !== '' ? ' · ' . $pcName : '' }}</strong>
+            <span>工艺参数，产线可直接复现</span>
           </div>
           <dl class="pc-body">
             @forelse($heroParams ?? [] as $hp)
               <div class="pc-row"><dt>{{ $hp['label'] }}</dt><dd>{{ $hp['value'] }}</dd></div>
             @empty
-              <div class="pc-row"><dt>主料</dt><dd>鸡腿肉 500g</dd></div>
-              <div class="pc-row"><dt>Sample Marinade</dt><dd>8g</dd></div>
-              <div class="pc-row"><dt>清水</dt><dd>50g</dd></div>
-              <div class="pc-row"><dt>搅拌</dt><dd>20 分钟</dd></div>
-              <div class="pc-row"><dt>冷藏腌制</dt><dd>0–4℃ · 4 小时以上</dd></div>
+              <div class="pc-row"><dt>参数</dt><dd>详见对应产品规格表</dd></div>
             @endforelse
           </dl>
           <div class="pc-foot">
@@ -268,7 +275,7 @@
                 <em>{{ is_array($line) ? ($line['name'] ?? '') : $line->name }}</em>
               @endforeach
             </div>
-            <a href="{{ url('/solutions/') }}">按门店场景选料 <span class="arr">→</span></a>
+            <a href="{{ url('/solutions/') }}">按应用场景选产品 <span class="arr">→</span></a>
           </div>
         </div>
       </div>

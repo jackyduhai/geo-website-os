@@ -42,30 +42,30 @@ class HomeController extends Controller
             ],
         ];
 
-        // S01 Hero：Sample Flavor 801 参数卡（5 行，真实可溯）
-        $data['heroProduct'] = Facts::product('orleans-801');
+        // S01 Hero：取首个核心产品的关键参数卡（数据驱动，最多 5 行，真实可溯）
+        $data['heroProduct'] = collect(Facts::products())->firstWhere('core', true) ?: null;
         $data['heroParams'] = $this->heroParams($data['heroProduct']);
 
-        // S02 六类场景（后台条目优先，缺省取统一默认源）
+        // S02 应用场景（后台条目优先，缺省取统一默认源）
         $sceneBlock = $byType->get('scenes');
         $data['sceneList'] = ($sceneBlock && $it = $sceneBlock->items()) ? $it : HomeBlockDefaults::scenes();
 
-        // S03 五大产品体系（含产品数，2 大 + 3 小由视图按数量呈现）
+        // S03 产品体系（含产品数，各系列由视图按实际数量呈现）
         $data['productLines'] = collect(Facts::productLines())->map(function ($l) {
             $l['products'] = Facts::productsByLine($l['slug']);
             $l['count'] = count($l['products']);
             return $l;
         })->all();
 
-        // S04 反白参数表 6 行 + 三条差异化
+        // S04 反白参数表（行数随核心产品数据驱动）+ 差异化条目
         $data['paramRows'] = $this->s04Rows();
         $data['paramDifferentiators'] = $this->paramDifferentiators();
 
-        // S05 信任数据条 5 项 + 四大车间（后台区块可覆盖，缺省取 Facts 并带默认图标）
+        // S05 信任数据条 + 生产车间（后台区块可覆盖，缺省取 Facts 并带默认图标）
         $data['stats'] = $this->buildStats($company);
         $data['workshopItems'] = $this->workshopItems($byType->get('workshops'));
 
-        // S06 三种合作方式 + 五步流程（条目后台可覆盖，缺省取统一默认源）
+        // S06 合作方式 + 合作流程（条目后台可覆盖，缺省取统一默认源）
         $coopBlock = $byType->get('cooperation');
         $data['coopModes'] = ($coopBlock && $it = $coopBlock->items()) ? $it : HomeBlockDefaults::cooperation();
         $data['stepItems'] = $this->stepItems($byType->get('steps'));
@@ -74,14 +74,14 @@ class HomeController extends Controller
         $caseBlock = $byType->get('cases');
         $data['caseList'] = ($caseBlock && $it = $caseBlock->items()) ? $it : HomeBlockDefaults::cases();
 
-        // S09 首页 FAQ（终稿 8 条，后台区块可覆盖）
+        // S09 首页 FAQ（条数由 config/pages 驱动，后台区块可覆盖）
         $data['homeFaqs'] = $this->homeFaqItems($byType->get('faqs'));
 
         // 能力点（后台可装修，缺省内置）
         $data['capabilityItems'] = $this->capabilityItems($byType->get('capabilities'));
 
         // 资质与产能事实条（S6 GEO 证据层）：取公开事实，剔除已在页眉/页脚出现的
-        // 公司全称、品牌名、官方电话等身份/联系项，首页精选 8 条，全量见关于页。
+        // 公司全称、品牌名、官方电话等身份/联系项，首页精选部分，全量见关于页。
         $data['factRows'] = Fact::publicRows()->reject(fn ($f) => in_array($f->key, [
             'FACT-COMPANY-001', // 公司全称（页眉已有）
             'FACT-COMPANY-002', // 品牌名（页眉已有）
@@ -125,7 +125,10 @@ class HomeController extends Controller
         return view('site.home', $data);
     }
 
-    /** S01 Hero 参数卡：适用主料 / 用量 / 搅拌 / 腌制 / 油炸，共 5 行。 */
+    /**
+     * S01 Hero 参数卡：直接取产品数据中的关键参数 key_params（数据驱动，最多 5 行）。
+     * 不按任何行业专属的参数名 / 工序名过滤，换一套事实数据即可自动呈现对应参数。
+     */
     private function heroParams(?array $p): array
     {
         if (! $p) {
@@ -133,56 +136,47 @@ class HomeController extends Controller
         }
         $rows = [];
         foreach (($p['key_params'] ?? []) as $kp) {
-            if ($kp['label'] === '适用主料' || $kp['label'] === '推荐用量' || $kp['label'] === '冷藏腌制') {
-                $rows[] = ['label' => $kp['label'], 'value' => $kp['value']];
+            if (empty($kp['label'])) {
+                continue;
             }
-        }
-        foreach (($p['params'] ?? []) as $step) {
-            if (in_array($step['step'], ['搅拌', '油炸'], true)) {
-                $v = $step['value'];
-                if (! empty($step['note'])) {
-                    $v .= '（' . $step['note'] . '）';
-                }
-                $rows[] = ['label' => $step['step'], 'value' => $v];
-            }
+            $rows[] = ['label' => $kp['label'], 'value' => $kp['value'] ?? ''];
             if (count($rows) >= 5) {
                 break;
             }
         }
-        return array_slice($rows, 0, 5);
+        return $rows;
     }
 
-    /** S04 六行参数：取「推荐用量 + 油温/腌制」，全部源自 facts。 */
+    /** S04 参数对比行：取核心产品（最多 6 个）的关键参数值，全部源自 facts。 */
     private function s04Rows(): array
     {
-        $slugs = [
-            'orleans-801', 'american-fried-chicken-marinade', 'garlic-marinade',
-            'korean-fried-chicken-marinade', 'sample-city-chicken-frame-marinade', 'taiwanese-chicken-cutlet-marinade',
-        ];
         $rows = [];
-        foreach ($slugs as $slug) {
+        foreach (Facts::coreProductSlugs() as $slug) {
             $p = Facts::product($slug);
             if (! $p) {
                 continue;
             }
             $vals = [];
             foreach (($p['key_params'] ?? []) as $kp) {
-                if (in_array($kp['label'], ['推荐用量', '油温与时间', '冷藏腌制', 'Sample Breading浆粉水比'], true)) {
+                if (! empty($kp['value'])) {
                     $vals[] = $kp['value'];
                 }
             }
             $rows[] = ['label' => $p['short_name'] ?? $p['name'], 'value' => implode('｜', $vals)];
+            if (count($rows) >= 6) {
+                break;
+            }
         }
         return $rows;
     }
 
-    /** S04 三条差异化（均为可核实事实，不做他方对标、不用极限词）。 */
+    /** S04 三条差异化（通用表述，不做他方对标、不用极限词）。 */
     private function paramDifferentiators(): array
     {
         return [
-            ['title' => '四大车间自有生产', 'text' => '从Sample Spice粉碎到固体调味料同厂完成，风味与批次更可控'],
-            ['title' => '给到真实配比工艺', 'text' => '按 500g 主料写清用量、油温与时间，不只卖料、更教你怎么用'],
-            ['title' => '五大体系一站配齐', 'text' => 'Sample Marinade、Sample Breading、撒料、调味香精、调理鸡肉协同，减少多头对接'],
+            ['title' => '自有产线生产', 'text' => '从原料处理到品控包装同厂完成，性能与批次更可控'],
+            ['title' => '给到真实配比工艺', 'text' => '写清配比、温度与时间，不只供料、更说明怎么用'],
+            ['title' => '多产品线一站配齐', 'text' => '多条产品线协同配套，减少多头对接'],
         ];
     }
 
@@ -191,7 +185,7 @@ class HomeController extends Controller
         return ($block && $items = $block->items()) ? $items : HomeBlockDefaults::capabilities();
     }
 
-    /** 四大车间：后台装修优先，缺省取统一默认源。 */
+    /** 生产车间：后台装修优先，缺省取统一默认源。 */
     private function workshopItems(?PageBlock $block): array
     {
         return ($block && $items = $block->items()) ? $items : HomeBlockDefaults::workshops();
@@ -229,13 +223,13 @@ class HomeController extends Controller
             ->get();
     }
 
-    /** S05 五条信任数据（全部源自 facts）。 */
+    /** S05 信任数据条（数值全部源自 facts）。 */
     private function buildStats(array $company): array
     {
         return [
-            ['num' => (int) ($company['tech_experience_years'] ?? 20), 'unit' => '年', 'label' => '中式Sample Snack调味深耕'],
-            ['num' => (int) ($company['area_sqm'] ?? 9000), 'unit' => '㎡', 'label' => '自有生产厂区'],
-            ['num' => (int) ($company['annual_capacity_tons'] ?? 8000), 'unit' => '吨', 'label' => '年成品产能'],
+            ['num' => (int) ($company['tech_experience_years'] ?? 0), 'unit' => '年', 'label' => '工业材料领域经验'],
+            ['num' => (int) ($company['area_sqm'] ?? 0), 'unit' => '㎡', 'label' => '自有生产厂区'],
+            ['num' => (int) ($company['annual_capacity_tons'] ?? 0), 'unit' => '吨', 'label' => '年成品产能'],
             ['num' => count(Facts::workshops()), 'unit' => '大', 'label' => '自有生产车间'],
             ['num' => count(Facts::salesRegions()), 'unit' => '大区', 'label' => '全国销售覆盖'],
         ];

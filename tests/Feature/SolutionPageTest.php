@@ -44,11 +44,14 @@ class SolutionPageTest extends TestCase
 
     public function test_solution_shows_real_combo_without_competitor_terms(): void
     {
-        $res = $this->get('/solutions/fried-chicken-shop/')->assertOk();
-        $res->assertSee('生Sample Snack架Sample Marinade');
-        $res->assertDontSee('Sample Port');
-        $res->assertDontSee('Sample Chain');
-        $res->assertDontSee('Sample Person');
+        $res = $this->get('/solutions/equipment-manufacturing/')->assertOk();
+        // 场景页呈现真实产品组合（装备制造场景组合含环氧富锌底漆）
+        $res->assertSee('环氧富锌底漆');
+        // 通用合规红线：只呈现自有产品，不出现「XX 同款」式对标或配置中的他方品牌
+        $res->assertDontSee('同款');
+        foreach (Facts::bannedComparisons() as $competitor) {
+            $res->assertDontSee($competitor);
+        }
     }
 
     public function test_cooperation_page_renders_faq_schema_and_five_steps(): void
@@ -78,7 +81,7 @@ class SolutionPageTest extends TestCase
         $xml = $this->get('/sitemap.xml')->assertOk()->content();
         $this->assertStringContainsString('/solutions/', $xml);
         $this->assertStringContainsString('/cooperation/', $xml);
-        $this->assertStringContainsString('/products/seasoning/', $xml);
+        $this->assertStringContainsString('/products/coatings/', $xml);
         $this->assertStringNotContainsString('/scenarios', $xml);
         $this->assertStringNotContainsString('/cases', $xml);
     }
@@ -86,7 +89,7 @@ class SolutionPageTest extends TestCase
     public function test_legacy_scenarios_permanently_redirects_to_solutions(): void
     {
         $this->get('/scenarios')->assertRedirect('/solutions/');
-        $this->get('/scenarios/fried-chicken-shop')->assertRedirect('/solutions/fried-chicken-shop/');
+        $this->get('/scenarios/equipment-manufacturing')->assertRedirect('/solutions/equipment-manufacturing/');
     }
 
     public function test_home_contains_scene_and_param_sections(): void

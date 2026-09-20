@@ -1,13 +1,13 @@
-# Example Website · 生产部署与运维手册（云端 / 宝塔 / Nginx + PHP-FPM）
+# GEO Website OS · 生产部署与运维手册（云端 / 宝塔 / Nginx + PHP-FPM）
 
-> 适用：Laravel 12 + PHP 8.2+（项目按 8.4 验证）+ SQLite（可换 MySQL），前台为 Blade SSR + 整页静态化缓存，后台 CMS。
+> 适用：Laravel 12 + PHP 8.4+ + SQLite（可换 MySQL），前台为 Blade SSR + 整页静态化缓存，后台 CMS。
 > 本机开发用 `php artisan serve`；**生产环境务必用 Nginx + PHP-FPM**，不要用内置服务器对外。
 
 ---
 
 ## 1. 环境要求
 
-- PHP 8.2 及以上（推荐 8.4），扩展：`mbstring、openssl、tokenizer、xml、ctype、json、fileinfo、gd（或 imagick）、pdo_sqlite`（换 MySQL 则 `pdo_mysql`）、`bcmath、zip`（建议）。
+- PHP 8.4 及以上，扩展：`mbstring、openssl、tokenizer、xml、ctype、json、fileinfo、gd（或 imagick）、pdo_sqlite`（换 MySQL 则 `pdo_mysql`）、`bcmath、zip`（建议）。
 - Nginx（1.20+）；Composer 2；可选 Supervisor（队列）。
 - 目录可写：`storage/`、`bootstrap/cache/`；上传目录 `storage/app/public/`（通过 `public/storage` 软链对外）。
 
@@ -16,8 +16,8 @@
 ## 2. 首次部署
 
 ```bash
-# 1) 上传代码到站点目录（示例 /www/wwwroot/example），Web 根目录指向 .../example/public
-cd /www/wwwroot/example
+# 1) 上传代码到站点目录（示例 /www/wwwroot/geo-website-os），Web 根目录指向 .../geo-website-os/public
+cd /www/wwwroot/geo-website-os
 
 # 2) 依赖（不含开发包，优化自动加载）
 composer install --no-dev --optimize-autoloader
@@ -56,7 +56,7 @@ php artisan page-cache:clear
 server {
     listen 80;
     server_name www.example.com example.com;
-    root /www/wwwroot/example/public;
+    root /www/wwwroot/geo-website-os/public;
     index index.php;
 
     client_max_body_size 20m;          # 后台图片/Banner 上传上限，按需调整
@@ -135,7 +135,7 @@ opcache.fast_shutdown=1
 ## 5. 日常更新 / 发布流程
 
 ```bash
-cd /www/wwwroot/example
+cd /www/wwwroot/geo-website-os
 git pull   # 或上传新代码
 composer install --no-dev --optimize-autoloader
 php artisan migrate --force
@@ -176,7 +176,7 @@ curl -I http://127.0.0.1:8010/        # 首次 X-Page-Cache: MISS，再次 HIT
 
 - `.env` 设 `QUEUE_CONNECTION=database`，执行 `php artisan queue:table && php artisan migrate`；
 - 用 Supervisor 常驻：`php artisan queue:work --tries=3 --max-time=3600`；
-- 需要定时任务时加 crontab：`* * * * * cd /www/wwwroot/example && php artisan schedule:run >> /dev/null 2>&1`。
+- 需要定时任务时加 crontab：`* * * * * cd /www/wwwroot/geo-website-os && php artisan schedule:run >> /dev/null 2>&1`。
 
 ---
 

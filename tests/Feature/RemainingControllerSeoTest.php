@@ -50,7 +50,7 @@ class RemainingControllerSeoTest extends TestCase
             'factory'            => ['/factory/', false],
             'cooperation'        => ['/cooperation/', false],
             'products-index'     => ['/products/', false],
-            'product-detail'     => ['/products/orleans-801', false],
+            'product-detail'     => ['/products/epoxy-primer-100', false],
             'solutions-index'    => ['/solutions/', false],
             'search'             => ['/search', true],
         ];
@@ -80,11 +80,11 @@ class RemainingControllerSeoTest extends TestCase
 
     public function test_product_detail_canonical_matches_business_url(): void
     {
-        $html = $this->get('/products/orleans-801')->assertOk()->getContent();
+        $html = $this->get('/products/epoxy-primer-100')->assertOk()->getContent();
 
         // 固定 IA 页 canonical = 其真实公开地址（业务 URL 生成器职责，5.12 收敛）
         $this->assertStringContainsString('<link rel="canonical" href="', $html);
-        $this->assertStringContainsString('/products/orleans-801">', $html);
+        $this->assertStringContainsString('/products/epoxy-primer-100">', $html);
     }
 
     public function test_search_page_is_noindex_and_robots_excluded_tags_consistent(): void

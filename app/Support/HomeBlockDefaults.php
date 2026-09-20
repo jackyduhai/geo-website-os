@@ -25,7 +25,7 @@ class HomeBlockDefaults
         };
     }
 
-    /** S02 六类应用场景（含标签与揭示参数，后台可改文案/换图/改链接）。 */
+    /** S02 应用场景（含标签与揭示参数，后台可改文案/换图/改链接）。 */
     public static function scenes(): array
     {
         $out = [];
@@ -49,7 +49,7 @@ class HomeBlockDefaults
         return $out;
     }
 
-    /** S06 三种合作方式。 */
+    /** S06 合作方式。 */
     public static function cooperation(): array
     {
         return array_map(function ($m) {
@@ -87,17 +87,17 @@ class HomeBlockDefaults
         return $out;
     }
 
-    /** S05 四大车间（配默认线性图标）。 */
+    /** S05 生产车间（配默认线性图标，数量随 facts 数据）。 */
     public static function workshops(): array
     {
-        $icons = ['leaf', 'drumstick', 'jar', 'flask'];
+        $icons = ['package', 'sliders', 'gear', 'shield'];
         $i = 0;
         return array_map(function ($w) use (&$i, $icons) {
             return ['icon' => $icons[$i++] ?? 'factory', 'title' => $w['name'], 'text' => $w['desc']];
         }, Facts::workshops());
     }
 
-    /** S06 五步合作流程。 */
+    /** S06 合作流程。 */
     public static function steps(): array
     {
         return array_map(fn ($s) => ['title' => $s['name'], 'text' => $s['desc']], Facts::cooperation()['process'] ?? []);
@@ -113,8 +113,8 @@ class HomeBlockDefaults
     public static function capabilities(): array
     {
         return [
-            ['icon' => 'sliders', 'title' => '配方定制', 'text' => '按餐饮品牌需求定向研发风味，非通货拼配'],
-            ['icon' => 'factory', 'title' => 'OEM / ODM 代工', 'text' => '从Sample Marinade、Sample Breading撒料到调理鸡肉的完整代工链路'],
+            ['icon' => 'sliders', 'title' => '配方定制', 'text' => '按客户性能要求定向研发，非标定制'],
+            ['icon' => 'factory', 'title' => 'OEM / ODM 代工', 'text' => '从原料到成品的完整代工链路'],
             ['icon' => 'repeat', 'title' => '打样到量产', 'text' => '需求对接 → 配方打样 → 试样确认 → 批量交付'],
         ];
     }

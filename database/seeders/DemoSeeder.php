@@ -42,9 +42,9 @@ class DemoSeeder extends Seeder
                     ],
                     'area_served'   => collect(\App\Support\Facts::salesRegions())
                         ->map(fn ($r) => $r . '地区')->all(),
-                    'knows_about'   => [
-                        '中式Sample SnackSample Marinade', '鸡架Sample Marinade', 'Sample Breading撒料', '调理鸡肉制品', 'OEM/ODM 代工',
-                    ],
+                    'knows_about'   => collect(\App\Support\Facts::productLines())
+                        ->pluck('name')->take(4)->filter()->values()
+                        ->push('OEM/ODM 定制制造')->all(),
                 ],
             ], JSON_UNESCAPED_UNICODE),
         ]);

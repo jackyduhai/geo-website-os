@@ -6,12 +6,12 @@
 <section class="page-hero">
   <div class="wrap-narrow">
     <span class="eyebrow">COOPERATION · 合作方式</span>
-    <h1 class="ph-h">三种合作方式，从研发到稳定供货</h1>
+    <h1 class="ph-h">{{ count($coop['types']) }} 种合作方式，从研发到稳定供货</h1>
     <p class="ph-lead">{{ $lead }}</p>
   </div>
 </section>
 
-{{-- 三种合作方式 --}}
+{{-- 合作方式 --}}
 <section class="sec">
   <div class="wrap">
     <div class="coop-grid3">
@@ -30,13 +30,13 @@
   </div>
 </section>
 
-{{-- 五步流程 --}}
+{{-- 合作流程 --}}
 @if(!empty($coop['process']))
 <section class="sec sec-tint">
   <div class="wrap">
     <div class="sec-head center">
       <span class="eyebrow">PROCESS · 合作流程</span>
-      <h2 class="sec-h">五步走完，从沟通到持续供货</h2>
+      <h2 class="sec-h">{{ count($coop['process']) }} 步走完，从沟通到持续供货</h2>
     </div>
     @include('site._process_steps', [
       'steps' => array_map(fn($s) => ['title' => $s['name'], 'text' => $s['desc']], $coop['process']),

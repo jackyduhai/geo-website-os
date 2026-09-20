@@ -26,9 +26,9 @@ class SiteAwareCacheTest extends TestCase
     }
 
     /** @test */
-    public function demo-tenant-a_settings_cache_key_is_gone(): void
+    public function legacy_setting_cache_key_constant_is_gone(): void
     {
-        // The old hardcoded key should not exist as a constant anymore
+        // 旧的硬编码全局缓存键常量不应再存在（站点无关的固定 key 已被 Site-scoped key 取代）
         $reflection = new \ReflectionClass(Setting::class);
         $this->assertFalse($reflection->hasConstant('CACHE_KEY'), 'Setting::CACHE_KEY should not exist');
     }
@@ -75,7 +75,10 @@ class SiteAwareCacheTest extends TestCase
     public function old_legacy_keys_are_documented(): void
     {
         $legacy = SiteCacheKey::legacyKeys();
-        $this->assertContains('demo-tenant-a.settings', $legacy);
+        // 旧版全局 key 仅包含通用导航/重定向/分页缓存键，不得包含任何以具体企业命名的 key
+        foreach ($legacy as $key) {
+            $this->assertDoesNotMatchRegularExpression('/demo-tenant-a|Demo Tenant A/i', $key);
+        }
         $this->assertContains('nav.tree', $legacy);
         $this->assertContains('redirects.active', $legacy);
         $this->assertContains('pagecache:version', $legacy);

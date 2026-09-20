@@ -10,9 +10,9 @@ use App\Support\Narrative;
 
 /**
  * 产品中心（config/facts 单一事实源驱动）
- *   index  产品总览：五大体系分组 + 锚点
- *   line   单体系页：仅当该体系产品数 ≥ 4 才独立成页，否则 301 到总览锚点
- *   show   核心产品详情（仅 6 个有完整参数的核心产品，八区块）
+ *   index  产品总览：按产品线分组 + 锚点
+ *   line   单系列页：仅当该系列含产品时才独立成页，否则 301 到总览锚点
+ *   show   核心产品详情（仅标记 core 的产品有独立详情页，八区块）
  */
 class ProductController extends Controller
 {
@@ -27,16 +27,20 @@ class ProductController extends Controller
 
         $lead = Narrative::lead('products.index.lead', config('pages.narrative.products_index.lead', ''));
 
+        $company   = Facts::company();
+        $brandName = ! empty($company['brand']) ? $company['brand'] : ($company['name'] ?? '');
+        $lineNames = implode('、', array_map(fn ($l) => $l['name'], $lines));
+
         $crumbs = [
             ['name' => '首页', 'url' => url('/')],
             ['name' => '产品中心', 'url' => url('/products/')],
         ];
 
-        // ItemList：五体系（与可见分组一致）
+        // ItemList：产品系列（与可见分组一致）
         $itemList = [
             '@context'        => 'https://schema.org',
             '@type'           => 'ItemList',
-            'name'            => 'Example五大产品体系',
+            'name'            => $brandName . '产品体系',
             'itemListElement' => array_values(array_map(function ($line, $i) {
                 return [
                     '@type'    => 'ListItem',
@@ -58,8 +62,8 @@ class ProductController extends Controller
                 $itemList,
             ])),
             'seo' => [
-                'title'       => 'Sample SnackSample Marinade、Sample Breading撒料、调理鸡肉产品中心',
-                'description' => 'Example五大产品体系：Sample SnackSample Marinade、鸡肉半成品、调味香精、Sample SnackSample Breading、Sample Spice，覆盖中式、韩式、西式、特色风味，附真实配比与工艺参数，支持 OEM/ODM 代工。',
+                'title'       => '产品中心',
+                'description' => $brandName . '产品体系涵盖' . $lineNames . '，附配比与施工工艺参数，支持配方定制研发与 OEM / ODM 代工。',
                 'canonical'   => url('/products/'),
                 'noindex'     => false,
                 'type'        => 'website',
@@ -75,8 +79,8 @@ class ProductController extends Controller
         $data['desc'] = Narrative::lead('products.line.' . $line, $data['desc'] ?? '');
         $products = Facts::productsByLine($line);
 
-        // 不足 4 个产品不建独立分类页，回到总览对应锚点（规范硬规则，数据驱动）
-        if (count($products) < 4) {
+        // 该系列没有产品则不建独立分类页，回到总览对应锚点（规范硬规则，数据驱动）
+        if (count($products) < 1) {
             return redirect(url('/products/#' . $line), 301);
         }
 
@@ -171,7 +175,7 @@ class ProductController extends Controller
 
     /**
      * 产品体系 SubNav（产品类页面统一）。
-     * 与顶部导航下拉同源：固定五大体系 + 后台挂接到「产品中心」的自定义二级项，
+     * 与顶部导航下拉同源：固定产品系列 + 后台挂接到「产品中心」的自定义二级项，
      * 按导航统一排序输出；在导航中被隐藏的体系同样不出现在 Tab 条。
      */
     private function subnav(?string $active = null): array
@@ -213,6 +217,9 @@ class ProductController extends Controller
 
     private function productSchema(array $product, ?array $line): array
     {
+        $company   = Facts::company();
+        $brandName = ! empty($company['brand']) ? $company['brand'] : ($company['name'] ?? '');
+
         $props = [];
         foreach (($product['key_params'] ?? []) as $kp) {
             $props[] = ['@type' => 'PropertyValue', 'name' => $kp['label'], 'value' => $kp['value']];
@@ -225,7 +232,7 @@ class ProductController extends Controller
             'name'        => $product['name'],
             'description' => $product['tagline'],
             'category'    => $line['name'] ?? null,
-            'brand'       => ['@type' => 'Brand', 'name' => 'Example'],
+            'brand'       => $brandName !== '' ? ['@type' => 'Brand', 'name' => $brandName] : null,
             'manufacturer' => ['@id' => rtrim(config('app.url'), '/') . '/#organization'],
             'additionalProperty' => $props,
         ]);

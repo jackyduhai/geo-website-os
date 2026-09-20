@@ -3,7 +3,7 @@
 @php
   // 布局 <title> / robots 读取 $seo（不读 @section('title')），错误页需显式声明
   $seo = [
-      'title_full'  => '系统维护中｜Example Food',
+      'title_full'  => '系统维护中｜GEO Website OS',
       'description' => '网站正在例行维护，请稍后再访问。',
       'noindex'     => true,
   ];

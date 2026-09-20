@@ -66,7 +66,7 @@
           <x-admin-tip text="主标题上方一行小字，三种模式通用；留空使用默认文案。"/>
         </span>
           <input type="text" name="subtitle" value="{{ $block->subtitle }}" maxlength="200"
-                 placeholder="Example Food Co., Ltd. · 中式Sample Snack调味二十年">
+                 placeholder="企业名称 · 深耕行业多年">
         </label>
 
         <label class="checkline mb-4">
@@ -79,11 +79,11 @@
           <b class="block mb-2">A · 价值主张文案（右侧参数卡数据来自核定事实，无需配图）</b>
           <label class="fl mb-2">主标题 H1（留空用默认）
             <input type="text" name="title" value="{{ $block->title }}" maxlength="120"
-                   placeholder="中式Sample SnackSample Marinade与调理鸡肉，从配方到量产的一站式代工">
+                   placeholder="从研发到量产的一站式定制制造">
           </label>
           <label class="fl">说明正文（留空用默认口径）
             <textarea name="hero_lead" rows="3" maxlength="500"
-                      placeholder="自有约 9,000 ㎡ 厂区、四大生产车间，年产能约 8,000 吨……">{{ trim((string) ($bcfg['lead'] ?? '')) }}</textarea>
+                      placeholder="自有厂区与生产车间，年产能稳定，为客户提供定制研发、OEM / ODM 代工与稳定供货……">{{ trim((string) ($bcfg['lead'] ?? '')) }}</textarea>
           </label>
         </div>
 

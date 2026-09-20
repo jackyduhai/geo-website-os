@@ -156,11 +156,13 @@ class Narrative
 
         // ---------- 工厂与资质 ----------
         $company = Facts::company();
+        $workshopNames = implode('、', array_map(fn ($w) => $w['name'], Facts::workshops()));
         $defs[] = [
             'group' => '工厂与资质', 'key' => 'factory.lead',
             'label' => '工厂与资质 · 页头导语', 'url' => url('/factory/'),
-            'location' => '工厂页：页头导语（数据条、四大车间、流程、资质为锁定数据）',
-            'default_summary' => '从Sample Spice粉碎到固体调味料，四个车间都在自己厂里。不外包，不做贸易。'
+            'location' => '工厂页：页头导语（数据条、生产车间、流程、资质为锁定数据）',
+            'default_summary' => $workshopNames . '，' . count(Facts::workshops())
+                . '个车间都在自己厂里。不外包，不做贸易。'
                 . ($company['established_production_display'] ?? '') . '全面投产。',
         ];
 
@@ -168,7 +170,7 @@ class Narrative
         $defs[] = [
             'group' => '合作方式', 'key' => 'cooperation.lead',
             'label' => '合作方式 · 页头导语', 'url' => url('/cooperation/'),
-            'location' => '合作方式页：页头导语（三种合作模式、五步流程、FAQ 为锁定内容）',
+            'location' => '合作方式页：页头导语（合作模式、合作流程、FAQ 为锁定内容）',
             'default_summary' => config('pages.narrative.cooperation.lead', ''),
         ];
 
@@ -189,7 +191,7 @@ class Narrative
         ];
         foreach (Facts::productLines() as $line) {
             $count = count(Facts::productsByLine($line['slug']));
-            $url = $count >= 4
+            $url = $count >= 1
                 ? url('/products/' . $line['slug'] . '/')
                 : url('/products/#' . $line['slug']);
             $defs[] = [
@@ -198,7 +200,7 @@ class Narrative
                 'label' => $line['name'] . ' · 系列导语',
                 'url' => $url,
                 'location' => '产品总览「' . $line['name'] . '」分组说明'
-                    . ($count >= 4 ? '与该系列独立页页头导语（同步用于该页 SEO 描述）' : '（该系列不足 4 款，无独立页，仅显示在总览分组）'),
+                    . ($count >= 1 ? '与该系列独立页页头导语（同步用于该页 SEO 描述）' : '（该系列暂无产品，无独立页，仅显示在总览分组）'),
                 'default_summary' => $line['desc'] ?? '',
             ];
         }

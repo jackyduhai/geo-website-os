@@ -29,7 +29,7 @@
 
 <section class="sec">
   <div class="wrap-narrow center-txt">
-    <p class="prose">四大车间的实拍，比任何形容词都有说服力。</p>
+    <p class="prose">{{ count($workshops) }} 个车间的实拍，比任何形容词都有说服力。</p>
     <div class="actions" style="justify-content:center;margin-top:20px">
       <a class="btn btn-primary btn-lg" href="{{ url('/factory/') }}">查看工厂与资质<span class="arr">→</span></a>
     </div>

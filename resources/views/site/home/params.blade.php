@@ -1,4 +1,4 @@
-{{-- S04 参数级交付（全站反白区块之一）：左差异化说明，右真实配比/工艺 ParamTable。 --}}
+{{-- S04 参数级交付（全站反白区块之一）：左差异化说明，右真实规格 / 工艺 ParamTable。 --}}
 @php
   $diffPoints = ! empty($paramDifferentiators) ? $paramDifferentiators : array_slice($differentiatorItems ?? [], 0, 3);
 @endphp
@@ -7,8 +7,8 @@
     <div class="params-layout">
       <div class="params-side reveal">
         <span class="eyebrow accent">PARAMETERS · 参数级交付</span>
-        <h2 class="sec-h">{{ $blk->title ?: '把风味做到克数、温度和秒，门店照着就能复现' }}</h2>
-        <p class="sec-sub muted">{{ $blk->subtitle ?: '不止给一袋料，而是给出标准化配比与工艺参数，连锁多店、新手出餐都能稳定还原同一口味。' }}</p>
+        <h2 class="sec-h">{{ $blk->title ?: '把参数做到用量、温度和时间，产线照着就能复现' }}</h2>
+        <p class="sec-sub muted">{{ $blk->subtitle ?: '不止给一款产品，而是给出标准化规格与工艺参数，不同批次、不同产线都能稳定还原同一品质。' }}</p>
         @if(count($diffPoints))
         <ul class="params-points">
           @foreach($diffPoints as $d)
@@ -23,9 +23,9 @@
       <div class="reveal">
         @include('site._param_table', [
           'rows' => $paramRows ?? [],
-          'head' => ['产品 / Sample Marinade', '用量 / 工艺参数'],
+          'head' => ['产品 / 规格', '用量 / 工艺参数'],
         ])
-        <p class="tbl-note muted">以上为工艺说明参数，具体以对应产品规格表为准，可按目标口味定向调整。</p>
+        <p class="tbl-note muted">以上为工艺说明参数，具体以对应产品规格表为准，可按目标需求定向调整。</p>
       </div>
     </div>
   </div>

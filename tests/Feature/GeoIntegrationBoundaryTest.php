@@ -134,12 +134,12 @@ class GeoIntegrationBoundaryTest extends TestCase
         $product = Entity::create([
             'site_id' => $site->id,
             'type' => 'product',
-            'slug' => 'crispy-fried-chicken-marinade',
-            'name' => 'Crispy Fried Chicken Marinade',
+            'slug' => 'industrial-epoxy-primer',
+            'name' => 'Industrial Epoxy Primer',
             'status' => 'published',
         ]);
 
-        $found = $this->repo->findPublishedByTypeAndSlug('product', 'crispy-fried-chicken-marinade');
+        $found = $this->repo->findPublishedByTypeAndSlug('product', 'industrial-epoxy-primer');
         $this->assertNotNull($found);
         $this->assertEquals($product->id, $found->id);
     }
@@ -246,7 +246,7 @@ class GeoIntegrationBoundaryTest extends TestCase
             'status' => 'published',
             'metadata' => [
                 'sku' => 'GP-001',
-                'category' => 'Marinades',
+                'category' => 'Coatings',
                 'is_core' => true,
             ],
         ]);

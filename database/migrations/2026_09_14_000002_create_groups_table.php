@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Schema;
  * 分组表 groups
  *
  * 职责：栏目内的二级归集。栏目可独立使用，分组可选。
- * 例：知识中心（栏目）→ 腌制工艺 / 餐饮应用 / 行业观察（分组）。
+ * 例：知识中心（栏目）→ 选型指南 / 工艺与配方 / 选型与应用（分组）。
  */
 return new class extends Migration
 {

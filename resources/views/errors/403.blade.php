@@ -3,7 +3,7 @@
 @php
   // 布局 <title> / robots 读取 $seo（不读 @section('title')），错误页需显式声明
   $seo = [
-      'title_full'  => '暂时无法访问｜Example Food',
+      'title_full'  => '暂时无法访问｜GEO Website OS',
       'description' => '当前账号没有访问该内容的权限。',
       'noindex'     => true,
   ];

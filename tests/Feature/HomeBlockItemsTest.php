@@ -8,7 +8,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
- * v0.9.7 首页条目型区块（应用场景/合作方式/合作剪影/车间）：
+ * 首页条目型区块（应用场景/合作方式/合作剪影/车间）：
  * 缺省由统一默认源 HomeBlockDefaults 渲染；后台保存条目后以自定义为准（文案/图/链接均可改）。
  */
 class HomeBlockItemsTest extends TestCase
@@ -29,14 +29,16 @@ class HomeBlockItemsTest extends TestCase
         return PageBlock::where('page', 'home')->where('type', $type)->firstOrFail();
     }
 
-    public function test_scenes_render_default_six_cards_with_links(): void
+    public function test_scenes_render_default_three_cards_with_links(): void
     {
         $html = $this->get('/')->getContent();
-        // 默认六类场景都在，且卡片为可点链接（指向 /solutions/{slug}/）
+        // 默认三类应用场景都在，且卡片为可点链接（指向 /solutions/{slug}/）
         $this->assertStringContainsString('id="s02"', $html);
-        $this->assertStringContainsString('Sample Snack创业小店', $html);
+        $this->assertStringContainsString('装备制造', $html);
+        $this->assertStringContainsString('建筑工程', $html);
+        $this->assertStringContainsString('汽车零部件', $html);
         $this->assertStringContainsString('<a class="scene-card"', $html);
-        $this->assertMatchesRegularExpression('~href="[^"]*solutions/fried-chicken-shop/?~', $html);
+        $this->assertMatchesRegularExpression('~href="[^"]*solutions/equipment-manufacturing/?~', $html);
     }
 
     public function test_admin_scene_items_override_default_copy_and_link(): void
@@ -68,15 +70,15 @@ class HomeBlockItemsTest extends TestCase
         $this->actingAs($this->admin)->put("/admin/blocks/{$blk->id}", [
             'sort' => $blk->sort, 'is_active' => 1,
             'items' => [
-                0 => ['icon' => '', 'title' => 'Sample Snack创业小店', 'text' => '说明', 'link' => '/solutions/fried-chicken-shop/',
-                    'tags' => ['牛奶炸肉Sample Marinade', '生Sample Snack架Sample Marinade'], 'reveal' => 'Sample Marinade 8g/500g'],
+                0 => ['icon' => '', 'title' => '装备制造', 'text' => '说明', 'link' => '/solutions/equipment-manufacturing/',
+                    'tags' => ['防腐涂装', '结构粘接'], 'reveal' => '干膜 60–80 μm'],
             ],
         ])->assertRedirect();
 
         $it = $blk->fresh()->items()[0];
         $this->assertNull($it['icon']);
-        $this->assertSame(['牛奶炸肉Sample Marinade', '生Sample Snack架Sample Marinade'], $it['tags']);
-        $this->assertSame('Sample Marinade 8g/500g', $it['reveal']);
+        $this->assertSame(['防腐涂装', '结构粘接'], $it['tags']);
+        $this->assertSame('干膜 60–80 μm', $it['reveal']);
     }
 
     public function test_cooperation_and_cases_render_defaults(): void
@@ -90,7 +92,10 @@ class HomeBlockItemsTest extends TestCase
     public function test_workshop_items_carry_text_after_backfill(): void
     {
         $html = $this->get('/')->getContent();
-        // 四大车间说明不应因字段升级而丢失
-        $this->assertStringContainsString('原料处理车间', $html); // 迁移默认条目已中性化（P-STEP 02）
+        // 四大车间说明不应因字段升级而丢失，名称与通用事实源（facts.workshops）保持一致
+        $this->assertStringContainsString('原料处理车间', $html);
+        $this->assertStringContainsString('配料混合车间', $html);
+        $this->assertStringContainsString('成型加工车间', $html);
+        $this->assertStringContainsString('品控包装车间', $html);
     }
 }

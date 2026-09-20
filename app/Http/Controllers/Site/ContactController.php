@@ -44,6 +44,17 @@ class ContactController extends Controller
             ['name' => '联系我们', 'url' => url('/contact/')],
         ];
 
+        $contactBits = [];
+        if (! empty($company['phone'])) {
+            $contactBits[] = '合作热线 ' . $company['phone'];
+        }
+        if (! empty($company['address']['full'])) {
+            $contactBits[] = '厂区位于' . $company['address']['full'];
+        }
+        $contactDesc = '联系' . $company['name'] . '：'
+            . ($contactBits ? implode('，', $contactBits) . '。' : '')
+            . '填写表单或通过页面上的联系方式与我们沟通，我们安排试样与定制方案。';
+
         return view('site.contact', [
             'company' => $company,
             'lead'    => $lead,
@@ -54,8 +65,8 @@ class ContactController extends Controller
                 $localBusiness,
             ])),
             'seo' => [
-                'title'       => '联系我们｜获取样品与定制方案',
-                'description' => '联系Sample CityExample Food：全国合作热线 400-000-0000，厂区位于Sample Province省Sample City市沈河区 Example Street 39。填写表单或致电，我们安排寄样与定制方案。',
+                'title'       => '联系我们｜获取报价与样品',
+                'description' => $contactDesc,
                 'canonical'   => url('/contact/'),
                 'noindex'     => false,
                 'type'        => 'website',

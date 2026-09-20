@@ -4,7 +4,7 @@
 
 @php
   $specRows = collect([
-      ['净含量', $product['net_weight'] ?? null],
+      ['规格 / 净重', $product['net_weight'] ?? null],
       ['包装形式', $product['packaging'] ?? null],
       ['保质期', $product['shelf_life'] ?? null],
       ['储存条件', $product['storage'] ?? null],
@@ -28,7 +28,7 @@
       <p class="ph-lead">{{ $product['tagline'] }}</p>
       @if(!empty($product['mains']))
         <div class="prod-mains">
-          <span class="pm-k">适用主料</span>
+          <span class="pm-k">适用范围</span>
           @foreach($product['mains'] as $m)<em>{{ $m }}</em>@endforeach
         </div>
       @endif
@@ -50,7 +50,7 @@
   <div class="wrap">
     <div class="sec-head">
       <span class="eyebrow">PROCESS · 使用工艺</span>
-      <h2 class="sec-h">标准化使用步骤，门店照着就能做</h2>
+      <h2 class="sec-h">标准化使用步骤，产线照着就能做</h2>
     </div>
     @include('site._process_steps', ['steps' => $processSteps])
   </div>
@@ -64,7 +64,7 @@
     <div class="sec-head row">
       <div>
         <span class="eyebrow">SCENARIOS · 适用场景</span>
-        <h2 class="sec-h">这些生意类型都在用</h2>
+        <h2 class="sec-h">这些应用场景都在用</h2>
       </div>
       <a class="btn-text" href="{{ url('/solutions/') }}">全部场景<span class="arr">→</span></a>
     </div>
@@ -89,7 +89,7 @@
 <section class="sec sec-tint">
   <div class="wrap-narrow">
     <div class="sec-head"><span class="eyebrow">SPEC · 起订与交付</span><h2 class="sec-h">按你的用量与规格报价</h2></div>
-    <p class="prose">不同品类、规格与包装形式的起订量不同。说清你的预计用量、目标口味与包装需求，我们按你的实际情况给出报价与排期，并可先寄样、打样，确认后再量产。</p>
+    <p class="prose">不同品类、规格与包装形式的起订量不同。说清你的预计用量、目标参数与包装需求，我们按你的实际情况给出报价与排期，并可先寄样、打样，确认后再量产。</p>
   </div>
 </section>
 @endif

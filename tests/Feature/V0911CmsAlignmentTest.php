@@ -38,9 +38,9 @@ class V0911CmsAlignmentTest extends TestCase
         }
 
         $home = $this->get('/')->assertOk()->getContent();
-        $this->assertStringContainsString('选料指南', $home);
+        $this->assertStringContainsString('选型指南', $home);
         $this->assertStringContainsString('工艺与配方', $home);
-        $this->assertStringContainsString('开店与经营', $home);
+        $this->assertStringContainsString('选型与应用', $home);
     }
 
     public function test_legacy_empty_channels_are_not_seeded(): void
@@ -84,16 +84,16 @@ class V0911CmsAlignmentTest extends TestCase
             'category_id' => $group->category_id,
             'name'        => $group->name,
             'slug'        => $group->slug,
-            'description' => '更新后的栏目简介：腌制工艺与配比逻辑',
+            'description' => '更新后的栏目简介：涂装工艺与参数逻辑',
             'sort'        => $group->sort,
             'is_active'   => 1,
         ])->assertRedirect();
 
-        $this->assertSame('更新后的栏目简介：腌制工艺与配比逻辑', $group->fresh()->description);
+        $this->assertSame('更新后的栏目简介：涂装工艺与参数逻辑', $group->fresh()->description);
 
         $this->actingAs($this->admin)->get('/admin/groups')
             ->assertOk()
-            ->assertSee('更新后的栏目简介：腌制工艺与配比逻辑', false);
+            ->assertSee('更新后的栏目简介：涂装工艺与参数逻辑', false);
     }
 
     public function test_md_preview_renders_gfm_table(): void
@@ -167,7 +167,8 @@ class V0911CmsAlignmentTest extends TestCase
         // 旧 about/products/contact 栏目已停用（被 config 固定页取代），不得泄漏进 sitemap
         $sitemap = $this->get('/sitemap.xml')->assertOk()->getContent();
         $this->assertStringNotContainsString('/about/company/', $sitemap);
-        $this->assertStringNotContainsString('/products/chinese-marinade/', $sitemap);
+        // 非核心产品不建独立详情页，故不得泄漏进 sitemap
+        $this->assertStringNotContainsString('/products/heat-resistant-coating-300/', $sitemap);
 
         // noindex 文章不进 sitemap（P0-B 后 noindex 唯一来源：SeoMeta）
         $knowledge = Category::where('slug', 'knowledge')->firstOrFail();

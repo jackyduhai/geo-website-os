@@ -31,7 +31,7 @@ class SlashCanonicalResolverTest extends TestCase
 
     public function test_published_knowledge_article_is_detail_type_without_slash(): void
     {
-        $article = Content::where('slug', 'what-is-chinese-fried-marinade')->firstOrFail();
+        $article = Content::where('slug', 'how-to-choose-industrial-coatings')->firstOrFail();
 
         $this->assertFalse(CanonicalizeSlash::resolveWantsSlash('/knowledge/'.$article->slug));
         $this->assertFalse(CanonicalizeSlash::resolveWantsSlash('knowledge/'.$article->slug.'/'));

@@ -17,7 +17,7 @@ class CanonicalizeSlashTest extends TestCase
     public function test_directory_url_without_slash_gets_slash(): void
     {
         $this->assertSame('/solutions/', CanonicalizeSlash::targetFor('/solutions', true));
-        $this->assertSame('/solutions/fried-chicken-shop/', CanonicalizeSlash::targetFor('/solutions/fried-chicken-shop', true));
+        $this->assertSame('/solutions/equipment-manufacturing/', CanonicalizeSlash::targetFor('/solutions/equipment-manufacturing', true));
     }
 
     public function test_directory_url_with_slash_is_unchanged(): void
@@ -27,12 +27,12 @@ class CanonicalizeSlashTest extends TestCase
 
     public function test_detail_url_with_slash_has_slash_removed(): void
     {
-        $this->assertSame('/products/orleans-801', CanonicalizeSlash::targetFor('/products/orleans-801/', false));
+        $this->assertSame('/products/epoxy-primer-100', CanonicalizeSlash::targetFor('/products/epoxy-primer-100/', false));
     }
 
     public function test_detail_url_without_slash_is_unchanged(): void
     {
-        $this->assertNull(CanonicalizeSlash::targetFor('/products/orleans-801', false));
+        $this->assertNull(CanonicalizeSlash::targetFor('/products/epoxy-primer-100', false));
     }
 
     public function test_root_never_redirects(): void

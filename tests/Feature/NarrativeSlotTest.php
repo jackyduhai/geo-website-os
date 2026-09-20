@@ -64,7 +64,7 @@ class NarrativeSlotTest extends TestCase
     public function test_override_lead_renders_on_about_page(): void
     {
         $default = (string) config('pages.about.profile.lead');
-        $custom = '【测试自定义导语】Demo Tenant A专注中式Sample Snack风味的一句话，仅用于本断言。';
+        $custom = '【测试自定义导语】示例制造专注工业材料定制的一句话，仅用于本断言。';
 
         $this->get('/about/profile')->assertSee($default)->assertDontSee($custom);
 
@@ -148,8 +148,8 @@ class NarrativeSlotTest extends TestCase
 
     public function test_product_tagline_override_is_consistent_in_hero_and_seo(): void
     {
-        $slug = 'orleans-801';
-        $custom = '【产品覆盖测试】Sample FlavorSample Marinade 801 的自定义一句话定位。';
+        $slug = 'epoxy-primer-100';
+        $custom = '【产品覆盖测试】环氧富锌底漆 ZP-100 的自定义一句话定位。';
 
         $this->makeSlot('products.detail.' . $slug, $custom);
 
@@ -161,8 +161,8 @@ class NarrativeSlotTest extends TestCase
 
     public function test_scene_desc_override_renders_on_scene_page(): void
     {
-        $scene = 'fried-chicken-shop';
-        $custom = '【场景覆盖测试】Sample Snack店风味标准化方案的自定义导语。';
+        $scene = 'equipment-manufacturing';
+        $custom = '【场景覆盖测试】装备制造防护与粘接方案的自定义导语。';
 
         $this->makeSlot('solutions.scene.' . $scene, $custom);
 
@@ -177,7 +177,7 @@ class NarrativeSlotTest extends TestCase
         $this->assertContains('about.profile', $flat);
         $this->assertContains('factory.lead', $flat);
         $this->assertContains('contact.lead', $flat);
-        $this->assertContains('products.detail.orleans-801', $flat);
-        $this->assertContains('solutions.scene.fried-chicken-shop', $flat);
+        $this->assertContains('products.detail.epoxy-primer-100', $flat);
+        $this->assertContains('solutions.scene.equipment-manufacturing', $flat);
     }
 }

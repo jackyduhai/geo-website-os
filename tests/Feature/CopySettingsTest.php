@@ -11,7 +11,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
- * v0.9.26 边角文案可运营回归：
+ * 边角文案可运营回归：
  *  - 底部 CTA（含工厂页变体）、全局咨询表单（字段标签/提示/客户类型选项/提交话术）、
  *    404、页脚 slogan 全部接入「系统 → 站点设置 → 文案话术」
  *  - 留空回退默认，零配置零差异
@@ -34,40 +34,46 @@ class CopySettingsTest extends TestCase
 
     public function test_defaults_match_config_when_unconfigured(): void
     {
+        // 模拟零配置：清空后台 copy_* 覆盖后，Copy 必须逐键回退出厂默认（config / 内置默认）
+        Setting::where('key', 'like', 'copy_%')->delete();
+        Copy::flush();
+        PageCache::flush();
+
         $bcta = Copy::bcta();
         $this->assertSame(config('copy.bottomCta.title'), $bcta['title']);
         $this->assertSame(config('copy.bottomCta.primaryCta'), $bcta['primaryCta']);
 
         $factory = Copy::bcta('factory');
-        $this->assertSame('预约工厂参观', $factory['primaryCta']);
-        $this->assertSame('免费获取样品', $factory['secondaryCta']);
+        $this->assertSame(config('copy.bottomCta.overrides.factory.primaryCta'), $factory['primaryCta']);
+        $this->assertSame(config('copy.bottomCta.overrides.factory.secondaryCta'), $factory['secondaryCta']);
 
         $form = Copy::form();
         $this->assertSame(config('copy.form.fields.customerType.options'), $form['fields']['customerType']['options']);
         $this->assertSame(config('copy.form.submit'), $form['submit']);
 
+        // 404 标题的出厂默认内置于 Copy（config 同名段落为历史死配置）
         $this->assertSame('没有找到这个页面', Copy::error404()['title']);
         $this->assertSame(config('copy.footer.brandColumn.slogan'), Copy::footerSlogan());
     }
 
     public function test_bottom_cta_and_footer_slogan_overrides_render_on_home(): void
     {
-        Setting::set('copy_bcta_title', '先寄样再谈合作');
-        Setting::set('copy_bcta_primary', '立即申请寄样');
-        Setting::set('copy_footer_slogan', '好味道，源头工厂造');
+        Setting::set('copy_bcta_title', '先提供技术资料');
+        Setting::set('copy_bcta_primary', '立即获取方案');
+        Setting::set('copy_footer_slogan', '稳定品质，源头工厂造');
         PageCache::flush();
         Copy::flush();
 
-        // 底部 CTA 出现在内页收口（首页为自带表单的 s08 区块，不含该组件）
+        // 底部 CTA 出现在内页收口（首页为自带表单的区块，不含该组件）
         $inner = $this->get('/products/')->assertOk()->getContent();
-        $this->assertStringContainsString('先寄样再谈合作', $inner);
-        $this->assertStringContainsString('立即申请寄样', $inner);
-        $this->assertStringNotContainsString('先拿一份样品试试', $inner);
+        $this->assertStringContainsString('先提供技术资料', $inner);
+        $this->assertStringContainsString('立即获取方案', $inner);
+        $this->assertStringNotContainsString('先拿一份产品资料', $inner);
 
         // 页脚 slogan 全站可见
         $home = $this->get('/')->assertOk()->getContent();
-        $this->assertStringContainsString('好味道，源头工厂造', $home);
-        $this->assertStringNotContainsString('用真诚心，做好每一份鸡肉', $home);
+        $this->assertStringContainsString('稳定品质，源头工厂造', $home);
+        $this->assertStringNotContainsString('以稳定品质，服务每一次制造', $home);
     }
 
     public function test_factory_variant_override_renders(): void
@@ -84,7 +90,7 @@ class CopySettingsTest extends TestCase
     public function test_lead_form_labels_and_custom_options_render(): void
     {
         Setting::set('copy_form_name_label', '您的称呼');
-        Setting::set('copy_form_type_options', "茶饮品牌\n团餐公司\n其他渠道");
+        Setting::set('copy_form_type_options', "装备制造\n工业品牌方\n其他渠道");
         PageCache::flush();
         Copy::flush();
 
@@ -95,36 +101,36 @@ class CopySettingsTest extends TestCase
         preg_match('#<select[^>]*name="demand_type".*?</select>#s', $html, $m);
         $this->assertNotEmpty($m, '前台应渲染客户类型下拉');
         $select = $m[0];
-        $this->assertStringContainsString('茶饮品牌', $select);
-        $this->assertStringContainsString('团餐公司', $select);
-        $this->assertStringNotContainsString('Sample Snack创业小店', $select);
+        $this->assertStringContainsString('装备制造', $select);
+        $this->assertStringContainsString('工业品牌方', $select);
+        $this->assertStringNotContainsString('建筑工程', $select);
     }
 
     public function test_custom_customer_type_is_accepted_by_backend_validation(): void
     {
         // 运营新增的客户类型，后端白名单必须同步，否则前台能选、提交被拒
-        Setting::set('copy_form_type_options', "茶饮品牌\n团餐公司\n其他渠道");
+        Setting::set('copy_form_type_options', "装备制造\n工业品牌方\n其他渠道");
         Copy::flush();
 
         $this->from('/contact')->post('/inquiry', [
-            'name'        => '李总',
-            'phone'       => '13800000000',
-            'demand_type' => '茶饮品牌',
-            'message'     => '想做茶饮小料风味Sample Marinade。',
+            'name'        => '李工',
+            'phone'       => '13900002222',
+            'demand_type' => '工业品牌方',
+            'message'     => '需要一批结构胶，想了解定制规格与供货。',
         ])->assertSessionHasNoErrors()->assertRedirect();
 
         $lead = Inquiry::firstOrFail();
-        $this->assertSame('茶饮品牌', $lead->demand_type);
+        $this->assertSame('工业品牌方', $lead->demand_type);
     }
 
-    public function test_blank_options_fall_back_to_default_eight(): void
+    public function test_blank_options_fall_back_to_default_six(): void
     {
         Setting::set('copy_form_type_options', '');
         Copy::flush();
 
         $options = Copy::form()['fields']['customerType']['options'];
         $this->assertSame(config('copy.form.fields.customerType.options'), $options);
-        $this->assertCount(8, $options);
+        $this->assertCount(6, $options);
     }
 
     public function test_404_copy_override_renders(): void
@@ -163,8 +169,8 @@ class CopySettingsTest extends TestCase
     {
         // 旧标签页保存其它分组时，不能误清空文案分组（SettingController 按分组过滤）
         $this->actingAs($this->admin)->put('/admin/settings/general', [
-            'site_name'        => 'Example Food',
-            'nav_cta_text'     => '免费获取样品',
+            'site_name'        => '示例制造',
+            'nav_cta_text'     => '获取产品方案',
             'site_slogan'      => '',
             'site_description' => '',
             'site_short_name'  => '',
@@ -172,6 +178,6 @@ class CopySettingsTest extends TestCase
             'police_number'    => '',
         ])->assertRedirect();
 
-        $this->assertSame('先拿一份样品试试', Setting::allCached()['copy_bcta_title']);
+        $this->assertSame('先拿一份产品资料', Setting::allCached()['copy_bcta_title']);
     }
 }

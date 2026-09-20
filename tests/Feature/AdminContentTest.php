@@ -32,26 +32,26 @@ class AdminContentTest extends TestCase
 
         return array_merge([
             'type' => 'article',
-            'title' => 'Demo Tenant A中式Sample SnackSample Marinade的定制流程说明',
-            'slug' => 'marinade-custom-process',
+            'title' => '工业涂料定制开发流程说明',
+            'slug' => 'coating-custom-process',
             'category_id' => Category::where('slug', 'knowledge')->value('id'),
-            'summary' => '本文说明Sample Marinade定制从需求对接到试样确认的完整流程。',
+            'summary' => '本文说明工业涂料定制从需求对接到试样确认的完整流程。',
             'body' => "## 定制流程\n\n需求对接、配方打样、试样确认、批量交付四个阶段。",
-            'geo_conclusion' => 'Demo Tenant ASample Marinade定制分为需求对接、配方打样、试样确认与批量交付四个阶段，通常 2–3 轮试样。',
-            'geo_explanation' => "需求阶段确认风味方向与成本区间；打样阶段出 2–3 个版本；试样通过后锁定配方。",
+            'geo_conclusion' => '工业涂料定制分为需求对接、配方打样、试样确认与批量交付四个阶段，通常 2–3 轮试样。',
+            'geo_explanation' => '需求阶段确认性能方向与成本区间；打样阶段出 2–3 个版本；试样通过后锁定配方。',
             'geo_boundary' => '具体周期与起订量需结合品类与订单量由业务确认，本文不构成交付承诺。',
-            'ev_label' => ['研发打样间', '滚揉与腌渍设备'],
-            'ev_value' => ['可同时开展多版本配方打样', '真空滚揉机支持工艺参数固化'],
+            'ev_label' => ['研发打样间', '分散与研磨设备'],
+            'ev_value' => ['可同时开展多版本配方打样', '高速分散机支持工艺参数固化'],
             'ev_source' => ['车间实拍', '设备台账'],
             'ev_url' => ['', ''],
             'faq_q' => ['定制一般需要几轮试样？'],
-            'faq_a' => ['通常 2–3 轮，具体以风味确认进度为准。'],
+            'faq_a' => ['通常 2–3 轮，具体以性能确认进度为准。'],
             'kf_key' => ['试样轮次'],
             'kf_value' => ['2–3 轮'],
-            'owner' => '杜海',
+            'owner' => 'Administrator',
             'reviewed_at' => '2026-09-14',
             'review_due' => '2027-03-14',
-            'source_note' => '研发流程内部资料',
+            'source_note' => '研发流程内部资料（演示）',
             'fact_refs' => [$factKey],
         ], $override);
     }
@@ -74,8 +74,8 @@ class AdminContentTest extends TestCase
     public function test_admin_can_login_with_seeded_credential(): void
     {
         $this->post('/admin/login', [
-            'email' => 'admin@demo-tenant-a.local',
-            'password' => 'Demo Tenant A@2026',
+            'email' => 'admin@example.com',
+            'password' => 'Admin@123456',
         ])->assertRedirect('/admin');
 
         $this->assertAuthenticated();
@@ -113,7 +113,7 @@ class AdminContentTest extends TestCase
         $this->actingAs($this->admin);
 
         $this->post('/admin/contents', $this->validPayload())->assertRedirect();
-        $content = Content::where('slug', 'marinade-custom-process')->firstOrFail();
+        $content = Content::where('slug', 'coating-custom-process')->firstOrFail();
 
         $this->post("/admin/contents/{$content->id}/publish")->assertRedirect();
         $this->assertSame('published', $content->fresh()->status);
@@ -128,7 +128,7 @@ class AdminContentTest extends TestCase
     public function test_banned_extreme_word_blocks_publish(): void
     {
         $payload = $this->validPayload([
-            'geo_conclusion' => 'Demo Tenant A是行业领先的Sample Marinade代工企业，全国销量第一。',
+            'geo_conclusion' => '本企业是技术领先的工业材料供应商，全国销量第一。',
         ]);
 
         $this->actingAs($this->admin)->postJson('/admin/contents/check', $payload)
@@ -137,32 +137,35 @@ class AdminContentTest extends TestCase
             ->assertJsonStructure(['errors', 'warnings']);
     }
 
-    public function test_historical_wrong_tonnage_blocks_publish(): void
+    public function test_placeholder_marker_blocks_publish(): void
     {
+        // 通用发布硬约束：正文不得残留「【待提供】」之类占位符（替代旧的客户专属错误口径检测）
         $payload = $this->validPayload([
-            'body' => '厂区年产能为 3000 吨。',
+            'body' => '厂区年产能数据见【待提供】，后续补充。',
         ]);
 
         $res = $this->actingAs($this->admin)->postJson('/admin/contents/check', $payload)->json();
         $this->assertFalse($res['passed']);
-        $this->assertTrue(collect($res['errors'])->contains(fn ($e) => str_contains($e, '3000')));
+        $this->assertTrue(collect($res['errors'])->contains(fn ($e) => str_contains($e, '占位符')));
     }
 
-    public function test_competitor_brand_comparison_is_blocked(): void
+    public function test_comparison_same_style_phrase_is_blocked(): void
     {
+        // 通用对标检测：不内置任何具体品牌名单，但「XX 同款」式对标句式一律拦截
         $payload = $this->validPayload([
-            'geo_explanation' => '风味比Sample Chain更稳定。',
+            'geo_explanation' => '性能与进口大牌同款，稳定性更好。',
         ]);
 
         $res = $this->actingAs($this->admin)->postJson('/admin/contents/check', $payload)->json();
         $this->assertFalse($res['passed']);
+        $this->assertTrue(collect($res['errors'])->contains(fn ($e) => str_contains($e, '同款')));
     }
 
     public function test_every_save_creates_revision(): void
     {
         $this->actingAs($this->admin);
         $this->post('/admin/contents', $this->validPayload())->assertRedirect();
-        $content = Content::where('slug', 'marinade-custom-process')->firstOrFail();
+        $content = Content::where('slug', 'coating-custom-process')->firstOrFail();
 
         $this->assertGreaterThanOrEqual(1, $content->revisions()->count());
     }

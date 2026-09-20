@@ -25,7 +25,7 @@ class EntityMetadataSlugLifecycleTest extends TestCase
 
         Entity::create([
             'type' => 'product',
-            'slug' => 'crispy-breading',
+            'slug' => 'protective-coating',
             'name' => 'Product 1',
             'status' => 'published',
         ]);
@@ -34,7 +34,7 @@ class EntityMetadataSlugLifecycleTest extends TestCase
 
         Entity::create([
             'type' => 'product',
-            'slug' => 'crispy-breading',
+            'slug' => 'protective-coating',
             'name' => 'Product 2',
             'status' => 'draft',
         ]);
@@ -47,20 +47,20 @@ class EntityMetadataSlugLifecycleTest extends TestCase
 
         $entity1 = Entity::create([
             'type' => 'product',
-            'slug' => 'seasoning',
-            'name' => 'Product Seasoning',
+            'slug' => 'coating',
+            'name' => 'Product Coating',
             'status' => 'published',
         ]);
 
         $entity2 = Entity::create([
             'type' => 'service',
-            'slug' => 'seasoning',
-            'name' => 'Service Seasoning',
+            'slug' => 'coating',
+            'name' => 'Service Coating',
             'status' => 'published',
         ]);
 
-        $this->assertEquals($entity1->id, Entity::where('type', 'product')->where('slug', 'seasoning')->first()->id);
-        $this->assertEquals($entity2->id, Entity::where('type', 'service')->where('slug', 'seasoning')->first()->id);
+        $this->assertEquals($entity1->id, Entity::where('type', 'product')->where('slug', 'coating')->first()->id);
+        $this->assertEquals($entity2->id, Entity::where('type', 'service')->where('slug', 'coating')->first()->id);
     }
 
     public function test_same_slug_different_site_allowed(): void
@@ -120,12 +120,12 @@ class EntityMetadataSlugLifecycleTest extends TestCase
 
         $entity = Entity::create([
             'type' => 'product',
-            'slug' => 'crispy-breading-v2',
+            'slug' => 'protective-coating-v2',
             'name' => 'Product',
             'status' => 'published',
         ]);
 
-        $this->assertEquals('crispy-breading-v2', $entity->slug);
+        $this->assertEquals('protective-coating-v2', $entity->slug);
     }
 
     public function test_metadata_json_object(): void
@@ -139,8 +139,8 @@ class EntityMetadataSlugLifecycleTest extends TestCase
             'name' => 'Product',
             'status' => 'published',
             'metadata' => [
-                'features' => ['tender', 'crispy'],
-                'applications' => ['fried chicken'],
+                'features' => ['durable', 'corrosion-resistant'],
+                'applications' => ['metal equipment'],
                 'custom' => [
                     'key' => 'value',
                     'nested' => true,

@@ -16,7 +16,7 @@ return new class extends Migration
             $table->id();
             $table->string('name', 50);                       // 称呼
             $table->string('phone', 30);                      // 联系电话
-            $table->string('company', 120)->nullable();       // 公司/门店名称
+            $table->string('company', 120)->nullable();       // 公司名称
             $table->string('demand_type', 20)->default('其他'); // 代工/采购/经销/其他
             $table->string('monthly_use', 60)->nullable();    // 预计月用量
             $table->text('message');                          // 需求描述

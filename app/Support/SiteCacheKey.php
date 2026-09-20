@@ -15,7 +15,7 @@ use Illuminate\Support\Facades\Schema;
  * 原则：
  * - Site A 和 Site B 永远不会产生相同的 Site-scoped Cache Key
  * - System-scoped 缓存（如 PageCache file store 按 URL）不经过此类
- * - 禁止使用企业名称（如 example）作为 Cache Key 的一部分
+ * - 禁止使用任何具体企业名称作为 Cache Key 的一部分
  */
 class SiteCacheKey
 {
@@ -132,7 +132,6 @@ class SiteCacheKey
     public static function legacyKeys(): array
     {
         return [
-            'example.settings',
             'nav.tree',
             'main.menu.blueprint',
             'main.menu',

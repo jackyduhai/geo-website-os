@@ -1,5 +1,5 @@
 {{--
-  Example Website · 统一线性图标库（全站唯一来源）
+  GEO Website OS · 统一线性图标库（全站唯一来源）
   用法：@include('site._icon', ['name' => 'flame', 'size' => 24])
   规范：24×24 viewBox、stroke=currentColor、圆角线帽；颜色由父级 color 控制。
   可用 name：flame/droplet/sparkle/shaker/package/sliders/factory/repeat/

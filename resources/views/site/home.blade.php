@@ -10,8 +10,8 @@
     @includeIf('site.home.' . $blk->type, ['blk' => $blk])
   @empty
     <section class="section"><div class="wrap">
-      <span class="eyebrow">中式Sample Snack风味 · 源头工厂</span>
-      <h1>{{ $siteSettings['site_name'] ?? 'Example Food' }}</h1>
+      <span class="eyebrow">源头工厂 · 定制制造</span>
+      <h1>{{ $siteSettings['site_name'] ?? config('app.name') }}</h1>
       <p>{{ $siteSettings['site_description'] ?? '' }}</p>
       <div class="hero-actions">
         <a class="btn" href="{{ url('/contact/contact-us') }}">业务与打样咨询<span class="arr">→</span></a>

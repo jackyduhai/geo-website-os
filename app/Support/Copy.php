@@ -68,7 +68,7 @@ class Copy
 
     /**
      * 全局咨询表单文案。结构与 config('copy.form') 对齐，
-     * 客户类型选项支持后台逐行维护（留空回退默认八类）。
+     * 客户类型选项支持后台逐行维护（留空回退 config 默认选项）。
      *
      * @return array<string,mixed>
      */
@@ -139,7 +139,7 @@ class Copy
     {
         return self::val(
             'copy_footer_slogan',
-            (string) config('copy.footer.brandColumn.slogan', '用真诚心，做好每一份鸡肉')
+            (string) config('copy.footer.brandColumn.slogan', '以稳定品质，服务每一次制造')
         );
     }
 }

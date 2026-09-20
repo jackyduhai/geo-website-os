@@ -1,12 +1,2 @@
-{{-- 产品体系图标：栏目 slug → 统一图标库语义名（唯一来源 site._icon）。变量：$slug --}}
-@php
-  $slugIcon = [
-    'chinese-marinade' => 'flame',
-    'western-marinade' => 'droplet',
-    'special-marinade' => 'sparkle',
-    'coating-powder'   => 'shaker',
-    'prepared-chicken' => 'package',
-  ];
-  $iconName = $slugIcon[$slug ?? ''] ?? 'default';
-@endphp
-@include('site._icon', ['name' => $iconName])
+{{-- 分类图标：优先由调用方传入 icon / 数据字段，缺省回退统一占位图标（不在此绑定具体分类 slug）。保留 $slug 变量仅为兼容调用签名。 --}}
+@include('site._icon', ['name' => $icon ?? 'default'])

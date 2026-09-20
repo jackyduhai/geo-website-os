@@ -229,8 +229,8 @@ class EntityMultiSiteIsolationTest extends TestCase
             Entity::create([
                 'site_id' => $siteA->id,
                 'type' => 'product',
-                'slug' => 'crispy-a',
-                'name' => 'Crispy Product A',
+                'slug' => 'coating-a',
+                'name' => 'Coating Product A',
                 'status' => 'published',
             ]);
         });
@@ -239,16 +239,16 @@ class EntityMultiSiteIsolationTest extends TestCase
             Entity::create([
                 'site_id' => $siteB->id,
                 'type' => 'product',
-                'slug' => 'crispy-b',
-                'name' => 'Crispy Product B',
+                'slug' => 'coating-b',
+                'name' => 'Coating Product B',
                 'status' => 'published',
             ]);
         });
 
         SiteContext::setSite($siteA);
-        $results = $this->repo->search('Crispy');
+        $results = $this->repo->search('Coating');
         $this->assertCount(1, $results);
-        $this->assertEquals('Crispy Product A', $results->first()->name);
+        $this->assertEquals('Coating Product A', $results->first()->name);
     }
 
     public function test_delete_entity_only_affects_current_site(): void

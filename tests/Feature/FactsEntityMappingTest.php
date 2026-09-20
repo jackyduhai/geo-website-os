@@ -30,8 +30,8 @@ class FactsEntityMappingTest extends TestCase
         $entity = Entity::create([
             'site_id' => $site->id,
             'type' => 'organization',
-            'slug' => 'demo-tenant-a',
-            'name' => $company['name'] ?? 'Demo Tenant A',
+            'slug' => 'example-org',
+            'name' => $company['name'] ?? 'Example Org',
             'summary' => $company['slogan'] ?? null,
             'status' => 'published',
             'metadata' => [
@@ -43,7 +43,7 @@ class FactsEntityMappingTest extends TestCase
         ]);
 
         $this->assertEquals('organization', $entity->type);
-        $this->assertEquals('demo-tenant-a', $entity->slug);
+        $this->assertEquals('example-org', $entity->slug);
         $this->assertArrayHasKey('brand', $entity->metadata);
         $this->assertArrayHasKey('area_served', $entity->metadata);
     }
@@ -110,8 +110,8 @@ class FactsEntityMappingTest extends TestCase
         $org = Entity::create([
             'site_id' => $site->id,
             'type' => 'organization',
-            'slug' => 'demo-tenant-a',
-            'name' => 'Demo Tenant A',
+            'slug' => 'example-org',
+            'name' => 'Example Org',
             'status' => 'published',
         ]);
 
@@ -165,8 +165,8 @@ class FactsEntityMappingTest extends TestCase
         $org = Entity::create([
             'site_id' => $site->id,
             'type' => 'organization',
-            'slug' => 'demo-tenant-a',
-            'name' => 'Demo Tenant A',
+            'slug' => 'example-org',
+            'name' => 'Example Org',
             'status' => 'published',
             'metadata' => [
                 'area_served' => $salesRegions,
@@ -188,8 +188,8 @@ class FactsEntityMappingTest extends TestCase
         $org = Entity::create([
             'site_id' => $site->id,
             'type' => 'organization',
-            'slug' => 'demo-tenant-a',
-            'name' => 'Demo Tenant A',
+            'slug' => 'example-org',
+            'name' => 'Example Org',
             'status' => 'published',
             'metadata' => [
                 'brand' => $brandLanguage,
@@ -206,16 +206,16 @@ class FactsEntityMappingTest extends TestCase
         SiteContext::setSite($site);
 
         Entity::firstOrCreate(
-            ['site_id' => $site->id, 'type' => 'organization', 'slug' => 'demo-tenant-a'],
-            ['name' => 'Demo Tenant A', 'status' => 'published']
+            ['site_id' => $site->id, 'type' => 'organization', 'slug' => 'example-org'],
+            ['name' => 'Example Org', 'status' => 'published']
         );
 
         Entity::firstOrCreate(
-            ['site_id' => $site->id, 'type' => 'organization', 'slug' => 'demo-tenant-a'],
-            ['name' => 'Demo Tenant A', 'status' => 'published']
+            ['site_id' => $site->id, 'type' => 'organization', 'slug' => 'example-org'],
+            ['name' => 'Example Org', 'status' => 'published']
         );
 
-        $this->assertEquals(1, Entity::ofType('organization')->where('slug', 'demo-tenant-a')->count());
+        $this->assertEquals(1, Entity::ofType('organization')->where('slug', 'example-org')->count());
     }
 
     public function test_generic_dataset_works_without_business_hardcode(): void
