@@ -25,11 +25,13 @@ class ResolveSite
         // 解析 Site 并设置 Context
         $site = SiteResolver::resolveAndSet($request);
 
-        // 如果解析失败且启用了 fallback，使用 default site
-        if (!$site && config('site.default_fallback', true)) {
+        // 解析失败：单站 / 开发模式（fallback=true）回退 default site；
+        // 多站生产模式（fallback=false）不允许未知 Host 落到任何真实站点（下方直接 404）。
+        if (! $site && config('site.default_fallback', true)) {
             $default = SiteResolver::default();
             if ($default) {
                 SiteContext::setSite($default);
+                $site = $default;
             }
         }
 
@@ -38,6 +40,13 @@ class ResolveSite
         RequestScopedState::reapply();
 
         try {
+            // 多站生产模式：Host 未匹配任何 active 站点（未知 / 停用域名）时必须拒绝。
+            // 否则控制器调用 SiteContext::currentSite() 会惰性兜底到 default site，
+            // 导致未知 Host 意外拿到真实 default 站点内容（违背多站安全边界）。
+            if (! $site && ! config('site.default_fallback', true)) {
+                abort(404);
+            }
+
             $response = $next($request);
         } finally {
             // 请求结束后清理 Context，防止泄漏到下一个请求

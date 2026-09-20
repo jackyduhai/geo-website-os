@@ -29,6 +29,7 @@ class DemoSeeder extends Seeder
         // （Core SchemaBuilder 只消费通用扩展，不直读业务事实库）。
         $company = \App\Support\Facts::company();
         \App\Models\Site::where('slug', \App\Models\Site::DEFAULT_SLUG)->update([
+            'name'     => $company['name'] ?? 'Example Site',
             'metadata' => json_encode([
                 'organization' => [
                     'legal_name'    => $company['name'] ?? '',
