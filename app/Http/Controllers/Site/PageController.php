@@ -12,8 +12,8 @@ use Illuminate\Http\Request;
 /**
  * 统一页面分发器
  *
- * 为什么需要一个分发器：本站 URL 形如 /products/chinese-marinade，
- * 它既可能是「栏目」，也可能是「某栏目下 slug 为 chinese-marinade 的内容」，
+ * 为什么需要一个分发器：本站 URL 形如 /products/epoxy-primer-100，
+ * 它既可能是「栏目」，也可能是「某栏目下 slug 为 epoxy-primer-100 的内容」，
  * 静态路由无法区分。分发器按固定顺序判定，避免路径歧义导致 404 或错页：
  *
  *   1) 先按内容匹配：取最后一段作为 slug，前面各段作为栏目路径

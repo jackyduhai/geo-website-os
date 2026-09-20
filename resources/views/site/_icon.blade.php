@@ -4,7 +4,7 @@
   规范：24×24 viewBox、stroke=currentColor、圆角线帽；颜色由父级 color 控制。
   可用 name：flame/droplet/sparkle/shaker/package/sliders/factory/repeat/
             leaf/drumstick/jar/flask/check/truck/award/shield/users/gear/
-            chart/doc/phone/clock/star/beaker/mouse/chicken/grid/default
+            chart/doc/phone/clock/star/beaker/mouse/grid/default
 --}}
 @php
   $size = isset($size) ? (int)$size : 24;
@@ -34,7 +34,6 @@
     'star'     => '<path d="M12 3.5l2.5 5.2 5.7.8-4.1 4 1 5.7L12 16.5l-5.1 2.7 1-5.7-4.1-4 5.7-.8z"/>',
     'beaker'   => '<path d="M9 3h6"/><path d="M10 3v6L4.6 18A1.8 1.8 0 0 0 6.2 21h11.6a1.8 1.8 0 0 0 1.6-3L14 9V3"/><path d="M7 15.5h10"/>',
     'mouse'    => '<rect x="7" y="3" width="10" height="18" rx="5"/><path d="M12 7v4"/>',
-    'chicken'  => '<path d="M16 4a2.2 2.2 0 1 0 0 .01"/><path d="M15 8.5c2.6.4 4.5 2.3 4.5 4.9 0 3.6-3.4 6.6-7.5 6.6S4.5 17 4.5 13.4C4.5 9.7 7.4 7 11 6.6"/><path d="M11 6.6l2.6-2.3L15 8.5"/><path d="M9 13.5l-2.5 2"/>',
     'grid'     => '<rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/>',
     'arrow'    => '<path d="M5 12h14"/><path d="M13 6l6 6-6 6"/>',
     'default'  => '<path d="M20 7L12 3 4 7l8 4 8-4z"/><path d="M4 7v10l8 4 8-4V7"/><path d="M12 11v10"/>',

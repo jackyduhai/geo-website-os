@@ -79,7 +79,7 @@
 
 ## 4. Naming Standardization（命名统一）
 
-- 对外产品名统一为 **GEO Website OS**：APP_NAME、CLI 三命令输出、install/build 脚本、theme.json、DemoSeeder、composer（`geo-website-osos/geo-website-os`，MIT，PHP `^8.4`）、package.json、config fallback、README、CHANGELOG、LICENSE、错误/安装页、favicon/og 品牌图。
+- 对外产品名统一为 **GEO Website OS**：APP_NAME、CLI 三命令输出、install/build 脚本、theme.json、DemoSeeder、composer（`geo-website-os/geo-website-os`，MIT，PHP `^8.4`）、package.json、config fallback、README、CHANGELOG、LICENSE、错误/安装页、favicon/og 品牌图。
 - 历史客户命名（`ExampleUrlGenerator`、`Facts`、`HomeBlockDefaults` 等）未机械删除，按“通用能力 / 业务兼容层 / 待删除技术债”分类，加 legacy docblock 标注，交由后续解耦阶段处理（见 §16）。
 - 类名、方法名、缓存 key、配置 key 中客户专属标识已通用化（如 settings 缓存 key 不再含客户标识）。
 
@@ -146,6 +146,14 @@
 
 - 清空 `storage/logs/laravel.log` 后：① 跑完整全量回归，日志 **0 行**；② 干净日志窗口内真实 `serve` 抓取 11 个请求（含 404），日志 **0 字节**。HTTP 200 背后无隐藏 ERROR/WARNING/SQLSTATE/Deprecated。
 
+### 11.6 独立 Gate 核验补漏（post-closure，只读复核发现并修复）
+
+- 三 checkpoint 关闭后做独立证据复核，发现两处前序清洗漏网的**非 Runtime** 食品行业残留，已最小修复：
+  1. `resources/views/site/_icon.blade.php` 图标库含一个 `chicken`（鸡形）SVG：既不在服务端白名单 `config/icons.php`、也不被任何 Example 数据或测试引用，属食品行业死图标——已删除其 SVG 与 name 列表项。
+  2. `app/Http/Controllers/Site/PageController.php` 类注释用旧食品 slug `/products/chinese-marinade` 作 URL 分发示例——已改为通用工业产品 slug `/products/epoxy-primer-100`（仅注释，不含逻辑改动）。
+- 修复后对 `app/ resources/ config/ database/seeders/` 复扫 `chicken / marinade / fried-chicken / Sample Snack / Sample Marinade` **0 命中**；全量回归复跑 **639 / 2898 / 0 / 0**。
+- 保留并说明：`drumstick / shaker / jar / flask` 等图标在白名单内，label 已工业中立化（摇瓶=混合调配、棒件=成型加工、罐体=容器包装、烧瓶=研发），`shaker` 已被工业 Example 首页合理复用；其图形偏具象、未重画，列入 §16.6 技术债，不属业务数据污染。
+
 ## 12. Multi-Site Verification
 
 - 往复切换 `Site A → B → A → B → A → B`（CrossSiteMemoLeakTest，覆盖 Content/Setting/Theme/状态恢复），无串站。
@@ -172,6 +180,7 @@
 | CP2 checkpoint-standardize | 632 | 2860 | 0 | 0 |
 | CP3 #15 跨站 memo 修复后 | 635 | 2894 | 0 | 0 |
 | **CP3 最终（含未知 Host 修复）** | **639** | **2898** | **0** | **0** |
+| 独立核验补漏后复跑（§11.6） | 639 | 2898 | 0 | 0 |
 
 - 净增测试来自真实修复（CrossSiteMemoLeakTest +3、UnknownHostRejectionTest +4）与 CP1 ExampleDatasetIntegrityTest / CP2 标准化测试；未删除或弱化任何既有测试。
 - 85 条 PHPUnit Deprecation 为测试框架层弃用提示，不计失败、不写入 laravel.log。
@@ -193,7 +202,7 @@
 3. **常驻运行时插件 ServiceProvider 不可逆**：Octane / 常驻 queue worker 跨站时无法卸载上一站 provider 注册的路由（Laravel 框架限制）。当前 PHP-FPM 每请求重建、无 Job 类、queue 为 sync/database，**当前不可达**；接入 Octane/常驻 worker 前需专门处理。
 4. **fallback 内联默认字面不一致（小）**：`config/site.php` 与 ResolveSite 默认 true、`SiteResolver` L54 内联兜底 false；config 恒加载故运行时无分歧，建议后续统一。
 5. **版本号不一致**：`config/geo.php` app.version=2.0.0 与 release tag `1.0.0-rc1` 未对齐，交 Release 阶段决定。
-6. **图标集**：`config/icons.php` 部分 key（shaker/drumstick/flask/jar）偏具象，CP2 仅中立 3 个 label，未重设计。
+6. **图标集**：`config/icons.php` 的 shaker/drumstick/jar/flask/beaker 等 key 图形偏具象，但 label 已全部工业中立化（混合调配 / 成型加工 / 容器包装 / 研发 / 检测），不绑定行业；食品形死图标 `chicken` 已在 §11.6 删除。剩余具象图形（如 drumstick 棒件）尚未重画，后续可替换为更中性的工业线性图标。
 7. **两个开发期 migration 豁免**（§2）：normalize_terms / add_slot 保留为旧库升级路径，fresh 不播种客户数据；若要求开源源码层也彻底无食品英文 slug/术语，需评估删除这两个开发期 migration（不可逆，需明确授权）。
 
 ## 17. Remaining Risk（对外发布前）
