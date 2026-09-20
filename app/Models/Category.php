@@ -20,6 +20,7 @@ class Category extends Model
     protected $casts = [
         'is_nav' => 'boolean',
         'is_active' => 'boolean',
+        'is_index' => 'boolean',
         'sort' => 'integer',
         'parent_id' => 'integer',
     ];

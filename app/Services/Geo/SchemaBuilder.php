@@ -76,13 +76,6 @@ class SchemaBuilder
         return is_array($metadata[$namespace] ?? null) ? $metadata[$namespace] : [];
     }
 
-    protected function seo(): ?SeoResult
-    {
-        $site = SiteContext::currentSite();
-
-        return $site ? app(SeoMetaResolver::class)->resolveSite($site) : null;
-    }
-
     // ---------------------------------------------------------------
     // 全局：Organization + WebSite
     // ---------------------------------------------------------------

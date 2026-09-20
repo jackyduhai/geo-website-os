@@ -185,8 +185,12 @@ class ContentGate
     }
 
     /**
-     * 发布前调用；不通过则抛异常。
-     * 后台控制器与 GEOFlow 接口都走这里。
+     * 异常式门禁入口：校验不通过时抛 RuntimeException，适合 CLI / API / 队列等
+     * 需要直接中断发布的调用方。
+     *
+     * 注意：当前 Web 后台与 GEOFlow HTTP 路径使用 check() 取回 errors/warnings
+     * 自行呈现给操作者；本方法是与 check() 对称的公共入口，供需要「不通过即异常」
+     * 的调用方使用。
      */
     public function assertPassable(Content $c): void
     {

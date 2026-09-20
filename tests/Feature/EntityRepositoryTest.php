@@ -166,6 +166,38 @@ class EntityRepositoryTest extends TestCase
         $this->assertCount(1, $this->repo->getServices());
     }
 
+    public function test_type_shortcut_helpers_cover_remaining_entity_types(): void
+    {
+        $site = Site::where('is_default', true)->first();
+        SiteContext::setSite($site);
+
+        foreach (['organization', 'person', 'location', 'topic'] as $type) {
+            Entity::create([
+                'site_id' => $site->id, 'type' => $type,
+                'slug' => $type . '-1', 'name' => ucfirst($type) . ' 1',
+                'status' => 'published',
+            ]);
+        }
+
+        // 草稿态 organization：默认只取 published，显式 false 时一并返回
+        Entity::create([
+            'site_id' => $site->id, 'type' => 'organization',
+            'slug' => 'org-draft', 'name' => 'Org Draft', 'status' => 'draft',
+        ]);
+
+        $this->assertCount(1, $this->repo->getOrganizations());
+        $this->assertCount(2, $this->repo->getOrganizations(false));
+        $this->assertCount(1, $this->repo->getPersons());
+        $this->assertCount(1, $this->repo->getLocations());
+        $this->assertCount(1, $this->repo->getTopics());
+
+        // 类型化快捷方法不得串型
+        $this->assertTrue($this->repo->getOrganizations()->every(fn ($e) => $e->type === 'organization'));
+        $this->assertTrue($this->repo->getPersons()->every(fn ($e) => $e->type === 'person'));
+        $this->assertTrue($this->repo->getLocations()->every(fn ($e) => $e->type === 'location'));
+        $this->assertTrue($this->repo->getTopics()->every(fn ($e) => $e->type === 'topic'));
+    }
+
     public function test_get_related_entities(): void
     {
         $site = Site::where('is_default', true)->first();

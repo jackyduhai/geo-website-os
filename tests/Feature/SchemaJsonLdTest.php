@@ -40,8 +40,8 @@ class SchemaJsonLdTest extends TestCase
                     'founding_date' => '2017-03',
                     'address'       => [
                         'street'   => 'No.39 Example Street',
-                        'locality' => 'Sample City',
-                        'region'   => 'Sample Province',
+                        'locality' => 'Example City',
+                        'region'   => 'Example Region',
                         'country'  => 'CN',
                     ],
                     'area_served'   => ['North', 'East'],
@@ -67,7 +67,7 @@ class SchemaJsonLdTest extends TestCase
         $this->assertSame('400-000-0000', $org['telephone']);
         $this->assertSame('2017-03', $org['foundingDate']);
         $this->assertSame('No.39 Example Street', $org['address']['streetAddress']);
-        $this->assertSame('Sample City', $org['address']['addressLocality']);
+        $this->assertSame('Example City', $org['address']['addressLocality']);
         $this->assertSame(['topic-a', 'topic-b'], $org['knowsAbout']);
         $this->assertSame('Place', $org['areaServed'][0]['@type']);
     }
