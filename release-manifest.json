@@ -1,0 +1,17 @@
+﻿{
+    "version": "1.0.0",
+    "commit": "5cfa4cbcedcda20da8d63df4173ef788a564975c",
+    "tag": "checkpoint-product-step-10-1-g5cfa4cb",
+    "php": "8.4.25",
+    "laravel": "^12.0",
+    "required_extensions": [
+        "pdo_sqlite",
+        "mbstring",
+        "openssl",
+        "tokenizer",
+        "xml",
+        "ctype",
+        "json"
+    ],
+    "build_time": "2026-09-20T01:14:43+00:00"
+}
