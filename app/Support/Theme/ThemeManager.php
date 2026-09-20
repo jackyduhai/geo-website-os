@@ -73,6 +73,17 @@ class ThemeManager
     /** 把激活主题的视图目录置于查找器最前（幂等、可重入；default = 纯基础视图） */
     public static function register(): void
     {
+        try {
+            self::doRegister();
+        } catch (\Throwable) {
+            // 环境未就绪时安全跳过（如 composer package:discover 阶段 DB 尚未创建）：
+            // 主题解析失败不得阻塞应用引导，回退 default。
+            self::$activeMemo = null;
+        }
+    }
+
+    private static function doRegister(): void
+    {
         $finder = View::getFinder();
 
         // 移除此前注册的主题目录，保留基础视图目录与其它既有路径

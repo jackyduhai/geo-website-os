@@ -114,10 +114,17 @@ class PluginManager
     /** boot 全部启用插件（AppServiceProvider::boot 调用；enable 后可重入，仅新增生效） */
     public static function register(): void
     {
-        if (! Schema::hasTable('settings') && self::$enabledMemo === null) {
-            return;
+        try {
+            self::doRegister();
+        } catch (\Throwable) {
+            // 环境未就绪时安全跳过（如 composer package:discover 阶段 DB 尚未创建）：
+            // 插件解析失败不得阻塞应用引导。
+            self::$booted = [];
         }
+    }
 
+    private static function doRegister(): void
+    {
         foreach (self::enabled() as $slug) {
             if (isset(self::$booted[$slug])) {
                 continue;
@@ -131,14 +138,10 @@ class PluginManager
 
             $providerClass = $plugin['provider'];
             if (! class_exists($providerClass)) {
-                $providerFile = $plugin['path'] . '/' . str_replace('\\', '/', Str::after($providerClass, 'Plugin\\')) . '.php';
                 // 插件未进 composer autoload：按 provider 相对路径手工装载
                 $candidate = $plugin['path'] . '/providers/' . class_basename($providerClass) . '.php';
-                foreach ([$providerFile, $candidate] as $file) {
-                    if (is_file($file)) {
-                        require_once $file;
-                        break;
-                    }
+                if (is_file($candidate)) {
+                    require_once $candidate;
                 }
             }
 
