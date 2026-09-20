@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Support\RequestScopedState;
 use App\Support\SiteContext;
 use App\Support\SiteResolver;
 use Closure;
@@ -31,6 +32,10 @@ class ResolveSite
                 SiteContext::setSite($default);
             }
         }
+
+        // 真实站点此刻才确定（服务 boot 阶段通常仍解析为 default）。按当前站复位请求级记忆并重放
+        // 主题 / 插件，防止 default 站预热、或常驻进程上一请求残留的设置 / 导航 / 主题快照串站。
+        RequestScopedState::reapply();
 
         try {
             $response = $next($request);

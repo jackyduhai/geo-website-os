@@ -16,6 +16,7 @@ use App\Models\Setting;
 use App\Contracts\UrlResolverInterface;
 use App\Services\Seo\GenericUrlResolver;
 use App\Support\PageCache;
+use App\Support\RequestScopedState;
 use App\Support\SiteCacheKey;
 use App\Support\GeoUrlGenerator;
 use Illuminate\Routing\UrlGenerator;
@@ -62,30 +63,17 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
-        // 请求级内存缓存逐请求复位：PHP-FPM worker / artisan serve 进程复用，
-        // 模型 static 属性会跨请求存活，必须在每请求启动时清空，保证后台改完设置/事实/导航后，
-        // 下一个请求（哪怕落在同一进程）读到的都是最新值，而不是上个请求残留的内存快照。
-        Fact::flushMemo();
-        Setting::resetRequestMemo();
-        Group::flushKnowledgeMemo();
-        \App\Support\Narrative::flush();
-        \App\Support\Copy::flush();
-        \App\Models\Scopes\SiteScope::resetRequestMemo();
-        \App\Support\SiteCacheKey::resetRequestMemo();
-        \App\Services\Seo\SeoMetaResolver::resetRequestMemo();
-        \App\Support\Theme\ThemeManager::resetRequestMemo();
-        \App\Support\Plugins\PluginManager::resetRequestMemo();
+        // 导航 / 页脚视图记忆归属本 Provider，注册到统一复位器（进程内仅注册一次，回调幂等）。
+        if (! self::$stateCallbackRegistered) {
+            RequestScopedState::onReset([self::class, 'flushViewComposerMemos']);
+            self::$stateCallbackRegistered = true;
+        }
 
-        // 主题架构（P-STEP 05）：激活主题的视图目录前置（同名覆盖 + 基础视图回退）
-        \App\Support\Theme\ThemeManager::register();
-
-        // 插件架构（P-STEP 06）：boot 全部启用插件的 ServiceProvider
-        \App\Support\Plugins\PluginManager::register();
-        self::$navTreeMemo = null;
-        self::$mainMenuMemo = null;
-        self::$footerExtraMemo = null;
-        self::$footerBlueprintMemo = null;
-        self::$footerMenuMemo = null;
+        // 按当前站点复位请求级记忆并重放主题 / 插件注册。
+        // 此刻（中间件之前）站点通常仍解析为 default；ResolveSite 解析出真实站点后会再次 reapply()，
+        // 避免 default 站预热的设置 / 导航 / 事实 / 主题快照污染真实站点，同时保证常驻进程
+        // （Octane / 同进程连续请求 / queue worker）跨站不脏读。
+        RequestScopedState::reapply();
 
         // 前台整页静态化缓存的自动失效：任一影响前台展示的内容模型发生
         // 新增/修改/删除（后台保存、GEOFlow 推内容等），版本号 +1，旧页面缓存整体作废。
@@ -151,6 +139,23 @@ class AppServiceProvider extends ServiceProvider
     private static ?array $blueprintMemo = null;
     private static ?array $footerBlueprintMemo = null;
     private static ?array $footerMenuMemo = null;
+
+    /** RequestScopedState 复位回调是否已注册（进程内注册一次即可，回调幂等） */
+    private static bool $stateCallbackRegistered = false;
+
+    /**
+     * 清空导航 / 页脚等视图 Composer 的进程内短路记忆（幂等，由 RequestScopedState 调起）。
+     * 只清进程内存、不动持久缓存：缓存键本身含 site_id，切站后 Cache::remember 会按新站取对数据。
+     */
+    public static function flushViewComposerMemos(): void
+    {
+        self::$navTreeMemo = null;
+        self::$mainMenuMemo = null;
+        self::$footerExtraMemo = null;
+        self::$blueprintMemo = null;
+        self::$footerBlueprintMemo = null;
+        self::$footerMenuMemo = null;
+    }
 
     /**
      * 由 href 推导当前态匹配 pattern（首段 + 通配），如 /about/profile/ => ['about*']

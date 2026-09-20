@@ -33,6 +33,9 @@ trait QueuedBySite
             $site = Site::find($this->siteId);
             if ($site && $site->status === 'active') {
                 SiteContext::setSite($site);
+                // 常驻 queue worker 会连续处理不同站点的 Job：切站后必须复位请求级记忆并重放
+                // 主题 / 插件，否则上一个 Job 站点的设置 / 导航 / 主题 static 快照会被本站短路读到。
+                RequestScopedState::reapply();
                 return;
             }
         }
@@ -41,6 +44,7 @@ trait QueuedBySite
         $default = Site::where('is_default', true)->where('status', 'active')->first();
         if ($default) {
             SiteContext::setSite($default);
+            RequestScopedState::reapply();
             logger()->warning('Job executing without site context, falling back to default site', [
                 'job' => static::class,
                 'site_id' => $this->siteId ?? null,
