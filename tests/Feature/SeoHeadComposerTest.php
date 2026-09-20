@@ -89,6 +89,27 @@ class SeoHeadComposerTest extends TestCase
         $this->assertStringContainsString('<meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1">', $html);
     }
 
+    public function test_title_has_no_dangling_separator_when_site_name_suffix_empty(): void
+    {
+        // 回归 P-STEP 14：fresh install 未配置 site_name / seo_title_suffix 时，
+        // 内页标题曾被拼成 "文章标题 - "（尾部悬挂分隔符）。后缀为空时不应拼接 " - "。
+        $html = $this->renderHead(['seo' => ['title' => '某内页标题']]);
+
+        $this->assertStringContainsString('<title>某内页标题</title>', $html);
+        $this->assertStringNotContainsString(' - </title>', $html);
+    }
+
+    public function test_title_joins_suffix_with_separator_only_when_present(): void
+    {
+        // 后缀存在时仍正常拼接为 "标题 - 站名"
+        \App\Models\Setting::set('site_name', '我的站点');
+        \App\Models\Setting::flush();
+
+        $html = $this->renderHead(['seo' => ['title' => '某内页标题']]);
+
+        $this->assertStringContainsString('<title>某内页标题 - 我的站点</title>', $html);
+    }
+
     public function test_legacy_settings_only_apply_after_site_resolution(): void
     {
         // Site.description / Site.logo 为空时，兜底才落到遗留设置

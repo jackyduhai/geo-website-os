@@ -42,8 +42,10 @@ class SeoHeadComposer
         // 遗留后缀拼接（"标题 - 站名"）：展示层过渡约定，STEP 08 随站点级
         // SeoMeta.title 接管后移除；核心页传 title_full 时不叠加。
         $suffix = trim((string) ($settings['seo_title_suffix'] ?? $settings['site_name'] ?? ''));
-        $titleFull = $seo['title_full']
-            ?? (($title !== '' ? $title . ' - ' : '') . $suffix);
+        // 仅当后缀非空时才拼接 " - "，避免站点名/后缀缺失时标题尾部出现悬挂分隔符
+        // （例如 fresh install 未配置 site_name 时内页标题渲染成 "文章标题 - "）。（P-STEP 14）
+        $titleParts = array_filter([$title !== '' ? $title : null, $suffix !== '' ? $suffix : null]);
+        $titleFull = $seo['title_full'] ?? implode(' - ', $titleParts);
 
         // ---- description：Controller → Resolver（非空才接管）→ 遗留设置 ----
         $description = $seo['description'] ?? null;

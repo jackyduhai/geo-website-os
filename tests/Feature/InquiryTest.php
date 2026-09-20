@@ -58,6 +58,33 @@ class InquiryTest extends TestCase
         $this->assertSame(0, Inquiry::count());
     }
 
+    public function test_lead_without_optional_message_is_stored_without_error(): void
+    {
+        // message 为选填字段；浏览器表单未填写时该键可能完全缺失。
+        // 回归 P-STEP 14：Undefined array key "message" 曾导致 HTTP 500。
+        $payload = $this->validLead();
+        unset($payload['message']);
+
+        $this->from('/contact')
+            ->post('/inquiry', $payload)
+            ->assertRedirect();
+
+        $lead = Inquiry::firstOrFail();
+        $this->assertSame('new', $lead->status);
+        // 缺失 message 时以客户类型兜底，保证后台有可读内容
+        $this->assertStringContainsString('代工合作', $lead->message);
+    }
+
+    public function test_lead_with_empty_message_is_stored_without_error(): void
+    {
+        // 显式提交空字符串 message 同样不得 500
+        $this->from('/contact')
+            ->post('/inquiry', $this->validLead(['message' => '   ']))
+            ->assertRedirect();
+
+        $this->assertSame(1, Inquiry::count());
+    }
+
     public function test_honeypot_silently_discards_bot_submission(): void
     {
         $this->post('/inquiry', $this->validLead(['website' => 'spam-bot']))->assertRedirect();

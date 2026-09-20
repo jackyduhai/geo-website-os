@@ -35,8 +35,11 @@ class MediaController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
+        // 安全：禁止 svg 上传——SVG 可内嵌 <script>/onload，经 public/storage 以
+        // image/svg+xml 直出时在浏览器执行，构成存储型 XSS。矢量图请用 PNG/WebP；
+        // 如确需 SVG，须先引入专业净化库并以安全 Content-Type 提供。（P-STEP 14）
         $request->validate([
-            'file' => ['required', 'file', 'max:10240', 'mimes:jpg,jpeg,png,webp,gif,svg,pdf,doc,docx,xls,xlsx,mp4'],
+            'file' => ['required', 'file', 'max:10240', 'mimes:jpg,jpeg,png,webp,gif,pdf,doc,docx,xls,xlsx,mp4'],
             'alt'  => ['nullable', 'string', 'max:200'],
         ]);
 
@@ -69,7 +72,7 @@ class MediaController extends Controller
     public function uploadInline(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'file' => ['required', 'file', 'max:8192', 'mimes:jpg,jpeg,png,webp,gif,svg'],
+            'file' => ['required', 'file', 'max:8192', 'mimes:jpg,jpeg,png,webp,gif'],
             'alt'  => ['nullable', 'string', 'max:200'],
         ]);
 

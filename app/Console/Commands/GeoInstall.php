@@ -76,6 +76,14 @@ class GeoInstall extends Command
         $this->call('migrate', ['--force' => true]);
         $this->line('  [ok] migrations');
 
+        // ---------- 3b. 公共存储软链 ----------
+        // public 磁盘上传的媒体（封面/内联插图/logo）需经 public/storage 软链才能在
+        // 前台访问；缺失时所有 /storage/... 上传文件返回 404。已存在则跳过，保证幂等。
+        if (! file_exists(public_path('storage'))) {
+            $this->call('storage:link');
+            $this->line('  [ok] storage link');
+        }
+
         // ---------- 4. 站点创建（幂等，通用默认值） ----------
         $site = Site::firstOrCreate(
             ['slug' => Site::DEFAULT_SLUG],

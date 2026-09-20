@@ -72,6 +72,21 @@ class GeoInstallTest extends TestCase
         $this->assertSame(1, User::where('email', 'owner@example.org')->count());
     }
 
+    public function test_install_creates_public_storage_symlink(): void
+    {
+        // 回归 P-STEP 14：未建软链时上传媒体 /storage/... 全部 404。
+        // 安装器应在软链缺失时创建；已存在则跳过（幂等，不报错）。
+        $this->artisan('geo:install')->assertExitCode(0);
+
+        $this->assertTrue(
+            file_exists(public_path('storage')),
+            'geo:install 应创建 public/storage 软链，使上传媒体可在前台访问'
+        );
+
+        // 幂等：再次安装不应因软链已存在而失败
+        $this->artisan('geo:install')->assertExitCode(0);
+    }
+
     public function test_no_business_defaults_in_install_paths(): void
     {
         $installer = file_get_contents(app_path('Console/Commands/GeoInstall.php'));
