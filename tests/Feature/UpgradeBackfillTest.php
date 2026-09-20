@@ -75,7 +75,7 @@ class UpgradeBackfillTest extends TestCase
     public function test_version_command_reports_contract_fields(): void
     {
         $this->artisan('geo:version')
-            ->expectsOutputToContain('GEO OS')
+            ->expectsOutputToContain('GEO Website OS')
             ->expectsOutputToContain('app.version')
             ->assertExitCode(0);
     }

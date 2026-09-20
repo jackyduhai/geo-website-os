@@ -8,7 +8,7 @@ use Illuminate\Database\Seeder;
  * Demo / 业务示例数据编排器（P-STEP 02：Demo 与 Core 隔离）。
  *
  * 这里的全部数据（事实库 / 栏目结构 / 站点设置 / 演示内容）都是
- * 「某个具体业务站点」的示例数据，不属于 GEO OS Core Runtime。
+ * 「某个具体业务站点」的示例数据，不属于 GEO Website OS Core Runtime。
  *
  * Core Runtime 的启动路径是 geo:install / Migration（不含本 Seeder）；
  * 本 Seeder 只在显式调用（php artisan db:seed --class=DemoSeeder，或

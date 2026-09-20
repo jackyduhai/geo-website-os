@@ -1,11 +1,16 @@
 {
     "$schema": "https://getcomposer.org/schema.json",
-    "name": "laravel/laravel",
+    "name": "geo-website-os/geo-website-os",
     "type": "project",
-    "description": "The skeleton application for the Laravel framework.",
+    "description": "GEO Website OS - a multi-site, GEO/SEO-first content and entity operating system built on Laravel.",
     "keywords": [
-        "laravel",
-        "framework"
+        "geo",
+        "seo",
+        "cms",
+        "multi-site",
+        "schema-org",
+        "llms-txt",
+        "laravel"
     ],
     "license": "MIT",
     "require": {

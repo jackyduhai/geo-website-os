@@ -12,10 +12,15 @@ namespace App\Support;
  * 约定：
  *   - 产品、体系、场景一律以 slug 为键（URL 也用 slug）
  *   - 空值（null / 空数组）表示「待补」，模板侧整块隐藏，不输出占位符
+ *
+ * 过渡层说明（legacy）：
+ *   本类读取的 config('facts') 是文件型事实源，仅用于当前前台 / Schema / feeds 的
+ *   兼容渲染。权威领域数据已迁移到 Entity / EntityRelation / Content（见 5.5）。
+ *   后续前台展示层切换到 Entity / Content 数据源后，本类与 config('facts') 一并退场。
+ *   新代码不应依赖本类，应使用 EntityRepository 与 Content 模型。
  */
 class Facts
 {
-    /** 拥有完整八区块详情页的核心产品（其余产品只在体系列表以卡片出现） */
     /**
      * 核心产品 slug 列表（拥有独立详情页，进入路由白名单 / sitemap / llms）。
      *

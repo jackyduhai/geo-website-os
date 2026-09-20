@@ -21,11 +21,11 @@ use Illuminate\Support\Facades\Schema;
 class GeoUpgrade extends Command
 {
     protected $signature = 'geo:upgrade';
-    protected $description = 'Upgrade an existing GEO OS site: pre-migrate backfill, run migrations, verify';
+    protected $description = 'Upgrade an existing GEO Website OS site: pre-migrate backfill, run migrations, verify';
 
     public function handle(): int
     {
-        $this->info('GEO OS upgrade — start');
+        $this->info('GEO Website OS upgrade — start');
 
         // ---------- 1. Pre-migrate 数据迁移（顺序即契约） ----------
         $this->call('geo:backfill-seo');
@@ -58,7 +58,7 @@ class GeoUpgrade extends Command
             $this->line(sprintf('  [data] %-10s = %d', $table, $n));
         }
 
-        $this->info('GEO OS upgrade — complete (version ' . config('geo.version', '0.0.0') . ')');
+        $this->info('GEO Website OS upgrade — complete (version ' . config('geo.version', '0.0.0') . ')');
 
         return self::SUCCESS;
     }

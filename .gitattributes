@@ -7,5 +7,7 @@
 *.php diff=php
 
 /.github export-ignore
-CHANGELOG.md export-ignore
 .styleci.yml export-ignore
+
+# Internal audit / pre-productization history (contains source-project context; never shipped)
+docs/audit/ export-ignore

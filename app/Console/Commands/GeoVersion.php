@@ -15,7 +15,7 @@ use Illuminate\Support\Facades\Schema;
 class GeoVersion extends Command
 {
     protected $signature = 'geo:version';
-    protected $description = 'Report GEO OS application version, schema state and environment';
+    protected $description = 'Report GEO Website OS application version, schema state and environment';
 
     public function handle(): int
     {
@@ -23,7 +23,7 @@ class GeoVersion extends Command
             ? DB::table('migrations')->orderBy('batch')->orderBy('id')->pluck('migration')->all()
             : [];
 
-        $this->info('GEO OS');
+        $this->info('GEO Website OS');
         $this->line('  app.version        = ' . config('geo.version', '0.0.0'));
         $this->line('  app.env            = ' . app()->environment());
         $this->line('  php                = ' . PHP_VERSION);

@@ -8,6 +8,12 @@ namespace App\Support;
  * 前台 HomeController 与后台「首页装修」共用本类：
  * 区块未自定义条目时，前台按此渲染、后台按此预填以便直接编辑；一旦在后台保存条目，以区块 content.items 为准。
  * 信任数字 / 产品参数仍只从 Facts 派生，这里不产生任何新数字。
+ *
+ * 过渡层说明（legacy / Example 演示层）：
+ *   本类与 config('facts') 及 data migration 播种的首页区块配套，服务于内置 Example
+ *   演示站的默认装修，条目文案随 Example 行业数据集，不是行业中立的核心服务。
+ *   待前台展示层切换到 Entity / Content 数据源后，首页装修缺省改由通用区块模板与
+ *   各站点数据驱动，本类随之退场（见架构审计中的前台数据源切换项 / Issue B）。
  */
 class HomeBlockDefaults
 {

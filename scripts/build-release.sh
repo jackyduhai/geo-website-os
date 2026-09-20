@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# GEO OS Release Artifact 构建脚本（P-STEP 08）
+# GEO Website OS Release Artifact 构建脚本（P-STEP 08）
 # ---------------------------------------------------------------
 # 产物 = 干净源码（git archive，天然排除 .env / storage 内容 / 本地缓存）
 #       + composer.lock（保证依赖 = CI 锁定版本）

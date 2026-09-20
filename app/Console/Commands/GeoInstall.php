@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 
 /**
- * GEO OS 安装器（P-STEP 03：Site Bootstrap Contract）。
+ * GEO Website OS 安装器（P-STEP 03：Site Bootstrap Contract）。
  *
  * 从空环境引导出可运行的站点：
  *
@@ -30,11 +30,11 @@ class GeoInstall extends Command
                             {--admin-email= : 管理员邮箱（默认 admin@example.com）}
                             {--admin-password= : 管理员密码（缺省随机生成并打印一次）}';
 
-    protected $description = 'Initialize a fresh GEO OS environment: migrate, bootstrap site, create admin, verify';
+    protected $description = 'Initialize a fresh GEO Website OS environment: migrate, bootstrap site, create admin, verify';
 
     public function handle(): int
     {
-        $this->info('GEO OS install — start');
+        $this->info('GEO Website OS install — start');
 
         // ---------- 1. 环境检查 ----------
         if (version_compare(PHP_VERSION, '8.2', '<')) {
@@ -135,7 +135,7 @@ class GeoInstall extends Command
             return self::FAILURE;
         }
 
-        $this->info('GEO OS install — complete');
+        $this->info('GEO Website OS install — complete');
 
         return self::SUCCESS;
     }

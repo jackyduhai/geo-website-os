@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# GEO OS Release 安装脚本（P-STEP 08）
+# GEO Website OS Release 安装脚本（P-STEP 08）
 # ---------------------------------------------------------------
 # 在全新环境中把 Release Artifact 安装为可运行站点：
 #   composer install --no-dev（依赖 = composer.lock 锁定，与 CI 一致）

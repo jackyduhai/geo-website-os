@@ -1,5 +1,7 @@
 {
     "$schema": "https://json.schemastore.org/package.json",
+    "name": "geo-website-os",
+    "description": "GEO Website OS front-end assets (Vite + Tailwind).",
     "private": true,
     "type": "module",
     "scripts": {
