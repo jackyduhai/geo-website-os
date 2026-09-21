@@ -45,6 +45,15 @@ return Application::configure(basePath: dirname(__DIR__))
             before: \Illuminate\Routing\Middleware\SubstituteBindings::class,
             prepend: \App\Http\Middleware\EnsureAdmin::class,
         );
+        // 后台站点上下文同样必须先于路由模型绑定：超管切换到非默认站点后，
+        // {entity} 等按 id 的隐式绑定在 SiteScope 下解析；若 SetAdminSiteContext
+        // 晚于 SubstituteBindings，绑定仍落在 default 站点，导致跨站编辑 / 发布 404。
+        // 第二次 prepend 使其位于 EnsureAdmin 之后、SubstituteBindings 之前，
+        // 执行顺序为：认证 -> 设定管理站点 -> 路由模型绑定。
+        $middleware->prependToPriorityList(
+            before: \Illuminate\Routing\Middleware\SubstituteBindings::class,
+            prepend: \App\Http\Middleware\SetAdminSiteContext::class,
+        );
 
         // SecurityHeaders 必须最外层（prepend）：无论内层是鉴权 302、旧链 301，
         // 还是 CachePage 命中(HIT)/未命中(MISS)/304/BYPASS，响应回程都统一补安全头；

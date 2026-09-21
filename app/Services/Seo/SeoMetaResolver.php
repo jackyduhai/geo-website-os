@@ -234,7 +234,9 @@ class SeoMetaResolver
         $fallback = $this->siteFallback($site);
 
         $metadata = $entity->metadata ?? [];
-        $entityOgImage = $metadata['og_image'] ?? null;
+        $entityOgImageId = isset($metadata['og_image']) && is_numeric($metadata['og_image'])
+            ? (int) $metadata['og_image']
+            : null;
 
         // Title chain: SeoMeta -> Entity.name -> Site -> System
         $title = $seoMeta?->title
@@ -257,7 +259,7 @@ class SeoMetaResolver
             ]),
             ogTitle: $seoMeta?->og_title ?? ($seoMeta?->title ?? $title),
             ogDescription: $seoMeta?->og_description ?? ($seoMeta?->description ?? $description),
-            ogImage: $seoMeta?->og_image_path ?? $entityOgImage ?? $fallback['ogImage'],
+            ogImage: $seoMeta?->og_image_path ?? $this->mediaPath($entityOgImageId) ?? $fallback['ogImage'],
             ogType: $seoMeta?->og_type ?? 'website',
             twitterCard: $seoMeta?->twitter_card ?? 'summary_large_image',
             noindex: $seoMeta?->noindex ?? false,

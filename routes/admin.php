@@ -5,6 +5,7 @@ use App\Http\Controllers\Admin\BlockController;
 use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\ContentController;
 use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\EntityController;
 use App\Http\Controllers\Admin\FactController;
 use App\Http\Controllers\Admin\GeoController;
 use App\Http\Controllers\Admin\GroupController;
@@ -47,9 +48,9 @@ Route::middleware(['admin.auth', 'admin.site'])->group(function () {
 
     // ---------- 内容管理 ----------
     Route::get('contents/{tab?}', [ContentController::class, 'index'])
-        ->where('tab', 'article|page|product|all')->name('contents.index');
+        ->where('tab', 'article|page|all')->name('contents.index');
     Route::get('contents/create/{type?}', [ContentController::class, 'create'])
-        ->where('type', 'article|page|product')->name('contents.create');
+        ->where('type', 'article|page')->name('contents.create');
     Route::post('contents', [ContentController::class, 'store'])->name('contents.store');
     Route::get('contents/{content}/edit', [ContentController::class, 'edit'])->name('contents.edit');
     Route::put('contents/{content}', [ContentController::class, 'update'])->name('contents.update');
@@ -59,6 +60,18 @@ Route::middleware(['admin.auth', 'admin.site'])->group(function () {
     Route::post('contents/check', [ContentController::class, 'check'])->name('contents.check');
     Route::post('contents/md-preview', [ContentController::class, 'mdPreview'])->name('contents.md-preview');
     Route::get('contents/{content}/revisions', [ContentController::class, 'revisions'])->name('contents.revisions');
+    // ---------- Entities / knowledge-graph catalog resources (P-STEP 17B) ----------
+    // organization / product / service / person / location / topic. EntityRelation
+    // management UI is delivered in 17C; 17B ships entity CRUD + example seeding only.
+    Route::post('entities/seed-examples', [EntityController::class, 'seedExamples'])->name('entities.seed');
+    Route::post('entities/{entity}/publish', [EntityController::class, 'publish'])->name('entities.publish');
+    Route::post('entities/{entity}/unpublish', [EntityController::class, 'unpublish'])->name('entities.unpublish');
+    Route::get('entities/create/{type}', [EntityController::class, 'create'])->name('entities.create');
+    Route::post('entities', [EntityController::class, 'store'])->name('entities.store');
+    Route::get('entities/{entity}/edit', [EntityController::class, 'edit'])->name('entities.edit');
+    Route::put('entities/{entity}', [EntityController::class, 'update'])->name('entities.update');
+    Route::delete('entities/{entity}', [EntityController::class, 'destroy'])->name('entities.destroy');
+    Route::get('entities/{tab?}', [EntityController::class, 'index'])->name('entities.index');
 
     // ---------- 页面文案（结构化页面叙事插槽：hero 导语 / 企业简介正文） ----------
     Route::get('narrative', [NarrativeController::class, 'index'])->name('narrative.index');

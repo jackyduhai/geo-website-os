@@ -1,12 +1,11 @@
 @extends('admin.layout')
 @section('title','内容管理')
-@section('page-desc','文章 / 新闻、单页、产品统一在此发布与维护；发布须通过 GEO 四层门禁，草稿不进前台与 sitemap / llms.txt。')
+@section('page-desc','文章 / 新闻与单页统一在此发布与维护；产品 / 服务 / 组织请在「实体与图谱」中维护；发布须通过 GEO 四层门禁，草稿不进前台与 sitemap / llms.txt。')
 
 @section('content')
 <div class="filter-bar">
   <a class="tab {{ $tab==='article' ? 'on' : '' }}" href="{{ route('admin.contents.index','article') }}">文章 / 新闻</a>
   <a class="tab {{ $tab==='page' ? 'on' : '' }}" href="{{ route('admin.contents.index','page') }}">单页</a>
-  <a class="tab {{ $tab==='product' ? 'on' : '' }}" href="{{ route('admin.contents.index','product') }}">产品</a>
   <a class="tab {{ $tab==='all' ? 'on' : '' }}" href="{{ route('admin.contents.index','all') }}">全部</a>
   <div class="filter-search">
     <form method="get" class="flex gap-2 items-center">
@@ -18,7 +17,6 @@
       <div class="dropdown-menu">
         <a href="{{ route('admin.contents.create','article') }}">文章 / 新闻</a>
         <a href="{{ route('admin.contents.create','page') }}">单页</a>
-        <a href="{{ route('admin.contents.create','product') }}">产品</a>
       </div>
     </div>
   </div>
@@ -41,7 +39,7 @@
           @if($c->lock_manual)<span class="badge info ml-1" title="该页含人工锁定内容，AI 同步不得覆盖">🔒 人工锁定</span>@endif
           <div class="small muted">/{{ $c->slug }} @if($c->external_id)<span class="mono">· ext:{{ $c->external_id }}</span>@endif</div>
         </td>
-        <td>{{ ['article'=>'文章','page'=>'单页','product'=>'产品'][$c->type] ?? $c->type }}</td>
+        <td>{{ ['article'=>'文章','page'=>'单页'][$c->type] ?? $c->type }}</td>
         <td class="small">{{ $c->category->name ?? '—' }}@if($c->group) / {{ $c->group->name }}@endif</td>
         <td>
           @if($c->status==='published')<span class="badge published">已发布</span>

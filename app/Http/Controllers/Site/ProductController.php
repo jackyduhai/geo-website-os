@@ -29,6 +29,19 @@ class ProductController extends Controller
             return $line;
         })->all();
 
+        // Generic fallback (P-STEP 17B): when the organization defines no product
+        // lines, render every product in a single flat group instead of an empty page.
+        $flatMode = false;
+        if (empty($lines) && ! empty(Catalog::products())) {
+            $flatMode = true;
+            $lines = [[
+                'slug'     => null,
+                'name'     => '全部产品',
+                'desc'     => '',
+                'products' => Catalog::products(),
+            ]];
+        }
+
         $lead = Narrative::lead('products.index.lead', config('pages.narrative.products_index.lead', ''));
 
         $company   = Catalog::company();
@@ -55,7 +68,19 @@ class ProductController extends Controller
             }, $lines, array_keys($lines))),
         ];
 
+        if ($flatMode) {
+            $itemList['itemListElement'] = array_values(array_map(function ($p, $i) {
+                return [
+                    '@type'    => 'ListItem',
+                    'position' => $i + 1,
+                    'name'     => $p['name'],
+                    'url'      => Catalog::isCoreProduct($p['slug']) ? url('/products/' . $p['slug']) : url('/products/'),
+                ];
+            }, $lines[0]['products'], array_keys($lines[0]['products'])));
+        }
+
         return view('site.products.index', [
+            'flatMode' => $flatMode,
             'lines'   => $lines,
             'lead'    => $lead,
             'crumbs'  => array_slice($crumbs, 1),
@@ -67,7 +92,9 @@ class ProductController extends Controller
             ])),
             'seo' => [
                 'title'       => '产品中心',
-                'description' => $brandName . '产品体系涵盖' . $lineNames . '，附配比与施工工艺参数，支持配方定制研发与 OEM / ODM 代工。',
+                'description' => $flatMode
+                    ? (trim($brandName) !== '' ? $brandName . '产品中心，展示全部产品。' : '产品中心，展示全部产品。')
+                    : $brandName . '产品体系涵盖' . $lineNames . '，附配比与施工工艺参数，支持配方定制研发与 OEM / ODM 代工。',
                 'canonical'   => url('/products/'),
                 'noindex'     => false,
                 'type'        => 'website',
@@ -149,9 +176,10 @@ class ProductController extends Controller
         $product = Catalog::product($slug);
         abort_if(! $product || ! Catalog::isCoreProduct($slug), 404);
         // 产品导语可运营：页头、SEO 描述、Product 结构化数据三处共用同一覆盖
-        $product['tagline'] = Narrative::lead('products.detail.' . $slug, $product['tagline'] ?? '');
+        $product['tagline'] = Narrative::lead('products.detail.' . $slug, $product['tagline'] ?? $product['summary'] ?? '');
 
-        $line     = Catalog::line($product['line']);
+        $lineSlug = $product['line'] ?? null;
+        $line     = $lineSlug !== null ? Catalog::line($lineSlug) : null;
         $related  = Catalog::relatedProducts($product, 5);
         $scenes   = Catalog::scenesOfProduct($product);
         $faqs     = config('pages.product_faqs.' . $slug, []);
@@ -159,9 +187,11 @@ class ProductController extends Controller
         $crumbs = [
             ['name' => '首页', 'url' => url('/')],
             ['name' => '产品中心', 'url' => url('/products/')],
-            ['name' => $line['name'] ?? '产品', 'url' => url('/products/' . $product['line'] . '/')],
-            ['name' => $product['name'], 'url' => url('/products/' . $slug)],
         ];
+        if ($line !== null) {
+            $crumbs[] = ['name' => $line['name'] ?? '产品', 'url' => url('/products/' . $lineSlug . '/')];
+        }
+        $crumbs[] = ['name' => $product['name'], 'url' => url('/products/' . $slug)];
 
         $schemas = [
             $schema->organization(),
@@ -183,7 +213,7 @@ class ProductController extends Controller
             'scenes'  => $scenes,
             'faqs'    => $faqs,
             'crumbs'  => array_slice($crumbs, 1),
-            'subnav'  => $this->subnav($product['line']),
+            'subnav'  => $this->subnav($lineSlug),
             'schemas' => array_values(array_filter($schemas)),
             'seo' => [
                 'title'       => $product['name'] . '配比用量与工艺参数',

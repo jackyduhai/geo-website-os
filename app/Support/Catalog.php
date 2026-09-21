@@ -79,7 +79,12 @@ class Catalog
             ->get()
             ->map(fn (Entity $e) => array_merge(
                 is_array($e->metadata) ? $e->metadata : [],
-                ['slug' => $e->slug, 'name' => $e->name]
+                [
+                    'slug' => $e->slug,
+                    'name' => $e->name,
+                    'summary' => $e->summary,
+                    'description' => $e->description,
+                ]
             ))
             ->values()
             ->all();
@@ -90,7 +95,12 @@ class Catalog
             ->get()
             ->map(fn (Entity $e) => array_merge(
                 is_array($e->metadata) ? $e->metadata : [],
-                ['slug' => $e->slug, 'name' => $e->name]
+                [
+                    'slug' => $e->slug,
+                    'name' => $e->name,
+                    'summary' => $e->summary,
+                    'description' => $e->description,
+                ]
             ))
             ->values()
             ->all();

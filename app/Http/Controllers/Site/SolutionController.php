@@ -103,7 +103,7 @@ class SolutionController extends Controller
             'crumbs'     => array_slice($crumbs, 1),
             'schemas'    => array_values(array_filter($schemas)),
             'seo' => [
-                'title'       => $data['title_q'],
+                'title'       => $data['title_q'] ?? $data['name'],
                 'description' => $data['desc'] . '。' . ($data['combo_reason'] ?? ''),
                 'canonical'   => url('/solutions/' . $scene . '/'),
                 'noindex'     => false,

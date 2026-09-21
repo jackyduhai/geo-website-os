@@ -29,6 +29,7 @@
   $navGroups = [
     ['label'=>'内容中心','icon'=>'file-text','links'=>[
         ['内容管理', str_starts_with($routeName,'admin.contents'), route('admin.contents.index','article')],
+        ['实体与图谱', str_starts_with($routeName,'admin.entities'), route('admin.entities.index')],
         ['页面文案', str_starts_with($routeName,'admin.narrative'), route('admin.narrative.index')],
         ['栏目与知识分组', str_starts_with($routeName,'admin.categories') || str_starts_with($routeName,'admin.groups'), route('admin.categories.index')],
         ['媒体库', str_starts_with($routeName,'admin.media'), route('admin.media.index')],

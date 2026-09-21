@@ -8,20 +8,24 @@
 <section class="page-hero">
   <div class="wrap-narrow">
     <span class="eyebrow">PRODUCTS · 产品中心</span>
+    @if($flatMode ?? false)
+    <h1 class="ph-h">产品中心</h1>
+    @else
     <h1 class="ph-h">{{ count($lines) }} 大产品系列，覆盖从研发到量产的完整需求</h1>
+    @endif
     <p class="ph-lead">{{ $lead }}</p>
   </div>
 </section>
 
 @foreach($lines as $line)
-  <section class="sec {{ $loop->even ? 'sec-tint' : '' }}" id="{{ $line['slug'] }}">
+  <section class="sec {{ $loop->even ? 'sec-tint' : '' }}" id="{{ $line['slug'] ?? 'all' }}">
     <div class="wrap">
       <div class="sec-head row">
         <div>
           <h2 class="sec-h">{{ $line['name'] }}<span class="pcard-count">{{ count($line['products']) }} 款</span></h2>
           <p class="sec-sub">{{ $line['desc'] ?? '' }}</p>
         </div>
-        @if(count($line['products']) >= 1)
+        @if(!empty($line['slug']) && count($line['products']) >= 1)
           <a class="btn-text" href="{{ url('/products/' . $line['slug'] . '/') }}">查看该系列<span class="arr">→</span></a>
         @endif
       </div>

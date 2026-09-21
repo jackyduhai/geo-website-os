@@ -46,7 +46,7 @@ class ContentController extends Controller
             'items'    => $query->paginate(20)->withQueryString(),
             'q'        => $request->get('q'),
             'fStatus'  => $status,
-            'typeName' => ['article' => '文章', 'page' => '单页', 'product' => '产品', 'all' => '全部'][$tab ?? 'all'] ?? '内容',
+            'typeName' => ['article' => '文章', 'page' => '单页', 'all' => '全部'][$tab ?? 'all'] ?? '内容',
         ]);
     }
 
@@ -196,7 +196,7 @@ class ContentController extends Controller
             : 'unique:contents,slug';
 
         return $request->validate([
-            'type'        => ['required', 'in:article,page,product'],
+            'type'        => ['required', 'in:article,page'],
             'title'       => ['required', 'string', 'max:200'],
             'slug'        => $slugRule,
             'category_id' => ['nullable', 'exists:categories,id'],

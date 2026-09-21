@@ -37,10 +37,12 @@
         <a class="btn btn-secondary btn-lg" href="{{ url('/cooperation/') }}">获取定制方案</a>
       </div>
     </div>
+    @if(!empty($product['key_params']))
     <div class="prod-hero-card">
       <span class="phc-cap">关键参数一览</span>
       @include('site._param_table', ['rows' => array_map(fn ($kp) => ['label' => $kp['label'], 'value' => $kp['value']], $product['key_params'] ?? [])])
     </div>
+    @endif
   </div>
 </section>
 

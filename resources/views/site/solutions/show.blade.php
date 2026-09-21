@@ -25,7 +25,7 @@
 <section class="page-hero">
   <div class="wrap-narrow">
     <span class="eyebrow">SOLUTION · 应用场景</span>
-    <h1 class="ph-h">{{ $scene['title_q'] }}</h1>
+    <h1 class="ph-h">{{ $scene['title_q'] ?? $scene['name'] }}</h1>
     <p class="ph-lead">{{ $scene['desc'] }}</p>
   </div>
 </section>

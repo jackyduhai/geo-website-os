@@ -48,9 +48,9 @@
         <input type="text" name="title" value="{{ old('title',$content->title) }}" required>
       </div>
       <div class="form-grid">
-        <div class="form-row"><label><span class="label-with-tip">类型 <span class="req">*</span><x-admin-tip text="文章 / 新闻、单页、产品三类；保存后类型不可修改。"/></span></label>
+        <div class="form-row"><label><span class="label-with-tip">类型 <span class="req">*</span><x-admin-tip text="文章 / 新闻、单页两类；产品 / 服务 / 组织等目录资源请在「实体与图谱」中维护。保存后类型不可修改。"/></span></label>
           <select name="type" @if($content->exists) disabled @endif>
-            @foreach(['article'=>'文章 / 新闻','page'=>'单页','product'=>'产品'] as $vk=>$vn)
+            @foreach(['article'=>'文章 / 新闻','page'=>'单页'] as $vk=>$vn)
               <option value="{{ $vk }}" @selected(old('type',$content->type)===$vk)>{{ $vn }}</option>
             @endforeach
           </select>
