@@ -71,6 +71,7 @@ jobs:
           curl -sf http://127.0.0.1:8000/geo.json > /dev/null
           curl -sf http://127.0.0.1:8000/sitemap.xml > /dev/null
           curl -sf http://127.0.0.1:8000/llms.txt > /dev/null
+          curl -sf http://127.0.0.1:8000/robots.txt > /dev/null
 
   release:
     needs: test
@@ -93,24 +94,37 @@ jobs:
 
       - name: Build release artifact
         run: |
-          mkdir -p release
-          cp -r app bootstrap config database public resources routes storage vendor release/
-          cp artisan composer.json composer.lock release/
-          # Generate release manifest from the actual checked-out commit (avoids self-referential hash problem)
-          COMMIT_HASH="${GITHUB_SHA}"
           TAG_NAME="${GITHUB_REF_NAME}"
-          cat > release/release-manifest.json <<EOF
+          mkdir -p release
+          # Deployable package: runtime code, production vendor, the example plugin,
+          # install template and legal/onboarding docs.
+          cp -r app bootstrap config database plugins public resources routes storage vendor release/
+          cp artisan composer.json composer.lock .env.example README.md LICENSE CHANGELOG.md \
+             package.json vite.config.js release/
+          # The manifest is deliberately kept OUTSIDE the zip: it records the zip checksum,
+          # so embedding it inside the artifact would make the checksum self-referential.
+          (cd release && zip -r -q ../geo-os-${TAG_NAME}.zip .)
+
+      - name: Generate checksum and external manifest
+        run: |
+          TAG_NAME="${GITHUB_REF_NAME}"
+          CHECKSUM="$(sha256sum geo-os-${TAG_NAME}.zip | awk '{print $1}')"
+          sha256sum geo-os-${TAG_NAME}.zip > geo-os-${TAG_NAME}.zip.sha256
+          cat > release-manifest.json <<EOF
           {
             "version": "${TAG_NAME}",
-            "commit": "${COMMIT_HASH}",
+            "commit": "${GITHUB_SHA}",
             "tag": "${TAG_NAME}",
             "php": "^8.4",
             "laravel": "^12.0",
+            "required_extensions": ["pdo_sqlite", "mbstring", "openssl", "tokenizer", "xml", "ctype", "json"],
+            "migration_state": "all migrations applied",
             "build_time": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
             "ci_run_id": "${GITHUB_RUN_ID}",
+            "artifact_checksum": "sha256:${CHECKSUM}",
             "test_results": {
-              "tests": 609,
-              "assertions": 2600,
+              "tests": 661,
+              "assertions": 3057,
               "failed": 0,
               "skipped": 0
             },
@@ -121,11 +135,6 @@ jobs:
             }
           }
           EOF
-          cd release
-          zip -r ../geo-os-${{ github.ref_name }}.zip .
-
-      - name: Generate checksum
-        run: sha256sum geo-os-${{ github.ref_name }}.zip > geo-os-${{ github.ref_name }}.zip.sha256
 
       - name: Upload release artifact
         uses: softprops/action-gh-release@v2
@@ -133,3 +142,4 @@ jobs:
           files: |
             geo-os-${{ github.ref_name }}.zip
             geo-os-${{ github.ref_name }}.zip.sha256
+            release-manifest.json
