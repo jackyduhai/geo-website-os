@@ -81,6 +81,7 @@
         <td class="small mono nowrap">{{ optional($e->updated_at)->format('Y-m-d H:i') }}</td>
         <td class="actions">
           <a class="btn btn-sm" href="{{ route('admin.entities.edit',$e) }}">编辑</a>
+          <a class="btn btn-sm" href="{{ route('admin.relations.index',['entity'=>$e->id]) }}">关系</a>
           @if($e->status==='published')
             <form class="form-inline" method="post" action="{{ route('admin.entities.unpublish',$e) }}">
               @csrf
@@ -121,7 +122,7 @@
   <ul class="small" style="line-height:1.9;margin:0;padding-left:18px;">
     <li><strong>产品 / 服务上线</strong>：需先有一个「组织」实体（承载公司信息），再把产品 / 服务发布；标记为「核心」的产品拥有独立详情页并进入 sitemap / llms.txt。</li>
     <li><strong>实体与内容</strong>：实体驱动目录与知识图谱（/products、/solutions、geo.json）；文章 / 单页用于知识内容，二者不互相 fallback。</li>
-    <li><strong>关系</strong>：组织 produces 产品、offers 服务、服务 uses 产品等关系将在「实体关系」管理中维护（下一阶段）。</li>
+    <li><strong>关系</strong>：组织 produces 产品、offers 服务、服务 uses 产品等有向关系在 <a href="{{ route('admin.relations.index') }}">实体关系</a> 中维护；两端实体均发布后该关系才进入 geo.json。</li>
   </ul>
 </div>
 @endsection

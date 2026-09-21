@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\ContentController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\EntityController;
+use App\Http\Controllers\Admin\EntityRelationController;
 use App\Http\Controllers\Admin\FactController;
 use App\Http\Controllers\Admin\GeoController;
 use App\Http\Controllers\Admin\GroupController;
@@ -72,6 +73,16 @@ Route::middleware(['admin.auth', 'admin.site'])->group(function () {
     Route::put('entities/{entity}', [EntityController::class, 'update'])->name('entities.update');
     Route::delete('entities/{entity}', [EntityController::class, 'destroy'])->name('entities.destroy');
     Route::get('entities/{tab?}', [EntityController::class, 'index'])->name('entities.index');
+
+    // ---------- EntityRelation 知识图谱关系（P-STEP 17C） ----------
+    // 五型有向边（produces/offers/uses/located_in/related_to），仅连接本站实体；
+    // {relation} 路由模型绑定经 BelongsToSite 全局作用域，跨站 id 自动 404。
+    Route::get('relations/create', [EntityRelationController::class, 'create'])->name('relations.create');
+    Route::post('relations', [EntityRelationController::class, 'store'])->name('relations.store');
+    Route::get('relations/{relation}/edit', [EntityRelationController::class, 'edit'])->name('relations.edit');
+    Route::put('relations/{relation}', [EntityRelationController::class, 'update'])->name('relations.update');
+    Route::delete('relations/{relation}', [EntityRelationController::class, 'destroy'])->name('relations.destroy');
+    Route::get('relations', [EntityRelationController::class, 'index'])->name('relations.index');
 
     // ---------- 页面文案（结构化页面叙事插槽：hero 导语 / 企业简介正文） ----------
     Route::get('narrative', [NarrativeController::class, 'index'])->name('narrative.index');
