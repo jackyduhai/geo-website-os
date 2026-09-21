@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Site;
 
 use App\Http\Controllers\Controller;
 use App\Services\Geo\SchemaBuilder;
-use App\Support\Facts;
+use App\Support\Catalog;
 use App\Support\Narrative;
 
 /**
@@ -15,7 +15,7 @@ class ContactController extends Controller
 {
     public function show(SchemaBuilder $schema)
     {
-        $company = Facts::company();
+        $company = Catalog::company();
         // 配置契约降级（P-STEP 04）：无业务数据时该业务页不渲染（404），不抛错
         if (empty($company)) {
             abort(404);
@@ -36,7 +36,7 @@ class ContactController extends Controller
                 'addressRegion'   => $company['address']['province'] ?? null,
                 'addressCountry'  => $company['address']['country'] ?? null,
             ],
-            'areaServed' => Facts::salesRegions(),
+            'areaServed' => Catalog::salesRegions(),
         ]);
 
         $crumbs = [

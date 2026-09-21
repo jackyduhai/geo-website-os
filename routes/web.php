@@ -12,7 +12,6 @@ use App\Http\Controllers\Site\PageController;
 use App\Http\Controllers\Site\ProductController;
 use App\Http\Controllers\Site\SearchController;
 use App\Http\Controllers\Site\SolutionController;
-use App\Support\Facts;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -44,24 +43,25 @@ Route::get('/search', [SearchController::class, 'index'])->name('search');
 // ---------- 首页 ----------
 Route::get('/', [HomeController::class, 'index'])->name('home');
 
-// 路由参数白名单（全部来自 facts，单一事实源，禁止手写枚举）
-$lineRe  = collect(Facts::productLines())->pluck('slug')->implode('|');
-$coreRe  = implode('|', Facts::coreProductSlugs());
-$sceneRe = collect(Facts::scenes())->pluck('slug')->implode('|');
+// 产品 / 场景的可访问 slug 不再在路由加载期由全局 Facts 白名单决定（那会绕过
+// 多站隔离，让空站 / 他站也能命中本站不存在的目录 URL）。统一交给站点隔离的
+// Catalog 在控制器内判定：系列 / 核心产品存在才渲染，否则 404（P-STEP 14 / D.2）。
 
 // ---------- 产品中心 ----------
 Route::get('products{slash?}', [ProductController::class, 'index'])
     ->where('slash', '/?')->defaults('_slash', 1)->name('products.index');
-Route::get('products/{line}{slash?}', [ProductController::class, 'line'])
-    ->where('line', $lineRe)->where('slash', '/?')->defaults('_slash', 1)->name('products.line');
-Route::get('products/{slug}{slash?}', [ProductController::class, 'show'])
-    ->where('slug', $coreRe)->where('slash', '/?')->name('products.show');
+// 系列页（目录型，带尾斜杠）与核心产品详情（详情型，无尾斜杠）共用单一路由，
+// ProductController::resolve 按当前站 Catalog 分流；斜杠方向无法在路由层静态声明
+// （同一路由承载两类页面），由 CanonicalizeSlash 按 Catalog 实体类型动态判定。
+Route::get('products/{param}{slash?}', [ProductController::class, 'resolve'])
+    ->where('param', '[a-z0-9-]+')->where('slash', '/?')->name('products.show');
 
 // ---------- 应用场景 ----------
 Route::get('solutions{slash?}', [SolutionController::class, 'index'])
     ->where('slash', '/?')->defaults('_slash', 1)->name('solutions.index');
+// 场景是否存在由当前站 Catalog 决定，show() 内查无即 404
 Route::get('solutions/{scene}{slash?}', [SolutionController::class, 'show'])
-    ->where('scene', $sceneRe)->where('slash', '/?')->defaults('_slash', 1)->name('solutions.show');
+    ->where('scene', '[a-z0-9-]+')->where('slash', '/?')->defaults('_slash', 1)->name('solutions.show');
 
 // ---------- 工厂与资质 / 合作方式 ----------
 Route::get('factory{slash?}', [FactoryController::class, 'show'])

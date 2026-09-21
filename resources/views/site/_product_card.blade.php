@@ -1,7 +1,7 @@
 {{-- ProductCard：无重框 / 3px 绿顶 / 1:1 图位 / 名 16/24 / 一句话 13/20 最多 2 行。
      变量：$p（facts 产品），可选 $lineName。核心产品进详情，其余回总览体系锚点。 --}}
 @php
-  $isCore = \App\Support\Facts::isCoreProduct($p['slug']);
+  $isCore = \App\Support\Catalog::isCoreProduct($p['slug']);
   $href = $isCore ? url('/products/' . $p['slug']) : url('/products/#' . ($p['line'] ?? ''));
   // 无产品图时使用数据自带 icon 或中性占位图标，不在此绑定具体产品线 slug
   $icon = $p['icon'] ?? 'default';

@@ -19,6 +19,8 @@ class InquiryTest extends TestCase
             \Database\Seeders\StructureSeeder::class,
             \Database\Seeders\SettingSeeder::class,
             \Database\Seeders\ContentSeeder::class,
+            // P-STEP 14 / D.2：/contact 等固定页改读站点隔离 Catalog，需投影 Example 目录。
+            \Database\Seeders\CatalogSeeder::class,
         ]);
         User::create([
             'name' => '管理员', 'email' => 'admin@example.test', 'password' => bcrypt('secret123'), 'is_super_admin' => true,

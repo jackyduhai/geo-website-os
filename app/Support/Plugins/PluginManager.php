@@ -2,23 +2,30 @@
 
 namespace App\Support\Plugins;
 
+use App\Http\Middleware\EnsurePluginEnabled;
 use App\Models\Setting;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 /**
- * PluginManager（P-STEP 06：Core / Theme / Plugin / Site Data 边界）
+ * PluginManager（P-STEP 06：Core / Theme / Plugin / Site Data 边界；
+ * P-STEP 14 / D.3：注册 / 授权分离）
  *
  * 插件 = plugins/{name}/ 目录：
  *   plugin.json        清单：name / version / description / provider（Laravel ServiceProvider 类名）
+ *   routes/web.php     可选：插件路由声明（自身前缀内），由 Core 在路由加载期统一注册
  *   其余文件           插件自有代码 / 视图 / 资产
  *
  * 契约：
- *   - 插件通过自有 ServiceProvider 注册路由 / 配置 / 视图 / 生命周期监听，
- *     全部限定在自身命名空间与自身路由前缀内，禁止修改 Core；
- *   - 启用状态存于站点设置 plugins_enabled（JSON 数组）；
+ *   - 注册与授权分离（D.3）：路由加载期为“所有已安装插件”一次性注册路由，每条路由挂
+ *     per-site EnsurePluginEnabled:{slug} 守卫；运行时按当前站点启用态决定 200 / 404，
+ *     不再在 enable() 时动态 app()->register provider（动态注册进全局路由单例不可逆、
+ *     也无法按站隔离）；
+ *   - ServiceProvider 仅承载视图 / 配置等非路由资源，随每请求 register() 重放；
+ *   - 启用状态存于站点设置 plugins_enabled（JSON 数组），按站点隔离；
  *   - 插件缺席 / 清单无效 / 类缺失 → 跳过并视为未启用（不致命）；
- *   - Core 代码不感知任何具体插件（静态扫描锁定）。
+ *   - Core 代码不感知任何具体插件（静态扫描锁定）：slug 一律来自清单发现，不写死。
  */
 class PluginManager
 {
@@ -85,7 +92,13 @@ class PluginManager
         return in_array($slug, self::enabled(), true);
     }
 
-    /** 启用：写设置并即时 boot（幂等） */
+    /**
+     * 启用：写当前站点设置（幂等）。
+     *
+     * D.3 起不再动态 app()->register provider：路由已在路由加载期为所有已安装插件注册，
+     * 由 EnsurePluginEnabled 守卫按当前站点启用态即时判定，故启用后下一个请求即生效；
+     * Provider 的非路由资源随每请求 register() 重放，无需在此引导。
+     */
     public static function enable(string $slug): bool
     {
         if (! self::exists($slug) || self::isEnabled($slug)) {
@@ -96,12 +109,11 @@ class PluginManager
         $list[] = $slug;
         Setting::set(self::SETTINGS_KEY, json_encode(array_values($list)));
         self::$enabledMemo = null;
-        self::register();
 
         return true;
     }
 
-    /** 停用：写设置，路由等随本次进程生命周期结束后不再注册 */
+    /** 停用：写当前站点设置；守卫在下一请求即返回 404（无需等到进程结束） */
     public static function disable(string $slug): bool
     {
         $list = array_values(array_filter(self::enabled(), fn ($s) => $s !== $slug));
@@ -109,6 +121,31 @@ class PluginManager
         self::$enabledMemo = null;
 
         return true;
+    }
+
+    /**
+     * 路由加载期：为“所有已安装插件”一次性注册路由（注册 / 授权分离，D.3）。
+     *
+     * 仅扫描插件目录中的 routes/web.php（文件系统操作，不查数据库、不看启用态），
+     * 为每个插件路由文件套入 web 组（含 ResolveSite，先解析当前站点）并追加 per-site
+     * EnsurePluginEnabled:{slug} 守卫。启用 / 停用的运行时判定全部交给守卫，从而：
+     *   - 由 bootstrap withRouting 的 then 回调在“每个应用实例”路由注册阶段调用一次，
+     *     调用方天然保证单次注册，故此处不使用跨应用的静态防重入标志（测试 / 队列等会
+     *     在同一进程重建应用，静态标志会让后续应用实例漏注册插件路由）；
+     *   - 同一插件在 A 站启用、B 站停用时，A 200 / B 404 由守卫按当前站点保证；
+     *   - Core 不出现任何具体插件 slug 字面量（slug 来自 all() 发现结果）。
+     */
+    public static function registerInstalledRoutes(): void
+    {
+        foreach (self::all() as $slug => $plugin) {
+            $routesFile = $plugin['path'] . '/routes/web.php';
+            if (! is_file($routesFile)) {
+                continue;
+            }
+
+            Route::middleware(['web', EnsurePluginEnabled::class . ':' . $slug])
+                ->group($routesFile);
+        }
     }
 
     /** boot 全部启用插件（AppServiceProvider::boot 调用；enable 后可重入，仅新增生效） */

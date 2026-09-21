@@ -4,6 +4,7 @@ use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Support\Facades\Route;
+use App\Support\Plugins\PluginManager;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -22,6 +23,10 @@ return Application::configure(basePath: dirname(__DIR__))
                 ->prefix('api/v1')
                 ->name('api.v1.')
                 ->group(base_path('routes/api.php'));
+
+            // 插件路由（P-STEP 14 / D.3：注册 / 授权分离）：路由加载期为所有已安装插件
+            // 一次性注册路由，per-site 启用态由 EnsurePluginEnabled 守卫在运行时判定。
+            PluginManager::registerInstalledRoutes();
         },
     )
     // 自动注册 app/Console/Commands（如 page-cache:clear）

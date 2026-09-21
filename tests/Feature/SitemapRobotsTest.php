@@ -114,6 +114,25 @@ class SitemapRobotsTest extends TestCase
 
     public function test_sitemap_is_site_scoped(): void
     {
+        // P-STEP 14 / D.2：默认站 A 播种“站点隔离”的 Example 目录（Catalog 投影为本站 Entity）。
+        // 旧 Facts 是全局配置，空站也能渲染；Catalog 只取本站 Entity，B 站不得看到 A 站目录。
+        $this->seed(\Database\Seeders\CatalogSeeder::class);
+
+        // 先在 A 站上下文收集本站目录的规范路径，供后续双向断言。
+        $catalogPaths = [
+            '/products/', '/solutions/', '/factory/', '/cooperation/',
+            '/about/profile/', '/about/history/', '/about/culture/', '/contact/',
+        ];
+        foreach (\App\Support\Catalog::productLines() as $line) {
+            $catalogPaths[] = '/products/' . $line['slug'] . '/';
+        }
+        foreach (\App\Support\Catalog::coreProductSlugs() as $slug) {
+            $catalogPaths[] = '/products/' . $slug;
+        }
+        foreach (\App\Support\Catalog::scenes() as $scene) {
+            $catalogPaths[] = '/solutions/' . $scene['slug'] . '/';
+        }
+
         $siteB = Site::create([
             'name' => 'Site B', 'slug' => 'site-b', 'domain' => 'b.example.com',
             'status' => 'active', 'is_default' => false,
@@ -123,13 +142,44 @@ class SitemapRobotsTest extends TestCase
             'title' => 'Page B', 'status' => 'published', 'published_at' => now(),
         ]);
 
-        $locs = $this->locs();
+        // —— A 站视角：必须完整收录本站目录，且不泄漏任何 B 站地址 ——
+        $xmlA = $this->get('https://example.com/sitemap.xml')->assertOk()->getContent();
+        preg_match_all('#<loc>(.*?)</loc>#', $xmlA, $mA);
+        $locsA = $mA[1];
 
-        $this->assertNotContains('https://b.example.com/page/site-b-page', $locs);
-        // 且不输出任何 Site B 域名地址
-        foreach ($locs as $loc) {
-            $this->assertStringNotContainsString('b.example.com', $loc);
+        $this->assertContains('https://example.com', $locsA);
+        $this->assertContains('https://example.com/products/', $locsA);
+        $this->assertContains('https://example.com/solutions/', $locsA);
+        $this->assertContains('https://example.com/factory/', $locsA);
+        $this->assertContains('https://example.com/cooperation/', $locsA);
+        foreach (\App\Support\Catalog::coreProductSlugs() as $slug) {
+            $this->assertContains('https://example.com/products/' . $slug, $locsA);
         }
+        foreach (\App\Support\Catalog::scenes() as $scene) {
+            $this->assertContains('https://example.com/solutions/' . $scene['slug'] . '/', $locsA);
+        }
+        $this->assertNotContains('https://b.example.com/page/site-b-page', $locsA);
+        // A 站每条 loc 的 host 必须严格是 example.com（不得出现 b.example.com）
+        foreach ($locsA as $loc) {
+            $this->assertSame('example.com', parse_url($loc, PHP_URL_HOST), "A sitemap leaked host in: $loc");
+        }
+
+        // —— B 站视角（D.2 核心回归）：空站绝不能渲染 A 站 / 全局目录 ——
+        $xmlB = $this->get('https://b.example.com/sitemap.xml')->assertOk()->getContent();
+        preg_match_all('#<loc>(.*?)</loc>#', $xmlB, $mB);
+        $locsB = $mB[1];
+
+        $this->assertContains('https://b.example.com', $locsB);
+        // B 站每条 loc 的 host 必须严格是 b.example.com（不得回落到 example.com）
+        foreach ($locsB as $loc) {
+            $this->assertSame('b.example.com', parse_url($loc, PHP_URL_HOST), "B sitemap leaked host in: $loc");
+        }
+        // B 站 sitemap 绝不含 A 站任何目录路径（产品 / 场景 / 体系 / 工厂 / 合作 / 关于 / 联系）
+        foreach ($catalogPaths as $path) {
+            $this->assertStringNotContainsString($path, $xmlB, "B sitemap leaked A catalog path: $path");
+        }
+        // 也不得收录 A 站首页实体（<loc>https://example.com</loc>，区别于子域 b.example.com）
+        $this->assertStringNotContainsString('<loc>https://example.com</loc>', $xmlB);
     }
 
     public function test_sitemap_xml_is_valid_structure(): void

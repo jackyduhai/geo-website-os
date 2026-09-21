@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Site;
 
 use App\Http\Controllers\Controller;
 use App\Services\Geo\SchemaBuilder;
-use App\Support\Facts;
+use App\Support\Catalog;
 use App\Support\Narrative;
 
 /**
@@ -18,8 +18,8 @@ class AboutController extends Controller
     {
         abort_if(! in_array($page, self::PAGES, true), 404);
 
-        $company = Facts::company();
-        $brand   = Facts::brandLanguage();
+        $company = Catalog::company();
+        $brand   = Catalog::brandLanguage();
         $copy    = config('pages.about.' . $page, []);
 
         // 配置契约降级（P-STEP 04）：无业务数据时该业务页不渲染（404），不抛错
@@ -70,8 +70,8 @@ class AboutController extends Controller
             'company' => $company,
             'brand'   => $brand,
             'copy'    => $copy,
-            'workshops' => Facts::workshops(),
-            'regions'  => Facts::salesRegions(),
+            'workshops' => Catalog::workshops(),
+            'regions'  => Catalog::salesRegions(),
             'crumbs'  => array_slice($crumbs, 1),
             'subnav'  => $subnav,
             'pageKey' => $page,

@@ -4,20 +4,24 @@ namespace App\Http\Controllers\Site;
 
 use App\Http\Controllers\Controller;
 use App\Services\Geo\SchemaBuilder;
-use App\Support\Facts;
+use App\Support\Catalog;
 use App\Support\Narrative;
 
 /**
- * 应用场景（按客户应用类型分诊，config/facts 驱动）
+ * 应用场景（按应用行业分诊，当前站点 Catalog 站点隔离读模型驱动）
  * 取代旧 ScenarioController / config('scenarios')，URL 由 /scenarios 迁到 /solutions。
  */
 class SolutionController extends Controller
 {
     public function index(SchemaBuilder $schema)
     {
-        $scenes = Facts::scenes();
+        // D.2 多站目录隔离：空目录站（无 organization Entity）不渲染场景总览，
+        // 与 factory / cooperation / about / contact 及场景详情页的 404 行为保持一致。
+        abort_if(empty(Catalog::company()), 404);
+
+        $scenes = Catalog::scenes();
         $lead = Narrative::lead('solutions.index.lead', config('pages.narrative.solutions_index.lead', ''));
-        $company    = Facts::company();
+        $company    = Catalog::company();
         $brandName  = ! empty($company['brand']) ? $company['brand'] : ($company['name'] ?? '');
         $sceneCnt   = count($scenes);
         $sceneNames = implode('、', array_map(fn ($s) => $s['name'], $scenes));
@@ -61,14 +65,14 @@ class SolutionController extends Controller
 
     public function show(string $scene, SchemaBuilder $schema)
     {
-        $data = Facts::scene($scene);
+        $data = Catalog::scene($scene);
         abort_if(! $data, 404);
         // 场景导语可运营：页头与 SEO 描述共用同一覆盖（组合理由 combo_reason 仍读 facts）
         $data['desc'] = Narrative::lead('solutions.scene.' . $scene, $data['desc'] ?? '');
 
-        $combo     = Facts::sceneCombo($data);
-        $adjacent  = Facts::adjacentScenes($data);
-        $keyProduct = ! empty($data['key_param_product']) ? Facts::product($data['key_param_product']) : null;
+        $combo     = Catalog::sceneCombo($data);
+        $adjacent  = Catalog::adjacentScenes($data);
+        $keyProduct = ! empty($data['key_param_product']) ? Catalog::product($data['key_param_product']) : null;
         $faqs      = config('pages.scene_faqs.' . $scene, []);
 
         // 上一/下一相邻场景

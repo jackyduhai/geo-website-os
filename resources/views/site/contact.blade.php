@@ -18,7 +18,7 @@
   $mapUrl = trim((string)($siteSettings['contact_map_url'] ?? ''));
   $qrSrc  = trim((string)($siteSettings['contact_wechat_qr'] ?? ''));
   $targetCustomers = $company['target_customers'] ?? [];
-  $salesRegions = \App\Support\Facts::salesRegions();
+  $salesRegions = \App\Support\Catalog::salesRegions();
 @endphp
 <section class="sec">
   <div class="wrap contact-grid">

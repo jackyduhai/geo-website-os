@@ -1,4 +1,4 @@
-{{-- S02 应用场景（客户分诊）：后台「应用场景」条目优先（可改文案/换图/改链接），缺省由 Facts 规范化 --}}
+{{-- S02 应用场景（客户分诊）：后台「应用场景」条目优先（可改文案/换图/改链接），缺省由 Catalog（站点目录读模型）规范化 --}}
 @if(!empty($sceneList))
 <section class="sec sec-tint" id="s02">
   <div class="wrap">

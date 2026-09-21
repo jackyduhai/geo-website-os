@@ -1,4 +1,4 @@
-{{-- S03 产品体系（数据来自 Facts，产品数与链接由数据决定；系列卡等宽呈现） --}}
+{{-- S03 产品体系（数据来自 Catalog 站点目录读模型，产品数与链接由数据决定；系列卡等宽呈现） --}}
 @php
   $lines = $productLines ?? [];
   if ($lines instanceof \Illuminate\Support\Collection) { $lines = $lines->all(); }

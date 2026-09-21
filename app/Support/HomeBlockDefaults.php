@@ -7,7 +7,7 @@ namespace App\Support;
  *
  * 前台 HomeController 与后台「首页装修」共用本类：
  * 区块未自定义条目时，前台按此渲染、后台按此预填以便直接编辑；一旦在后台保存条目，以区块 content.items 为准。
- * 信任数字 / 产品参数仍只从 Facts 派生，这里不产生任何新数字。
+ * 信任数字 / 产品参数仍只从站点隔离的 Catalog 派生，这里不产生任何新数字。
  *
  * 过渡层说明（legacy / Example 演示层）：
  *   本类与 config('facts') 及 data migration 播种的首页区块配套，服务于内置 Example
@@ -35,10 +35,10 @@ class HomeBlockDefaults
     public static function scenes(): array
     {
         $out = [];
-        foreach (Facts::scenes() as $sc) {
+        foreach (Catalog::scenes() as $sc) {
             $tags = [];
             foreach (($sc['combo'] ?? []) as $pslug) {
-                $p = Facts::product($pslug);
+                $p = Catalog::product($pslug);
                 if ($p) {
                     $tags[] = $p['short_name'] ?? $p['name'];
                 }
@@ -67,17 +67,17 @@ class HomeBlockDefaults
                 'cta'    => $m['cta'] ?? '了解合作方式',
                 'link'   => url('/cooperation/'),
             ];
-        }, Facts::cooperation()['types'] ?? []);
+        }, Catalog::cooperation()['types'] ?? []);
     }
 
     /** S07 匿名合作剪影。 */
     public static function cases(): array
     {
         $out = [];
-        foreach (Facts::cases() as $case) {
+        foreach (Catalog::cases() as $case) {
             $tags = [];
             foreach (($case['combo'] ?? []) as $slug) {
-                $p = Facts::product($slug);
+                $p = Catalog::product($slug);
                 if ($p) {
                     $tags[] = $p['short_name'] ?? $p['name'];
                 }
@@ -100,13 +100,13 @@ class HomeBlockDefaults
         $i = 0;
         return array_map(function ($w) use (&$i, $icons) {
             return ['icon' => $icons[$i++] ?? 'factory', 'title' => $w['name'], 'text' => $w['desc']];
-        }, Facts::workshops());
+        }, Catalog::workshops());
     }
 
     /** S06 合作流程。 */
     public static function steps(): array
     {
-        return array_map(fn ($s) => ['title' => $s['name'], 'text' => $s['desc']], Facts::cooperation()['process'] ?? []);
+        return array_map(fn ($s) => ['title' => $s['name'], 'text' => $s['desc']], Catalog::cooperation()['process'] ?? []);
     }
 
     /** S09 首页 FAQ。 */

@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Site;
 
 use App\Http\Controllers\Controller;
 use App\Services\Geo\SchemaBuilder;
-use App\Support\Facts;
+use App\Support\Catalog;
 use App\Support\Narrative;
 
 /**
@@ -16,7 +16,7 @@ class CooperationController extends Controller
 {
     public function show(SchemaBuilder $schema)
     {
-        $coop = Facts::cooperation();
+        $coop = Catalog::cooperation();
         // 配置契约降级（P-STEP 04）：无业务数据时该业务页不渲染（404），不抛错
         if (empty($coop)) {
             abort(404);
@@ -25,11 +25,11 @@ class CooperationController extends Controller
         $url  = url('/cooperation/');
         $lead = Narrative::lead('cooperation.lead', config('pages.narrative.cooperation.lead', ''));
 
-        $company     = Facts::company();
+        $company     = Catalog::company();
         $typeNames   = implode('、', array_map(fn ($t) => $t['name'], $coop['types'] ?? []));
         $typeCnt     = count($coop['types'] ?? []);
         $stepCnt     = count($coop['process'] ?? []);
-        $workshopCnt = count(Facts::workshops());
+        $workshopCnt = count(Catalog::workshops());
 
         $crumbs = [
             ['name' => '首页', 'url' => url('/')],

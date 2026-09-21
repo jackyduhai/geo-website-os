@@ -1,11 +1,11 @@
 {{--
-  SceneCard（Facts 驱动）：3px 强调色顶条；hover 上移 + 轻阴影 + 展开真实工艺 / 参数；
-  移动端默认展开（CSS），揭示内容必须在初始 DOM。入参：$sc（Facts 场景）。
+  SceneCard（Catalog 站点目录读模型驱动）：3px 强调色顶条；hover 上移 + 轻阴影 + 展开真实工艺 / 参数；
+  移动端默认展开（CSS），揭示内容必须在初始 DOM。入参：$sc（Catalog 场景）。
 --}}
 @php
   $comboNames = [];
   foreach (($sc['combo'] ?? []) as $pslug) {
-      $prod = \App\Support\Facts::product($pslug);
+      $prod = \App\Support\Catalog::product($pslug);
       if ($prod) $comboNames[] = $prod['short_name'] ?? $prod['name'];
   }
   $reveal = $sc['hover_reveal'] ?? ($sc['key_param_display'] ?? '');

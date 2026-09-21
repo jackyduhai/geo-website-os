@@ -15,6 +15,7 @@ use App\Models\Redirect as RedirectRule;
 use App\Models\Setting;
 use App\Contracts\UrlResolverInterface;
 use App\Services\Seo\GenericUrlResolver;
+use App\Support\Catalog;
 use App\Support\PageCache;
 use App\Support\RequestScopedState;
 use App\Support\SiteCacheKey;
@@ -242,6 +243,10 @@ class AppServiceProvider extends ServiceProvider
                 $resolved = static::resolveMenuHref($effectiveHref);
                 $isExternal = $forceExternal || $resolved['external'];
 
+                // D.2 多站目录隔离：产品 / 场景 / 工厂 / 关于等目录型链接只在当前站点
+                // 自己的 Catalog 中真实存在时才进入导航，空目录站不输出指向不存在目录的链接。
+                $visible = $visible && static::navPathExists($effectiveHref);
+
                 return [
                     'key'          => $key,
                     'default_name' => $defaultName,
@@ -449,6 +454,9 @@ class AppServiceProvider extends ServiceProvider
                 $resolved = static::resolveMenuHref($effectiveHref);
                 $external = $forceExternal || $resolved['external'];
 
+                // D.2 多站目录隔离：目录型页脚链接同样以当前站点 Catalog 是否存在为准。
+                $visible = $visible && static::navPathExists($effectiveHref);
+
                 return [
                     'key'          => $key,
                     'type'         => $type,
@@ -480,7 +488,7 @@ class AppServiceProvider extends ServiceProvider
                 $items = [];
                 if ($isContact) {
                     // 联系列：热线 / 业务手机（设置驱动，无值则不显示）/ 地址 / 二维码
-                    $hotline = (string) (\App\Support\Facts::company()['phone'] ?? '');
+                    $hotline = (string) (\App\Support\Catalog::company()['phone'] ?? '');
                     $si = 0;
                     $items[] = $applyItem('ft-contact-hotline', ['type' => 'text', 'label' => '合作热线', 'href' => $hotline !== '' ? 'tel:' . $hotline : ''], ++$si * 10, true);
                     $items[] = $applyItem('ft-contact-mobile', ['type' => 'text', 'label' => '业务手机'], ++$si * 10, true, true);
@@ -562,6 +570,10 @@ class AppServiceProvider extends ServiceProvider
                     ];
                 }
                 usort($items, fn ($a, $b) => $a['sort_effective'] <=> $b['sort_effective']);
+                // D.2：空目录站剔除目录链接后，非联系列若已无任何可见项则整列不输出（联系列保留）。
+                if (empty($items) && empty($col['contact'])) {
+                    continue;
+                }
                 $col['items'] = $items;
                 $columns[] = $col;
             }
@@ -598,6 +610,58 @@ class AppServiceProvider extends ServiceProvider
             }
             return $out;
         });
+    }
+
+    /**
+     * 菜单内部路径在「当前站点」是否存在（P-STEP 14 / D.2 多站目录隔离）。
+     *
+     * 固定导航 / 页脚里的产品 / 场景 / 工厂 / 合作 / 关于 / 联系等目录型链接，其存在性
+     * 以当前站点自己的 Catalog（Entity 投影）为准：空目录站不输出指向不存在目录的链接，
+     * 部分目录站只输出本站真实存在的产品线 / 场景。首页、知识中心（Content 域）、外链、
+     * 电话 / 邮箱、纯锚点不受此门控。
+     */
+    private static function navPathExists(string $rawHref): bool
+    {
+        $href = trim($rawHref);
+        if ($href === '' || $href === '#' || preg_match('~^(https?:|tel:|mailto:)~i', $href)) {
+            return true;
+        }
+
+        $path = trim((string) parse_url($href, PHP_URL_PATH), '/');
+        if ($path === '') {
+            return true; // 首页
+        }
+
+        $segments = explode('/', $path);
+        $top = $segments[0];
+        $catalogTops = ['products', 'solutions', 'factory', 'cooperation', 'about', 'contact'];
+        if (! in_array($top, $catalogTops, true)) {
+            return true; // 知识中心等非目录域不受门控
+        }
+
+        // 目录域：空目录站（无 organization Entity）整体不存在
+        if (empty(Catalog::company())) {
+            return false;
+        }
+
+        $sub = $segments[1] ?? '';
+        if ($top === 'products') {
+            if ($sub === '') {
+                return true; // 产品总览
+            }
+
+            return Catalog::line($sub) !== null || Catalog::product($sub) !== null;
+        }
+        if ($top === 'solutions') {
+            if ($sub === '') {
+                return true; // 场景总览
+            }
+
+            return Catalog::scene($sub) !== null;
+        }
+
+        // factory / cooperation / about / contact：站点存在目录即成立
+        return true;
     }
 
     /**

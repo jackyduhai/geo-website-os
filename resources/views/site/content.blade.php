@@ -112,7 +112,7 @@
         <p style="margin-left:auto;margin-right:auto">业务团队会结合你的产品与工艺需求，对接打样与代工方案。</p>
         <div class="cta-row" style="justify-content:center">
           <span class="cta-phone">{{ $siteSettings['contact_phone'] }}</span>
-          <a class="btn-ghost btn-lg" href="{{ url('/contact/contact-us') }}">在线留言</a>
+          <a class="btn-ghost btn-lg" href="{{ url('/contact/') }}">在线留言</a>
         </div>
       </div>
     </section>

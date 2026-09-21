@@ -5,6 +5,7 @@ namespace App\Http\Middleware;
 use App\Models\Category;
 use App\Models\Content;
 use App\Models\Group;
+use App\Support\Catalog;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -54,6 +55,9 @@ class CanonicalizeSlash
             } elseif ($routeName === 'page') {
                 // 统一分发器：栏目页目录型、文章详情型
                 $wantSlash = self::resolveWantsSlash($path);
+            } elseif ($routeName === 'products.show') {
+                // 同一路由承载产品系列（目录型）与核心产品详情（详情型），按当前站 Catalog 判定
+                $wantSlash = self::resolveProductWantsSlash((string) $route->parameter('param'));
             } else {
                 $wantSlash = $route?->parameter('_slash') === 1;
             }
@@ -106,6 +110,26 @@ class CanonicalizeSlash
 
         // single 型栏目直接渲染其下文章，规范地址是文章 URL（无斜杠）；list/product 为目录型
         return $node->type === 'single' ? false : true;
+    }
+
+    /**
+     * products.show 路由的实体级斜杠判定（该路由同时承载系列页与核心产品详情）：
+     *   true  = 产品系列（目录型，/products/{line}/，带尾斜杠）
+     *   false = 核心产品详情（详情型，/products/{product}，无尾斜杠）
+     *   null  = 当前站点 Catalog 查无该实体（不跳转，交 ProductController::resolve 404）
+     *
+     * 数据源是站点隔离的 Catalog（Entity 投影），不读任何全局 slug 白名单。
+     */
+    public static function resolveProductWantsSlash(string $param): ?bool
+    {
+        if (Catalog::line($param) !== null) {
+            return true;
+        }
+        if (Catalog::isCoreProduct($param)) {
+            return false;
+        }
+
+        return null;
     }
 
     /**

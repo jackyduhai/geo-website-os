@@ -1,4 +1,4 @@
-{{-- S06 合作方式：后台「合作方式」条目优先（可改文案/换图），缺省由 Facts 规范化 --}}
+{{-- S06 合作方式：后台「合作方式」条目优先（可改文案/换图），缺省由 Catalog（站点目录读模型）规范化 --}}
 @if(!empty($coopModes))
 <section class="sec sec-tint" id="s06">
   <div class="wrap">

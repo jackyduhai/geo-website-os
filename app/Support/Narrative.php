@@ -9,7 +9,7 @@ use Illuminate\Support\Str;
  * 叙事插槽（Narrative Slot）取数层
  * ------------------------------------------------------------------
  * 结构化页面（关于 / 工厂 / 合作 / 联系 / 产品 / 场景）的硬数据（配比、参数、
- * 资质、时间线、数字、FAQ、产品组合）始终锁定在 Facts 单一事实源，保证 GEO
+ * 资质、时间线、数字、FAQ、产品组合）始终锁定在站点隔离的 Catalog 单一目录源，保证 GEO
  * 证据一致、不可在 CMS 虚构；而面向运营的「叙事段落」（hero 导语、企业简介
  * 正文）允许后台「页面文案」覆盖。
  *
@@ -18,7 +18,7 @@ use Illuminate\Support\Str;
  * sitemap / feed / 列表（Content 的 not_slot 全局作用域统一排除）。
  *
  * 约定：
- *   - 未覆盖时一律回退 Facts / config/pages 的默认文案，上线零差异、不做 DB 回填；
+ *   - 未覆盖时一律回退 Catalog / config/pages 的默认文案，上线零差异、不做 DB 回填；
  *   - 后台清空保存即删除覆盖行，恢复默认；
  *   - summary 为纯文本 hero 导语（同时用于 meta / Schema description）；
  *   - body 为 Markdown 正文，渲染时把 H1 降级为 H2，保证每页唯一 H1。
@@ -155,13 +155,13 @@ class Narrative
         ];
 
         // ---------- 工厂与资质 ----------
-        $company = Facts::company();
-        $workshopNames = implode('、', array_map(fn ($w) => $w['name'], Facts::workshops()));
+        $company = Catalog::company();
+        $workshopNames = implode('、', array_map(fn ($w) => $w['name'], Catalog::workshops()));
         $defs[] = [
             'group' => '工厂与资质', 'key' => 'factory.lead',
             'label' => '工厂与资质 · 页头导语', 'url' => url('/factory/'),
             'location' => '工厂页：页头导语（数据条、生产车间、流程、资质为锁定数据）',
-            'default_summary' => $workshopNames . '，' . count(Facts::workshops())
+            'default_summary' => $workshopNames . '，' . count(Catalog::workshops())
                 . '个车间都在自己厂里。不外包，不做贸易。'
                 . ($company['established_production_display'] ?? '') . '全面投产。',
         ];
@@ -189,8 +189,8 @@ class Narrative
             'location' => '产品中心总览页：页头导语',
             'default_summary' => config('pages.narrative.products_index.lead', ''),
         ];
-        foreach (Facts::productLines() as $line) {
-            $count = count(Facts::productsByLine($line['slug']));
+        foreach (Catalog::productLines() as $line) {
+            $count = count(Catalog::productsByLine($line['slug']));
             $url = $count >= 1
                 ? url('/products/' . $line['slug'] . '/')
                 : url('/products/#' . $line['slug']);
@@ -204,8 +204,8 @@ class Narrative
                 'default_summary' => $line['desc'] ?? '',
             ];
         }
-        foreach (Facts::products() as $p) {
-            if (! Facts::isCoreProduct($p['slug'])) {
+        foreach (Catalog::products() as $p) {
+            if (! Catalog::isCoreProduct($p['slug'])) {
                 continue;
             }
             $defs[] = [
@@ -225,7 +225,7 @@ class Narrative
             'location' => '应用场景总览页：页头导语',
             'default_summary' => config('pages.narrative.solutions_index.lead', ''),
         ];
-        foreach (Facts::scenes() as $scene) {
+        foreach (Catalog::scenes() as $scene) {
             $defs[] = [
                 'group' => '应用场景',
                 'key' => 'solutions.scene.' . $scene['slug'],

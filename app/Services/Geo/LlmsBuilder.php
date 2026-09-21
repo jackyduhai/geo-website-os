@@ -3,13 +3,13 @@
 namespace App\Services\Geo;
 
 use App\Models\Content;
-use App\Support\Facts;
+use App\Support\Catalog;
 
 /**
- * llms.txt 生成器（v0.7：按 Facts 权威数据源 + 新 IA 重建，遵循 llmstxt.org）
+ * llms.txt 生成器（v0.7 IA；P-STEP 14 / D.2 起结构化事实改由站点隔离 Catalog 驱动，遵循 llmstxt.org）
  *
  * 定位：给 AI 检索 / 生成引擎的权威口径入口。
- *   - 结构化事实全部来自 Facts（facts.yaml 编译产物），与页面正文同源，不手工维护；
+ *   - 结构化事实全部来自当前站点的 Catalog（Entity 投影），与页面正文同源，不手工维护；
  *   - 链接使用 v0.7 规范地址（目录带斜杠、详情不带），不输出已取消的 /cases/；
  *   - 未核定数据（资质编号、起订量、交付周期、门店数、经纬度）一律不写。
  */
@@ -17,7 +17,7 @@ class LlmsBuilder
 {
     public function build(): string
     {
-        $company = Facts::company();
+        $company = Catalog::company();
 
         // 配置契约降级（P-STEP 04）：业务事实缺席（如开源裸部署）时
         // 输出通用骨架——不抛错、不编造事实。
@@ -25,18 +25,18 @@ class LlmsBuilder
             return $this->buildGeneric();
         }
 
-        $brand       = Facts::brandLanguage();
+        $brand       = Catalog::brandLanguage();
         $brandName   = ! empty($company['brand']) ? $company['brand'] : $company['name'];
         $industry    = $company['industry'] ?? '';
-        $workshops   = Facts::workshops();
+        $workshops   = Catalog::workshops();
         $workshopCnt = count($workshops);
-        $regions     = Facts::salesRegions();
+        $regions     = Catalog::salesRegions();
         $regionCnt   = count($regions);
-        $lines       = Facts::productLines();
+        $lines       = Catalog::productLines();
         $lineCnt     = count($lines);
-        $scenes      = Facts::scenes();
+        $scenes      = Catalog::scenes();
         $sceneCnt    = count($scenes);
-        $coop        = Facts::cooperation();
+        $coop        = Catalog::cooperation();
         $L           = [];
 
         // ---------- 标题与摘要 ----------
@@ -106,13 +106,13 @@ class LlmsBuilder
         $L[] = '- [产品中心](' . url('/products/') . ')：' . $lineCnt . '大产品体系总览';
         foreach ($lines as $line) {
             $slug = $line['slug'];
-            if (count(Facts::productsByLine($slug)) >= 1) {
+            if (count(Catalog::productsByLine($slug)) >= 1) {
                 $L[] = '- [' . $line['name'] . '](' . url('/products/' . $slug . '/') . ')：' . ($line['desc'] ?? $line['name']);
             }
         }
         // 核心产品（有独立详情页），带关键参数
-        foreach (Facts::products() as $p) {
-            if (! Facts::isCoreProduct($p['slug'])) {
+        foreach (Catalog::products() as $p) {
+            if (! Catalog::isCoreProduct($p['slug'])) {
                 continue;
             }
             $kp = array_map(fn ($k) => $k['label'] . ' ' . $k['value'], $p['key_params'] ?? []);
@@ -128,7 +128,7 @@ class LlmsBuilder
         $L[] = '';
         $L[] = '- [应用场景总览](' . url('/solutions/') . ')：' . $sceneCnt . '类常见应用场景';
         foreach ($scenes as $scene) {
-            $combo = Facts::sceneCombo($scene);
+            $combo = Catalog::sceneCombo($scene);
             $names = array_map(fn ($p) => $p['short_name'] ?? $p['name'], $combo);
             $L[] = '- [' . $scene['name'] . '](' . url('/solutions/' . $scene['slug'] . '/') . ')'
                  . ($names ? '：推荐组合为 ' . implode('、', $names) : '');

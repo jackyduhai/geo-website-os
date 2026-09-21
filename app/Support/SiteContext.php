@@ -81,17 +81,25 @@ class SiteContext
     }
 
     /**
-     * 临时执行一个站点上下文下的操作（用于测试/Admin 切换站点）
+     * 临时执行一个站点上下文下的操作（用于测试 / Admin / CLI / Job 嵌套切换站点）。
+     *
+     * P-STEP 14 / D.4：切换站点不仅是替换 currentSite，还必须复位所有“按当前站点解析、
+     * 以 static 记忆”的请求级状态，否则同进程内会读到上一站点缓存的 Setting / Catalog /
+     * SeoMeta / Theme / Plugin 等（state leakage）。进入目标站点后 reapply() 一次，
+     * 退出（finally）恢复外层站点后再 reapply() 一次，保证嵌套 A{B{A}} 与 CLI / Queue /
+     * Admin 内嵌场景下上下文都能正确重建。reapply 内 register 幂等且对未就绪环境兜底。
      */
     public static function withSite(Site $site, callable $callback): mixed
     {
         $previous = self::$currentSite;
         self::setSite($site);
+        RequestScopedState::reapply();
 
         try {
             return $callback();
         } finally {
             self::$currentSite = $previous;
+            RequestScopedState::reapply();
         }
     }
 }

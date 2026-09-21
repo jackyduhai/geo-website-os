@@ -5,12 +5,12 @@ namespace App\Services\Geo;
 use App\Models\Category;
 use App\Models\Content;
 use App\Models\SeoMeta;
-use App\Support\Facts;
+use App\Support\Catalog;
 use App\Support\SiteContext;
 use Illuminate\Support\Collection;
 
 /**
- * sitemap.xml 生成器（v0.7：按 Facts 驱动的新 IA 重建）
+ * sitemap.xml 生成器（v0.7 IA；P-STEP 14 / D.2 起目录数据改由站点隔离 Catalog 驱动）
  *
  * 判据：只收录「真实可访问（返回 200）且有实质正文」的规范地址。
  *   - 目录型带尾斜杠、详情型不带，与 CanonicalizeSlash / canonical 完全一致；
@@ -40,29 +40,36 @@ class SitemapBuilder
         // 首页
         $add(url('/'), 'daily', '1.0');
 
-        // 产品中心：总览 + 含产品的系列独立页 + 核心产品详情
-        $add(url('/products/'), 'weekly', '0.9');
-        foreach (Facts::productLines() as $line) {
-            $lineSlug = $line['slug'];
-            if (count(Facts::productsByLine($lineSlug)) >= 1) {
-                $add(url('/products/' . $lineSlug . '/'), 'weekly', '0.8');
-            }
-        }
-        foreach (Facts::products() as $p) {
-            if (Facts::isCoreProduct($p['slug'])) {
-                $add(url('/products/' . $p['slug']), 'weekly', '0.7');
-            }
-        }
+        // 业务目录（产品 / 场景 / 工厂 / 合作 / 关于 / 联系）只在当前站点确实存在
+        // 目录数据（organization Entity）时收录。目录按站点隔离（Catalog），空站 /
+        // 未播种站点这些页面返回 404 或空壳，不得把全局 / 他站目录 URL 写入本站 sitemap。
+        $hasCatalog = ! empty(Catalog::company());
 
-        // 应用场景：总览 + 各场景详情
-        $add(url('/solutions/'), 'monthly', '0.9');
-        foreach (Facts::scenes() as $scene) {
-            $add(url('/solutions/' . $scene['slug'] . '/'), 'monthly', '0.8');
-        }
+        if ($hasCatalog) {
+            // 产品中心：总览 + 含产品的系列独立页 + 核心产品详情
+            $add(url('/products/'), 'weekly', '0.9');
+            foreach (Catalog::productLines() as $line) {
+                $lineSlug = $line['slug'];
+                if (count(Catalog::productsByLine($lineSlug)) >= 1) {
+                    $add(url('/products/' . $lineSlug . '/'), 'weekly', '0.8');
+                }
+            }
+            foreach (Catalog::products() as $p) {
+                if (Catalog::isCoreProduct($p['slug'])) {
+                    $add(url('/products/' . $p['slug']), 'weekly', '0.7');
+                }
+            }
 
-        // 工厂与合作
-        $add(url('/factory/'), 'monthly', '0.7');
-        $add(url('/cooperation/'), 'monthly', '0.7');
+            // 应用场景：总览 + 各场景详情
+            $add(url('/solutions/'), 'monthly', '0.9');
+            foreach (Catalog::scenes() as $scene) {
+                $add(url('/solutions/' . $scene['slug'] . '/'), 'monthly', '0.8');
+            }
+
+            // 工厂与合作
+            $add(url('/factory/'), 'monthly', '0.7');
+            $add(url('/cooperation/'), 'monthly', '0.7');
+        }
 
         // 知识中心：总览 + 各启用子栏目（groups 数据驱动）+ 已发布文章（扁平 URL）
         $add(url('/knowledge/'), 'weekly', '0.7');
@@ -86,11 +93,13 @@ class SitemapBuilder
             );
         }
 
-        // 关于我们三子页 + 联系
-        $add(url('/about/profile/'), 'yearly', '0.5');
-        $add(url('/about/history/'), 'yearly', '0.5');
-        $add(url('/about/culture/'), 'yearly', '0.5');
-        $add(url('/contact/'), 'yearly', '0.6');
+        // 关于我们三子页 + 联系（仅当本站存在目录 / 公司数据，否则这些页面 404）
+        if ($hasCatalog) {
+            $add(url('/about/profile/'), 'yearly', '0.5');
+            $add(url('/about/history/'), 'yearly', '0.5');
+            $add(url('/about/culture/'), 'yearly', '0.5');
+            $add(url('/contact/'), 'yearly', '0.6');
+        }
 
         // 后台可运营的自定义栏目（如新闻 /news/）：启用的列表/产品型栏目页收录；
         // 单页型（type=single）直接渲染其下文章，规范地址是文章 URL，故不重复收录栏目地址。

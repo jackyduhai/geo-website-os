@@ -2,7 +2,7 @@
 @php
   $navPhone = config('copy.nav.phone');
   $navPhoneTel = config('copy.nav.phoneTel');
-  $company = $company ?? \App\Support\Facts::company();
+  $company = $company ?? \App\Support\Catalog::company();
 @endphp
 <section class="sec sec-tint" id="s08">
   <div class="wrap contact-grid">

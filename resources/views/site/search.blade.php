@@ -36,11 +36,11 @@
     <div class="card" style="padding:40px 22px;text-align:center;color:var(--ink-muted)">
       <p style="margin:0 0 12px">没有找到与「{{ $q }}」相关的内容</p>
       <p style="margin:0;font-size:14px">
-        换个关键词试试，或直接
+        换个关键词试试
         @if(!empty($siteSettings['contact_phone']))
-          致电 <strong style="color:var(--brand)">{{ $siteSettings['contact_phone'] }}</strong>
-        @else
-          <a href="{{ url('/contact/contact-us') }}">联系我们</a>
+          ，或直接致电 <strong style="color:var(--brand)">{{ $siteSettings['contact_phone'] }}</strong>
+        @elseif(!empty(\App\Support\Catalog::company()))
+          ，或直接<a href="{{ url('/contact/') }}">联系我们</a>
         @endif
       </p>
     </div>

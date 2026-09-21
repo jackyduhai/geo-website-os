@@ -8,10 +8,10 @@
   $heroMode = $blkCfg['mode'] ?? 'A';
   $heroAutoplay = ! empty($blkCfg['autoplay']);
 
-  // 默认口径全部由通用 Facts 数据派生，不在此写死任何具体企业 / 行业信息
-  $company = $company ?? \App\Support\Facts::company();
-  $heroWsCount = count(\App\Support\Facts::workshops());
-  $heroRegionCount = count(\App\Support\Facts::salesRegions());
+  // 默认口径全部由通用 Catalog 站点目录数据派生，不在此写死任何具体企业 / 行业信息
+  $company = $company ?? \App\Support\Catalog::company();
+  $heroWsCount = count(\App\Support\Catalog::workshops());
+  $heroRegionCount = count(\App\Support\Catalog::salesRegions());
   $heroYears = (int) ($company['tech_experience_years'] ?? 0);
   $heroCustomers = implode('、', array_slice($company['target_customers'] ?? [], 0, 3));
   $heroBrand = $company['brand'] ?? ($company['name'] ?? config('app.name'));
@@ -23,7 +23,7 @@
   if (blank($heroTitle) || trim((string) $heroTitle) === trim((string) $siteName)) {
       $heroTitle = $defaultTitle;
   }
-  // A/C 共用说明正文：后台「首页装修」可编辑，留空回退由 Facts 派生的默认口径
+  // A/C 共用说明正文：后台「首页装修」可编辑，留空回退由 Catalog 派生的默认口径
   $defaultLead = '自有约 ' . number_format((int) ($company['area_sqm'] ?? 0)) . ' ㎡ 厂区、' . $heroWsCount . ' 个生产车间，年产能约 ' . $heroCapacity . ' 吨。为' . $heroCustomers . '等客户提供定制研发、OEM / ODM 代工与稳定供货，销售覆盖全国 ' . $heroRegionCount . ' 大区域。';
   $heroLead = trim((string) ($blkCfg['lead'] ?? '')) !== '' ? trim((string) $blkCfg['lead']) : $defaultLead;
 

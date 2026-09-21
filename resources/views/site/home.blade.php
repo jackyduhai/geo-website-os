@@ -13,9 +13,11 @@
       <span class="eyebrow">源头工厂 · 定制制造</span>
       <h1>{{ $siteSettings['site_name'] ?? config('app.name') }}</h1>
       <p>{{ $siteSettings['site_description'] ?? '' }}</p>
+      @if(! empty(\App\Support\Catalog::company()))
       <div class="hero-actions">
-        <a class="btn" href="{{ url('/contact/contact-us') }}">业务与打样咨询<span class="arr">→</span></a>
+        <a class="btn" href="{{ url('/contact/') }}">业务与打样咨询<span class="arr">→</span></a>
       </div>
+      @endif
     </div></section>
   @endforelse
 @endsection

@@ -56,6 +56,7 @@ class RequestScopedState
         Group::flushKnowledgeMemo();
         Narrative::flush();
         Copy::flush();
+        Catalog::flush();
 
         // —— 结构 / 解析型记忆 ——
         SiteScope::resetRequestMemo();

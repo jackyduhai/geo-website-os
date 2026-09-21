@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Site;
 
 use App\Http\Controllers\Controller;
 use App\Services\Geo\SchemaBuilder;
-use App\Support\Facts;
+use App\Support\Catalog;
 use App\Support\Narrative;
 
 /**
@@ -16,14 +16,14 @@ class FactoryController extends Controller
 {
     public function show(SchemaBuilder $schema)
     {
-        $company    = Facts::company();
+        $company    = Catalog::company();
         // 配置契约降级（P-STEP 04）：无业务数据时该业务页不渲染（404），不抛错
         if (empty($company)) {
             abort(404);
         }
-        $workshops  = Facts::workshops();
-        $regions    = Facts::salesRegions();
-        $certsReady = Facts::certificationsReady();
+        $workshops  = Catalog::workshops();
+        $regions    = Catalog::salesRegions();
+        $certsReady = Catalog::certificationsReady();
         $steps      = config('pages.factory_steps', []);
 
         $workshopNames = implode('、', array_map(fn ($w) => $w['name'], $workshops));
@@ -68,7 +68,7 @@ class FactoryController extends Controller
             'steps'      => $steps,
             'lead'       => $lead,
             'certsReady' => $certsReady,
-            'certs'      => Facts::certifications(),
+            'certs'      => Catalog::certifications(),
             'crumbs'     => array_slice($crumbs, 1),
             'schemas'    => array_values(array_filter(array_merge([
                 $schema->organization(),

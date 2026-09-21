@@ -69,9 +69,12 @@ class PluginArchitectureTest extends TestCase
         $this->get('/plugins/hello/ping')->assertOk();
 
         PluginManager::disable('hello');
-        // 进程内路由由已注册 provider 残留（生命周期到进程结束），
-        // 但启用态已持久化：新请求进程（真实部署）不再注册。
         $this->assertFalse(PluginManager::isEnabled('hello'));
+
+        // D.3：注册 / 授权分离后，路由仍在路由表，但 per-site 守卫按当前站点启用态实时
+        // 判定，故停用后的“下一个请求”立即 404，无需等到进程结束 / 路由重新注册。
+        $this->get('/plugins/hello/ping')->assertNotFound();
+
         $this->get('/')->assertOk();
         $this->get('/geo.json')->assertOk();
     }

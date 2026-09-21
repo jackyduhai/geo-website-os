@@ -9,7 +9,7 @@ use App\Models\Fact;
 use App\Models\PageBlock;
 use App\Services\Geo\SchemaBuilder;
 use App\Services\Seo\SeoMetaResolver;
-use App\Support\Facts;
+use App\Support\Catalog;
 use App\Support\HomeBlockDefaults;
 use App\Support\SiteContext;
 use Illuminate\Http\Request;
@@ -18,8 +18,8 @@ use Illuminate\Http\Request;
  * 首页（S01–S10，实体中心 + 可整体装修）
  *
  * 渲染顺序 / 显隐 / 标题 / 手动选稿仍由 page_blocks 决定（后台首页装修可运营）；
- * 结构化默认内容（场景、参数、合作、车间、案例、FAQ）统一来自 config/facts、config/pages，
- * 信任数字只从已核定事实派生，不允许虚构。
+ * 结构化默认内容（场景、参数、合作、车间、案例、FAQ）统一来自 Catalog 站点目录读模型
+ * （Entity 投影）与 config/pages，信任数字只从已核定事实派生，不允许虚构。
  */
 class HomeController extends Controller
 {
@@ -28,7 +28,7 @@ class HomeController extends Controller
         $blocks = PageBlock::forPage('home')->active()->with('category')->get();
         $byType = $blocks->keyBy('type');
 
-        $company = Facts::company();
+        $company = Catalog::company();
 
         $data = [
             'blocks'  => $blocks,
@@ -43,7 +43,7 @@ class HomeController extends Controller
         ];
 
         // S01 Hero：取首个核心产品的关键参数卡（数据驱动，最多 5 行，真实可溯）
-        $data['heroProduct'] = collect(Facts::products())->firstWhere('core', true) ?: null;
+        $data['heroProduct'] = collect(Catalog::products())->firstWhere('core', true) ?: null;
         $data['heroParams'] = $this->heroParams($data['heroProduct']);
 
         // S02 应用场景（后台条目优先，缺省取统一默认源）
@@ -51,8 +51,8 @@ class HomeController extends Controller
         $data['sceneList'] = ($sceneBlock && $it = $sceneBlock->items()) ? $it : HomeBlockDefaults::scenes();
 
         // S03 产品体系（含产品数，各系列由视图按实际数量呈现）
-        $data['productLines'] = collect(Facts::productLines())->map(function ($l) {
-            $l['products'] = Facts::productsByLine($l['slug']);
+        $data['productLines'] = collect(Catalog::productLines())->map(function ($l) {
+            $l['products'] = Catalog::productsByLine($l['slug']);
             $l['count'] = count($l['products']);
             return $l;
         })->all();
@@ -61,7 +61,7 @@ class HomeController extends Controller
         $data['paramRows'] = $this->s04Rows();
         $data['paramDifferentiators'] = $this->paramDifferentiators();
 
-        // S05 信任数据条 + 生产车间（后台区块可覆盖，缺省取 Facts 并带默认图标）
+        // S05 信任数据条 + 生产车间（后台区块可覆盖，缺省取 Catalog 站点目录并带默认图标）
         $data['stats'] = $this->buildStats($company);
         $data['workshopItems'] = $this->workshopItems($byType->get('workshops'));
 
@@ -147,12 +147,12 @@ class HomeController extends Controller
         return $rows;
     }
 
-    /** S04 参数对比行：取核心产品（最多 6 个）的关键参数值，全部源自 facts。 */
+    /** S04 参数对比行：取核心产品（最多 6 个）的关键参数值，全部源自 Catalog 站点目录。 */
     private function s04Rows(): array
     {
         $rows = [];
-        foreach (Facts::coreProductSlugs() as $slug) {
-            $p = Facts::product($slug);
+        foreach (Catalog::coreProductSlugs() as $slug) {
+            $p = Catalog::product($slug);
             if (! $p) {
                 continue;
             }
@@ -223,15 +223,15 @@ class HomeController extends Controller
             ->get();
     }
 
-    /** S05 信任数据条（数值全部源自 facts）。 */
+    /** S05 信任数据条（数值全部源自 Catalog 站点目录）。 */
     private function buildStats(array $company): array
     {
         return [
             ['num' => (int) ($company['tech_experience_years'] ?? 0), 'unit' => '年', 'label' => '工业材料领域经验'],
             ['num' => (int) ($company['area_sqm'] ?? 0), 'unit' => '㎡', 'label' => '自有生产厂区'],
             ['num' => (int) ($company['annual_capacity_tons'] ?? 0), 'unit' => '吨', 'label' => '年成品产能'],
-            ['num' => count(Facts::workshops()), 'unit' => '大', 'label' => '自有生产车间'],
-            ['num' => count(Facts::salesRegions()), 'unit' => '大区', 'label' => '全国销售覆盖'],
+            ['num' => count(Catalog::workshops()), 'unit' => '大', 'label' => '自有生产车间'],
+            ['num' => count(Catalog::salesRegions()), 'unit' => '大区', 'label' => '全国销售覆盖'],
         ];
     }
 }

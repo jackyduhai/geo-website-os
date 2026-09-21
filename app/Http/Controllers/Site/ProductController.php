@@ -5,12 +5,12 @@ namespace App\Http\Controllers\Site;
 use App\Http\Controllers\Controller;
 use App\Providers\AppServiceProvider;
 use App\Services\Geo\SchemaBuilder;
-use App\Support\Facts;
+use App\Support\Catalog;
 use App\Support\Narrative;
 
 /**
- * 产品中心（config/facts 单一事实源驱动）
- *   index  产品总览：按产品线分组 + 锚点
+ * 产品中心（当前站点 Catalog 站点隔离读模型驱动，Catalog 由 Entity 投影，Example 种子源自 config/facts）
+ *   index  产品总览：按产品线分组 + 锚点（空目录站 404）
  *   line   单系列页：仅当该系列含产品时才独立成页，否则 301 到总览锚点
  *   show   核心产品详情（仅标记 core 的产品有独立详情页，八区块）
  */
@@ -18,8 +18,12 @@ class ProductController extends Controller
 {
     public function index(SchemaBuilder $schema)
     {
-        $lines = collect(Facts::productLines())->map(function ($line) {
-            $line['products'] = Facts::productsByLine($line['slug']);
+        // D.2 多站目录隔离：空目录站（无 organization Entity）不渲染产品总览，
+        // 与 factory / cooperation / about / contact 及产品详情页的 404 行为保持一致。
+        abort_if(empty(Catalog::company()), 404);
+
+        $lines = collect(Catalog::productLines())->map(function ($line) {
+            $line['products'] = Catalog::productsByLine($line['slug']);
             // 系列导语可运营（总览分组说明与独立系列页共用同一覆盖）
             $line['desc'] = Narrative::lead('products.line.' . $line['slug'], $line['desc'] ?? '');
             return $line;
@@ -27,7 +31,7 @@ class ProductController extends Controller
 
         $lead = Narrative::lead('products.index.lead', config('pages.narrative.products_index.lead', ''));
 
-        $company   = Facts::company();
+        $company   = Catalog::company();
         $brandName = ! empty($company['brand']) ? $company['brand'] : ($company['name'] ?? '');
         $lineNames = implode('、', array_map(fn ($l) => $l['name'], $lines));
 
@@ -71,13 +75,31 @@ class ProductController extends Controller
         ]);
     }
 
+    /**
+     * 产品中心统一入口（路由中性化，P-STEP 14 / D.2）：/products/{param}
+     *
+     * 按「当前站点」Catalog 判定 param 是产品系列还是核心产品，否则 404。
+     * 不再依赖全局 Facts 在路由加载期生成的 slug 白名单（那会让空站 / 其他站
+     * 也能命中本站不存在的产品 URL）。数据全部来自站点隔离的 Catalog。
+     */
+    public function resolve(string $param, SchemaBuilder $schema)
+    {
+        if (Catalog::line($param) !== null) {
+            return $this->line($param, $schema);
+        }
+        if (Catalog::isCoreProduct($param)) {
+            return $this->show($param, $schema);
+        }
+        abort(404);
+    }
+
     public function line(string $line, SchemaBuilder $schema)
     {
-        $data = Facts::line($line);
+        $data = Catalog::line($line);
         abort_if(! $data, 404);
         // 系列导语可运营：独立系列页页头与 SEO 描述、总览分组说明共用同一覆盖
         $data['desc'] = Narrative::lead('products.line.' . $line, $data['desc'] ?? '');
-        $products = Facts::productsByLine($line);
+        $products = Catalog::productsByLine($line);
 
         // 该系列没有产品则不建独立分类页，回到总览对应锚点（规范硬规则，数据驱动）
         if (count($products) < 1) {
@@ -95,7 +117,7 @@ class ProductController extends Controller
             '@type'           => 'ItemList',
             'name'            => $data['name'],
             'itemListElement' => array_values(array_map(function ($p, $i) {
-                $url = Facts::isCoreProduct($p['slug'])
+                $url = Catalog::isCoreProduct($p['slug'])
                     ? url('/products/' . $p['slug'])
                     : url('/products/#' . $p['line']);
                 return ['@type' => 'ListItem', 'position' => $i + 1, 'name' => $p['name'], 'url' => $url];
@@ -124,14 +146,14 @@ class ProductController extends Controller
 
     public function show(string $slug, SchemaBuilder $schema)
     {
-        $product = Facts::product($slug);
-        abort_if(! $product || ! Facts::isCoreProduct($slug), 404);
+        $product = Catalog::product($slug);
+        abort_if(! $product || ! Catalog::isCoreProduct($slug), 404);
         // 产品导语可运营：页头、SEO 描述、Product 结构化数据三处共用同一覆盖
         $product['tagline'] = Narrative::lead('products.detail.' . $slug, $product['tagline'] ?? '');
 
-        $line     = Facts::line($product['line']);
-        $related  = Facts::relatedProducts($product, 5);
-        $scenes   = Facts::scenesOfProduct($product);
+        $line     = Catalog::line($product['line']);
+        $related  = Catalog::relatedProducts($product, 5);
+        $scenes   = Catalog::scenesOfProduct($product);
         $faqs     = config('pages.product_faqs.' . $slug, []);
 
         $crumbs = [
@@ -192,7 +214,7 @@ class ProductController extends Controller
 
         // 固定体系按规范化 URL 映射回 slug（供详情 / 系列页高亮）
         $slugByUrl = [];
-        foreach (Facts::productLines() as $l) {
+        foreach (Catalog::productLines() as $l) {
             $slugByUrl[trim((string) url('/products/' . $l['slug'] . '/'), '/')] = $l['slug'];
         }
 
@@ -217,7 +239,7 @@ class ProductController extends Controller
 
     private function productSchema(array $product, ?array $line): array
     {
-        $company   = Facts::company();
+        $company   = Catalog::company();
         $brandName = ! empty($company['brand']) ? $company['brand'] : ($company['name'] ?? '');
 
         $props = [];

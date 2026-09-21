@@ -19,10 +19,11 @@ class DemoSeeder extends Seeder
     public function run(): void
     {
         $this->call([
-            FactSeeder::class,        // 事实库（单一事实源）
+            FactSeeder::class,        // 事实库（单一事实源，历史文件源）
             StructureSeeder::class,   // 栏目树 + 分组 + 首页区块
             SettingSeeder::class,     // 站点设置与主题变量
             ContentSeeder::class,     // 首批骨架内容（全部过 ContentGate，幂等可重跑）
+            CatalogSeeder::class,     // Example 目录 → 站点隔离 Entity / EntityRelation（D.2）
         ]);
 
         // 组织结构化扩展：业务补充属性写入 sites.metadata['organization'] 通用扩展

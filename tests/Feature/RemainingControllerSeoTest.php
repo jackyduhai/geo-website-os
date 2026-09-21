@@ -30,6 +30,11 @@ class RemainingControllerSeoTest extends TestCase
     {
         parent::setUp();
 
+        // P-STEP 14 / D.2：固定 IA 页（产品 / 场景 / 工厂 / 合作 / 关于 / 联系）的数据
+        // 改由站点隔离的 Catalog（Entity 投影）提供，空库不再有全局 config facts 兜底。
+        // 本测试验证「有目录的站点」SEO 头完整性，故先播种 Example 目录（DemoSeeder→CatalogSeeder）。
+        $this->seed();
+
         $site = Site::where('slug', Site::DEFAULT_SLUG)->firstOrFail();
         $site->update([
             'name'        => 'Test Site',

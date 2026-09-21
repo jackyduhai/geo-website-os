@@ -33,6 +33,11 @@ class FinalAcceptanceTest extends TestCase
             'logo'        => '/site-logo.png',
         ]);
         SiteContext::setSite($site);
+
+        // P-STEP 14 / D.2：完整站点遍历（factory / cooperation / about / contact 等）改读
+        // 站点隔离 Catalog，空库不再有全局 config facts 兜底；只投影 Example 目录，不播 demo
+        // 栏目 / 文章，避免与本类手动创建的 news 栏目冲突。
+        $this->seed(\Database\Seeders\CatalogSeeder::class);
     }
 
     protected function tearDown(): void
