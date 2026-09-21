@@ -34,6 +34,8 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
             'admin.auth' => \App\Http\Middleware\EnsureAdmin::class,
+            'admin.site' => \App\Http\Middleware\SetAdminSiteContext::class,
+            'super.admin' => \App\Http\Middleware\EnsureSuperAdmin::class,
             'geoflow.token' => \App\Http\Middleware\VerifyGeoflowToken::class,
         ]);
 

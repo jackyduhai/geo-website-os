@@ -48,6 +48,16 @@
         ['外观与主题', $settingsGroup==='theme', route('admin.settings.index','theme')],
     ]],
   ];
+
+  // 站点管理是跨站租户根操作，仅超级管理员可见；并在导航最前方提供入口。
+  $isSuperAdmin = \App\Support\SystemAuthorization::canCrossSite();
+  if ($isSuperAdmin) {
+      array_unshift($navDirect,
+          ['站点管理', str_starts_with($routeName, 'admin.sites'), route('admin.sites.index'), null, 'globe']);
+  }
+  // 顶部站点切换器数据（仅超管；多于一个站点时才有切换意义）。
+  $adminSites = $isSuperAdmin ? \App\Models\Site::orderBy('id')->get() : collect();
+  $currentAdminSiteSlug = session('admin_site_slug') ?: optional(\App\Support\SiteContext::currentSite())->slug;
 @endphp
 
 <div class="side-overlay" data-close-side></div>
@@ -89,6 +99,18 @@
       <button type="button" class="side-toggle" id="sideToggle" aria-label="打开导航菜单">☰</button>
       <div class="crumb">官网后台 / <b>@yield('title','仪表盘')</b></div>
       <div class="who">
+        @if($isSuperAdmin && $adminSites->count() > 1)
+          <form method="post" action="{{ route('admin.sites.switch') }}" class="site-switch-form">
+            @csrf
+            <label class="site-switch-label" for="adminSiteSwitch">管理站点</label>
+            <select name="site_id" id="adminSiteSwitch" class="site-switch-select"
+                    onchange="this.form.submit()" title="切换当前后台管理的站点">
+              @foreach($adminSites as $s)
+                <option value="{{ $s->id }}" @selected($s->slug === $currentAdminSiteSlug)>{{ $s->name }}</option>
+              @endforeach
+            </select>
+          </form>
+        @endif
         <a href="{{ url('/') }}" target="_blank">查看官网 ↗</a>
         <a href="{{ route('admin.password') }}">修改密码</a>
         <span>{{ auth()->user()->name ?? '' }}（{{ auth()->user()->email ?? '' }}）</span>

@@ -42,6 +42,10 @@ class ProductizationAcceptanceTest extends TestCase
 
     public function test_theme_and_plugin_lifecycle_keep_engine_output_stable(): void
     {
+        // geo.json 携带秒级 generated_at 构建时间戳；本测试断言的是「内容不随 theme/plugin
+        // 变化」，时间戳不属于被比较的内容。冻结时钟避免两次请求恰好跨秒造成的非确定性失败。
+        \Illuminate\Support\Carbon::setTestNow(\Illuminate\Support\Carbon::now());
+
         $canonical = function (): string {
             preg_match('#<link rel="canonical" href="([^"]+)"#', $this->get('/')->getContent(), $m);
 
@@ -128,8 +132,13 @@ class ProductizationAcceptanceTest extends TestCase
             $this->assertStringNotContainsString($needle, $installer);
         }
 
-        // Admin 后台受 auth 中间件保护（路由层契约）
+        // Admin 后台受 auth 中间件保护（路由层契约）；兼容单中间件 middleware('admin.auth')
+        // 与中间件数组 middleware(['admin.auth', ...]) 两种写法，但 admin.auth 必须在组上。
         $admin = file_get_contents(base_path('routes/admin.php'));
-        $this->assertStringContainsString("middleware('admin.auth')", $admin);
+        $this->assertMatchesRegularExpression(
+            '/middleware\(\s*\[?\s*([\'"])admin\.auth\1/',
+            $admin,
+            '后台路由组必须声明 admin.auth 中间件保护'
+        );
     }
 }

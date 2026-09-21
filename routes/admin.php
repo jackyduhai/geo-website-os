@@ -14,6 +14,7 @@ use App\Http\Controllers\Admin\MenuController;
 use App\Http\Controllers\Admin\NarrativeController;
 use App\Http\Controllers\Admin\RedirectController;
 use App\Http\Controllers\Admin\SettingController;
+use App\Http\Controllers\Admin\SiteController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -27,7 +28,8 @@ Route::get('login', [AuthController::class, 'showLogin'])->name('login');
 Route::post('login', [AuthController::class, 'login'])->name('login.attempt');
 
 // ---------- 以下全部需要登录 ----------
-Route::middleware('admin.auth')->group(function () {
+// admin.site：超级管理员可经顶部切换器（session admin_site_slug）选择当前管理站点。
+Route::middleware(['admin.auth', 'admin.site'])->group(function () {
 
     Route::post('logout', [AuthController::class, 'logout'])->name('logout');
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
@@ -35,6 +37,13 @@ Route::middleware('admin.auth')->group(function () {
     // 修改自身密码
     Route::get('password', [AuthController::class, 'showPassword'])->name('password');
     Route::put('password', [AuthController::class, 'updatePassword'])->name('password.update');
+
+    // ---------- 站点管理（跨站租户根，仅超级管理员） ----------
+    Route::middleware('super.admin')->group(function () {
+        Route::post('sites/switch', [SiteController::class, 'switchSite'])->name('sites.switch');
+        Route::resource('sites', SiteController::class)->except(['show']);
+        Route::post('sites/{site}/make-default', [SiteController::class, 'makeDefault'])->name('sites.default');
+    });
 
     // ---------- 内容管理 ----------
     Route::get('contents/{tab?}', [ContentController::class, 'index'])
