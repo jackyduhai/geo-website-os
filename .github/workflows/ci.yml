@@ -61,7 +61,10 @@ jobs:
         run: php artisan geo:install --no-interaction
 
       - name: Run tests
-        run: php artisan test --parallel
+        # Sequential execution only. The project does not ship brianium/paratest,
+        # and the 661/3057 baseline is validated with the stock sequential runner;
+        # do not switch to --parallel without adding and separately validating it.
+        run: php artisan test
 
       - name: Smoke test - HTTP
         run: |
@@ -137,8 +140,14 @@ jobs:
           EOF
 
       - name: Upload release artifact
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
+          # Private observation window: create a non-latest prerelease DRAFT.
+          # It must not be published automatically; promotion to v1.0.0 is a
+          # separate, explicit decision after the observation window passes.
+          draft: true
+          prerelease: true
+          make_latest: 'false'
           files: |
             geo-os-${{ github.ref_name }}.zip
             geo-os-${{ github.ref_name }}.zip.sha256
