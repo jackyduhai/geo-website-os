@@ -69,7 +69,12 @@ class SeoMetaResolver
         }
     }
 
-    /** 批量预载 Media path（OG 图片解析链） */
+    /**
+     * 批量预载 Media 公开 URL（OG 图片解析链）。
+     * 必须缓存 Media::url()（asset('storage/'.path) 的绝对公开地址），不能缓存
+     * Media::path（disk 相对路径，如 covers/202609/x.png）：后者既缺 /storage 前缀
+     * 也缺 host，写入 og:image / JSON-LD 后是不可解析的坏链（UAT Bug#3）。
+     */
     public function preloadMediaPaths(iterable $mediaIds): void
     {
         $ids = collect($mediaIds)->filter()->unique()->values();
@@ -77,7 +82,7 @@ class SeoMetaResolver
             || array_key_exists($id, self::$mediaPathMemo));
         if ($missing->isNotEmpty()) {
             Media::query()->whereIn('id', $missing)->get()->each(function (Media $m) {
-                self::$mediaPathMemo[$m->id] = $m->path;
+                self::$mediaPathMemo[$m->id] = $m->url();
             });
         }
         foreach ($ids as $id) {
@@ -113,13 +118,17 @@ class SeoMetaResolver
         return self::$entitySeoMemo[$key] ?: null;
     }
 
+    /**
+     * 取媒体的公开 URL（OG 图片链）。返回 Media::url() 绝对地址而非 disk 相对
+     * path——否则前台 og:image / JSON-LD image 会输出缺 host 与 /storage 前缀的坏链。
+     */
     private function mediaPath(?int $mediaId): ?string
     {
         if ($mediaId === null) {
             return null;
         }
         if (! array_key_exists($mediaId, self::$mediaPathMemo)) {
-            self::$mediaPathMemo[$mediaId] = Media::find($mediaId)?->path;
+            self::$mediaPathMemo[$mediaId] = Media::find($mediaId)?->url();
         }
 
         return self::$mediaPathMemo[$mediaId];

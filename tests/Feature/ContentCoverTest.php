@@ -62,4 +62,26 @@ class ContentCoverTest extends TestCase
         ]))->assertRedirect();
         $this->assertNull($content->fresh()->cover_id);
     }
+
+    /**
+     * 安全（UAT Bug#4）：内容封面禁止 SVG，与媒体库/内联上传策略一致。
+     * SVG 可内嵌 <script>，经 /storage 以 image/svg+xml 直出构成存储型 XSS。
+     */
+    public function test_cover_svg_is_rejected_to_prevent_stored_xss(): void
+    {
+        $svg = '<?xml version="1.0" encoding="UTF-8"?>'
+            . '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">'
+            . '<script>alert("xss")</script></svg>';
+
+        $this->actingAs($this->admin)
+            ->post('/admin/contents', $this->payload([
+                'slug'       => 'cover-svg-rejected',
+                'cover_file' => UploadedFile::fake()->createWithContent('evil.svg', $svg),
+            ]))
+            ->assertSessionHasErrors('cover_file');
+
+        // 校验失败：内容不得创建，磁盘不得写入封面。
+        $this->assertSame(0, Content::where('slug', 'cover-svg-rejected')->count());
+        Storage::disk('public')->assertDirectoryEmpty('covers');
+    }
 }

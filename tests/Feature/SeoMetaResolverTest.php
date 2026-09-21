@@ -627,7 +627,8 @@ class SeoMetaResolverTest extends TestCase
         $resolver = app(SeoMetaResolver::class);
         $result = $resolver->resolveContent($content);
 
-        $this->assertEquals('/uploads/og-image.jpg', $result->ogImage);
+        // og:image 必须是 Media::url() 的绝对公开地址，不能是 disk 相对 path（UAT Bug#3）。
+        $this->assertSame($media->url(), $result->ogImage);
     }
 
     public function test_og_image_fallback_to_cover_id(): void
@@ -664,7 +665,50 @@ class SeoMetaResolverTest extends TestCase
         $resolver = app(SeoMetaResolver::class);
         $result = $resolver->resolveContent($content);
 
-        $this->assertEquals('/uploads/cover.jpg', $result->ogImage);
+        $this->assertSame($media->url(), $result->ogImage);
+    }
+
+    /**
+     * 真实回归（UAT Bug#3）：封面 Media.path 是 disk 相对路径（无前导斜杠，
+     * 如 covers/202609/x.png），og:image 必须经 Media::url() 变成绝对公开地址
+     * （含 host 与 /storage 前缀），不能把裸 path 写进 meta / JSON-LD。
+     */
+    public function test_og_image_cover_disk_relative_path_becomes_absolute_storage_url(): void
+    {
+        $site = Site::create([
+            'name' => 'Test Site',
+            'slug' => 'test-site',
+            'domain' => 'example.com',
+            'status' => 'active',
+            'is_default' => false,
+        ]);
+
+        SiteContext::setSite($site);
+
+        $media = \App\Models\Media::create([
+            'site_id' => $site->id,
+            'disk' => 'public',
+            'path' => 'covers/202609/abc.png',
+            'original_name' => 'abc.png',
+            'mime' => 'image/png',
+            'size' => 20000,
+        ]);
+
+        $content = Content::create([
+            'site_id' => $site->id,
+            'type' => 'article',
+            'title' => 'Covered Article',
+            'slug' => 'covered-article',
+            'cover_id' => $media->id,
+            'status' => 'published',
+        ]);
+
+        $result = app(SeoMetaResolver::class)->resolveContent($content);
+
+        $this->assertSame($media->url(), $result->ogImage);
+        $this->assertStringStartsWith('http', $result->ogImage);
+        $this->assertStringContainsString('/storage/covers/202609/abc.png', $result->ogImage);
+        $this->assertStringNotContainsString('content="covers/', $result->ogImage);
     }
 
     public function test_og_image_fallback_to_site_logo(): void

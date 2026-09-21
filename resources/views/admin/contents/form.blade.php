@@ -225,11 +225,9 @@
       <div class="save-spacer"></div>
       @if($content->exists)
         @if($content->status==='published')
-          <form class="form-inline" method="post" action="{{ route('admin.contents.unpublish',$content) }}">@csrf
-            <button class="btn">下架为草稿</button></form>
+          <button type="submit" class="btn" form="unpublishForm">下架为草稿</button>
         @else
-          <form class="form-inline" method="post" action="{{ route('admin.contents.publish',$content) }}">@csrf
-            <button class="btn btn-ok">发布</button></form>
+          <button type="submit" class="btn btn-ok" form="publishForm">发布</button>
         @endif
         <a class="btn btn-sm" href="{{ route('admin.contents.revisions',$content) }}">版本记录</a>
       @endif
@@ -244,6 +242,17 @@
   </div>
 </div>
 </form>
+
+{{-- 发布 / 下架载体表单：必须位于主表单 #contentForm 之外。HTML 不允许 <form> 嵌套，
+     原先内联在主表单里的发布表单会被浏览器忽略，导致“发布”按钮实际只触发保存（PUT update）。
+     按钮通过 form="publishForm|unpublishForm" 属性关联到这里的独立表单。 --}}
+@if($content->exists)
+  @if($content->status==='published')
+    <form id="unpublishForm" method="post" action="{{ route('admin.contents.unpublish',$content) }}" style="display:none">@csrf</form>
+  @else
+    <form id="publishForm" method="post" action="{{ route('admin.contents.publish',$content) }}" style="display:none">@csrf</form>
+  @endif
+@endif
 @endsection
 
 @push('scripts')

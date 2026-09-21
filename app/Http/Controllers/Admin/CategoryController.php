@@ -98,7 +98,7 @@ class CategoryController extends Controller
             'slug'         => ['required', 'regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/', 'unique:categories,slug' . ($except ? ',' . $except->id : '')],
             'icon'         => ['nullable', 'in:' . implode(',', array_keys(config('icons')))],
             'type'         => ['required', 'in:list,page,product_list,external'],
-            'intro'        => ['nullable', 'string', 'max:1000'],
+            'description'  => ['nullable', 'string', 'max:1000'],
             'seo_title'    => ['nullable', 'string', 'max:70'],
             'seo_desc'     => ['nullable', 'string', 'max:180'],
             'sort'         => ['nullable', 'integer', 'min:0'],

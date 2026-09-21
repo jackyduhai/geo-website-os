@@ -204,7 +204,9 @@ class ContentController extends Controller
             'summary'     => ['nullable', 'string', 'max:1000'],
             'body'        => ['nullable', 'string'],
             'published_at'=> ['nullable', 'date'],
-            'cover_file'  => ['nullable', 'file', 'max:6144', 'mimes:jpg,jpeg,png,webp,gif,svg'],
+            // 安全：与媒体库/内联上传保持一致，禁止 SVG（可内嵌 <script>，经
+            // /storage 以 image/svg+xml 直出构成存储型 XSS，见 MediaController）。（UAT Bug#4）
+            'cover_file'  => ['nullable', 'file', 'max:6144', 'mimes:jpg,jpeg,png,webp,gif'],
             'cover_remove'=> ['nullable', 'boolean'],
 
             'geo_conclusion'   => ['nullable', 'string'],

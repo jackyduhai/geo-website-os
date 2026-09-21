@@ -96,6 +96,54 @@ class V0911CmsAlignmentTest extends TestCase
             ->assertSee('更新后的栏目简介：涂装工艺与参数逻辑', false);
     }
 
+    public function test_category_description_persists_and_echoes_on_edit(): void
+    {
+        // 回归：栏目表单曾误用不存在的 intro 列（正确列为 description），导致新建栏目必现 500。
+        // 与分组 description 的历史修复同源，补齐栏目这一侧。
+        $payload = [
+            'name'        => 'UAT 栏目简介',
+            'slug'        => 'uat-cat-intro',
+            'type'        => 'list',
+            'description' => '栏目简介用于列表页页头说明。',
+            'sort'        => 0,
+            'is_active'   => '1',
+            'is_nav'      => '1',
+            'is_index'    => '0',
+        ];
+
+        $this->actingAs($this->admin)->post('/admin/categories', $payload)->assertRedirect();
+
+        $category = Category::where('slug', 'uat-cat-intro')->firstOrFail();
+        $this->assertSame('栏目简介用于列表页页头说明。', $category->description);
+
+        // 编辑页必须回显 description（而不是读取不存在的 intro）
+        $this->actingAs($this->admin)->get("/admin/categories/{$category->id}/edit")
+            ->assertOk()
+            ->assertSee('栏目简介用于列表页页头说明。', false);
+    }
+
+    public function test_external_category_persists_external_url(): void
+    {
+        // 回归：表单/控制器早已暴露 type=external + external_url，但建表迁移漏列，
+        // 导致保存任何栏目都 500。补列后外链栏目必须能持久化。
+        $payload = [
+            'name'         => '外链栏目',
+            'slug'         => 'uat-external-link',
+            'type'         => 'external',
+            'external_url' => 'https://example.com/partner',
+            'sort'         => 0,
+            'is_active'    => '1',
+            'is_nav'       => '1',
+            'is_index'     => '0',
+        ];
+
+        $this->actingAs($this->admin)->post('/admin/categories', $payload)->assertRedirect();
+
+        $category = Category::where('slug', 'uat-external-link')->firstOrFail();
+        $this->assertSame('external', $category->type);
+        $this->assertSame('https://example.com/partner', $category->external_url);
+    }
+
     public function test_md_preview_renders_gfm_table(): void
     {
         $md = "| 列1 | 列2 |\n| --- | --- |\n| 甲 | 乙 |\n";

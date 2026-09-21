@@ -155,7 +155,8 @@ class SeoHttpIntegrationTest extends TestCase
         $this->assertSame('Content Title', $expected->ogTitle);
         $this->assertStringContainsString('<meta property="og:description" content="' . $expected->ogDescription . '">', $html);
         $this->assertStringContainsString('<meta property="og:image" content="' . $expected->ogImage . '">', $html);
-        $this->assertSame('/uploads/cover.jpg', $expected->ogImage);
+        // og:image 取 Media::url() 绝对公开地址（含 host + /storage），不再是裸相对 path（UAT Bug#3）。
+        $this->assertSame($cover->url(), $expected->ogImage);
     }
 
     public function test_content_canonical_has_no_query_string_in_html(): void
@@ -251,7 +252,8 @@ class SeoHttpIntegrationTest extends TestCase
         $this->assertStringContainsString('<title>Knowledge Article Title', $html);
         $this->assertStringContainsString('<meta name="description" content="Knowledge Summary">', $html);
         $this->assertStringContainsString('<link rel="canonical" href="https://example.com/article/knowledge-article">', $html);
-        $this->assertStringContainsString('<meta property="og:image" content="/uploads/knowledge-cover.jpg">', $html);
+        // 封面经 Media::url() 绝对化（UAT Bug#3）。
+        $this->assertStringContainsString('<meta property="og:image" content="' . $cover->url() . '">', $html);
         $this->assertStringContainsString('<meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1">', $html);
     }
 

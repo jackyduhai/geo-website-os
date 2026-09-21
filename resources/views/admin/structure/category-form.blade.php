@@ -47,7 +47,7 @@
     </div>
 
     <div class="form-row"><label>栏目简介</label>
-      <textarea name="intro" rows="2">{{ old('intro',$category->intro) }}</textarea></div>
+      <textarea name="description" rows="2">{{ old('description',$category->description) }}</textarea></div>
 
     <div class="form-grid">
       <div class="form-row"><label>SEO Title（可空）</label>
