@@ -36,6 +36,7 @@
         ['媒体库', str_starts_with($routeName,'admin.media'), route('admin.media.index')],
     ]],
     ['label'=>'搜索与 AI（SEO/GEO）','icon'=>'search','links'=>[
+        ['SEO 覆盖（标题/描述/图谱）', str_starts_with($routeName,'admin.seo-metas'), route('admin.seo-metas.index')],
         ['SEO 设置', $settingsGroup==='seo', route('admin.settings.index','seo')],
         ['GEO 设置', $settingsGroup==='geo', route('admin.settings.index','geo')],
         ['抓取产出 / Sitemap', $is('admin.geo.tools') || $is('admin.geo.preview'), route('admin.geo.tools')],

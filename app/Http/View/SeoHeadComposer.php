@@ -67,8 +67,12 @@ class SeoHeadComposer
         $ogImage = $ogImage ?: asset('img/og-default.png');
 
         // ---- og / twitter ----
-        $ogTitle = $seo['title_full']
+        $ogTitle = $seo['og_title']
+            ?? $seo['title_full']
             ?? ($seo['title'] ?? ($settings['site_name'] ?? $title));
+        // og 描述优先取 Resolver 解析值（SeoMeta.og_description → 主描述回退链），
+        // 不再无条件等同主描述（P-STEP 17D：打通显式社交标题 / 描述到前台 head）。
+        $ogDescription = (string) ($seo['og_description'] ?? $description);
         $ogSiteName = $settings['site_name']
             ?? ($siteResult->title ?? '');
         $twitterCard = $seo['twitter_card']
@@ -83,7 +87,7 @@ class SeoHeadComposer
             'type'           => (string) ($seo['type'] ?? ($siteResult->ogType ?? 'website')),
             'image'          => (string) $ogImage,
             'og_title'       => (string) $ogTitle,
-            'og_description' => (string) $description,
+            'og_description' => (string) $ogDescription,
             'og_site_name'   => (string) $ogSiteName,
             'og_image'       => (string) $ogImage,
             'twitter_card'   => (string) $twitterCard,

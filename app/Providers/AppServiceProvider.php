@@ -12,6 +12,7 @@ use App\Models\Media;
 use App\Models\Menu;
 use App\Models\PageBlock;
 use App\Models\Redirect as RedirectRule;
+use App\Models\SeoMeta;
 use App\Models\Setting;
 use App\Contracts\UrlResolverInterface;
 use App\Services\Seo\GenericUrlResolver;
@@ -83,6 +84,8 @@ class AppServiceProvider extends ServiceProvider
             Content::class, ContentRevision::class, Category::class, Group::class,
             Banner::class, Menu::class, PageBlock::class, Setting::class,
             Media::class, RedirectRule::class, Fact::class,
+            // SeoMeta 显式覆盖直接决定前台 title/description/canonical/OG/robots，变更即作废整页静态壳。
+            SeoMeta::class,
         ] as $model) {
             $model::saved(static fn () => PageCache::flush());
             $model::deleted(static fn () => PageCache::flush());

@@ -15,6 +15,7 @@ use App\Http\Controllers\Admin\MediaController;
 use App\Http\Controllers\Admin\MenuController;
 use App\Http\Controllers\Admin\NarrativeController;
 use App\Http\Controllers\Admin\RedirectController;
+use App\Http\Controllers\Admin\SeoMetaController;
 use App\Http\Controllers\Admin\SettingController;
 use App\Http\Controllers\Admin\SiteController;
 use Illuminate\Support\Facades\Route;
@@ -83,6 +84,18 @@ Route::middleware(['admin.auth', 'admin.site'])->group(function () {
     Route::put('relations/{relation}', [EntityRelationController::class, 'update'])->name('relations.update');
     Route::delete('relations/{relation}', [EntityRelationController::class, 'destroy'])->name('relations.destroy');
     Route::get('relations', [EntityRelationController::class, 'index'])->name('relations.index');
+
+    // ---------- SEO 覆盖 SeoMeta（P-STEP 17D） ----------
+    // 三作用域：站点级（content/entity 皆空，每站一条）、内容级、实体级。
+    // 最终解析统一由 SeoMetaResolver 完成，后台仅维护显式覆盖；{seoMeta} 模型
+    // 绑定经 BelongsToSite 全局作用域，跨站 id 自动 404。index 的 {scope?} 放最后。
+    Route::get('seo-metas/create', [SeoMetaController::class, 'create'])->name('seo-metas.create');
+    Route::post('seo-metas', [SeoMetaController::class, 'store'])->name('seo-metas.store');
+    Route::get('seo-metas/{seoMeta}/edit', [SeoMetaController::class, 'edit'])->name('seo-metas.edit');
+    Route::put('seo-metas/{seoMeta}', [SeoMetaController::class, 'update'])->name('seo-metas.update');
+    Route::delete('seo-metas/{seoMeta}', [SeoMetaController::class, 'destroy'])->name('seo-metas.destroy');
+    Route::get('seo-metas/{scope?}', [SeoMetaController::class, 'index'])
+        ->where('scope', 'site|content|entity|all')->name('seo-metas.index');
 
     // ---------- 页面文案（结构化页面叙事插槽：hero 导语 / 企业简介正文） ----------
     Route::get('narrative', [NarrativeController::class, 'index'])->name('narrative.index');

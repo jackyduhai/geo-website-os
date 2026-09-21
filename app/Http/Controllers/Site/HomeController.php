@@ -109,7 +109,10 @@ class HomeController extends Controller
                 'canonical'   => $seoResult->canonical,
                 'noindex'     => $seoResult->noindex,
                 'type'        => $seoResult->ogType,
-                'image'       => $seoResult->ogImage,
+                'image'          => $seoResult->ogImage,
+                'og_title'       => $seoResult->ogTitle,
+                'og_description' => $seoResult->ogDescription,
+                'twitter_card'   => $seoResult->twitterCard,
             ];
         } else {
             // Fallback: 开发环境兼容
