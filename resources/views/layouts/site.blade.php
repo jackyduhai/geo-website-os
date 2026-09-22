@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
@@ -1454,6 +1454,9 @@ a.ft-v:hover{color:#fff;}
         <span><a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener">{{ $ftLegal['icp'] }}</a></span>
       @elseif(!empty($siteSettings['icp_number']))
         <span><a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener">{{ $siteSettings['icp_number'] }}</a></span>
+      @endif
+      @if(!empty($siteSettings['police_number']))
+        <span class="ft-police"><a href="http://www.beian.mps.gov.cn/" target="_blank" rel="noopener">{{ $siteSettings['police_number'] }}</a></span>
       @endif
       @if(!empty($ftLegal['scLicense']))<span>{{ $ftLegal['scLicense'] }}</span>@endif
       @if(!empty($ftLegal['standardCode']))<span>{{ $ftLegal['standardCode'] }}</span>@endif

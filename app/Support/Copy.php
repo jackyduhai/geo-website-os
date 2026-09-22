@@ -47,8 +47,8 @@ class Copy
         $out = [
             'title'        => self::val('copy_bcta_title', (string) ($base['title'] ?? '')),
             'desc'         => self::val('copy_bcta_desc', (string) ($base['desc'] ?? '')),
-            'primaryCta'   => self::val('copy_bcta_primary', (string) ($base['primaryCta'] ?? '免费获取样品')),
-            'secondaryCta' => self::val('copy_bcta_secondary', (string) ($base['secondaryCta'] ?? '获取定制方案')),
+            'primaryCta'   => self::val('copy_bcta_primary', (string) ($base['primaryCta'] ?? '获取方案')),
+            'secondaryCta' => self::val('copy_bcta_secondary', (string) ($base['secondaryCta'] ?? '联系我们')),
         ];
 
         if ($variant === 'factory') {
@@ -111,7 +111,7 @@ class Copy
                     'placeholder' => self::val('copy_form_note_placeholder', (string) ($ff['note']['placeholder'] ?? '')),
                 ],
             ],
-            'submit'     => self::val('copy_form_submit', (string) ($f['submit'] ?? '提交，我要样品')),
+            'submit'     => self::val('copy_form_submit', (string) ($f['submit'] ?? '提交需求')),
             'submitting' => self::val('copy_form_submitting', (string) ($f['submitting'] ?? '提交中…')),
             'privacy'    => self::val('copy_form_privacy', (string) ($f['privacy'] ?? '')),
             'success'    => self::val('copy_form_success', (string) ($f['success'] ?? '已收到，我们会尽快联系你。')),
@@ -139,7 +139,7 @@ class Copy
     {
         return self::val(
             'copy_footer_slogan',
-            (string) config('copy.footer.brandColumn.slogan', '以稳定品质，服务每一次制造')
+            (string) config('copy.footer.brandColumn.slogan', '以专业可靠，服务每一位客户')
         );
     }
 }

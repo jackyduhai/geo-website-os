@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Geo;
 
 use App\Http\Controllers\Controller;
+use App\Models\Setting;
 use App\Services\Geo\GeoGraphBuilder;
 use App\Services\Geo\LlmsBuilder;
 use App\Services\Geo\SitemapBuilder;
@@ -17,6 +18,11 @@ class FeedController extends Controller
 {
     public function sitemap(SitemapBuilder $builder)
     {
+        // per-site 产出开关：仅当管理员显式关闭（'0'）时返回 404；未配置默认开启（GEO 核心能力）。
+        if (Setting::get('geo_sitemap_enabled', '1') === '0') {
+            abort(404);
+        }
+
         return response($builder->build(), 200, [
             'Content-Type'  => 'application/xml; charset=UTF-8',
             'Cache-Control' => 'public, max-age=3600',
@@ -25,6 +31,11 @@ class FeedController extends Controller
 
     public function llms(LlmsBuilder $builder)
     {
+        // per-site 产出开关：仅当管理员显式关闭（'0'）时返回 404；未配置默认开启。
+        if (Setting::get('geo_llms_enabled', '1') === '0') {
+            abort(404);
+        }
+
         return response($builder->build(), 200, [
             'Content-Type'  => 'text/plain; charset=UTF-8',
             'Cache-Control' => 'public, max-age=3600',
@@ -71,10 +82,14 @@ class FeedController extends Controller
         }
 
         $lines[] = '# ---------- Sitemap ----------';
-        $lines[] = 'Sitemap: ' . url('/sitemap.xml');
+        // sitemap 被站点显式关闭时，robots 不再指向一个会 404 的地址。
+        if (Setting::get('geo_sitemap_enabled', '1') !== '0') {
+            $lines[] = 'Sitemap: ' . url('/sitemap.xml');
+        }
         $lines[] = '';
 
-        $extra = (string) (config('geo.robots_extra') ?: '');
+        // 自定义追加：站点设置（seo_robots_extra）优先，未配置时回退 config/geo.php。
+        $extra = trim((string) Setting::get('seo_robots_extra', (string) config('geo.robots_extra', '')));
         if ($extra !== '') {
             $lines[] = '# ---------- 自定义追加 ----------';
             $lines[] = $extra;

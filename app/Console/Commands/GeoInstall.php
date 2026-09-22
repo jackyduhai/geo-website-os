@@ -98,6 +98,12 @@ class GeoInstall extends Command
         ], fn ($v) => $v !== null))->save();
         $this->line("  [ok] site: {$site->name} ({$site->slug})");
 
+        // ---------- 4b. 产品级默认站点设置（七组完整字段 + 中性默认，幂等） ----------
+        // 必须在默认站点创建之后调用，设置按当前站点（default）落 site_id；
+        // 只装产品中性默认，不含任何演示行业数据（演示数据见 DemoSeeder，需显式 db:seed）。
+        $this->call('db:seed', ['--class' => 'DefaultSettingSeeder', '--force' => true]);
+        $this->line('  [ok] default settings');
+
         // ---------- 5. 管理员初始化 ----------
         $email = trim((string) $this->option('admin-email')) ?: 'admin@example.com';
         $password = (string) $this->option('admin-password');

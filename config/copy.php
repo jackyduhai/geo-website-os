@@ -259,10 +259,10 @@ return array (
         ),
       ),
     ),
-    'brandColumn' => 
+    'brandColumn' =>
     array (
       'companyName' => '示例制造有限公司',
-      'slogan' => '以稳定品质，服务每一次制造',
+      'slogan' => '以专业可靠，服务每一位客户',
       'logoVariant' => 'inverse',
     ),
     'factBlock' => 
@@ -291,18 +291,18 @@ return array (
   ),
   'bottomCta' => 
   array (
-    'title' => '先获取一份试样',
-    'desc' => '说明你的材料、性能要求与预计用量，我们安排试样与报价。',
-    'primaryCta' => '获取报价与样品',
-    'secondaryCta' => '获取定制方案',
+    'title' => '需要进一步了解？',
+    'desc' => '告诉我们你的需求，我们会尽快安排专人与你联系。',
+    'primaryCta' => '获取方案',
+    'secondaryCta' => '联系我们',
     'phone' => '',
     'overrides' => 
     array (
       'factory' => 
       array (
-        'primaryCta' => '预约工厂参观',
-        'secondaryCta' => '获取报价与样品',
-        'note' => '工厂页访客意向更明确，「来厂看看」比「寄样」更能推进合作。',
+        'primaryCta' => '预约到访',
+        'secondaryCta' => '获取方案',
+        'note' => '到访客户意向更明确，实地沟通往往比线上咨询更能推进合作。',
       ),
     ),
   ),
@@ -331,20 +331,20 @@ return array (
         'placeholder' => '请选择',
         'required' => true,
         'error' => '请选择客户类型',
-        'options' => 
+        'options' =>
         array (
-          0 => '装备制造',
-          1 => '建筑工程',
-          2 => '汽车零部件',
-          3 => '工业品牌方',
-          4 => '经销商',
+          0 => '产品采购',
+          1 => '解决方案',
+          2 => '渠道合作',
+          3 => '技术合作',
+          4 => '媒体咨询',
           5 => '其他',
         ),
       ),
-      'note' => 
+      'note' =>
       array (
         'label' => '需求简述（选填）',
-        'placeholder' => '需要什么材料或性能？大概用量？',
+        'placeholder' => '简单描述你的需求，我们会尽快联系你。',
         'required' => false,
       ),
     ),
