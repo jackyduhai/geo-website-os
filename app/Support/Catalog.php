@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use App\Models\Entity;
+use App\Models\EntityRelation;
 
 /**
  * 站点隔离的目录（Catalog）读模型 —— Runtime 唯一的产品 / 场景 / 公司目录数据源。
@@ -73,38 +74,67 @@ class Catalog
 
         $meta = $organization->metadata ?? [];
 
-        $products = Entity::published()
+        // 产品 / 场景（应用服务）实体
+        $productEntities = Entity::published()
             ->ofType(Entity::TYPE_PRODUCT)
             ->orderBy('sort_order')
-            ->get()
-            ->map(function (Entity $e) use ($organization) {
-                return self::normalizeProduct(array_merge(
+            ->get();
+        $sceneEntities = Entity::published()
+            ->ofType(Entity::TYPE_SERVICE)
+            ->orderBy('sort_order')
+            ->get();
+
+        // P-STEP 18A / #114：实体间关系（适用场景 / 组合产品 / 相关产品 / 相邻场景 /
+        // 关键参数产品）统一由权威边表 EntityRelation 单向派生；Entity.metadata 里历史
+        // 遗留的 scenes / related / combo / adjacent / key_param_product slug 数组不再
+        // 作为前台关系来源（与 /geo.json 同源，后台维护关系后前台即时一致）。产品线
+        // line / product_lines 是组织 metadata 的配置分组（非实体关系），仍读 metadata。
+        $relationMap = self::relationMap($organization, $productEntities, $sceneEntities);
+
+        $products = $productEntities
+            ->map(function (Entity $e) use ($relationMap) {
+                $data = self::normalizeProduct(array_merge(
                     is_array($e->metadata) ? $e->metadata : [],
                     [
-                        'slug' => $e->slug,
-                        'name' => $e->name,
-                        'summary' => $e->summary,
+                        'slug'        => $e->slug,
+                        'name'        => $e->name,
+                        'summary'     => $e->summary,
                         'description' => $e->description,
                     ]
                 ));
+                // 关系字段以 EntityRelation 为唯一权威，覆盖 metadata 透传值。
+                $data['scenes']  = $relationMap['product_scenes'][$data['slug']] ?? [];
+                $data['related'] = $relationMap['product_related'][$data['slug']] ?? [];
+
+                return $data;
             })
             ->values()
             ->all();
 
-        $scenes = Entity::published()
-            ->ofType(Entity::TYPE_SERVICE)
-            ->orderBy('sort_order')
-            ->get()
-            ->map(function (Entity $e) {
-                return self::normalizeScene(array_merge(
+        $scenes = $sceneEntities
+            ->map(function (Entity $e) use ($relationMap) {
+                $data = self::normalizeScene(array_merge(
                     is_array($e->metadata) ? $e->metadata : [],
                     [
-                        'slug' => $e->slug,
-                        'name' => $e->name,
-                        'summary' => $e->summary,
+                        'slug'        => $e->slug,
+                        'name'        => $e->name,
+                        'summary'     => $e->summary,
                         'description' => $e->description,
                     ]
                 ));
+                // 组合产品 / 相邻场景 / 关键参数产品均以 EntityRelation 为唯一权威。
+                $data['combo']    = $relationMap['scene_combo'][$data['slug']] ?? [];
+                $data['adjacent'] = $relationMap['scene_adjacent'][$data['slug']] ?? [];
+                $keyParam         = $relationMap['scene_key_param'][$data['slug']] ?? null;
+                $data['key_param_product'] = $keyParam['slug'] ?? null;
+                if ($keyParam !== null) {
+                    // 关键参数展示文案优先取关系 metadata，缺省回退场景自身文案。
+                    $data['key_param_display'] = $keyParam['display'] !== ''
+                        ? $keyParam['display']
+                        : ($data['key_param_display'] ?? '');
+                }
+
+                return $data;
             })
             ->values()
             ->all();
@@ -125,6 +155,78 @@ class Catalog
             'cases'          => is_array($meta['cases'] ?? null) ? $meta['cases'] : [],
             'compliance'     => is_array($meta['compliance'] ?? null) ? $meta['compliance'] : [],
         ];
+    }
+
+    /**
+     * P-STEP 18A / #114：从权威边表 EntityRelation 单向派生 Catalog 关系读模型。
+     *
+     * 返回按 slug 索引的关系集合（仅保留两端在当前站点均已发布、且类型匹配的边）：
+     *   - product_scenes  ：product -uses-> service（产品适用场景）
+     *   - scene_combo     ：service -uses-> product（场景组合产品；metadata.role=key_param
+     *                       的边额外给出关键参数产品及其展示文案）
+     *   - product_related ：product -related_to-> product（相关产品）
+     *   - scene_adjacent  ：service -related_to-> service（相邻场景）
+     *
+     * 方向性：uses 是有向边，不做对称推断；产品「适用场景」与场景「组合产品」是两条
+     * 独立边，必须各自显式存在。组织 produces / offers 边不进入前台目录关系区块。
+     */
+    private static function relationMap(Entity $organization, $productEntities, $sceneEntities): array
+    {
+        $published = [];
+        foreach ($productEntities as $e) {
+            $published[(int) $e->id] = [Entity::TYPE_PRODUCT, $e->slug];
+        }
+        foreach ($sceneEntities as $e) {
+            $published[(int) $e->id] = [Entity::TYPE_SERVICE, $e->slug];
+        }
+        $published[(int) $organization->id] = [Entity::TYPE_ORGANIZATION, $organization->slug];
+
+        $map = [
+            'product_scenes'  => [],
+            'scene_combo'     => [],
+            'product_related' => [],
+            'scene_adjacent'  => [],
+            'scene_key_param' => [],
+        ];
+
+        $relations = EntityRelation::query()
+            ->where('site_id', $organization->site_id)
+            ->orderBy('sort_order')
+            ->get();
+
+        foreach ($relations as $relation) {
+            $from = $published[(int) $relation->from_entity_id] ?? null;
+            $to   = $published[(int) $relation->to_entity_id] ?? null;
+            if (! $from || ! $to) {
+                continue; // 任一端未发布 / 非本站目录类型，不进入前台关系
+            }
+
+            [$fromType, $fromSlug] = $from;
+            [$toType, $toSlug]     = $to;
+
+            if ($relation->relation_type === EntityRelation::TYPE_USES) {
+                if ($fromType === Entity::TYPE_PRODUCT && $toType === Entity::TYPE_SERVICE) {
+                    $map['product_scenes'][$fromSlug][] = $toSlug;
+                } elseif ($fromType === Entity::TYPE_SERVICE && $toType === Entity::TYPE_PRODUCT) {
+                    $map['scene_combo'][$fromSlug][] = $toSlug;
+                    $relMeta = is_array($relation->metadata) ? $relation->metadata : [];
+                    if (($relMeta['role'] ?? null) === 'key_param') {
+                        $map['scene_key_param'][$fromSlug] = [
+                            'slug'    => $toSlug,
+                            'display' => (string) ($relMeta['display'] ?? ''),
+                        ];
+                    }
+                }
+            } elseif ($relation->relation_type === EntityRelation::TYPE_RELATED_TO) {
+                if ($fromType === Entity::TYPE_PRODUCT && $toType === Entity::TYPE_PRODUCT) {
+                    $map['product_related'][$fromSlug][] = $toSlug;
+                } elseif ($fromType === Entity::TYPE_SERVICE && $toType === Entity::TYPE_SERVICE) {
+                    $map['scene_adjacent'][$fromSlug][] = $toSlug;
+                }
+            }
+        }
+
+        return $map;
     }
 
     /**

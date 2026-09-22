@@ -292,3 +292,66 @@
 
 **后续节奏（需明确授权，本阶段不自动进入）**：
 #114 关系读模型统一 / #115 默认模板中性化（可选专项）→ 代码冻结 → 重建干净 RC（基于最终 HEAD）→ Private GitHub push → GitHub Actions 云端首跑 → RC 观察 → 转 Public / 发布 v1.0.0。
+
+---
+
+# 附录 P-STEP 18A — #114 Catalog Read Model Authority（关系读模型单向统一）
+
+**结论：#114「关系权威源 → Catalog 读模型」= CLOSED（P-STEP 18A PASS）。** 原 §5/§11 中登记的"关系权威源双轨"已消除；#114 名下其余两项（Entity 类型公开 URL 体系冻结、content 路径双轨）仍为待裁定项，不在本阶段范围。
+
+## A. 根因（双轨）
+- 权威边表 `EntityRelation`（produces/offers/uses/located_in/related_to，同站、两端 published 才进 `/geo.json` edge）早已是 GEO 机器关系的唯一权威源（17C）。
+- 但前台 Catalog 读模型的产品"适用场景"、场景"组合产品 / 相邻场景 / 关键参数产品"、产品"相关产品"仍读 `Entity.metadata` JSON 内的 slug 数组；CatalogSeeder 也只建了部分边，漏建 `product uses service`（产品适用场景）与 `service related_to service`（场景相邻）。
+- 后果：后台手工创建/删除 Relation 会改变 `/geo.json`，却不改变前台产品/场景详情，形成"后台事实 ≠ 前台事实 ≠ GEO 事实"。
+
+## B. 定稿契约（单向 EntityRelation → Catalog，禁止双向反写）
+- 产品适用场景 `product.scenes`（scenesOfProduct）← product `uses` service。
+- 场景组合产品 `scene.combo`（sceneCombo）← service `uses` product；关键参数产品 = 该类 uses 边中 `metadata.role='key_param'`，展示文案取边 `metadata.display`（在 combo 边上打标，不另建边；key_param_product 必为 combo 成员）。
+- 相关产品 `product.related`（relatedProducts）← product `related_to` product。
+- 相邻场景 `scene.adjacent`（adjacentScenes）← service `related_to` service。
+- `uses` 为**有向边、不做对称推断**：产品"适用场景"与场景"组合产品"是两条各自显式存在的反向边（seeder 分别从 product.scenes 与 scene.combo 独立建边，数据驱动而非自动反推）。
+- 产品线 `product.line` / 组织 product_lines 是组织 metadata 的**配置分组（关系两端必须是 Entity，产品线不是实体）**，保留读 metadata，不在 #114 范围。
+- 组织 produces/offers 边仅用于 geo/组织语义，不进前台目录区块。
+- Catalog 投影关系字段**只来自 EntityRelation，不再回退 metadata slug 数组**；控制器与 Blade 业务代码零改动（仍经 Catalog 方法 / 归一化数组消费）。metadata 历史 slug 数组成为 Runtime 不再消费的种子冗余，不强删。
+
+## C. CatalogSeeder 对齐（fresh seed 后 58 边）
+| 边类型 | 数量 | 明细 |
+| --- | --- | --- |
+| organization produces product | 8 | |
+| organization offers service | 3 | |
+| product related_to product | 17 | 相关产品 |
+| service related_to service | 6 | 相邻场景（新增来源 scene.adjacent） |
+| product uses service | 13 | 产品适用场景（新增，来源 product.metadata.scenes） |
+| service uses product | 11 | 场景组合产品（其中 3 边 metadata.role=key_param） |
+| **合计** | **58** | |
+
+关键参数边（role=key_param，display 落边 metadata）：equipment-manufacturing→epoxy-primer-100「主剂∶固化剂 9∶1，干膜 60–80 μm，25 ℃ 表干约 30 分钟」、construction-infrastructure→silicone-sealant-s20、automotive-parts→structural-adhesive-a10。
+
+## D. 本轮新发现并修复的真实缓存 Bug（TD-08 在关系域的表现）
+- `App\Http\Middleware\CachePage` 在测试环境同样生效，把匿名 GET 的 200 HTML 落盘为 SSR shell（X-Page-Cache: MISS/HIT/BYPASS），跨请求残留。
+- EntityRelation 成为前台关系区块权威源后，若关系写入不失效整页缓存，则"后台改关系 → 前台仍命中旧 HTML"，权威链路在缓存层不成立。原 EntityRelationController / EntityController 仅 `Catalog::flush()`（清进程内 static memo），未清磁盘整页缓存。
+- **最小修复**：在 `app/Models/EntityRelation.php` 的 `booted()` 注册 `static::saved` / `static::deleted` → `PageCache::flush()`，置于模型层以覆盖后台 Controller、tinker、未来 import 等全部写入路径；Controller 的 `Catalog::flush()` 保留（处理同请求 admin 列表）。
+- 防回归测试 `test_new_manual_relation_edge_reaches_frontend_and_geo_graph` 同时锁定：模型建边后前台场景 chip 立即可见、`/geo.json` 含该边（即隐式验证缓存失效契约）。
+
+## E. 改动文件（4 个）
+- `app/Support/Catalog.php`：buildDataset 收集本站 published product/service 实体，新增 private static `relationMap()`，按上表单向派生 scenes/combo/adjacent/related/key_param_*，覆盖原 metadata 投影。
+- `database/seeders/CatalogSeeder.php`：relate() 支持 metadata；新增 product uses service、service related_to service 建边；combo 关键参数边打 role=key_param + display。
+- `app/Models/EntityRelation.php`：saved/deleted → PageCache::flush()。
+- `tests/Feature/CatalogRelationAuthorityTest.php`（新增，12 测试）：seed 派生、metadata 无边不投影、uses 有向不对称反推、类型配对过滤、删边、Draft 端点排除、key_param 边 metadata、跨站不泄漏、前台与 geo 共用 seed 边、手工新边同时到达前台与 geo（含缓存失效契约）。
+
+## F. 验证证据
+- Focused：CatalogRelationAuthorityTest **12 passed / 59 assertions / 0 failed**。
+- 全量回归：**801 passed / 3948 assertions / 0 failed / 0 skipped**（17G 基线 789/3889，净增 12 测试 / 59 断言；GeoGraph 等 seed CatalogSeeder 的测试未硬编码旧边数，补全真实关系后无需改断言）。
+- Fresh `geo:install`（空站，不调 CatalogSeeder）+ `db:seed`：成功无异常，seed 后 58 边，分布与 C 表一致。
+- 真实 `artisan serve` HTTP smoke（fresh 库）：`/`、`/products/epoxy-primer-100`、`/solutions/equipment-manufacturing/`、`/geo.json`、`/sitemap.xml`、`/robots.txt`、`/llms.txt` 全部 **200**；产品页场景 chip=装备制造/建筑工程、相关产品=聚氨酯面漆/结构胶 SA-A10；场景页 combo=环氧底漆/聚氨酯面漆/结构胶/流平剂、相邻=建筑工程/汽车零部件、关键参数文案正确；`/geo.json` relations 含成对 product↔service uses 边且与前台同源。空站目录 404 契约由 Feature 测试覆盖。
+- Runtime 业务强身份污染复扫 = 0（app/config/routes/resources/database seeders+factories/plugins/scripts/public/README）；命中仅存于 `docs/audit/**`（Historical Audit Exemptions，release archive export-ignore）。
+- 日志审计：HTTP smoke / fresh install-seed / 全量回归后 `storage/logs/laravel.log` 相对基线零增长（2395 行 / 473774 字节），0 production.ERROR / CRITICAL / EMERGENCY。
+
+## G. Remaining Risks / 技术债务
+- **TD-08（部分闭环）**：本轮仅为 EntityRelation 写入挂接整页缓存失效；Entity / Site / SeoMeta / Content 变更后的整页 HTML 失效仍未挂接，留 Release Residual（18C）。feed 端点不缓存。
+- metadata 历史 slug 数组（scenes/related/combo/adjacent）Runtime 关系区块不再消费，但仍作为安装期种子冗余保留，随 Facts / 演示数据完全 Entity 化退场（关联 TD-07 organization 双载体）。
+- TD-05 Entity 六类型公开 URL 体系未冻结（org/person/location/topic/非 core 产品 url=null）；TD-06 content 路径双轨（无 /article/，旧路径 301 桥接）；TD-09 Product 自身 @id 仍用 url() helper。
+- 已完成当前测试范围内的系统性验证，不宣布"无 Bug"。
+
+## H. Git
+- 基线父提交：`200b5ae`（checkpoint-admin-17G）。本阶段提交与 annotated tag `checkpoint-18A` 见仓库实际记录；`v1.0.0-rc1` 保持冻结于 965d63c，未重建 / 未移动；未配置 remote、未 push、未发布。

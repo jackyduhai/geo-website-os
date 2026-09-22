@@ -112,7 +112,8 @@ class CatalogSeeder extends Seeder
             $this->relate($organization, $serviceEntity, EntityRelation::TYPE_OFFERS);
         }
 
-        // service -uses-> product（场景组合 combo）
+        // service -uses-> product（场景组合 combo）；关键参数产品在同一条 uses 边上以
+        // metadata.role=key_param 标记（key_param_product 必为 combo 成员之一，不另建边）。
         foreach (Facts::scenes() as $scene) {
             $serviceEntity = $serviceEntities[$scene['slug']] ?? null;
             if (! $serviceEntity) {
@@ -122,7 +123,46 @@ class CatalogSeeder extends Seeder
             foreach (($scene['combo'] ?? []) as $productSlug) {
                 $productEntity = $productEntities[$productSlug] ?? null;
                 if ($productEntity) {
-                    $this->relate($serviceEntity, $productEntity, EntityRelation::TYPE_USES, $order++);
+                    $metadata = null;
+                    if (($scene['key_param_product'] ?? null) === $productSlug) {
+                        $metadata = [
+                            'role'    => 'key_param',
+                            'display' => (string) ($scene['key_param_display'] ?? ''),
+                        ];
+                    }
+                    $this->relate($serviceEntity, $productEntity, EntityRelation::TYPE_USES, $order++, $metadata);
+                }
+            }
+        }
+
+        // product -uses-> service（产品适用场景，product.metadata.scenes）。
+        // P-STEP 18A / #114：uses 是有向边，不做对称推断；这是与「场景组合 combo」方向
+        // 相反、各自显式存在的边，前台产品「适用场景」与 /geo.json 统一以该边为权威来源。
+        foreach (Facts::products() as $product) {
+            $productEntity = $productEntities[$product['slug']] ?? null;
+            if (! $productEntity) {
+                continue;
+            }
+            $order = 0;
+            foreach (($product['scenes'] ?? []) as $sceneSlug) {
+                $serviceEntity = $serviceEntities[$sceneSlug] ?? null;
+                if ($serviceEntity) {
+                    $this->relate($productEntity, $serviceEntity, EntityRelation::TYPE_USES, $order++);
+                }
+            }
+        }
+
+        // service -related_to-> service（相邻场景，scene.metadata.adjacent）
+        foreach (Facts::scenes() as $scene) {
+            $serviceEntity = $serviceEntities[$scene['slug']] ?? null;
+            if (! $serviceEntity) {
+                continue;
+            }
+            $order = 0;
+            foreach (($scene['adjacent'] ?? []) as $adjacentSlug) {
+                $adjacentEntity = $serviceEntities[$adjacentSlug] ?? null;
+                if ($adjacentEntity) {
+                    $this->relate($serviceEntity, $adjacentEntity, EntityRelation::TYPE_RELATED_TO, $order++);
                 }
             }
         }
@@ -143,7 +183,7 @@ class CatalogSeeder extends Seeder
         }
     }
 
-    private function relate(Entity $from, Entity $to, string $type, int $sortOrder = 0): void
+    private function relate(Entity $from, Entity $to, string $type, int $sortOrder = 0, ?array $metadata = null): void
     {
         $relation = EntityRelation::firstOrNew([
             'from_entity_id' => $from->id,
@@ -155,6 +195,7 @@ class CatalogSeeder extends Seeder
         $relation->fill([
             'site_id'    => $from->site_id,
             'sort_order' => $sortOrder,
+            'metadata'   => $metadata,
         ]);
         $relation->save();
     }
