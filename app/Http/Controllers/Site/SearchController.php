@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Site;
 
 use App\Http\Controllers\Controller;
-use App\Models\Content;
+use App\Support\PublicIndex;
 use Illuminate\Http\Request;
 
 /**
@@ -17,7 +17,9 @@ class SearchController extends Controller
         $items = null;
 
         if (mb_strlen($q) >= 2) {
-            $items = Content::published()
+            // PublicIndex 在查询层排除 noindex / 停用栏目 / 他站内容，对分页安全
+            // （不会像取集合后 reject 那样破坏每页条数）。
+            $items = PublicIndex::contentQuery()
                 ->with('category')
                 ->where(function ($w) use ($q) {
                     $w->where('title', 'like', "%{$q}%")

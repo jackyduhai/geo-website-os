@@ -251,7 +251,7 @@ class SeoHttpIntegrationTest extends TestCase
         // 转交 PageController::dispatch → resolveContent → Blade。SEO 必须仍是 Resolver 输出。
         $this->assertStringContainsString('<title>Knowledge Article Title', $html);
         $this->assertStringContainsString('<meta name="description" content="Knowledge Summary">', $html);
-        $this->assertStringContainsString('<link rel="canonical" href="https://example.com/article/knowledge-article">', $html);
+        $this->assertStringContainsString('<link rel="canonical" href="https://example.com/knowledge/knowledge-article">', $html);
         // 封面经 Media::url() 绝对化（UAT Bug#3）。
         $this->assertStringContainsString('<meta property="og:image" content="' . $cover->url() . '">', $html);
         $this->assertStringContainsString('<meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1">', $html);

@@ -8,6 +8,7 @@ use App\Models\Entity;
 use App\Models\Setting;
 use App\Services\Seo\SeoMetaResolver;
 use App\Services\Seo\SeoResult;
+use App\Support\PublicUrl;
 use App\Support\SiteContext;
 use Illuminate\Support\Str;
 
@@ -59,13 +60,9 @@ class SchemaBuilder
 
     protected function baseUrl(): string
     {
-        // 与 Canonical 同源：优先当前 Site.domain（HTTPS），开发环境回退 app.url
-        $site = SiteContext::currentSite();
-        if ($site && trim((string) $site->domain) !== '') {
-            return 'https://' . rtrim($site->domain, '/');
-        }
-
-        return rtrim(config('app.url'), '/');
+        // 与 PublicUrl / canonical 同源：真实 HTTP 用请求 origin（多站 / 反代可达），
+        // CLI / 队列回退当前站点 domain（https），再回退 app.url。
+        return PublicUrl::base();
     }
 
     /** Site.metadata 通用扩展读取 */
@@ -206,14 +203,14 @@ class SchemaBuilder
         $data = [
             '@context'         => 'https://schema.org',
             '@type'            => $c->type === 'product' ? 'Product' : 'Article',
-            '@id'              => $c->url() . '#main',
+            '@id'              => PublicUrl::content($c) . '#main',
             'headline'         => $seo->title,
             'name'             => $seo->title,
             'description'      => $seo->description,
             'inLanguage'       => 'zh-CN',
             'mainEntityOfPage' => [
                 '@type' => 'WebPage',
-                '@id'   => $seo->canonical,
+                '@id'   => PublicUrl::content($c),
             ],
             'publisher'        => ['@id' => $this->baseUrl() . '/#organization'],
         ];
@@ -269,15 +266,22 @@ class SchemaBuilder
         $seo ??= app(SeoMetaResolver::class)->resolveEntity($e);
         $metadata = is_array($e->metadata) ? $e->metadata : [];
 
+        $publicUrl = PublicUrl::entity($e);
+
         $data = [
             '@context'   => 'https://schema.org',
             '@type'      => $schemaType,
-            '@id'        => $seo->canonical . '#entity',
+            '@id'        => ($publicUrl ?? PublicUrl::home()) . '#' . $e->type . '-' . $e->slug,
             'name'       => $seo->title,
             'description' => $seo->description,
-            'url'        => $seo->canonical,
             'inLanguage' => 'zh-CN',
         ];
+
+        // 仅当实体有真实前台落地页时才输出 url；组织 / 人物 / 地点 / 主题、非核心
+        // 产品、无场景服务无独立页，不得输出会 404 的地址（Public Render Contract）。
+        if ($publicUrl !== null) {
+            $data['url'] = $publicUrl;
+        }
 
         if ($seo->ogImage) {
             $data['image'] = $this->absolute($seo->ogImage);

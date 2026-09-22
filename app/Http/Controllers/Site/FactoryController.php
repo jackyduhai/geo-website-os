@@ -21,6 +21,12 @@ class FactoryController extends Controller
         if (empty($company)) {
             abort(404);
         }
+        // P-STEP 17G / Public Render Contract：只有公司名、无任何生产实质（车间 /
+        // 厂区面积 / 年产能均空）的最小站点，/factory/ 必须 404，不渲染全 0 空壳，
+        // 也不得被 sitemap / llms 收录为会 404 的 URL。
+        if (! Catalog::hasProduction()) {
+            abort(404);
+        }
         $workshops  = Catalog::workshops();
         $regions    = Catalog::salesRegions();
         $certsReady = Catalog::certificationsReady();
@@ -36,8 +42,8 @@ class FactoryController extends Controller
         // 5 条信任数据（全部源自 facts，不虚构）
         $stats = [
             ['num' => (int) ($company['tech_experience_years'] ?? 0), 'unit' => '年', 'label' => ($company['industry'] ?? '') . '领域经验'],
-            ['num' => (int) $company['area_sqm'], 'unit' => '㎡', 'label' => '自有生产厂区'],
-            ['num' => (int) $company['annual_capacity_tons'], 'unit' => '吨', 'label' => '年成品产能'],
+            ['num' => (int) ($company['area_sqm'] ?? 0), 'unit' => '㎡', 'label' => '自有生产厂区'],
+            ['num' => (int) ($company['annual_capacity_tons'] ?? 0), 'unit' => '吨', 'label' => '年成品产能'],
             ['num' => count($workshops), 'unit' => '大', 'label' => '自有生产车间'],
             ['num' => count($regions), 'unit' => '大区', 'label' => '全国销售覆盖'],
         ];

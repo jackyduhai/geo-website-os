@@ -2,8 +2,8 @@
 
 namespace App\Services\Geo;
 
-use App\Models\Content;
 use App\Support\Catalog;
+use App\Support\PublicIndex;
 
 /**
  * llms.txt 生成器（v0.7 IA；P-STEP 14 / D.2 起结构化事实改由站点隔离 Catalog 驱动，遵循 llmstxt.org）
@@ -11,7 +11,12 @@ use App\Support\Catalog;
  * 定位：给 AI 检索 / 生成引擎的权威口径入口。
  *   - 结构化事实全部来自当前站点的 Catalog（Entity 投影），与页面正文同源，不手工维护；
  *   - 链接使用 v0.7 规范地址（目录带斜杠、详情不带），不输出已取消的 /cases/；
- *   - 未核定数据（资质编号、起订量、交付周期、门店数、经纬度）一律不写。
+ *   - 未核定数据（资质编号、起订量、交付周期、门店数、经纬度）一律不写；
+ *   - P-STEP 17G / Public Render Contract：只链接真实可访问（200）的页面——/factory/
+ *     仅有生产实质、/cooperation/ 仅有合作内容时才输出；核心产品 / 场景、知识文章
+ *     统一经 PublicIndex 过滤（published + 启用栏目 + 非 noindex）；
+ *   - 最小站点（只有公司名）时摘要与各段按数据有无条件降级，不拼「自有 0 厂区 /
+ *     0 车间 / 年产能」这类空壳句，也不输出会 404 / 500 的链接。
  */
 class LlmsBuilder
 {
@@ -37,15 +42,35 @@ class LlmsBuilder
         $scenes      = Catalog::scenes();
         $sceneCnt    = count($scenes);
         $coop        = Catalog::cooperation();
+        $coopTypes   = $coop['types'] ?? [];
+        $coopSteps   = $coop['process'] ?? [];
+        $indexableEntitySlugs = PublicIndex::indexableEntitySlugs();
         $L           = [];
 
-        // ---------- 标题与摘要 ----------
+        // ---------- 标题与摘要（按数据有无条件拼接，不制造全 0 空壳） ----------
         $L[] = '# ' . $company['name'];
         $L[] = '';
-        $summary = '> ' . $company['name'] . '，' . ($company['founded_display'] ?? '') . '成立'
-            . ($industry !== '' ? '，专注' . $industry . '的研发、生产与销售' : '')
-            . '。自有' . ($company['area_display'] ?? '') . '厂区与' . $workshopCnt . '个生产车间，'
-            . '年产能' . ($company['annual_capacity_display'] ?? '') . '。';
+        $summary = '> ' . $company['name'];
+        if (! empty($company['founded_display'])) {
+            $summary .= '，' . $company['founded_display'] . '成立';
+        }
+        if ($industry !== '') {
+            $summary .= '，专注' . $industry . '的研发、生产与销售';
+        }
+        $capacity = [];
+        if (! empty($company['area_display'])) {
+            $capacity[] = '自有' . $company['area_display'] . '厂区';
+        }
+        if ($workshopCnt > 0) {
+            $capacity[] = $workshopCnt . '个生产车间';
+        }
+        if (! empty($company['annual_capacity_display'])) {
+            $capacity[] = '年产能' . $company['annual_capacity_display'];
+        }
+        if ($capacity !== []) {
+            $summary .= '。' . implode('，', $capacity);
+        }
+        $summary .= '。';
         if (! empty($company['target_customers'])) {
             $summary .= '为' . implode('、', $company['target_customers'])
                 . '提供' . implode('、', $company['business_model'] ?? []) . '。';
@@ -72,8 +97,12 @@ class LlmsBuilder
         if (! empty($company['address']['full'])) {
             $L[] = '- 注册与生产地址：' . $company['address']['full'];
         }
-        $L[] = '- 厂区面积：' . ($company['area_display'] ?? '');
-        $L[] = '- 年产能：' . ($company['annual_capacity_display'] ?? '');
+        if (! empty($company['area_display'])) {
+            $L[] = '- 厂区面积：' . $company['area_display'];
+        }
+        if (! empty($company['annual_capacity_display'])) {
+            $L[] = '- 年产能：' . $company['annual_capacity_display'];
+        }
         if (! empty($company['total_investment_wan'])) {
             $L[] = '- 总投资：约 ' . number_format($company['total_investment_wan']) . ' 万元';
         }
@@ -101,21 +130,24 @@ class LlmsBuilder
         // ---------- 产品体系 ----------
         $L[] = '## 产品体系';
         $L[] = '';
-        $L[] = $lineCnt . '大产品体系：' . implode('、', array_map(fn ($l) => $l['name'], $lines)) . '。';
-        $L[] = '';
-        $L[] = '- [产品中心](' . url('/products/') . ')：' . $lineCnt . '大产品体系总览';
-        foreach ($lines as $line) {
-            $slug = $line['slug'];
-            if (count(Catalog::productsByLine($slug)) >= 1) {
-                $L[] = '- [' . $line['name'] . '](' . url('/products/' . $slug . '/') . ')：' . ($line['desc'] ?? $line['name']);
+        $L[] = '- [产品中心](' . url('/products/') . ')：产品体系总览';
+        if ($lineCnt > 0) {
+            $L[] = '';
+            $L[] = $lineCnt . '大产品体系：' . implode('、', array_map(fn ($l) => $l['name'], $lines)) . '。';
+            foreach ($lines as $line) {
+                $slug = $line['slug'];
+                if (count(Catalog::productsByLine($slug)) >= 1) {
+                    $L[] = '- [' . $line['name'] . '](' . url('/products/' . $slug . '/') . ')：' . ($line['desc'] ?? $line['name']);
+                }
             }
         }
-        // 核心产品（有独立详情页），带关键参数
+        // 核心产品（有独立详情页、未 noindex），带关键参数
         foreach (Catalog::products() as $p) {
-            if (! Catalog::isCoreProduct($p['slug'])) {
+            if (! Catalog::isCoreProduct($p['slug'])
+                || ! in_array($p['slug'], $indexableEntitySlugs, true)) {
                 continue;
             }
-            $kp = array_map(fn ($k) => $k['label'] . ' ' . $k['value'], $p['key_params'] ?? []);
+            $kp = array_map(fn ($k) => $k['label'] . ' ' . ($k['value'] ?? ''), $p['key_params'] ?? []);
             $suffix = $kp ? '：' . implode('，', array_slice($kp, 0, 3)) : '';
             $L[] = '- [' . $p['name'] . '](' . url('/products/' . $p['slug']) . ')' . $suffix;
         }
@@ -124,10 +156,11 @@ class LlmsBuilder
         // ---------- 应用场景 ----------
         $L[] = '## 应用场景';
         $L[] = '';
-        $L[] = '按客户应用类型组织，每类配好可直接使用的产品组合与关键工艺参数。';
-        $L[] = '';
-        $L[] = '- [应用场景总览](' . url('/solutions/') . ')：' . $sceneCnt . '类常见应用场景';
+        $L[] = '- [应用场景总览](' . url('/solutions/') . ')：' . ($sceneCnt > 0 ? $sceneCnt . '类常见应用场景' : '应用场景总览');
         foreach ($scenes as $scene) {
+            if (! in_array($scene['slug'], $indexableEntitySlugs, true)) {
+                continue;
+            }
             $combo = Catalog::sceneCombo($scene);
             $names = array_map(fn ($p) => $p['short_name'] ?? $p['name'], $combo);
             $L[] = '- [' . $scene['name'] . '](' . url('/solutions/' . $scene['slug'] . '/') . ')'
@@ -135,17 +168,21 @@ class LlmsBuilder
         }
         $L[] = '';
 
-        // ---------- 合作与信任 ----------
-        $coopTypes  = $coop['types'] ?? [];
-        $coopSteps  = $coop['process'] ?? [];
-        $typeNames  = implode('、', array_map(fn ($t) => $t['name'], $coopTypes));
-        $stepNames  = implode('、', array_map(fn ($s) => $s['name'], $coopSteps));
+        // ---------- 合作与信任（仅链接真实可访问的页面） ----------
         $L[] = '## 合作与信任';
         $L[] = '';
-        $L[] = '- [合作方式](' . url('/cooperation/') . ')：' . $typeNames . count($coopTypes) . '种方式。合作流程为' . $stepNames . count($coopSteps) . '步';
-        $L[] = '- [工厂与资质](' . url('/factory/') . ')：厂区规模、' . $workshopCnt . '大车间、生产流程与' . $regionCnt . '大销售区域';
+        if (! empty($coopTypes)) {
+            $typeNames = implode('、', array_map(fn ($t) => $t['name'], $coopTypes));
+            $stepNames = implode('、', array_map(fn ($s) => $s['name'], $coopSteps));
+            $L[] = '- [合作方式](' . url('/cooperation/') . ')：' . $typeNames . count($coopTypes) . '种方式。合作流程为' . $stepNames . count($coopSteps) . '步';
+        }
+        if (Catalog::hasProduction()) {
+            $L[] = '- [工厂与资质](' . url('/factory/') . ')：厂区规模、' . $workshopCnt . '大车间、生产流程与' . $regionCnt . '大销售区域';
+        }
         $L[] = '- [企业简介](' . url('/about/profile/') . ')：公司概况与核心事实';
-        $L[] = '- [发展历程](' . url('/about/history/') . ')：' . ($company['founded_display'] ?? '') . '成立至今的可核实节点';
+        if (! empty($company['founded_display'])) {
+            $L[] = '- [发展历程](' . url('/about/history/') . ')：' . $company['founded_display'] . '成立至今的可核实节点';
+        }
         $L[] = '- [企业文化](' . url('/about/culture/') . ')：使命、愿景、价值观与品牌口号';
         $contactLine = '- [联系我们](' . url('/contact/') . ')：';
         if (! empty($company['phone'])) {
@@ -157,7 +194,7 @@ class LlmsBuilder
         $L[] = $contactLine;
         $L[] = '';
 
-        // ---------- 知识中心 ----------
+        // ---------- 知识中心（仅公开可索引文章） ----------
         $L[] = '## 知识中心';
         $L[] = '';
         $knowledgeGroups = \App\Models\Group::knowledgeChannels();
@@ -167,7 +204,7 @@ class LlmsBuilder
             $desc = trim((string) ($kg->description ?? ''));
             $L[] = '- [' . $kg->name . '](' . url('/knowledge/' . $kg->slug . '/') . ')' . ($desc !== '' ? '：' . $desc : '');
         }
-        $knowledgeArticles = Content::published()
+        $knowledgeArticles = PublicIndex::contentQuery()
             ->whereHas('category', fn ($q) => $q->where('slug', 'knowledge'))
             ->orderByDesc('published_at')->limit(20)->get();
         foreach ($knowledgeArticles as $article) {
@@ -180,7 +217,9 @@ class LlmsBuilder
         $L[] = '';
         $L[] = '- 本站仅承载「' . $company['name'] . '」一个主体';
         $L[] = '- 品牌名「' . $brandName . '」与公司主体「' . $company['name'] . '」指同一实体，无集团主体';
-        $L[] = '- 品牌口号：' . ($brand['slogan'] ?? '');
+        if (! empty($brand['slogan'])) {
+            $L[] = '- 品牌口号：' . $brand['slogan'];
+        }
         if (! empty($brand['values'])) {
             $L[] = '- 企业价值观：' . rtrim($brand['values'], '！!');
         }
@@ -213,7 +252,8 @@ class LlmsBuilder
         $L[] = '## 内容';
         $L[] = '';
         $L[] = '- [首页](' . url('/') . ')';
-        foreach (\App\Models\Content::published()->orderByDesc('published_at')->limit(20)->get() as $article) {
+        // 仅列出公开可索引（published + 启用栏目 + 非 noindex）的内容。
+        foreach (PublicIndex::contentQuery()->orderByDesc('published_at')->limit(20)->get() as $article) {
             $L[] = '- [' . $article->title . '](' . $article->url() . ')';
         }
         $L[] = '';

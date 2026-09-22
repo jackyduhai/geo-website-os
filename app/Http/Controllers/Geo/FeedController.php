@@ -105,7 +105,9 @@ class FeedController extends Controller
     {
         // RSS 只收录知识 / 新闻类文章；被 config 页取代的旧公司内容、产品综述不进 feed，
         // 且文章 URL 与前台一致采用扁平 /knowledge/{slug}（知识类）。
-        $items = \App\Models\Content::published()
+        // PublicIndex：published + 启用栏目 + 非 noindex + 当前站点，避免 RSS 泄漏
+        // noindex / 停用栏目 / 他站文章。
+        $items = \App\Support\PublicIndex::contentQuery()
             ->whereHas('category', fn ($q) => $q->whereIn('slug', ['knowledge', 'news']))
             ->with('category')
             ->orderByDesc('published_at')

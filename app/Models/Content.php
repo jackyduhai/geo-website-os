@@ -141,8 +141,11 @@ class Content extends Model
     // SEO Resolution 已统一收敛至 SeoMetaResolver（5.6-C 冻结契约）；
     // legacy 辅助方法 metaTitle/metaDescription/canonicalUrl 已删除（STEP 08）。
 
-    /** 前台地址：/{栏目完整路径}/{slug}，语义化且唯一 */
-    public function url(): string
+    /**
+     * 前台相对路径：/{栏目完整路径}/{slug}，语义化且唯一。
+     * 与绝对 URL 分离，便于 PublicUrl 在 HTTP / CLI 两种 host 口径下复用同一条路径。
+     */
+    public function path(): string
     {
         $segs = [];
         $node = $this->category;
@@ -154,7 +157,13 @@ class Content extends Model
 
         $segs[] = $this->slug;
 
-        return url('/' . implode('/', $segs));
+        return '/' . implode('/', $segs);
+    }
+
+    /** 前台地址：/{栏目完整路径}/{slug}，语义化且唯一 */
+    public function url(): string
+    {
+        return url($this->path());
     }
 
     /** 页面类型到 schema.org 类型的映射 */

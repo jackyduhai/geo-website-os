@@ -8,6 +8,7 @@ use App\Models\Entity;
 use App\Models\Media;
 use App\Models\SeoMeta;
 use App\Models\Site;
+use App\Support\PublicUrl;
 use App\Support\SiteContext;
 
 class SeoMetaResolver
@@ -26,6 +27,9 @@ class SeoMetaResolver
     private static array $mediaPathMemo = [];   // media_id => ?string
 
     public function __construct(
+        // P-STEP 17G 起 canonical 统一由 {@see PublicUrl} 按真实前台路由裁决；
+        // GenericUrlResolver 硬编码的 /{单数类型}/{slug} 会产出 404 地址，已不再用于
+        // canonical。保留该构造注入仅为兼容容器绑定与既有测试，待 #86 阶段移除。
         private UrlResolverInterface $urlResolver
     ) {}
 
@@ -145,7 +149,7 @@ class SeoMetaResolver
             title: $seoMeta?->title ?? $site->name ?? self::SYSTEM_DEFAULT_TITLE,
             description: $seoMeta?->description ?? $site->description ?? self::SYSTEM_DEFAULT_DESCRIPTION,
             keywords: $seoMeta?->keywords ?? [],
-            canonical: $seoMeta?->canonical ?? $this->urlResolver->generateCanonical('home'),
+            canonical: $seoMeta?->canonical ?? PublicUrl::home(),
             ogTitle: $seoMeta?->og_title ?? ($seoMeta?->title ?? $site->name ?? self::SYSTEM_DEFAULT_TITLE),
             ogDescription: $seoMeta?->og_description ?? ($seoMeta?->description ?? $site->description ?? self::SYSTEM_DEFAULT_DESCRIPTION),
             ogImage: $seoMeta?->og_image_path ?? $site->logo,
@@ -205,11 +209,8 @@ class SeoMetaResolver
             title: $title,
             description: $description,
             keywords: $seoMeta?->keywords ?? [],
-            // Canonical: SeoMeta -> UrlResolver (no Content.canonical as formal layer)
-            canonical: $seoMeta?->canonical ?? $this->urlResolver->generateCanonical('content', [
-                'type' => $content->type,
-                'slug' => $content->slug,
-            ]),
+            // Canonical: SeoMeta -> PublicUrl（真实前台路由；P-STEP 17G 收敛）
+            canonical: $seoMeta?->canonical ?? PublicUrl::content($content),
             ogTitle: $seoMeta?->og_title ?? ($seoMeta?->title ?? $title),
             ogDescription: $seoMeta?->og_description ?? ($seoMeta?->description ?? $description),
             ogImage: $ogImage,
@@ -253,10 +254,7 @@ class SeoMetaResolver
             title: $title,
             description: $description,
             keywords: $seoMeta?->keywords ?? [],
-            canonical: $seoMeta?->canonical ?? $this->urlResolver->generateCanonical('entity', [
-                'type' => $entity->type,
-                'slug' => $entity->slug,
-            ]),
+            canonical: $seoMeta?->canonical ?? (PublicUrl::entity($entity) ?? PublicUrl::home()),
             ogTitle: $seoMeta?->og_title ?? ($seoMeta?->title ?? $title),
             ogDescription: $seoMeta?->og_description ?? ($seoMeta?->description ?? $description),
             ogImage: $seoMeta?->og_image_path ?? $this->mediaPath($entityOgImageId) ?? $fallback['ogImage'],

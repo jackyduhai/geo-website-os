@@ -77,15 +77,17 @@ class Catalog
             ->ofType(Entity::TYPE_PRODUCT)
             ->orderBy('sort_order')
             ->get()
-            ->map(fn (Entity $e) => array_merge(
-                is_array($e->metadata) ? $e->metadata : [],
-                [
-                    'slug' => $e->slug,
-                    'name' => $e->name,
-                    'summary' => $e->summary,
-                    'description' => $e->description,
-                ]
-            ))
+            ->map(function (Entity $e) use ($organization) {
+                return self::normalizeProduct(array_merge(
+                    is_array($e->metadata) ? $e->metadata : [],
+                    [
+                        'slug' => $e->slug,
+                        'name' => $e->name,
+                        'summary' => $e->summary,
+                        'description' => $e->description,
+                    ]
+                ));
+            })
             ->values()
             ->all();
 
@@ -93,29 +95,288 @@ class Catalog
             ->ofType(Entity::TYPE_SERVICE)
             ->orderBy('sort_order')
             ->get()
-            ->map(fn (Entity $e) => array_merge(
-                is_array($e->metadata) ? $e->metadata : [],
-                [
-                    'slug' => $e->slug,
-                    'name' => $e->name,
-                    'summary' => $e->summary,
-                    'description' => $e->description,
-                ]
-            ))
+            ->map(function (Entity $e) {
+                return self::normalizeScene(array_merge(
+                    is_array($e->metadata) ? $e->metadata : [],
+                    [
+                        'slug' => $e->slug,
+                        'name' => $e->name,
+                        'summary' => $e->summary,
+                        'description' => $e->description,
+                    ]
+                ));
+            })
             ->values()
             ->all();
 
+        $productLines = array_map(
+            fn ($l) => self::normalizeProductLine(is_array($l) ? $l : []),
+            is_array($meta['product_lines'] ?? null) ? $meta['product_lines'] : []
+        );
+
         return [
-            'company'       => $meta['company'] ?? [],
-            'brand_language' => $meta['brand_language'] ?? [],
-            'product_lines' => $meta['product_lines'] ?? [],
-            'products'      => $products,
-            'scenes'        => $scenes,
-            'production'    => $meta['production'] ?? [],
-            'cooperation'   => $meta['cooperation'] ?? [],
-            'cases'         => $meta['cases'] ?? [],
-            'compliance'    => $meta['compliance'] ?? [],
+            'company'        => self::normalizeCompany(is_array($meta['company'] ?? null) ? $meta['company'] : [], $organization),
+            'brand_language' => is_array($meta['brand_language'] ?? null) ? $meta['brand_language'] : [],
+            'product_lines'  => $productLines,
+            'products'       => $products,
+            'scenes'         => $scenes,
+            'production'     => self::normalizeProduction(is_array($meta['production'] ?? null) ? $meta['production'] : []),
+            'cooperation'    => self::normalizeCooperation(is_array($meta['cooperation'] ?? null) ? $meta['cooperation'] : []),
+            'cases'          => is_array($meta['cases'] ?? null) ? $meta['cases'] : [],
+            'compliance'     => is_array($meta['compliance'] ?? null) ? $meta['compliance'] : [],
         ];
+    }
+
+    /**
+     * 投影出口形状归一化（P-STEP 17G / Public Render Contract）。
+     *
+     * Catalog 是 Runtime 唯一目录读模型，但其原始数据来自后台可任意填写的
+     * Entity.metadata：管理员新建「最小字段」实体（如只填公司名的 organization、
+     * 只填名称的 service）时，metadata 缺键会被下游 Blade / Controller 原样裸访问，
+     * 在 PHP 8 下以 `Undefined array key` ErrorException 直接白屏（HTTP 500）。
+     *
+     * 因此在「投影出口」单点补齐全集可选键的安全默认，保证下游永远读到形状稳定的
+     * 数组，而不是给几十个视图逐个加 `??`。demo 数据字段齐全，归一化对其零影响。
+     */
+    private static function normalizeCompany(array $c, Entity $organization): array
+    {
+        $address = is_array($c['address'] ?? null) ? $c['address'] : [];
+
+        return array_replace([
+            'name'                            => $organization->name,
+            'name_en'                         => '',
+            'brand'                           => '',
+            'brand_en'                        => '',
+            'short_name'                      => '',
+            'founded'                         => '',
+            'founded_display'                 => '',
+            'established_production'          => '',
+            'established_production_display'  => '',
+            'address'                         => [
+                'full'     => '',
+                'country'  => '',
+                'province' => '',
+                'city'     => '',
+                'district' => '',
+                'street'   => '',
+                'lat'      => null,
+                'lng'      => null,
+            ],
+            'area_sqm'                        => 0,
+            'area_display'                    => '',
+            'annual_capacity_tons'            => 0,
+            'annual_capacity_display'         => '',
+            'total_investment_wan'            => 0,
+            'total_investment_display'        => '',
+            'tech_experience_years'           => 0,
+            'tech_experience_display'         => '',
+            'phone'                           => '',
+            'phone_tel'                       => '',
+            'email'                           => '',
+            'website'                         => '',
+            'domain'                          => '',
+            'industry'                        => '',
+            'served_stores'                   => null,
+            'served_stores_display'           => '',
+            'business_model'                  => [],
+            'target_customers'                => [],
+        ], $c, [
+            // address 必须整体补键，不能让 array_replace 用缺失的子数组裸透传
+            'address' => array_replace([
+                'full'     => '',
+                'country'  => '',
+                'province' => '',
+                'city'     => '',
+                'district' => '',
+                'street'   => '',
+                'lat'      => null,
+                'lng'      => null,
+            ], $address),
+            // 标量强制类型 / 缺省，避免下游 (int) / 字符串拼接遇到 null 报错
+            'name' => $c['name'] ?? $organization->name,
+            'business_model' => is_array($c['business_model'] ?? null) ? $c['business_model'] : [],
+            'target_customers' => is_array($c['target_customers'] ?? null) ? $c['target_customers'] : [],
+        ]);
+    }
+
+    private static function normalizeProduct(array $p): array
+    {
+        $n = array_replace([
+            'id'         => null,
+            'short_name' => '',
+            'line'       => null,
+            'core'       => false,
+            'tag'        => '',
+            'tagline'    => '',
+            'desc'       => '',
+            'icon'       => null,
+            'image'      => null,
+            'mains'      => [],
+            'key_params' => [],
+            'params'     => [],
+            'scenes'     => [],
+            'related'    => [],
+            'net_weight' => null,
+            'packaging'  => null,
+            'shelf_life' => null,
+            'storage'    => null,
+            'moq'        => null,
+        ], $p, [
+            'slug' => $p['slug'],
+            'name' => $p['name'],
+            'core' => (bool) ($p['core'] ?? false),
+            'mains' => is_array($p['mains'] ?? null) ? $p['mains'] : [],
+            'key_params' => is_array($p['key_params'] ?? null) ? $p['key_params'] : [],
+            'params' => is_array($p['params'] ?? null) ? $p['params'] : [],
+            'scenes' => is_array($p['scenes'] ?? null) ? $p['scenes'] : [],
+            'related' => is_array($p['related'] ?? null) ? $p['related'] : [],
+        ]);
+
+        // 导语/描述归一化：后台最小字段实体（仅 summary、无 tagline/desc）时回退实体摘要，
+        // 避免默认空串占位后下游 `?? summary` 回退失效，造成详情页导语与 SEO description 空白
+        if (trim((string) ($n['tagline'] ?? '')) === '') {
+            $n['tagline'] = (string) ($n['summary'] ?? '');
+        }
+        if (trim((string) ($n['desc'] ?? '')) === '') {
+            $n['desc'] = (string) ($n['description'] ?? $n['summary'] ?? '');
+        }
+
+        return $n;
+    }
+
+    private static function normalizeScene(array $s): array
+    {
+        $n = array_replace([
+            'id'                 => null,
+            'title_q'            => '',
+            'desc'               => '',
+            'pain_points'        => [],
+            'combo'              => [],
+            'combo_reason'       => '',
+            'key_param_product'  => null,
+            'key_param_display'  => '',
+            'hover_reveal'       => '',
+            'adjacent'           => [],
+            'param_note'         => [],
+            'order'              => 99,
+            'priority'           => 'P0',
+        ], $s, [
+            'slug' => $s['slug'],
+            'name' => $s['name'],
+            'pain_points' => is_array($s['pain_points'] ?? null) ? $s['pain_points'] : [],
+            'combo' => is_array($s['combo'] ?? null) ? $s['combo'] : [],
+            'adjacent' => is_array($s['adjacent'] ?? null) ? $s['adjacent'] : [],
+            'order' => (int) ($s['order'] ?? 99),
+        ]);
+
+        // 场景描述同产品：缺省回退实体摘要，避免最小字段场景页 SEO 描述空白
+        if (trim((string) ($n['desc'] ?? '')) === '') {
+            $n['desc'] = (string) ($n['description'] ?? $n['summary'] ?? '');
+        }
+
+        return $n;
+    }
+
+    private static function normalizeProductLine(array $l): array
+    {
+        return array_replace([
+            'id'       => null,
+            'name'     => '',
+            'slug'     => '',
+            'desc'     => '',
+            'order'    => 99,
+            'featured' => false,
+        ], $l, [
+            'order' => (int) ($l['order'] ?? 99),
+            'featured' => (bool) ($l['featured'] ?? false),
+        ]);
+    }
+
+    private static function normalizeProduction(array $p): array
+    {
+        $workshops = array_map(static function ($w) {
+            $w = is_array($w) ? $w : ['name' => (string) $w];
+            return array_replace([
+                'id'        => null,
+                'name'      => '',
+                'desc'      => '',
+                'image'     => null,
+                'image_alt' => '',
+            ], $w);
+        }, is_array($p['workshops'] ?? null) ? $p['workshops'] : []);
+
+        $certs = is_array($p['certifications'] ?? null) ? $p['certifications'] : [];
+
+        return [
+            'workshops'     => $workshops,
+            'sales_regions' => is_array($p['sales_regions'] ?? null) ? $p['sales_regions'] : [],
+            'certifications' => [
+                'sc_license'      => $certs['sc_license'] ?? null,
+                'standard_code'   => $certs['standard_code'] ?? null,
+                'business_license' => $certs['business_license'] ?? null,
+                'icp'             => $certs['icp'] ?? null,
+            ],
+        ];
+    }
+
+    /**
+     * 合作方式仅在确实存在合作类型 / 流程时才是可渲染页面；空数组保持空（empty 为真），
+     * 与 CooperationController 的 404 判定、Sitemap / llms 收录准入严格对齐。
+     */
+    private static function normalizeCooperation(array $c): array
+    {
+        $types = array_map(static function ($t) {
+            $t = is_array($t) ? $t : ['name' => (string) $t];
+            return array_replace([
+                'id'       => null,
+                'name'     => '',
+                'fit'      => '',
+                'includes' => [],
+                'cta'      => '',
+            ], $t, [
+                'includes' => is_array($t['includes'] ?? null) ? $t['includes'] : [],
+            ]);
+        }, is_array($c['types'] ?? null) ? $c['types'] : []);
+
+        $process = array_map(static function ($s) {
+            $s = is_array($s) ? $s : ['name' => (string) $s];
+            return array_replace([
+                'step' => null,
+                'name' => '',
+                'desc' => '',
+            ], $s);
+        }, is_array($c['process'] ?? null) ? $c['process'] : []);
+
+        if ($types === [] && $process === []) {
+            return [];
+        }
+
+        return [
+            'types'            => $types,
+            'process'          => $process,
+            'moq'              => $c['moq'] ?? null,
+            'sample_lead_time' => $c['sample_lead_time'] ?? null,
+            'delivery_lead_time' => $c['delivery_lead_time'] ?? null,
+        ];
+    }
+
+    /**
+     * 工厂页是否有「生产实质」可渲染：至少有车间、厂区面积或年产能任一非空。
+     * 只有公司名（最小 organization）时 /factory/ 必须 404，而不是渲染全 0 空壳或 500。
+     */
+    public static function hasProduction(): bool
+    {
+        $company = self::company();
+
+        return ! empty(self::workshops())
+            || (int) ($company['area_sqm'] ?? 0) > 0
+            || (int) ($company['annual_capacity_tons'] ?? 0) > 0;
+    }
+
+    /** 合作方式页是否有实质内容（与 CooperationController 的 empty 判定一致）。 */
+    public static function hasCooperation(): bool
+    {
+        return ! empty(self::cooperation());
     }
 
     /** 核心产品 slug 列表（拥有独立详情页 / 进入 sitemap / llms），由 core 标志驱动。 */

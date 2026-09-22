@@ -3,19 +3,22 @@
 namespace App\Services\Geo;
 
 use App\Models\Category;
-use App\Models\Content;
-use App\Models\SeoMeta;
 use App\Support\Catalog;
-use App\Support\SiteContext;
-use Illuminate\Support\Collection;
+use App\Support\PublicIndex;
 
 /**
  * sitemap.xml 生成器（v0.7 IA；P-STEP 14 / D.2 起目录数据改由站点隔离 Catalog 驱动）
  *
- * 判据：只收录「真实可访问（返回 200）且有实质正文」的规范地址。
+ * 判据（Public Render Contract，P-STEP 17G 强化）：只收录「真实可访问（返回 200）、
+ * 已发布、当前站点可见、未 noindex 且有实质正文」的规范地址。
  *   - 目录型带尾斜杠、详情型不带，与 CanonicalizeSlash / canonical 完全一致；
- *   - 仅标记为核心（core）的产品有独立详情页（ProductController@show 对非核心产品 404），
- *     其余产品只在产品系列页内以锚点呈现，不进 sitemap；
+ *   - 仅标记为核心（core）且未 noindex 的产品有独立详情页（ProductController@show
+ *     对非核心产品 404），其余产品只在产品系列页内以锚点呈现，不进 sitemap；
+ *   - 场景详情同理（SolutionController@show）；
+ *   - /factory/ 仅在站点有生产实质（车间 / 面积 / 产能）时收录，/cooperation/ 仅在
+ *     有合作内容时收录——与对应控制器的 404 判定一致，不收录会 404 的地址；
+ *   - 内容统一经 {@see PublicIndex::contentQuery()}：published + 启用栏目（或无栏目
+ *     单页）+ 非 noindex + 当前站点，停用栏目 / noindex 文章不得泄漏；
  *   - 不建案例中心，故不输出 /cases/；
  *   - 知识文章 URL 扁平为 /knowledge/{slug}。
  * lastmod 由内容变更驱动，不写死。
@@ -45,6 +48,10 @@ class SitemapBuilder
         // 未播种站点这些页面返回 404 或空壳，不得把全局 / 他站目录 URL 写入本站 sitemap。
         $hasCatalog = ! empty(Catalog::company());
 
+        // 可索引实体 slug 白名单（published + 非 noindex + 当前站点）：noindex 实体的
+        // 详情页虽仍可直接访问（200），但不得进入 sitemap。
+        $indexableEntitySlugs = PublicIndex::indexableEntitySlugs();
+
         if ($hasCatalog) {
             // 产品中心：总览 + 含产品的系列独立页 + 核心产品详情
             $add(url('/products/'), 'weekly', '0.9');
@@ -55,20 +62,27 @@ class SitemapBuilder
                 }
             }
             foreach (Catalog::products() as $p) {
-                if (Catalog::isCoreProduct($p['slug'])) {
+                if (Catalog::isCoreProduct($p['slug'])
+                    && in_array($p['slug'], $indexableEntitySlugs, true)) {
                     $add(url('/products/' . $p['slug']), 'weekly', '0.7');
                 }
             }
 
-            // 应用场景：总览 + 各场景详情
+            // 应用场景：总览 + 各可索引场景详情
             $add(url('/solutions/'), 'monthly', '0.9');
             foreach (Catalog::scenes() as $scene) {
-                $add(url('/solutions/' . $scene['slug'] . '/'), 'monthly', '0.8');
+                if (in_array($scene['slug'], $indexableEntitySlugs, true)) {
+                    $add(url('/solutions/' . $scene['slug'] . '/'), 'monthly', '0.8');
+                }
             }
 
-            // 工厂与合作
-            $add(url('/factory/'), 'monthly', '0.7');
-            $add(url('/cooperation/'), 'monthly', '0.7');
+            // 工厂与合作：仅有实质内容时收录，避免收录会 404 的地址
+            if (Catalog::hasProduction()) {
+                $add(url('/factory/'), 'monthly', '0.7');
+            }
+            if (Catalog::hasCooperation()) {
+                $add(url('/cooperation/'), 'monthly', '0.7');
+            }
         }
 
         // 知识中心：总览 + 各启用子栏目（groups 数据驱动）+ 已发布文章（扁平 URL）
@@ -76,14 +90,11 @@ class SitemapBuilder
         foreach (\App\Models\Group::knowledgeChannels() as $ch) {
             $add(url('/knowledge/' . $ch->slug . '/'), 'weekly', '0.6');
         }
-        // 仅收录知识分类下的文章（扁平 /knowledge/{slug}）；旧产品综述/公司内容已被
-        // config 页取代，不进 sitemap，避免跨分类重复地址。
-        $knowledgeArticles = $this->filterIndexable(
-            Content::published()
-                ->whereHas('category', fn ($q) => $q->where('slug', 'knowledge'))
-                ->with('category.parent')
-                ->orderByDesc('published_at')->get()
-        );
+        // 仅收录知识分类下、公开可索引（启用栏目 + 非 noindex）的文章（扁平 /knowledge/{slug}）。
+        $knowledgeArticles = PublicIndex::contentQuery()
+            ->whereHas('category', fn ($q) => $q->where('slug', 'knowledge'))
+            ->with('category.parent')
+            ->orderByDesc('published_at')->get();
         foreach ($knowledgeArticles as $article) {
             $add(
                 url('/knowledge/' . $article->slug),
@@ -107,15 +118,13 @@ class SitemapBuilder
             $add($category->url(), 'weekly', '0.5');
         }
 
-        // 后台发布的全部文章（知识类已在上面以 0.6 收录，此处自动去重；新闻等其余栏目在此补齐）。
-        // 仅收录归属启用栏目的文章，避免停用栏目下的内容泄漏进 sitemap。
-        $extraArticles = $this->filterIndexable(
-            Content::published()
-                ->whereHas('category', fn ($q) => $q->where('is_active', true))
-                ->with('category.parent')
-                ->orderByDesc('published_at')
-                ->get()
-        );
+        // 后台发布的全部公开可索引文章（知识类已在上面以 0.6 收录，此处自动去重；
+        // 新闻等其余栏目在此补齐）。PublicIndex 已排除停用栏目与 noindex 内容。
+        $extraArticles = PublicIndex::contentQuery()
+            ->whereHas('category', fn ($q) => $q->where('is_active', true))
+            ->with('category.parent')
+            ->orderByDesc('published_at')
+            ->get();
         foreach ($extraArticles as $article) {
             $add(
                 $article->url(),
@@ -126,23 +135,6 @@ class SitemapBuilder
         }
 
         return $this->toXml($urls);
-    }
-
-    /**
-     * 可索引判定统一来源（冻结链）：SeoMeta.noindex → Content.noindex → false。
-     * contents.noindex 已在 SQL 层排除；此处补 SeoMeta 层显式 noindex 的内容。
-     */
-    protected function filterIndexable(Collection $articles): Collection
-    {
-        $siteId = SiteContext::currentSite()?->id;
-        $noindexIds = SeoMeta::query()
-            ->where('site_id', $siteId)
-            ->whereIn('content_id', $articles->pluck('id'))
-            ->where('noindex', true)
-            ->pluck('content_id')
-            ->all();
-
-        return $articles->reject(fn ($a) => in_array($a->id, $noindexIds, true))->values();
     }
 
     protected function toXml(array $urls): string

@@ -40,13 +40,14 @@ class HomeBlockDefaults
             foreach (($sc['combo'] ?? []) as $pslug) {
                 $p = Catalog::product($pslug);
                 if ($p) {
-                    $tags[] = $p['short_name'] ?? $p['name'];
+                    $short = $p['short_name'] ?? '';
+                    $tags[] = $short !== '' ? $short : $p['name'];
                 }
             }
             $out[] = [
                 'icon'   => null,
                 'title'  => $sc['name'],
-                'text'   => $sc['desc'],
+                'text'   => $sc['desc'] ?? '',
                 'link'   => url('/solutions/' . $sc['slug'] . '/'),
                 'tags'   => $tags,
                 'reveal' => $sc['hover_reveal'] ?? ($sc['key_param_display'] ?? ''),
@@ -79,7 +80,8 @@ class HomeBlockDefaults
             foreach (($case['combo'] ?? []) as $slug) {
                 $p = Catalog::product($slug);
                 if ($p) {
-                    $tags[] = $p['short_name'] ?? $p['name'];
+                    $short = $p['short_name'] ?? '';
+                    $tags[] = $short !== '' ? $short : $p['name'];
                 }
             }
             $out[] = [

@@ -7,6 +7,7 @@ use App\Providers\AppServiceProvider;
 use App\Services\Geo\SchemaBuilder;
 use App\Support\Catalog;
 use App\Support\Narrative;
+use App\Support\PublicUrl;
 
 /**
  * 产品中心（当前站点 Catalog 站点隔离读模型驱动，Catalog 由 Entity 投影，Example 种子源自 config/facts）
@@ -285,7 +286,7 @@ class ProductController extends Controller
             'description' => $product['tagline'],
             'category'    => $line['name'] ?? null,
             'brand'       => $brandName !== '' ? ['@type' => 'Brand', 'name' => $brandName] : null,
-            'manufacturer' => ['@id' => rtrim(config('app.url'), '/') . '/#organization'],
+            'manufacturer' => ['@id' => PublicUrl::base() . '/#organization'],
             'additionalProperty' => $props,
         ]);
     }

@@ -165,7 +165,8 @@ class FinalAcceptanceTest extends TestCase
         // 站点 A 的 SEO Resolution：canonical 域名必须是 A
         $resolver = app(\App\Services\Seo\SeoMetaResolver::class);
         $resultA = $resolver->resolveEntity($entityA);
-        $this->assertSame('https://accept-a.test/service/alpha-service', $resultA->canonical);
+        // 场景（service）公开 URL 为 /solutions/{slug}/（带尾斜杠）；旧单数 /service/ 路由不存在
+        $this->assertSame('https://accept-a.test/solutions/alpha-service/', $resultA->canonical);
 
         // 缓存 key 隔离：两站点不共享 site-scoped key
         SiteContext::setSite($siteB);

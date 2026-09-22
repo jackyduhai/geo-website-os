@@ -106,7 +106,8 @@ class GeoGraphTest extends TestCase
 
         $aliceNode = collect($graph['entities'])->firstWhere('slug', 'alice');
         $this->assertSame('Alice Seo Title', $aliceNode['name'], 'SeoMeta 覆盖必须反映到 GEO 输出');
-        $this->assertSame('https://example.com/person/alice', $aliceNode['url']);
+        // person 无前台落地页：仍是图谱 / 关系节点，但不得输出会 404 的 url（Public Render Contract）
+        $this->assertArrayNotHasKey('url', $aliceNode);
 
         $this->assertCount(1, $graph['relations']);
         $this->assertSame('entity/organization/org', $graph['relations'][0]['from']);
@@ -180,23 +181,36 @@ class GeoGraphTest extends TestCase
         $this->assertNotContains('page-b', $contentSlugs);
     }
 
-    public function test_content_seo_resolution_flows_into_graph(): void
+    public function test_indexable_content_flows_into_graph_and_noindex_content_is_excluded(): void
     {
-        $content = \App\Models\Content::create([
+        // 公开单页：进入 geo.json，标题/摘要走统一 Resolution，canonical 为真实落地路径
+        $visible = \App\Models\Content::create([
             'site_id' => $this->site->id, 'type' => 'page', 'slug' => 'about-page',
             'title' => 'About Title', 'summary' => 'About summary',
             'status' => 'published', 'published_at' => now(),
         ]);
-        // P0-B 后 noindex 唯一来源：SeoMeta
+        // noindex 唯一来源 SeoMeta：noindex 内容不得进入公开图谱（Public Render Contract）
+        $hidden = \App\Models\Content::create([
+            'site_id' => $this->site->id, 'type' => 'page', 'slug' => 'hidden-page',
+            'title' => 'Hidden Title', 'summary' => 'Hidden summary',
+            'status' => 'published', 'published_at' => now(),
+        ]);
         \App\Models\SeoMeta::create([
-            'site_id' => $this->site->id, 'content_id' => $content->id, 'noindex' => true,
+            'site_id' => $this->site->id, 'content_id' => $hidden->id, 'noindex' => true,
         ]);
 
-        $node = collect($this->graph()['contents'])->firstWhere('slug', 'about-page');
+        $contents = $this->graph()['contents'];
+        $slugs = array_column($contents, 'slug');
 
+        $this->assertContains('about-page', $slugs);
+        $this->assertNotContains('hidden-page', $slugs, 'noindex 内容不得进入 /geo.json');
+
+        $node = collect($contents)->firstWhere('slug', 'about-page');
         $this->assertSame('About Title', $node['title'], '内容标题走统一 Resolution 链');
         $this->assertSame('About summary', $node['description']);
-        $this->assertTrue($node['noindex'], 'noindex 必须显式暴露给机器消费方');
-        $this->assertSame('https://example.com/page/about-page', $node['canonical']);
+        $this->assertFalse($node['noindex']);
+        // 无栏目单页真实落地路径为 /{slug}（catch-all 渲染），不再是旧的 /page/{slug}
+        $this->assertSame('https://example.com/about-page', $node['canonical']);
+        $this->assertSame('https://example.com/about-page', $node['url']);
     }
 }

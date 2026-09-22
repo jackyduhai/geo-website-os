@@ -138,7 +138,9 @@ class SchemaJsonLdTest extends TestCase
         $this->assertSame($expectedSchemaType, $schema['@type']);
         $this->assertSame('Entity ' . ucfirst($type), $schema['name']);
         $this->assertSame('Entity summary text', $schema['description']);
-        $this->assertSame('https://example.com/' . $type . '/entity-' . $type, $schema['url']);
+        // dataProvider 六类实体此处均无 Catalog 落地页（非 core 产品 / 无场景服务 / 组织人物等），
+        // Schema 不得输出会 404 的 url；@id 仍为稳定绝对 URI（Public Render Contract）。
+        $this->assertArrayNotHasKey('url', $schema);
         $this->assertSame('zh-CN', $schema['inLanguage']);
         $this->assertStringStartsWith('https://', $schema['@id']);
     }

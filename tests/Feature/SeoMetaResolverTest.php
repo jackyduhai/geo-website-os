@@ -476,7 +476,8 @@ class SeoMetaResolverTest extends TestCase
         $resolver = app(SeoMetaResolver::class);
         $result = $resolver->resolveContent($content);
 
-        $this->assertEquals('https://example.com/article/test-slug', $result->canonical);
+        // 无栏目文章真实落地路径为 /{slug}（Content::path 无栏目前缀），不再是旧 /article/{slug}
+        $this->assertEquals('https://example.com/test-slug', $result->canonical);
     }
 
     public function test_entity_canonical_no_trailing_slash(): void
@@ -491,18 +492,29 @@ class SeoMetaResolverTest extends TestCase
 
         SiteContext::setSite($site);
 
+        // Catalog 目录以 organization 为前提：无组织主体的站点产品页前台即 404，
+        // PublicUrl 据此不输出 URL（与前台契约一致）。故先建组织主体再建核心产品。
+        Entity::create([
+            'site_id' => $site->id,
+            'type' => 'organization',
+            'slug' => 'test-org',
+            'name' => 'Test Org',
+            'status' => 'published',
+        ]);
+        // 仅核心产品（Catalog core 标志）有真实落地页 /products/{slug}（PublicUrl 裁决）
         $entity = Entity::create([
             'site_id' => $site->id,
             'type' => 'product',
             'slug' => 'test-product',
             'name' => 'Test Product',
             'status' => 'published',
+            'metadata' => ['core' => true],
         ]);
 
         $resolver = app(SeoMetaResolver::class);
         $result = $resolver->resolveEntity($entity);
 
-        $this->assertEquals('https://example.com/product/test-product', $result->canonical);
+        $this->assertEquals('https://example.com/products/test-product', $result->canonical);
     }
 
     public function test_canonical_always_https(): void
