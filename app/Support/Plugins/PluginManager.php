@@ -53,12 +53,14 @@ class PluginManager
             }
             $slug = basename(dirname($manifestPath));
             $plugins[$slug] = [
-                'slug'        => $slug,
-                'name'        => (string) $manifest['name'],
-                'version'     => (string) ($manifest['version'] ?? '0.0.0'),
-                'description' => (string) ($manifest['description'] ?? ''),
-                'provider'    => (string) $manifest['provider'],
-                'path'        => dirname($manifestPath),
+                'slug'         => $slug,
+                'name'         => (string) $manifest['name'],
+                'version'      => (string) ($manifest['version'] ?? '0.0.0'),
+                'description'  => (string) ($manifest['description'] ?? ''),
+                'provider'     => (string) $manifest['provider'],
+                'path'         => dirname($manifestPath),
+                'dependencies' => array_values(array_map('strval', (array) ($manifest['dependencies'] ?? []))),
+                'capabilities' => array_values(array_map('strval', (array) ($manifest['capabilities'] ?? []))),
             ];
         }
         ksort($plugins);
@@ -101,13 +103,22 @@ class PluginManager
      */
     public static function enable(string $slug): bool
     {
-        if (! self::exists($slug) || self::isEnabled($slug)) {
-            return self::isEnabled($slug);
+        if (! self::exists($slug)) {
+            return false;
+        }
+        if (self::isEnabled($slug)) {
+            return true;
+        }
+
+        // 依赖闸门（P-STEP 17E）：依赖插件未安装或未在本站启用时拒绝启用，直接返回
+        // false、不写设置，因此不会留下「半启用」状态；UI 据此回友好提示。
+        if (self::dependencyBlockers($slug) !== []) {
+            return false;
         }
 
         $list = self::enabled();
         $list[] = $slug;
-        Setting::set(self::SETTINGS_KEY, json_encode(array_values($list)));
+        Setting::set(self::SETTINGS_KEY, json_encode(array_values(array_unique($list))));
         self::$enabledMemo = null;
 
         return true;
@@ -121,6 +132,99 @@ class PluginManager
         self::$enabledMemo = null;
 
         return true;
+    }
+
+    /**
+     * 计算某插件在「当前站点」启用前尚未满足的依赖（P-STEP 17E）。
+     *
+     * 依赖声明在 plugin.json 的 `dependencies`（插件 slug 数组，默认空）。
+     * 返回 [依赖 slug => 原因]；为空表示依赖已满足（已安装且在本站启用）。
+     * 运行时闸门仍是 {@see \App\Http\Middleware\EnsurePluginEnabled}，这里只做
+     * 启用前的前置校验与 UI 提示，不替代运行时守卫。
+     *
+     * @return array<string,string>
+     */
+    public static function dependencyBlockers(string $slug): array
+    {
+        $plugins = self::all();
+        if (! isset($plugins[$slug])) {
+            return [$slug => '插件未安装'];
+        }
+
+        $blockers = [];
+        foreach ($plugins[$slug]['dependencies'] as $dep) {
+            if (! self::exists($dep)) {
+                $blockers[$dep] = "依赖插件「{$dep}」未安装";
+            } elseif (! self::isEnabled($dep)) {
+                $blockers[$dep] = "依赖插件「{$dep}」尚未在当前站点启用";
+            }
+        }
+
+        return $blockers;
+    }
+
+    /**
+     * 当前站点已启用、且依赖于 $slug 的插件（停用前置保护，P-STEP 17E）。
+     * 返回 [插件 slug => 显示名]；非空时调用方应拒绝停用 $slug，避免把依赖方留在失效态。
+     *
+     * @return array<string,string>
+     */
+    public static function enabledDependents(string $slug): array
+    {
+        $plugins = self::all();
+        $out = [];
+        foreach (self::enabled() as $enabled) {
+            if ($enabled === $slug || ! isset($plugins[$enabled])) {
+                continue;
+            }
+            if (in_array($slug, $plugins[$enabled]['dependencies'], true)) {
+                $out[$enabled] = $plugins[$enabled]['name'];
+            }
+        }
+
+        return $out;
+    }
+
+    /**
+     * 发现「已放置目录但清单无效」的插件（P-STEP 17E）。
+     *
+     * 这些目录不会进入 {@see all()}（因此不会注册、不可启用），后台只读告警，
+     * 避免运营以为插件已安装。返回 [目录名 => 原因]。
+     *
+     * @return array<string,string>
+     */
+    public static function invalidPlugins(): array
+    {
+        $out = [];
+        $base = self::basePath();
+        if (! is_dir($base)) {
+            return [];
+        }
+
+        $valid = self::all();
+        foreach (glob($base . '/*', GLOB_ONLYDIR) ?: [] as $dir) {
+            $slug = basename($dir);
+            if (array_key_exists($slug, $valid)) {
+                continue;
+            }
+            $manifestPath = $dir . '/plugin.json';
+            if (! is_file($manifestPath)) {
+                $out[$slug] = '缺少 plugin.json 清单文件';
+                continue;
+            }
+            $manifest = json_decode((string) file_get_contents($manifestPath), true);
+            if (! is_array($manifest)) {
+                $out[$slug] = 'plugin.json 不是合法 JSON';
+            } elseif (empty($manifest['name'])) {
+                $out[$slug] = 'plugin.json 缺少 name 字段';
+            } elseif (empty($manifest['provider'])) {
+                $out[$slug] = 'plugin.json 缺少 provider 字段';
+            } else {
+                $out[$slug] = '插件清单无效';
+            }
+        }
+
+        return $out;
     }
 
     /**

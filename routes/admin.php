@@ -14,10 +14,12 @@ use App\Http\Controllers\Admin\InquiryController;
 use App\Http\Controllers\Admin\MediaController;
 use App\Http\Controllers\Admin\MenuController;
 use App\Http\Controllers\Admin\NarrativeController;
+use App\Http\Controllers\Admin\PluginController;
 use App\Http\Controllers\Admin\RedirectController;
 use App\Http\Controllers\Admin\SeoMetaController;
 use App\Http\Controllers\Admin\SettingController;
 use App\Http\Controllers\Admin\SiteController;
+use App\Http\Controllers\Admin\ThemeController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -153,6 +155,19 @@ Route::middleware(['admin.auth', 'admin.site'])->group(function () {
     Route::post('redirects', [RedirectController::class, 'store'])->name('redirects.store');
     Route::put('redirects/{redirect}', [RedirectController::class, 'update'])->name('redirects.update');
     Route::delete('redirects/{redirect}', [RedirectController::class, 'destroy'])->name('redirects.destroy');
+
+    // ---------- 外观与扩展：主题 / 插件（per-site；文件资源只激活 / 启停，不上传） ----------
+    Route::get('themes', [ThemeController::class, 'index'])->name('themes.index');
+    Route::post('themes/{name}/activate', [ThemeController::class, 'activate'])
+        ->where('name', '[a-z0-9\-]+')->name('themes.activate');
+    Route::get('themes/{name}/preview', [ThemeController::class, 'preview'])
+        ->where('name', '[a-z0-9\-]+')->name('themes.preview');
+
+    Route::get('plugins', [PluginController::class, 'index'])->name('plugins.index');
+    Route::post('plugins/{slug}/enable', [PluginController::class, 'enable'])
+        ->where('slug', '[a-z0-9\-]+')->name('plugins.enable');
+    Route::post('plugins/{slug}/disable', [PluginController::class, 'disable'])
+        ->where('slug', '[a-z0-9\-]+')->name('plugins.disable');
 
     // ---------- 站点设置 ----------
     Route::get('settings/{group?}', [SettingController::class, 'index'])

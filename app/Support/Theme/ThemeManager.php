@@ -25,9 +25,22 @@ class ThemeManager
 
     private static ?string $activeMemo = null;
 
-    /** 当前激活主题名（缺省 / 未知 → default） */
+    /**
+     * 请求级「预览主题」覆盖（P-STEP 17E）。
+     * 非 null 时 active() 返回该主题，但**不写入站点设置、不改变激活态**，
+     * 仅供后台「预览」在当前请求内临时以指定主题渲染；preview() 用 try/finally
+     * 保证退出时复位，不向后续请求泄漏（与 RequestScopedState 同纪律）。
+     */
+    private static ?string $previewName = null;
+
+    /** 当前激活主题名（缺省 / 未知 → default；预览请求内返回预览主题） */
     public static function active(): string
     {
+        // 预览覆盖优先：直接返回、不写入激活 memo（避免预览名在复位后残留）。
+        if (self::$previewName !== null) {
+            return self::exists(self::$previewName) ? self::$previewName : self::DEFAULT_THEME;
+        }
+
         if (self::$activeMemo !== null) {
             return self::$activeMemo;
         }
@@ -56,9 +69,11 @@ class ThemeManager
             }
             $name = basename(dirname($manifestPath));
             $themes[$name] = [
-                'name'        => (string) $manifest['name'],
-                'version'     => (string) ($manifest['version'] ?? '0.0.0'),
-                'description' => (string) ($manifest['description'] ?? ''),
+                'name'         => (string) $manifest['name'],
+                'slug'         => $name,
+                'version'      => (string) ($manifest['version'] ?? '0.0.0'),
+                'description'  => (string) ($manifest['description'] ?? ''),
+                'capabilities' => array_values(array_map('strval', (array) ($manifest['capabilities'] ?? []))),
             ];
         }
 
@@ -122,6 +137,73 @@ class ThemeManager
     public static function resetRequestMemo(): void
     {
         self::$activeMemo = null;
+    }
+
+    /**
+     * 在当前调用栈内临时以指定主题渲染（P-STEP 17E 后台预览）。
+     *
+     * 仅设置请求级 {@see $previewName} 并重注册查找器，**不写站点设置、不改激活态**；
+     * 回调（通常是一次前台首页的内部子请求）返回后，try/finally 复位覆盖并重注册，
+     * 因此预览不会泄漏到激活态或后续请求。主题不存在时由调用方先 {@see exists()} 拦截。
+     *
+     * @template T
+     * @param  callable():T  $callback
+     * @return T
+     */
+    public static function preview(string $name, callable $callback): mixed
+    {
+        $previous = self::$previewName;
+        self::$previewName = $name;
+        self::$activeMemo = null;
+        self::register();
+
+        try {
+            return $callback();
+        } finally {
+            self::$previewName = $previous;
+            self::$activeMemo = null;
+            self::register();
+        }
+    }
+
+    /**
+     * 发现「已放置目录但清单无效」的主题（P-STEP 17E）。
+     *
+     * 这些目录不会进入 {@see all()}（因此不可激活），但后台需要可见地告警，
+     * 避免运营以为主题已安装却找不到。返回 [目录名 => 原因]，全部只读、不可激活。
+     *
+     * @return array<string,string>
+     */
+    public static function invalidThemes(): array
+    {
+        $out = [];
+        $base = self::basePath();
+        if (! is_dir($base)) {
+            return [];
+        }
+
+        $valid = self::all();
+        foreach (glob($base . '/*', GLOB_ONLYDIR) ?: [] as $dir) {
+            $slug = basename($dir);
+            if (array_key_exists($slug, $valid)) {
+                continue;
+            }
+            $manifestPath = $dir . '/theme.json';
+            if (! is_file($manifestPath)) {
+                $out[$slug] = '缺少 theme.json 清单文件';
+                continue;
+            }
+            $manifest = json_decode((string) file_get_contents($manifestPath), true);
+            if (! is_array($manifest)) {
+                $out[$slug] = 'theme.json 不是合法 JSON';
+            } elseif (empty($manifest['name'])) {
+                $out[$slug] = 'theme.json 缺少 name 字段';
+            } else {
+                $out[$slug] = '主题清单无效';
+            }
+        }
+
+        return $out;
     }
 
     private static function basePath(): string

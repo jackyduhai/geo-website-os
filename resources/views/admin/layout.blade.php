@@ -44,6 +44,10 @@
         ['GEOFlow 对接', $settingsGroup==='sync', route('admin.settings.index','sync')],
         ['同步日志', $is('admin.geo.sync-logs'), route('admin.geo.sync-logs')],
     ]],
+    ['label'=>'外观与扩展','icon'=>'template','links'=>[
+        ['主题管理', str_starts_with($routeName,'admin.themes'), route('admin.themes.index')],
+        ['插件管理', str_starts_with($routeName,'admin.plugins'), route('admin.plugins.index')],
+    ]],
     ['label'=>'站点设置','icon'=>'settings','links'=>[
         ['公司基础信息', $settingsGroup==='general', route('admin.settings.index','general')],
         ['联系方式', $settingsGroup==='contact', route('admin.settings.index','contact')],
