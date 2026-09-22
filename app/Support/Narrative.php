@@ -161,9 +161,9 @@ class Narrative
             'group' => '工厂与资质', 'key' => 'factory.lead',
             'label' => '工厂与资质 · 页头导语', 'url' => url('/factory/'),
             'location' => '工厂页：页头导语（数据条、生产车间、流程、资质为锁定数据）',
-            'default_summary' => $workshopNames . '，' . count(Catalog::workshops())
-                . '个车间都在自己厂里。不外包，不做贸易。'
-                . ($company['established_production_display'] ?? '') . '全面投产。',
+            'default_summary' => $workshopNames !== ''
+                ? $workshopNames . '等' . count(Catalog::workshops()) . '处自有生产设施，具备稳定的生产与交付能力。'
+                : '具备稳定的生产与交付能力。',
         ];
 
         // ---------- 合作方式 ----------

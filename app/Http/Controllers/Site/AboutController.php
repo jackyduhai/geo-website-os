@@ -36,6 +36,13 @@ class AboutController extends Controller
             $bodyHtml = Narrative::html('about.profile', $defaultHtml);
         }
 
+        // 发展历程节点：config 未内置时从站点事实（成立 / 投产时间）数据驱动生成，
+        // 出厂不内置任何虚构年份或行业节点。
+        $nodes = $copy['nodes'] ?? [];
+        if ($page === 'history' && empty($nodes)) {
+            $nodes = $this->historyNodesFromFacts($company);
+        }
+
         $titles = [
             'profile' => '企业简介',
             'history' => '发展历程',
@@ -77,19 +84,38 @@ class AboutController extends Controller
             'pageKey' => $page,
             'lead'    => $lead,
             'bodyHtml' => $bodyHtml,
+            'nodes'   => $nodes,
             'schemas' => array_values(array_filter([
                 $schema->organization(),
                 $schema->breadcrumb($crumbs),
             ])),
             'seo' => [
                 'title'       => $titles[$page] . '｜' . ($company['name'] ?? ''),
-                'description' => $copy['meta_desc'] ?? (($company['name'] ?? '') . '，'
-                    . ($company['industry'] ?? '') . '领域制造商，自有厂区与生产车间，'
-                    . '提供配方定制研发与 OEM / ODM 代工。'),
+                'description' => $copy['meta_desc']
+                    ?? ('了解' . ($company['name'] ?? '') . '的企业概况、产品与服务。'),
                 'canonical'   => url('/about/' . $page . '/'),
                 'noindex'     => false,
                 'type'        => 'website',
             ],
         ]);
+    }
+
+    /**
+     * 从站点事实生成发展历程节点（成立 / 生产基地投产），行业中立、数据驱动。
+     *
+     * @param  array<string,mixed>  $company
+     * @return array<int,array{time:string,title:string,desc:string}>
+     */
+    private function historyNodesFromFacts(array $company): array
+    {
+        $nodes = [];
+        if (! empty($company['founded_display'])) {
+            $nodes[] = ['time' => $company['founded_display'], 'title' => '公司成立', 'desc' => '公司注册成立，开始正式运营。'];
+        }
+        if (! empty($company['established_production_display'])) {
+            $nodes[] = ['time' => $company['established_production_display'], 'title' => '生产基地投产', 'desc' => '生产或服务能力建成并投入使用。'];
+        }
+
+        return $nodes;
     }
 }

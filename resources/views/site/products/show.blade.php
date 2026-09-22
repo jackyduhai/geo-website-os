@@ -4,9 +4,9 @@
 
 @php
   $specRows = collect([
-      ['规格 / 净重', $product['net_weight'] ?? null],
+      ['规格 / 型号', $product['net_weight'] ?? null],
       ['包装形式', $product['packaging'] ?? null],
-      ['保质期', $product['shelf_life'] ?? null],
+      ['质保期 / 有效期', $product['shelf_life'] ?? null],
       ['储存条件', $product['storage'] ?? null],
       ['起订量', $product['moq'] ?? null],
   ])->filter(fn ($r) => filled($r[1]))->values()->all();
@@ -33,8 +33,8 @@
         </div>
       @endif
       <div class="actions" style="margin-top:26px">
-        <a class="btn btn-primary btn-lg" href="{{ url('/') }}#s08">{{ $ctaText ?? '免费获取样品' }}<span class="arr">→</span></a>
-        <a class="btn btn-secondary btn-lg" href="{{ url('/cooperation/') }}">获取定制方案</a>
+        <a class="btn btn-primary btn-lg" href="{{ url('/') }}#s08">{{ $ctaText ?? '联系我们' }}<span class="arr">→</span></a>
+        <a class="btn btn-secondary btn-lg" href="{{ url('/contact/') }}">联系我们</a>
       </div>
     </div>
     @if(!empty($product['key_params']))
@@ -46,13 +46,13 @@
   </div>
 </section>
 
-{{-- 2. 使用工艺（HowTo 可视化） --}}
+{{-- 2. 使用步骤（HowTo 可视化） --}}
 @if(!empty($processSteps))
 <section class="sec sec-tint">
   <div class="wrap">
     <div class="sec-head">
-      <span class="eyebrow">PROCESS · 使用工艺</span>
-      <h2 class="sec-h">标准化使用步骤，产线照着就能做</h2>
+      <span class="eyebrow">PROCESS · 使用说明</span>
+      <h2 class="sec-h">标准化使用步骤</h2>
     </div>
     @include('site._process_steps', ['steps' => $processSteps])
   </div>
@@ -79,19 +79,12 @@
 </section>
 @endif
 
-{{-- 4. 规格与交付（全部缺省则整块隐藏，禁止占位） --}}
+{{-- 4. 规格与交付：仅有实际规格数据时渲染，无数据不输出占位 / 营销话术 --}}
 @if(!empty($specRows))
 <section class="sec sec-tint">
   <div class="wrap-narrow">
     <div class="sec-head"><span class="eyebrow">SPEC · 规格与交付</span><h2 class="sec-h">规格、包装与起订</h2></div>
     @include('site._param_table', ['rows' => $specRows])
-  </div>
-</section>
-@else
-<section class="sec sec-tint">
-  <div class="wrap-narrow">
-    <div class="sec-head"><span class="eyebrow">SPEC · 起订与交付</span><h2 class="sec-h">按你的用量与规格报价</h2></div>
-    <p class="prose">不同品类、规格与包装形式的起订量不同。说清你的预计用量、目标参数与包装需求，我们按你的实际情况给出报价与排期，并可先寄样、打样，确认后再量产。</p>
   </div>
 </section>
 @endif

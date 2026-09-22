@@ -120,6 +120,27 @@ class PageCacheTest extends TestCase
         $this->assertEmpty($admin->headers->get('X-Page-Cache'), '后台不应被整页缓存');
     }
 
+    public function test_cache_key_distinguishes_same_host_different_port(): void
+    {
+        // P-STEP 18B：同主机不同端口是不同 origin（本地并排跑空站 / Demo 两个实例时
+        // 实测串过整页 shell）。缓存键必须含端口，否则两实例正文与 canonical 互串。
+        $port8096 = Request::create('http://127.0.0.1:8096/', 'GET');
+        $port8097 = Request::create('http://127.0.0.1:8097/', 'GET');
+        $this->assertNotSame(
+            PageCache::keyFor($port8096),
+            PageCache::keyFor($port8097),
+            '同主机不同端口必须产生不同缓存键'
+        );
+
+        // 同 origin 仅投放参数不同仍共享一份缓存（不产生重复副本）
+        $plain = Request::create('http://a.test/', 'GET');
+        $utm   = Request::create('http://a.test/?utm_source=baidu', 'GET');
+        $this->assertSame(PageCache::keyFor($plain), PageCache::keyFor($utm));
+
+        // 不同域名（生产多站）依旧分区
+        $hostB = Request::create('http://b.test/', 'GET');
+        $this->assertNotSame(PageCache::keyFor($plain), PageCache::keyFor($hostB));
+    }
     public function test_utm_does_not_duplicate_cache_and_is_personalized(): void
     {
         $a = $this->get('/?utm_source=baidu');

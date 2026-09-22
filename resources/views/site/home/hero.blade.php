@@ -16,15 +16,29 @@
   $heroCustomers = implode('、', array_slice($company['target_customers'] ?? [], 0, 3));
   $heroBrand = $company['brand'] ?? ($company['name'] ?? config('app.name'));
   $heroCapacity = number_format((int) ($company['annual_capacity_tons'] ?? 0));
-  $defaultKicker = $heroBrand . ($heroYears > 0 ? ' · 深耕行业 ' . $heroYears . ' 年' : ' · 源头制造工厂');
+  $defaultKicker = $heroBrand . ($heroYears > 0 ? ' · 深耕行业 ' . $heroYears . ' 年' : '');
 
-  $defaultTitle = $heroBrand . '，从研发到量产的一站式定制制造';
+  // 行业中立兜底：标题默认即品牌 / 站点名，不内置任何行业话术。
+  $defaultTitle = $heroBrand . ' 官方网站';
   $heroTitle = $blk->title ?? null;
   if (blank($heroTitle) || trim((string) $heroTitle) === trim((string) $siteName)) {
       $heroTitle = $defaultTitle;
   }
-  // A/C 共用说明正文：后台「首页装修」可编辑，留空回退由 Catalog 派生的默认口径
-  $defaultLead = '自有约 ' . number_format((int) ($company['area_sqm'] ?? 0)) . ' ㎡ 厂区、' . $heroWsCount . ' 个生产车间，年产能约 ' . $heroCapacity . ' 吨。为' . $heroCustomers . '等客户提供定制研发、OEM / ODM 代工与稳定供货，销售覆盖全国 ' . $heroRegionCount . ' 大区域。';
+  // A/C 共用说明正文：后台「首页装修」可编辑；留空时仅在站点确实提供了相应 Catalog
+  // 数据时才逐段拼接（场地 / 设施 / 产能 / 客户 / 区域），绝不裸输出 0；没有任何数据时
+  // 回退站点简介，或一句行业中立欢迎语。
+  $leadParts = [];
+  $heroArea = (int) ($company['area_sqm'] ?? 0);
+  $heroCapacityTons = (int) ($company['annual_capacity_tons'] ?? 0);
+  if ($heroArea > 0) { $leadParts[] = '自有约 ' . number_format($heroArea) . ' ㎡ 场地'; }
+  if ($heroWsCount > 0) { $leadParts[] = $heroWsCount . ' 个生产设施'; }
+  if ($heroCapacityTons > 0) { $leadParts[] = '年产能约 ' . number_format($heroCapacityTons) . ' 吨'; }
+  if ($heroCustomers !== '') { $leadParts[] = '为' . $heroCustomers . '等客户提供产品与服务'; }
+  if ($heroRegionCount > 0) { $leadParts[] = '销售覆盖全国 ' . $heroRegionCount . ' 大区域'; }
+  $blankLead = trim((string) ($siteSettings['site_description'] ?? '')) !== ''
+      ? trim((string) $siteSettings['site_description'])
+      : '欢迎访问' . $heroBrand . '官网，在这里了解我们的产品、方案与服务。';
+  $defaultLead = $leadParts !== [] ? implode('，', $leadParts) . '。' : $blankLead;
   $heroLead = trim((string) ($blkCfg['lead'] ?? '')) !== '' ? trim((string) $blkCfg['lead']) : $defaultLead;
 
   // B 模式可用 Banner：必须有图；控制器已按启用 + 投放位置=home_top 过滤
@@ -91,7 +105,7 @@
                     <a class="btn btn-primary btn-lg" href="{{ $href }}" @if($bBlank) target="_blank" rel="noopener" @endif>
                       {{ $bLinkText }}<span class="arr">→</span>
                     </a>
-                    <a class="btn btn-ghost btn-lg" href="{{ url('/cooperation/') }}">获取定制方案</a>
+                    <a class="btn btn-ghost btn-lg" href="{{ url('/contact/') }}">联系我们</a>
                   </div>
                 @endif
               </div>
@@ -137,7 +151,7 @@
   {{-- ============================ C · 一体化主视觉：一张图=一个主题，图文按钮一起交叉淡入 ============================ --}}
   @php
     $cCount = $hbList->count();
-    $defaultCta = $ctaText ?? (config('copy.nav.cta') ?? '免费获取样品');
+    $defaultCta = $ctaText ?? (config('copy.nav.cta') ?? '联系我们');
     // 逐幻灯解析：标题/正文/按钮各自独立，留空回退默认口径（整页唯一 H1 取第一张）
     $cSlides = $hbList->map(function ($cb, $ci) use ($heroTitle, $heroLead, $defaultCta) {
         $t = trim((string) ($cb->title ?? ''));
@@ -186,7 +200,7 @@
                 <p class="hi-lead">{{ $cs['lead'] }}</p>
                 <div class="hi-actions">
                   <a class="btn btn-primary btn-lg" href="{{ $cs['href'] }}">{{ $cs['cta'] }}<span class="arr">→</span></a>
-                  <a class="btn hi-ghost btn-lg" href="{{ url('/cooperation/') }}">获取定制方案</a>
+                  <a class="btn hi-ghost btn-lg" href="{{ url('/contact/') }}">联系我们</a>
                   @if(!empty($navPhone))
                     <a class="hi-tel" href="tel:{{ $navPhoneTel }}">致电 {{ $navPhone }}</a>
                   @endif
@@ -196,8 +210,12 @@
           </div>
           <ul class="hi-trust">
             <li>@include('site._icon', ['name' => 'clock', 'size' => 16]) {{ $heroYears > 0 ? '深耕行业 ' . $heroYears . ' 年' : '多年行业经验' }}</li>
-            <li>@include('site._icon', ['name' => 'sliders', 'size' => 16]) 定向研发 · 快速打样</li>
-            <li>@include('site._icon', ['name' => 'factory', 'size' => 16]) {{ $heroWsCount }} 个车间 · 年产能约 {{ $heroCapacity }} 吨</li>
+            <li>@include('site._icon', ['name' => 'sliders', 'size' => 16]) 按需定制 · 快速响应</li>
+            @if($heroWsCount > 0 || $heroCapacityTons > 0)
+              <li>@include('site._icon', ['name' => 'factory', 'size' => 16]) {{ $heroWsCount }} 个生产设施 · 年产能约 {{ $heroCapacity }} 吨</li>
+            @else
+              <li>@include('site._icon', ['name' => 'shield', 'size' => 16]) 品质可靠 · 用心服务</li>
+            @endif
           </ul>
         </div>
       </div>
@@ -243,24 +261,29 @@
         <h1 class="hero-title">{{ $heroTitle }}</h1>
         <p class="hero-lead">{{ $heroLead }}</p>
         <div class="actions">
-          <a class="btn btn-primary btn-lg" href="{{ url('/') }}#s08">{{ $ctaText ?? (config('copy.nav.cta') ?? '免费获取样品') }}<span class="arr">→</span></a>
-          <a class="btn btn-secondary btn-lg" href="{{ url('/cooperation/') }}">获取定制方案</a>
+          <a class="btn btn-primary btn-lg" href="{{ url('/') }}#s08">{{ $ctaText ?? (config('copy.nav.cta') ?? '联系我们') }}<span class="arr">→</span></a>
+          <a class="btn btn-secondary btn-lg" href="{{ url('/contact/') }}">联系我们</a>
           @if(!empty($navPhone))
             <a class="btn-text btn-lg" href="tel:{{ $navPhoneTel }}">致电 {{ $navPhone }}</a>
           @endif
         </div>
         <ul class="hero-trust">
           <li>@include('site._icon', ['name' => 'clock', 'size' => 16]) {{ $heroYears > 0 ? '深耕行业 ' . $heroYears . ' 年' : '多年行业经验' }}</li>
-          <li>@include('site._icon', ['name' => 'sliders', 'size' => 16]) 定向研发 · 快速打样</li>
-          <li>@include('site._icon', ['name' => 'factory', 'size' => 16]) {{ $heroWsCount }} 个车间 · 年产能约 {{ $heroCapacity }} 吨</li>
+          <li>@include('site._icon', ['name' => 'sliders', 'size' => 16]) 按需定制 · 快速响应</li>
+          @if($heroWsCount > 0 || $heroCapacityTons > 0)
+            <li>@include('site._icon', ['name' => 'factory', 'size' => 16]) {{ $heroWsCount }} 个生产设施 · 年产能约 {{ $heroCapacity }} 吨</li>
+          @else
+            <li>@include('site._icon', ['name' => 'shield', 'size' => 16]) 品质可靠 · 用心服务</li>
+          @endif
         </ul>
       </div>
       <div class="hero-visual">
+        @if(!empty($heroParams) || count($lines) > 0)
         @php $pcName = $heroProduct['short_name'] ?? ($heroProduct['name'] ?? ''); @endphp
         <div class="param-card" aria-label="标准化参数示例{{ $pcName !== '' ? '：' . $pcName : '' }}">
           <div class="pc-head">
             <strong>标准化参数示例{{ $pcName !== '' ? ' · ' . $pcName : '' }}</strong>
-            <span>工艺参数，产线可直接复现</span>
+            <span>典型参数示例，仅供参考</span>
           </div>
           <dl class="pc-body">
             @forelse($heroParams ?? [] as $hp)
@@ -275,9 +298,10 @@
                 <em>{{ is_array($line) ? ($line['name'] ?? '') : $line->name }}</em>
               @endforeach
             </div>
-            <a href="{{ url('/solutions/') }}">按应用场景选产品 <span class="arr">→</span></a>
+            <a href="{{ url('/solutions/') }}">浏览应用场景 <span class="arr">→</span></a>
           </div>
         </div>
+        @endif
       </div>
     </div>
   </section>

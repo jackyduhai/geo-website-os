@@ -58,12 +58,20 @@ class PageCache
         $store->forever(SiteCacheKey::pagecacheVersion(), self::version() + 1);
     }
 
-    /** 仅以「主机 + 规范路径」为键；UTM 等投放参数不产生重复副本。 */
+    /**
+     * 以「主机(含端口) + 规范路径」为键；UTM 等投放参数不产生重复副本。
+     *
+     * 必须包含端口：HTTP origin = host + port，同一主机不同端口（本地多实例并排
+     * 验证、或同机非标端口反代的不同站点）属于不同来源。若只用 getHost()，两个
+     * 端口的实例会命中同一份整页 shell，导致 Demo 站首页返回空站正文、canonical
+     * 指向另一端口（P-STEP 18B 实测）。标准 80/443 端口 HTTP_HOST 不含端口，
+     * 生产按域名分区的行为不变。
+     */
     public static function keyFor(Request $request): string
     {
         $path = '/'.ltrim($request->path(), '/');
 
-        return self::KEY_PREFIX.self::version().':'.sha1($request->getHost().$path);
+        return self::KEY_PREFIX.self::version().':'.sha1($request->getHttpHost().$path);
     }
 
     public static function get(Request $request): ?string

@@ -9,15 +9,20 @@
   @forelse($blocks as $blk)
     @includeIf('site.home.' . $blk->type, ['blk' => $blk])
   @empty
+    @php
+      $blankName = $siteSettings['site_name'] ?? config('app.name');
+      $blankDesc = trim((string) ($siteSettings['site_description'] ?? ''));
+    @endphp
     <section class="section"><div class="wrap">
-      <span class="eyebrow">源头工厂 · 定制制造</span>
-      <h1>{{ $siteSettings['site_name'] ?? config('app.name') }}</h1>
-      <p>{{ $siteSettings['site_description'] ?? '' }}</p>
-      @if(! empty(\App\Support\Catalog::company()))
-      <div class="hero-actions">
-        <a class="btn" href="{{ url('/contact/') }}">业务与打样咨询<span class="arr">→</span></a>
+      <span class="eyebrow">{{ config('app.name') }}</span>
+      <h1>{{ $blankName }}</h1>
+      <p>{{ $blankDesc !== '' ? $blankDesc : '站点已就绪。在后台创建内容与实体、完成站点设置并发布后，首页将展示你的信息。' }}</p>
+      <div class="actions">
+        @if(! empty(\App\Support\Catalog::company()))
+          <a class="btn btn-primary" href="{{ url('/contact/') }}">联系我们<span class="arr">→</span></a>
+        @endif
+        <a class="btn" href="{{ url('/knowledge/') }}">浏览内容<span class="arr">→</span></a>
       </div>
-      @endif
     </div></section>
   @endforelse
 @endsection

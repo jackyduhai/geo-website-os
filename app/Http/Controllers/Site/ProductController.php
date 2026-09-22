@@ -95,7 +95,7 @@ class ProductController extends Controller
                 'title'       => '产品中心',
                 'description' => $flatMode
                     ? (trim($brandName) !== '' ? $brandName . '产品中心，展示全部产品。' : '产品中心，展示全部产品。')
-                    : $brandName . '产品体系涵盖' . $lineNames . '，附配比与施工工艺参数，支持配方定制研发与 OEM / ODM 代工。',
+                    : $brandName . '产品体系涵盖' . $lineNames . '，可按系列浏览产品规格与适用场景，如有需求欢迎联系我们。',
                 'canonical'   => url('/products/'),
                 'noindex'     => false,
                 'type'        => 'website',

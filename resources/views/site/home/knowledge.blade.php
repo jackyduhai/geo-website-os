@@ -5,8 +5,8 @@
     <div class="sec-head row">
       <div>
         <span class="eyebrow">KNOWLEDGE · 知识中心</span>
-        <h2 class="sec-h">{{ $blk->title ?: '选型与工艺应用参考' }}</h2>
-        <p class="sec-sub">{{ $blk->subtitle ?: '把选型与工艺经验沉淀为可复用的专业内容，辅助你决策与落地。' }}</p>
+        <h2 class="sec-h">{{ $blk->title ?: '知识与选型参考' }}</h2>
+        <p class="sec-sub">{{ $blk->subtitle ?: '把产品知识与选型经验沉淀为可复用的专业内容，辅助你决策与落地。' }}</p>
       </div>
       <a class="btn-text" href="{{ url('/knowledge/') }}">进入知识中心<span class="arr">→</span></a>
     </div>

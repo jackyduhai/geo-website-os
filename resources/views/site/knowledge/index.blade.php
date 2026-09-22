@@ -8,8 +8,8 @@
 <section class="page-hero">
   <div class="wrap-narrow">
     <span class="eyebrow">KNOWLEDGE · 知识中心</span>
-    <h1 class="ph-h">{{ $active ? ($channels[$active] ?? '知识中心') : '选型、工艺施工与采购合作' }}</h1>
-    <p class="ph-lead">把选型方法、工艺施工与采购合作经验沉淀成可复用的内容，帮你把项目做稳、把出品做稳定。</p>
+    <h1 class="ph-h">{{ $active ? ($channels[$active] ?? '知识中心') : '产品知识、选型指南与常见问题' }}</h1>
+    <p class="ph-lead">沉淀产品知识、选型方法与常见问题，帮助你快速了解我们的产品与服务。</p>
   </div>
 </section>
 

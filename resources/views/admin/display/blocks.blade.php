@@ -79,11 +79,11 @@
           <b class="block mb-2">A · 价值主张文案（右侧参数卡数据来自核定事实，无需配图）</b>
           <label class="fl mb-2">主标题 H1（留空用默认）
             <input type="text" name="title" value="{{ $block->title }}" maxlength="120"
-                   placeholder="从研发到量产的一站式定制制造">
+                   placeholder="一句话主标题">
           </label>
           <label class="fl">说明正文（留空用默认口径）
             <textarea name="hero_lead" rows="3" maxlength="500"
-                      placeholder="自有厂区与生产车间，年产能稳定，为客户提供定制研发、OEM / ODM 代工与稳定供货……">{{ trim((string) ($bcfg['lead'] ?? '')) }}</textarea>
+                      placeholder="一句话说明你的产品与服务优势……">{{ trim((string) ($bcfg['lead'] ?? '')) }}</textarea>
           </label>
         </div>
 
@@ -108,7 +108,7 @@
                       <input type="text" name="slides[{{ $hb->id }}][title]" value="{{ $hb->title }}" maxlength="120" placeholder="留空用默认主标题">
                     </label>
                     <label class="fl">按钮文字
-                      <input type="text" name="slides[{{ $hb->id }}][link_text]" value="{{ $hb->link_text }}" maxlength="40" placeholder="免费获取样品">
+                      <input type="text" name="slides[{{ $hb->id }}][link_text]" value="{{ $hb->link_text }}" maxlength="40" placeholder="联系我们">
                     </label>
                   </div>
                   <label class="fl">这张的正文段落
@@ -116,7 +116,7 @@
                   </label>
                   <div class="grid2">
                     <label class="fl">按钮跳转链接
-                      <input type="text" name="slides[{{ $hb->id }}][link]" value="{{ $hb->link }}" placeholder="/cooperation/ 或 http(s)://，留空默认到获取样品">
+                      <input type="text" name="slides[{{ $hb->id }}][link]" value="{{ $hb->link }}" placeholder="/contact/ 或 http(s)://，留空默认到联系区">
                     </label>
                     <label class="fl">排序
                       <input type="number" name="slides[{{ $hb->id }}][sort]" value="{{ $hb->sort }}">

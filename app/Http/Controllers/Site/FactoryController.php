@@ -35,8 +35,10 @@ class FactoryController extends Controller
         $workshopNames = implode('、', array_map(fn ($w) => $w['name'], $workshops));
 
         // 可运营叙事：页头导语（默认含投产时间，硬数据仍读 facts）
-        $defaultLead = $workshopNames . '，' . count($workshops) . '个车间都在自己厂里。不外包，不做贸易。'
-            . ($company['established_production_display'] ?? '') . '全面投产。';
+        $defaultLead = ($workshopNames !== '' ? $workshopNames . '等' . count($workshops) . '处自有生产设施，' : '')
+            . '具备稳定的生产与交付能力'
+            . (! empty($company['established_production_display']) ? '，' . $company['established_production_display'] . '全面投产' : '')
+            . '。';
         $lead = Narrative::lead('factory.lead', $defaultLead);
 
         // 5 条信任数据（全部源自 facts，不虚构）

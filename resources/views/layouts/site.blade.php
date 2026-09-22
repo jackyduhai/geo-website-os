@@ -1318,7 +1318,7 @@ a.ft-v:hover{color:#fff;}
           <span class="hd-tel-num">{{ $navPhone }}</span>
         </a>
       @endif
-      <a class="btn btn-sm hd-cta" href="{{ url('/') }}#s08">{{ $ctaText ?? (config('copy.nav.cta') ?? '免费获取样品') }}</a>
+      <a class="btn btn-sm hd-cta" href="{{ url('/') }}#s08">{{ $ctaText ?? (config('copy.nav.cta') ?? '联系我们') }}</a>
       <label class="nav-toggle" for="nav-toggle" aria-label="菜单"><span></span><span></span><span></span></label>
     </div>
   </div>

@@ -273,10 +273,11 @@ class SiteIdCoreTablesTest extends TestCase
             $this->assertEquals($total, $site1, "$table: not all rows have site_id=1");
             $this->assertEquals(0, $nullSite, "$table: has NULL site_id");
         }
-        // ContentSeeder creates 3 articles, StructureSeeder creates 2 categories + 6 groups,
+        // ContentSeeder creates 3 knowledge articles + 1 Demo-only about.profile narrative slot
+        // (P-STEP 18B, type=page), StructureSeeder creates 2 categories + 6 groups,
         // FactSeeder creates 23 facts, SettingSeeder (DefaultSettingSeeder + demo overrides) creates 64 settings
         // (P-STEP 17F: RETIRE 4 consumer-less keys + add 2 newly-defined keys)
-        $this->assertEquals(3, Content::withoutGlobalScopes()->count());
+        $this->assertEquals(4, Content::withoutGlobalScopes()->count()); // 3 articles + 1 about.profile slot
         $this->assertEquals(2, Category::count());
         $this->assertEquals(6, Group::count());
         $this->assertEquals(23, Fact::count());

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
 use App\Models\Site;
+use App\Support\PageCache;
 use App\Support\RequestScopedState;
 use App\Support\SiteContext;
 use Illuminate\Http\RedirectResponse;
@@ -29,6 +30,13 @@ class SiteController extends Controller
      * 系统日志类表：记录的是操作痕迹而非业务数据，不作为删除站点的阻塞项。
      */
     private const SYSTEM_TABLES = ['audit_logs', 'sync_logs'];
+
+    /**
+     * 站点附属配置表：随站点生命周期创建 / 删除，不属于“业务内容”，
+     * 不参与删除保护计数（TD-12 后每个站点保存即镜像 settings.site_name，
+     * 若计入保护，任何刚创建的空站都会因自带配置行而无法删除）。
+     */
+    private const CONFIG_TABLES = ['settings'];
 
     public function index(): View
     {
@@ -65,6 +73,8 @@ class SiteController extends Controller
             return $site;
         });
 
+        // 站点名称 / 域名等变更影响全站静态 HTML 与设置缓存，统一失效。
+        PageCache::flush();
         AuditLog::record('site.created', '新建站点：' . $site->name, [], 'site', $site->id);
 
         return redirect()->route('admin.sites.index')->with('success', '站点已创建');
@@ -89,6 +99,8 @@ class SiteController extends Controller
             }
         });
 
+        // 站点名称 / 域名等变更影响全站静态 HTML 与设置缓存，统一失效。
+        PageCache::flush();
         AuditLog::record('site.updated', '更新站点：' . $site->name, [], 'site', $site->id);
 
         return redirect()->route('admin.sites.index')->with('success', '站点已更新');
@@ -108,7 +120,14 @@ class SiteController extends Controller
         }
 
         $name = $site->name;
-        $site->delete();
+        // settings 是站点附属配置（含 TD-12 镜像的 site_name），不是业务内容；
+        // 业务表已由 resourceCounts 确认全空，这里随站点一并清除配置，
+        // 否则 settings -> sites 的 RESTRICT 外键会阻止删除。
+        DB::transaction(function () use ($site): void {
+            DB::table('settings')->where('site_id', $site->id)->delete();
+            $site->delete();
+        });
+        \App\Models\Setting::flush();
 
         // 删除的正是后台当前管理站点时，回到默认上下文，避免 session 指向不存在的站点。
         if ($request->session()->get('admin_site_slug') === $site->slug) {
@@ -239,8 +258,14 @@ class SiteController extends Controller
     {
         $counts = [];
 
-        foreach (Schema::getTableListing() as $table) {
-            if ($table === 'sites' || in_array($table, self::SYSTEM_TABLES, true)) {
+        foreach (Schema::getTableListing() as $listed) {
+            // SQLite 的 getTableListing() 可能返回 schema 限定名（如 main.settings），
+            // 统一取裸表名后再比对 / 查询，否则白名单与计数都会失配。
+            $table = \Illuminate\Support\Str::afterLast($listed, '.');
+
+            if ($table === 'sites'
+                || in_array($table, self::SYSTEM_TABLES, true)
+                || in_array($table, self::CONFIG_TABLES, true)) {
                 continue;
             }
             if (! Schema::hasColumn($table, 'site_id')) {

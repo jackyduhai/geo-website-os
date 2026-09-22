@@ -5,7 +5,7 @@
   <div class="wrap">
     <div class="sec-head center">
       <span class="eyebrow">PROCESS · 合作流程</span>
-      <h2 class="sec-h">{{ $blk->title ?: count($st).' 步完成从需求到稳定供货' }}</h2>
+      <h2 class="sec-h">{{ $blk->title ?: count($st).' 步标准合作流程' }}</h2>
       <p class="sec-sub">{{ $blk->subtitle }}</p>
     </div>
     <div class="steps">

@@ -278,11 +278,20 @@ class AppServiceProvider extends ServiceProvider
                 }
                 $top = $makeNode($topKey, (string) ($item['label'] ?? ''), $rawTop, ($ti + 1) * 10);
 
-                // 知识中心子项由 groups 驱动（启用几个显示几个）；其余取 config 固定子项
+                // 子项内容驱动（行业中立、随站点隔离）：知识中心取内容分组，产品中心取
+                // 本站产品线，应用场景取本站场景；其余（工厂锚点 / 关于）取 config 固定子项。
                 $rawChildren = [];
                 if ($topKey === 'knowledge') {
                     foreach (\App\Models\Group::knowledgeChannels() as $g) {
                         $rawChildren[] = ['label' => $g->name, 'href' => '/knowledge/' . $g->slug . '/', 'dynamic' => true];
+                    }
+                } elseif ($topKey === 'products') {
+                    foreach (\App\Support\Catalog::productLines() as $line) {
+                        $rawChildren[] = ['label' => (string) ($line['name'] ?? ''), 'href' => '/products/' . ($line['slug'] ?? '') . '/', 'dynamic' => true];
+                    }
+                } elseif ($topKey === 'solutions') {
+                    foreach (\App\Support\Catalog::scenes() as $sc) {
+                        $rawChildren[] = ['label' => (string) ($sc['name'] ?? ''), 'href' => '/solutions/' . ($sc['slug'] ?? '') . '/', 'dynamic' => true];
                     }
                 } else {
                     foreach ((array) ($item['children'] ?? []) as $ch) {
@@ -495,13 +504,30 @@ class AppServiceProvider extends ServiceProvider
                     $si = 0;
                     $items[] = $applyItem('ft-contact-hotline', ['type' => 'text', 'label' => '合作热线', 'href' => $hotline !== '' ? 'tel:' . $hotline : ''], ++$si * 10, true);
                     $items[] = $applyItem('ft-contact-mobile', ['type' => 'text', 'label' => '业务手机'], ++$si * 10, true, true);
-                    $items[] = $applyItem('ft-contact-address', ['type' => 'text', 'label' => '厂区地址'], ++$si * 10, true);
+                    $items[] = $applyItem('ft-contact-address', ['type' => 'text', 'label' => '地址'], ++$si * 10, true);
                     $items[] = $applyItem('ft-contact-qr', ['type' => 'qr', 'label' => '扫码联系'], ++$si * 10, true);
                 } else {
                     $si = 0;
-                    foreach ((array) ($col['items'] ?? []) as $raw) {
+                    // 产品中心 / 应用场景列由本站 Catalog 内容驱动（空目录站整列自动隐藏），
+                    // 不内置任何行业条目；其余列取 config 固定链接。
+                    $rawItems = [];
+                    $colDynamic = false;
+                    if ($title === '产品中心') {
+                        foreach (\App\Support\Catalog::productLines() as $line) {
+                            $rawItems[] = ['label' => (string) ($line['name'] ?? ''), 'href' => '/products/' . ($line['slug'] ?? '') . '/'];
+                        }
+                        $colDynamic = true;
+                    } elseif ($title === '应用场景') {
+                        foreach (\App\Support\Catalog::scenes() as $sc) {
+                            $rawItems[] = ['label' => (string) ($sc['name'] ?? ''), 'href' => '/solutions/' . ($sc['slug'] ?? '') . '/'];
+                        }
+                        $colDynamic = true;
+                    } else {
+                        $rawItems = (array) ($col['items'] ?? []);
+                    }
+                    foreach ($rawItems as $raw) {
                         $ikey = 'ft-' . (static::keyForHref((string) ($raw['href'] ?? '')) ?: ('item-' . $ci . '-' . $si));
-                        $items[] = $applyItem($ikey, (array) $raw, ++$si * 10);
+                        $items[] = $applyItem($ikey, (array) $raw, ++$si * 10, false, $colDynamic);
                     }
                 }
 

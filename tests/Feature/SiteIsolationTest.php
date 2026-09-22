@@ -218,18 +218,22 @@ class SiteIsolationTest extends TestCase
         $siteA = Site::create(['name' => 'A', 'slug' => 'site-a', 'status' => 'active']);
         $siteB = Site::create(['name' => 'B', 'slug' => 'site-b', 'status' => 'active']);
 
+        // TD-12 后建站即由 Site.name 单向镜像 settings.site_name；这里把各站 site_name
+        // 更新为不同值（updateOrCreate 命中镜像行），再验证按站读取互不串扰。
         SiteContext::withSite($siteA, function () use ($siteA) {
-            Setting::create([
-                'key' => 'site_name', 'value' => 'Site A', 'group' => 'general', 'type' => 'text',
-                'site_id' => $siteA->id,
-            ]);
+            Setting::withoutSiteScope()->updateOrCreate(
+                ['site_id' => $siteA->id, 'key' => 'site_name'],
+                ['value' => 'Site A', 'group' => 'general', 'type' => 'text']
+            );
+            Setting::flush();
         });
 
         SiteContext::withSite($siteB, function () use ($siteB) {
-            Setting::create([
-                'key' => 'site_name', 'value' => 'Site B', 'group' => 'general', 'type' => 'text',
-                'site_id' => $siteB->id,
-            ]);
+            Setting::withoutSiteScope()->updateOrCreate(
+                ['site_id' => $siteB->id, 'key' => 'site_name'],
+                ['value' => 'Site B', 'group' => 'general', 'type' => 'text']
+            );
+            Setting::flush();
         });
 
         // Site A 只能看到 A 的设置

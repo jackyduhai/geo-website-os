@@ -57,9 +57,11 @@ class HomeController extends Controller
             return $l;
         })->all();
 
-        // S04 反白参数表（行数随核心产品数据驱动）+ 差异化条目
+        // S04 反白参数表（行数随核心产品数据驱动）+ 差异化条目（由首页装修区块
+        // 承载，仅 Demo 装载；出厂空站无区块时为空，模板不渲染制造口径）
         $data['paramRows'] = $this->s04Rows();
-        $data['paramDifferentiators'] = $this->paramDifferentiators();
+        $paramsBlock = $byType->get('params');
+        $data['paramDifferentiators'] = ($paramsBlock && $paramsItems = $paramsBlock->items()) ? $paramsItems : [];
 
         // S05 信任数据条 + 生产车间（后台区块可覆盖，缺省取 Catalog 站点目录并带默认图标）
         $data['stats'] = $this->buildStats($company);
@@ -173,15 +175,6 @@ class HomeController extends Controller
         return $rows;
     }
 
-    /** S04 三条差异化（通用表述，不做他方对标、不用极限词）。 */
-    private function paramDifferentiators(): array
-    {
-        return [
-            ['title' => '自有产线生产', 'text' => '从原料处理到品控包装同厂完成，性能与批次更可控'],
-            ['title' => '给到真实配比工艺', 'text' => '写清配比、温度与时间，不只供料、更说明怎么用'],
-            ['title' => '多产品线一站配齐', 'text' => '多条产品线协同配套，减少多头对接'],
-        ];
-    }
 
     private function capabilityItems(?PageBlock $block): array
     {
@@ -226,15 +219,26 @@ class HomeController extends Controller
             ->get();
     }
 
-    /** S05 信任数据条（数值全部源自 Catalog 站点目录）。 */
+    /**
+     * S05 信任数据条（数值全部源自 Catalog 站点目录，标签行业中立）。
+     * 出厂空站无公司事实时返回空，由区块自隐藏，绝不渲染全 0 空壳。
+     */
     private function buildStats(array $company): array
     {
-        return [
-            ['num' => (int) ($company['tech_experience_years'] ?? 0), 'unit' => '年', 'label' => '工业材料领域经验'],
-            ['num' => (int) ($company['area_sqm'] ?? 0), 'unit' => '㎡', 'label' => '自有生产厂区'],
-            ['num' => (int) ($company['annual_capacity_tons'] ?? 0), 'unit' => '吨', 'label' => '年成品产能'],
-            ['num' => count(Catalog::workshops()), 'unit' => '大', 'label' => '自有生产车间'],
-            ['num' => count(Catalog::salesRegions()), 'unit' => '大区', 'label' => '全国销售覆盖'],
+        if (empty($company)) {
+            return [];
+        }
+        $industry = trim((string) ($company['industry'] ?? ''));
+
+        // 仅输出真实存在的事实数值，数值为 0 的条目整体隐藏，绝不渲染全 0 空壳
+        $stats = [
+            ['num' => (int) ($company['tech_experience_years'] ?? 0), 'unit' => '年', 'label' => ($industry !== '' ? $industry : '行业') . '经验'],
+            ['num' => (int) ($company['area_sqm'] ?? 0), 'unit' => '㎡', 'label' => '自有场地'],
+            ['num' => (int) ($company['annual_capacity_tons'] ?? 0), 'unit' => '吨', 'label' => '年产能'],
+            ['num' => count(Catalog::workshops()), 'unit' => '个', 'label' => '生产设施'],
+            ['num' => count(Catalog::salesRegions()), 'unit' => '个', 'label' => '覆盖区域'],
         ];
+
+        return array_values(array_filter($stats, static fn ($row) => (int) $row['num'] > 0));
     }
 }

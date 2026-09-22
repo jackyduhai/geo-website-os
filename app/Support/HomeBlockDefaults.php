@@ -117,13 +117,13 @@ class HomeBlockDefaults
         return array_map(fn ($f) => ['title' => $f['q'], 'text' => $f['a']], (array) config('pages.home_faqs', []));
     }
 
-    /** S03 能力点。 */
+    /**
+     * S03 能力点：出厂缺省为空（行业中立）。
+     * Example 演示站的能力点由 Demo StructureSeeder 写入 capabilities 区块 content.items，
+     * 后台也可在「首页装修」中自定义；不在核心模板内置任何行业条目。
+     */
     public static function capabilities(): array
     {
-        return [
-            ['icon' => 'sliders', 'title' => '配方定制', 'text' => '按客户性能要求定向研发，非标定制'],
-            ['icon' => 'factory', 'title' => 'OEM / ODM 代工', 'text' => '从原料到成品的完整代工链路'],
-            ['icon' => 'repeat', 'title' => '打样到量产', 'text' => '需求对接 → 配方打样 → 试样确认 → 批量交付'],
-        ];
+        return [];
     }
 }

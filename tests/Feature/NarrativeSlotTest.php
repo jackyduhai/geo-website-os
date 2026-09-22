@@ -25,6 +25,13 @@ class NarrativeSlotTest extends TestCase
         parent::setUp();
         Narrative::flush();
         $this->seed();
+
+        // Demo 数据层（ContentSeeder）会预置 about.profile 叙事插槽；本测试类验证插槽
+        // 机制本身（默认回退 / 覆盖 / 无独立 URL / H1 降级等），需要 about.profile 的
+        // 纯净默认，故彻底移除 Demo 预置（含软删行，避免唯一约束冲突）。Demo 数据完整
+        // 性由 ExampleDatasetIntegrityTest 另行守护。
+        Content::withoutGlobalScope('not_slot')->where('slot', 'about.profile')->forceDelete();
+        Narrative::flush();
     }
 
     /** 直接写入一条 slot 片段 */

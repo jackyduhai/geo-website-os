@@ -65,6 +65,13 @@ class SettingsGovernanceTest extends TestCase
     public function test_default_seeder_alone_populates_seven_neutral_groups(): void
     {
         // 模拟全新生产安装：RefreshDatabase 后仅装产品默认（不装 demo 行业数据）。
+        // 先复刻 geo:install 的出厂收敛（TD-12）：默认站名 = 产品名。DefaultSettingSeeder
+        // 的 site_name 是 Site.name 的派生镜像，不再独立硬编码 app.name。
+        $this->default->name = config('app.name');
+        $this->default->save();
+        // 复刻 geo:install 顺序：先收敛站名并把当前站点上下文指向收敛后的站点，
+        // 再 seed 默认设置，避免 setUp 阶段 seed() 已把旧站名 memo 进 SiteContext。
+        SiteContext::setSite($this->default->fresh());
         Setting::withoutSiteScope()->delete();
         Setting::flush();
         $this->seed(DefaultSettingSeeder::class);

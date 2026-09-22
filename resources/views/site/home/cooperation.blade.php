@@ -5,8 +5,8 @@
     <div class="sec-head row">
       <div>
         <span class="eyebrow">COOPERATION · 合作方式</span>
-        <h2 class="sec-h">{{ $blk->title ?: count($coopModes).' 种合作方式，从研发到稳定供货' }}</h2>
-        <p class="sec-sub">{{ $blk->subtitle ?: '无论初创品牌、制造企业还是渠道经销商，都能找到对应的合作路径。' }}</p>
+        <h2 class="sec-h">{{ $blk->title ?: count($coopModes).' 种合作方式，按需选择' }}</h2>
+        <p class="sec-sub">{{ $blk->subtitle ?: '多种合作路径，满足不同业务需求。' }}</p>
       </div>
       <a class="btn-text" href="{{ url('/cooperation/') }}">合作流程与常见问题<span class="arr">→</span></a>
     </div>

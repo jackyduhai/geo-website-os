@@ -113,6 +113,18 @@ class SettingController extends Controller
             return back()->withErrors($errors)->withInput();
         }
 
+        // TD-12 单一事实源：基础信息里的「站点名称」只是权威 Site.name 的编辑入口，
+        // 保存时回写当前管理站点的 Site.name；Site 模型 saved 事件会再单向镜像
+        // settings.site_name，保证两处始终一致（清空则保留原站点名，不置空权威名）。
+        if ($group === 'general' && $request->exists('site_name')) {
+            $displayName = trim((string) $request->input('site_name', ''));
+            $currentSite = \App\Support\SiteContext::currentSite();
+            if ($displayName !== '' && $currentSite && $currentSite->name !== $displayName) {
+                $currentSite->name = $displayName;
+                $currentSite->save();
+            }
+        }
+
         Setting::flush();
         PageCache::flush();
         AuditLog::record('settings.update', "更新站点设置：{$group}");

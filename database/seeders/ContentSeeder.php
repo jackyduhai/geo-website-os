@@ -20,6 +20,10 @@ use Illuminate\Support\Facades\DB;
  * v0.9.22：结构化页面（关于/工厂/联系/产品系列）不再以薄占位文章形式存在，
  * 它们由 facts/pages 单一事实源驱动，可运营叙事改走「页面文案」叙事插槽
  * （contents.slot），故本 seeder 只保留知识中心示例文章，避免双轨占位复活。
+ *
+ * P-STEP 18B：出厂 config/pages 的 about.profile 已改为行业中立骨架（Blank System
+ * 不携带任何行业身份）；Demo 的完整制造企业简介改由本 seeder 写入 about.profile
+ * 叙事插槽承载，仅在 db:seed / DemoSeeder 时装载，与出厂默认彻底分离。
  */
 class ContentSeeder extends Seeder
 {
@@ -72,6 +76,51 @@ class ContentSeeder extends Seeder
                 $this->command->info('内容就绪：' . $saved->title);
             }
         });
+
+        // Demo 专属：完整制造企业简介经 about.profile 叙事插槽装载（出厂 config 保持行业中立）
+        $this->seedProfileSlot();
+    }
+
+    /**
+     * Demo「企业简介」叙事插槽（about.profile）。
+     *
+     * 仅由 DemoSeeder / db:seed 装载，geo:install 不调用；不经 ContentGate
+     * （与后台「页面文案」保存路径一致）。幂等：按 slot updateOrCreate。
+     */
+    protected function seedProfileSlot(): void
+    {
+        $site = \App\Models\Site::where('slug', \App\Models\Site::DEFAULT_SLUG)->first();
+
+        $body = implode("\n\n", [
+            '示例制造由深耕工业材料领域十余年的团队创立，公司主体于 2014 年注册成立，2015 年主要产线投产。',
+            '公司位于示例城市，厂区约 12,000 平方米，设有原料处理、配料混合、成型加工、品控包装四个生产车间，覆盖从原料预处理到成品包装的主要流程。',
+            '主营业务覆盖工业防护涂料、工业胶粘剂与功能助剂三大产品线，为装备制造企业、工程承包商、工业品牌方与渠道经销商提供配方定制研发、OEM / ODM 代工与原料供应。',
+            '服务网络覆盖东北、华北、华东、华中、西北、西南、华南等销售区域，面向全国供货。',
+        ]);
+
+        // 清理可能存在的历史软删片段，避免 slot 唯一索引冲突
+        Content::withoutGlobalScope('not_slot')->withTrashed()
+            ->where('slot', 'about.profile')->whereNotNull('deleted_at')->forceDelete();
+
+        Content::withoutGlobalScope('not_slot')->updateOrCreate(
+            ['slot' => 'about.profile'],
+            [
+                'site_id'     => $site?->id,
+                'type'        => 'page',
+                'category_id' => null,
+                'group_id'    => null,
+                'cover_id'    => null,
+                'slug'        => \App\Support\Narrative::reservedSlug('about.profile'),
+                'title'       => '企业简介 · 页头导语与正文',
+                'summary'     => '工业材料的专业制造商，2014 年成立。',
+                'body'        => $body,
+                'status'      => 'published',
+                'published_at' => now(),
+                'owner'       => 'demo-seeder',
+            ]
+        );
+
+        $this->command->info('内容就绪：企业简介叙事插槽（Demo）');
     }
 
     /**

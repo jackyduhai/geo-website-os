@@ -114,11 +114,14 @@ class FeedController extends Controller
             ->limit(30)
             ->get();
 
+        // RSS channel 名称取站点显示名权威源（Site.name，经 settings.site_name 镜像），
+        // 不使用产品名 config('app.name')，保证订阅器中与页头 / 页脚 / Schema 同源。
+        $siteTitle = (string) (Setting::get('site_name') ?: (\App\Support\SiteContext::currentSite()?->name ?? config('app.name')));
         $xml = ['<?xml version="1.0" encoding="UTF-8"?>'];
         $xml[] = '<rss version="2.0"><channel>';
-        $xml[] = '<title>' . e(config('app.name')) . '</title>';
+        $xml[] = '<title>' . e($siteTitle) . '</title>';
         $xml[] = '<link>' . url('/') . '</link>';
-        $xml[] = '<description>' . e((string) config('app.name')) . '</description>';
+        $xml[] = '<description>' . e($siteTitle) . '</description>';
 
         foreach ($items as $it) {
             $xml[] = '<item>';

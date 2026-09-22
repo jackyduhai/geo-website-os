@@ -33,7 +33,9 @@ class GeoInstallTest extends TestCase
         // 默认站点存在，未被塞入业务信息
         $site = DB::table('sites')->where('slug', 'default')->first();
         $this->assertNotNull($site);
-        $this->assertSame('Default Site', $site->name);
+        // TD-12（P-STEP 18B）：geo:install 出厂把默认站名收敛为产品名，Site.name 是
+        // 唯一事实源；不再保留 migration 内置的占位名 'Default Site'。
+        $this->assertSame(config('app.name'), $site->name);
 
         // 管理员以通用默认邮箱创建，并持有超管标记
         $admin = User::where('email', 'admin@example.com')->first();

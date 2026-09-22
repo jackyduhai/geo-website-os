@@ -25,7 +25,7 @@ use Illuminate\Support\Facades\Hash;
 class GeoInstall extends Command
 {
     protected $signature = 'geo:install
-                            {--site-name= : 站点名称（默认 Default Site）}
+                            {--site-name= : 站点名称（默认取 APP_NAME / GEO Website OS）}
                             {--site-domain= : 站点域名（默认 null，走通用回退）}
                             {--admin-email= : 管理员邮箱（默认 admin@example.com）}
                             {--admin-password= : 管理员密码（缺省随机生成并打印一次）}';
@@ -87,15 +87,19 @@ class GeoInstall extends Command
         // ---------- 4. 站点创建（幂等，通用默认值） ----------
         $site = Site::firstOrCreate(
             ['slug' => Site::DEFAULT_SLUG],
-            ['name' => 'Default Site', 'status' => 'active', 'metadata' => json_encode([])]
+            ['name' => config('app.name'), 'status' => 'active', 'metadata' => json_encode([])]
         );
 
-        $name = trim((string) $this->option('site-name'));
+        // TD-12：Site.name 是站点显示名唯一权威。未显式 --site-name 时收敛为产品名
+        // APP_NAME，save() 会单向镜像 settings.site_name，避免空站残留迁移内置的
+        // "Default Site" 与镜像名分叉；显式指定时使用自定义名并同样触发镜像。
+        $name = trim((string) $this->option('site-name')) ?: (string) config('app.name');
         $domain = trim((string) $this->option('site-domain'));
-        $site->fill(array_filter([
-            'name' => $name !== '' ? $name : null,
-            'domain' => $domain !== '' ? strtolower($domain) : null,
-        ], fn ($v) => $v !== null))->save();
+        $site->name = $name;
+        if ($domain !== '') {
+            $site->domain = strtolower($domain);
+        }
+        $site->save();
         $this->line("  [ok] site: {$site->name} ({$site->slug})");
 
         // ---------- 4b. 产品级默认站点设置（七组完整字段 + 中性默认，幂等） ----------
@@ -103,6 +107,12 @@ class GeoInstall extends Command
         // 只装产品中性默认，不含任何演示行业数据（演示数据见 DemoSeeder，需显式 db:seed）。
         $this->call('db:seed', ['--class' => 'DefaultSettingSeeder', '--force' => true]);
         $this->line('  [ok] default settings');
+
+        // ---------- 4c. 出厂中性首页（Blank System） ----------
+        // 历史迁移播种的行业 Example 首页区块不属于出厂空站，清空后回落到行业中立
+        // 欢迎屏；行业演示装修仅在显式 db:seed（DemoSeeder → StructureSeeder）时构建。
+        $this->call('db:seed', ['--class' => 'BlankHomepageSeeder', '--force' => true]);
+        $this->line('  [ok] blank homepage (industry-neutral)');
 
         // ---------- 5. 管理员初始化 ----------
         $email = trim((string) $this->option('admin-email')) ?: 'admin@example.com';

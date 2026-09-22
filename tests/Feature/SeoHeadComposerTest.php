@@ -91,8 +91,12 @@ class SeoHeadComposerTest extends TestCase
 
     public function test_title_has_no_dangling_separator_when_site_name_suffix_empty(): void
     {
-        // 回归 P-STEP 14：fresh install 未配置 site_name / seo_title_suffix 时，
-        // 内页标题曾被拼成 "文章标题 - "（尾部悬挂分隔符）。后缀为空时不应拼接 " - "。
+        // 回归 P-STEP 14：站点名后缀为空时，内页标题不得被拼成 "文章标题 - "（悬挂分隔符）。
+        // TD-12 后 site_name 由 Site.name 单向镜像、正常情况非空；这里直接清空底层
+        // site_name（绕过镜像），人为构造后缀缺失的防御场景。
+        \App\Models\Setting::withoutSiteScope()
+            ->where('key', 'site_name')->update(['value' => '']);
+        \App\Models\Setting::flush();
         $html = $this->renderHead(['seo' => ['title' => '某内页标题']]);
 
         $this->assertStringContainsString('<title>某内页标题</title>', $html);

@@ -1,5 +1,5 @@
 {{--
-  SceneCard（Catalog 站点目录读模型驱动）：3px 强调色顶条；hover 上移 + 轻阴影 + 展开真实工艺 / 参数；
+  SceneCard（Catalog 站点目录读模型驱动）：3px 强调色顶条；hover 上移 + 轻阴影 + 展开真实参数 / 说明；
   移动端默认展开（CSS），揭示内容必须在初始 DOM。入参：$sc（Catalog 场景）。
 --}}
 @php

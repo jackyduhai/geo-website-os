@@ -3,7 +3,7 @@
   $lines = $productLines ?? [];
   if ($lines instanceof \Illuminate\Support\Collection) { $lines = $lines->all(); }
   // 通用图标序列：按产品线顺序取中性图标，不绑定任何具体行业 / slug；数据可通过 icon 字段覆盖
-  $lineIconSeq = ['droplet', 'package', 'sparkle', 'shaker', 'beaker', 'flask', 'gear', 'default'];
+  $lineIconSeq = ['package', 'grid', 'gear', 'star', 'shield', 'truck', 'sparkle', 'default'];
   $lineHref = function ($l) {
       return ($l['count'] ?? 0) >= 1 ? url('/products/' . $l['slug'] . '/') : url('/products/#' . $l['slug']);
   };
@@ -14,8 +14,8 @@
     <div class="sec-head row">
       <div>
         <span class="eyebrow">PRODUCT SYSTEM · 产品体系</span>
-        <h2 class="sec-h">{{ $blk->title ?: count($lines).' 大产品系列，覆盖从研发到量产的完整方案' }}</h2>
-        <p class="sec-sub">{{ $blk->subtitle ?: '从研发、打样到量产的完整产品支撑。' }}</p>
+        <h2 class="sec-h">{{ $blk->title ?: count($lines).' 大产品系列' }}</h2>
+        <p class="sec-sub">{{ $blk->subtitle ?: '系统化的产品矩阵，满足多样化需求。' }}</p>
       </div>
       <a class="btn-text" href="{{ url('/products/') }}">查看全部产品<span class="arr">→</span></a>
     </div>

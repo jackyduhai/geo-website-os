@@ -49,11 +49,11 @@ class ContactController extends Controller
             $contactBits[] = '合作热线 ' . $company['phone'];
         }
         if (! empty($company['address']['full'])) {
-            $contactBits[] = '厂区位于' . $company['address']['full'];
+            $contactBits[] = '地址：' . $company['address']['full'];
         }
         $contactDesc = '联系' . $company['name'] . '：'
             . ($contactBits ? implode('，', $contactBits) . '。' : '')
-            . '填写表单或通过页面上的联系方式与我们沟通，我们安排试样与定制方案。';
+            . '填写表单或通过页面上的联系方式与我们沟通，我们会尽快与你联系。';
 
         return view('site.contact', [
             'company' => $company,
@@ -65,7 +65,7 @@ class ContactController extends Controller
                 $localBusiness,
             ])),
             'seo' => [
-                'title'       => '联系我们｜获取报价与样品',
+                'title'       => '联系我们',
                 'description' => $contactDesc,
                 'canonical'   => url('/contact/'),
                 'noindex'     => false,

@@ -6,7 +6,7 @@
 <section class="page-hero">
   <div class="wrap-narrow">
     <span class="eyebrow">CONTACT · 联系我们</span>
-    <h1 class="ph-h">说清你的需求，我们安排寄样与方案</h1>
+    <h1 class="ph-h">告诉我们你的需求，我们尽快与你联系</h1>
     <p class="ph-lead">{{ $lead }}</p>
   </div>
 </section>
@@ -36,7 +36,7 @@
         <div><dt>公司全称</dt><dd>{{ $company['name'] }}</dd></div>
         @if(!empty($company['address']['full']))
         <div>
-          <dt>厂区地址</dt>
+          <dt>地址</dt>
           <dd>{{ $company['address']['full'] }}</dd>
           @if($mapUrl)
             <a class="map-link" href="{{ $mapUrl }}" target="_blank" rel="noopener">查看地图 <span aria-hidden="true">→</span></a>
@@ -57,7 +57,7 @@
       @if($qrSrc)
       <div class="contact-wechat">
         <img src="{{ asset($qrSrc) }}" alt="联系二维码" width="132" height="132" loading="lazy">
-        <div><strong>扫码联系 · 获取样品</strong><span>扫码沟通需求，安排样品与定制方案</span></div>
+        <div><strong>扫码联系我们</strong><span>扫码沟通你的需求，我们尽快回复</span></div>
       </div>
       @endif
     </div>

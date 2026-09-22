@@ -15,8 +15,9 @@
 
 <section class="sec">
   <div class="wrap-narrow">
+    @if(!empty($nodes ?? []))
     <ol class="timeline">
-      @foreach(($copy['nodes'] ?? []) as $n)
+      @foreach($nodes as $n)
         <li class="reveal">
           <span class="t-year">{{ $n['time'] }}</span>
           <h4>{{ $n['title'] }}</h4>
@@ -24,6 +25,7 @@
         </li>
       @endforeach
     </ol>
+    @endif
   </div>
 </section>
 

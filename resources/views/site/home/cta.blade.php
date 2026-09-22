@@ -7,9 +7,9 @@
 <section class="sec sec-tint" id="s08">
   <div class="wrap contact-grid">
     <div class="cta-info reveal">
-      <span class="eyebrow">CONTACT · 获取样品</span>
-      <h2 class="sec-h">{{ $blk->title ?: '先拿一份样品试试' }}</h2>
-      <p class="sec-sub">{{ $blk->subtitle ?: '说清你的产品需求，我们安排样品，并附上规格参数与工艺建议。' }}</p>
+      <span class="eyebrow">CONTACT · 联系我们</span>
+      <h2 class="sec-h">{{ $blk->title ?: '告诉我们你的需求' }}</h2>
+      <p class="sec-sub">{{ $blk->subtitle ?: '留下你的需求与联系方式，我们会尽快与你沟通。' }}</p>
       <ul class="cta-facts">
         @if(!empty($navPhone))
           <li>
@@ -18,7 +18,7 @@
           </li>
         @endif
         @if(!empty($company['address']['full']))
-        <li><span class="ci-k">厂区地址</span><span class="ci-v">{{ $company['address']['full'] }}</span></li>
+        <li><span class="ci-k">地址</span><span class="ci-v">{{ $company['address']['full'] }}</span></li>
         @endif
         @if(!empty($company['target_customers']))
         <li><span class="ci-k">服务客户</span><span class="ci-v">{{ implode(' · ', $company['target_customers']) }}</span></li>

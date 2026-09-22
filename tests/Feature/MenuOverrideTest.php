@@ -310,15 +310,21 @@ class MenuOverrideTest extends TestCase
 
     public function test_override_repoints_fixed_child_to_internal_path(): void
     {
+        // P-STEP 18B 后产品中心 / 应用场景子项改由 Catalog 数据驱动（dynamic=true，
+        // 与知识中心动态子项同契约、不接受链接覆盖）。固定（config）子项的内部重指
+        // 能力改以「关于我们 / 发展历程」（key=about-history，dynamic=false）为样本。
+        AppServiceProvider::forgetNavCache();
         $this->actingAs($this->admin)->post('/admin/menus/override', [
-            'position' => 'main', 'key' => 'products-coatings',
+            'position' => 'main', 'key' => 'about-history',
             'label' => '', 'url' => '/knowledge/process/',
             'is_active' => 1,
         ])->assertRedirect();
 
-        $coatings = collect($this->top('产品中心')['children'])->firstWhere('name', '工业防护涂料');
-        $this->assertStringEndsWith('/knowledge/process/', $coatings['url']);
-        $this->assertFalse($coatings['external']);
+        AppServiceProvider::forgetNavCache();
+        $history = collect($this->top('关于我们')['children'])->firstWhere('name', '发展历程');
+        $this->assertNotNull($history, '固定子项「发展历程」应存在');
+        $this->assertStringEndsWith('/knowledge/process/', $history['url']);
+        $this->assertFalse($history['external']);
     }
 
     public function test_dynamic_knowledge_child_cannot_have_link_overridden(): void

@@ -6,7 +6,7 @@
 <section class="page-hero">
   <div class="wrap-narrow">
     <span class="eyebrow">COOPERATION · 合作方式</span>
-    <h1 class="ph-h">{{ count($coop['types']) }} 种合作方式，从研发到稳定供货</h1>
+    <h1 class="ph-h">{{ count($coop['types']) }} 种合作方式，按需选择</h1>
     <p class="ph-lead">{{ $lead }}</p>
   </div>
 </section>

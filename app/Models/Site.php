@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Schema;
+use Throwable;
 
 /**
  * 站点模型 Site
@@ -28,6 +30,34 @@ class Site extends Model
     public const STATUS_MAINTENANCE = 'maintenance';
 
     public const DEFAULT_SLUG = 'default';
+
+    /**
+     * TD-12 单一事实源：Site.name 是站点显示名的唯一权威；settings.site_name 仅作为
+     * 镜像，供 SEO / Schema / 视图等既有消费者读取。任何路径创建 / 更新站点（安装、
+     * Seeder、后台、CLI）后都单向同步该镜像，避免两处可编辑导致名称分叉。
+     */
+    protected static function booted(): void
+    {
+        static::saved(function (self $site): void {
+            try {
+                if (! Schema::hasTable((new Setting())->getTable())) {
+                    return;
+                }
+                $name = trim((string) $site->name);
+                if ($name === '') {
+                    return;
+                }
+                // 显式带 site_id，creating 自动填充不会覆盖到当前上下文站点。
+                Setting::withoutSiteScope()->updateOrCreate(
+                    ['site_id' => $site->id, 'key' => 'site_name'],
+                    ['site_id' => $site->id, 'value' => $name]
+                );
+                Setting::flush();
+            } catch (Throwable) {
+                // 安装早期 settings 表尚未就绪时静默跳过，安装命令随后会写入默认设置。
+            }
+        });
+    }
 
     /**
      * 获取默认站点。

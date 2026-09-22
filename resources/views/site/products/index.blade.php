@@ -11,7 +11,7 @@
     @if($flatMode ?? false)
     <h1 class="ph-h">产品中心</h1>
     @else
-    <h1 class="ph-h">{{ count($lines) }} 大产品系列，覆盖从研发到量产的完整需求</h1>
+    <h1 class="ph-h">{{ count($lines) }} 大产品系列</h1>
     @endif
     <p class="ph-lead">{{ $lead }}</p>
   </div>
@@ -36,7 +36,7 @@
           @endforeach
         </div>
       @else
-        <p class="empty-note">该体系产品正在整理中，可先联系我们获取产品手册与样品。</p>
+        <p class="empty-note">该系列产品正在整理中，可先联系我们了解详情。</p>
       @endif
     </div>
   </section>

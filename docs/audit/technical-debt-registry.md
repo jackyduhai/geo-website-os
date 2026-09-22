@@ -76,10 +76,7 @@ ACTIVE  →  FIXED  →  TESTED  →  ACCEPTED  →  CLOSED
 
 | ID | Title | Source | Status | Acceptance Criteria | Blocks v1.0.0? | Parent/Related |
 | --- | --- | --- | --- | --- | --- | --- |
-| **TD-10** | 默认模板 / Copy / IA 行业垂直（制造）痕迹 | 16A F1；17G §11；config/copy.php、config/pages.php、HomeController、HomeBlockDefaults、home/{hero,capabilities,workshops}.blade、产品详情标题后缀、询价 demand_type、copyright·companyName 写死「示例制造有限公司」 | ACTIVE（17G 仅做空状态降级） | 出厂为行业中性空站：默认层不含制造/化工垂直 copy 与 CTA；Example Demo 改为可选装载；中性空站前台可读、无裸 0/病句/404 CTA | **YES** | #115, TD-07 |
-| **TD-11** | 默认 Menu / Blocks 未按站初始化 | 17G §11 | ACTIVE | 新建 Site 时按站生成中性默认菜单/区块（或明确空状态）；A 站菜单/区块绝不串到 B 站；有多站测试 | **YES** | #115 |
-| **TD-12** | `Site.name` 与 setting `site_name` 双源 | 17F/17G 遗留 | ACTIVE | 站点名单一权威源（Site），Setting 不再冗余或被正式声明为派生；前台/后台/SEO 标题读取一致 | **YES**（小改，随 #115） | #115 |
-| **TD-13** | 27 个制造/化工垂直内置图标 | 16A P3 | ACTIVE | 默认图标集行业中性（通用几何/商务图标）；垂直图标仅随 Example Demo 提供，不进系统默认层 | NO（可随 #115 一并做，不阻塞核心） | #115 |
+> **#115 全部子项（TD-10 / TD-11 / TD-12 / TD-13）已由 P-STEP 18B 销项 CLOSED**，证据见 §5 与 `docs/audit/default-template-neutralization-18b.md`。出厂为行业中性空站（Blank System）；工业材料制造 Example 仅经 `db:seed` 可选装载（Demo Site）。两态经 Fresh Install + 真实 HTTP/浏览器对拍，验证 **Blank System ≠ Demo Site**。
 
 ### P3 — 后台与体验
 
@@ -114,6 +111,12 @@ ACTIVE  →  FIXED  →  TESTED  →  ACCEPTED  →  CLOSED
 | **P-STEP 17 P0** | 六大管理面（Site/Entity/EntityRelation/SeoMeta/Theme·Plugin/Settings）无 Admin UI | **17A–17F** | 逐阶段 Gate PASS（68e2b03 / 0d6872b / d839d5a / 220947f / 3348c92 / f783af6） |
 | **P-STEP 17G** | 六大管理面系统级 Full Admin UAT + 产品双轨收口 | **17G**（200b5ae，789/3889） | Content 收敛 article/page、Product 成为正式 Entity；中间件顺序修正；4 类真实问题修复 |
 | **（17F 子项）** | GEOFlow token 前缀 `yhf_` 中性化 | **17F**（f783af6） | token 前缀改产品中性；IA 重命名余项见 TD-19 |
+| **TD-10** | 默认模板 / Copy / IA 行业垂直痕迹 | **P-STEP 18B**（tag `checkpoint-18B`） | geo:install 出厂层 BlankHomepageSeeder 清空历史 migration 播种的 16 个制造区块；config/copy.php、config/pages.php、HomeController、五个前台控制器、home/* blade、产品后缀、询价、copyright 全面行业中性；空站首页中性欢迎屏、导航/footer 经 Catalog 门控（无工厂/合作/案例列）；制造 copy 仅以 slug 键控 Example 包（product_faqs/scene_faqs）保留，通用站零运行时命中；两态 HTTP 对拍 |
+| **TD-11** | 默认 Menu / Blocks 未按站初始化 | **P-STEP 18B** | 制造区块只在 `db:seed` 由 Demo StructureSeeder 按站重建；geo:install 不播任何区块（空站 page_blocks=0）；菜单/区块全部 site-scoped + Catalog/Group 数据驱动，空站导航仅知识中心，A/B 不串；BlankSystemDemoSeparationTest 锁定 |
+| **TD-12** | `Site.name` 与 setting `site_name` 双源 | **P-STEP 18B** | Site.name 成为唯一权威：Site booted `saved` 单向镜像 site_name；GeoInstall 默认站名收敛为 app.name/--site-name 并 save；DefaultSettingSeeder site_name 跟随 Site.name（不再硬编码 app.name 覆盖自定义名）；SettingController general 回写 Site.name；真实 HTTP 后台改名后 title/OG/footer(9 处)/geo.json/RSS 四端同源跟随，DB 双源一致 |
+| **TD-13** | 27 个制造/化工垂直内置图标 | **P-STEP 18B** | 全站收敛为单一通用 SVG 图标库 `site/_icon.blade.php`（通用名 registry）+ config/icons.php 中性 label registry，数据驱动、无 slug→垂直图标硬编码；出厂图标序列中性，垂直语义仅随 Demo 数据出现 |
+| **TD-25** | PageCache 整页缓存键只用 `getHost()`（不含端口），同主机异端口多实例（本地并排 / 同机非标端口反代）命中同一 shell，正文与 canonical 串站 | **P-STEP 18B**（两态 HTTP 实测发现） | keyFor 改 `getHttpHost()`（含端口；标准 80/443 行为不变，生产按域名分区不受影响）；新增 test_cache_key_distinguishes_same_host_different_port（同主机异端口键不同 / 同 origin UTM 共享 / 异域名分区）；修复后 blank 8096 与 demo 8097 首页 HIT 互不串 |
+| **TD-26** | SQLite 下 `Schema::getTableListing()` 返回 `main.<table>` 限定名，SiteController 删除保护动态表白名单整体失配，空站（含 settings 镜像行）被误判有业务数据无法删除 | **P-STEP 18B**（空站删除复现发现） | resourceCounts 循环开头 `Str::afterLast($listed,'.')` 去除 schema 前缀；settings 列入 CONFIG_TABLES 并在事务内随空站删除后 Setting::flush()；空站可正常删除、有数据站点仍受保护 |
 
 ---
 
@@ -146,9 +149,6 @@ ACTIVE  →  FIXED  →  TESTED  →  ACCEPTED  →  CLOSED
 | TD-07 Organization 单一事实源 | P1 | 18C |
 | TD-08b Entity/Site/SeoMeta/Content 整页缓存失效 | P1 | 18C |
 | TD-09 Product/Schema `@id` 统一 PublicUrl | P1 | 18C（随 #114） |
-| TD-10 默认模板 / Copy / IA 行业中性出厂 | P2 | **18B（#115）** |
-| TD-11 默认 Menu/Blocks 按站初始化 | P2 | 18B（#115） |
-| TD-12 Site.name 单一源 | P2 | 18B（#115） |
 | TD-16① Category slug 站点作用域 | P3（多站正确性） | 18C 评估 |
 | TD-20① RSS enabled 门禁 | P3（feed 一致性） | 18C |
 
@@ -157,7 +157,6 @@ ACTIVE  →  FIXED  →  TESTED  →  ACCEPTED  →  CLOSED
 | 项 | 类别 |
 | --- | --- |
 | TD-06 Content 路径收敛（现有 301 桥接可用） | P1 |
-| TD-13 垂直图标中性化（建议随 18B 顺手） | P2 |
 | TD-14 RBAC 三角色 + 站点成员 | P3 |
 | TD-15 校验 i18n + 字段级 @error | P3 |
 | TD-16②③④ Category type/外链/栏目 SEO | P3 |
@@ -170,9 +169,9 @@ ACTIVE  →  FIXED  →  TESTED  →  ACCEPTED  →  CLOSED
 
 ### 计数（当前）
 
-- CLOSED：#86、TD-04、TD-08a、P17 六管理面 + 17G（共 5 组/项）
-- v1.0.0 Required 未闭合：**12**（P0×3、P1×4 含 1 个 DECISION、P2×3、P3 拆分×2）
-- v1.1+ Planned：**11**
+- CLOSED：#86、TD-04、TD-08a、TD-10、TD-11、TD-12、TD-13、TD-25、TD-26、P17 六管理面 + 17G
+- v1.0.0 Required 未闭合：**9**（P0×3、P1×4 含 1 个 DECISION、P3 拆分×2）；#115（TD-10/11/12）已由 18B 闭合移出
+- v1.1+ Planned：**10**（TD-13 已由 18B 闭合移出）
 - NON-DEBT / DEFERRED 观察项：TD-21 / TD-22 / TD-23 / TD-24
 
 ---
@@ -191,3 +190,4 @@ ACTIVE  →  FIXED  →  TESTED  →  ACCEPTED  →  CLOSED
 | 日期 | 阶段 / commit | 变更 |
 | --- | --- | --- |
 | 2026-09-22 | P-STEP 18A（`4dbc95a` / `checkpoint-18A`） | 建立唯一 Registry；汇总 16A/17F/17G/P14/蓝图散落债务为 TD-01..TD-24 + Epic #86/#114/#115；#86 与 TD-04、TD-08a 登记 CLOSED；#114 标 PARTIAL；#115 标 ACTIVE；锁定 v1.0.0 Required / v1.1 Planned 建议基线 |
+| 2026-09-22 | P-STEP 18B（`checkpoint-18B`） | #115 子项 TD-10/11/12/13 全部 CLOSED：出厂 Blank System 与 db:seed Demo Site 分离（BlankHomepageSeeder / Demo StructureSeeder）、Site.name 单一事实源、图标 registry 中性化；两态 Fresh Install + HTTP/浏览器对拍；新发现并修复 TD-25（PageCache 键不含端口致同机异端口串整页）、TD-26（SQLite getTableListing 返回 main. 限定名致空站删除保护失效），各补防回归测试；v1.0 Required 12→9 |

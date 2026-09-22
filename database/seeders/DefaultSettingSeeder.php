@@ -27,9 +27,17 @@ class DefaultSettingSeeder extends Seeder
     {
         $appName = (string) config('app.name');
 
+        // TD-12：Site.name 是站点显示名唯一权威，settings.site_name 仅为镜像。
+        // 这里跟随当前 / 默认站点名，而不是独立硬编码 APP_NAME，以免覆盖
+        // geo:install --site-name 的自定义名或后台改名；站点名缺失时才回退 APP_NAME。
+        $siteName = \App\Support\SiteContext::currentSite()?->name
+            ?: \App\Models\Site::default()?->name
+            ?: $appName;
+        $siteName = trim((string) $siteName) !== '' ? $siteName : $appName;
+
         $rows = [
             // ---------- 基础信息 ----------
-            ['site_name',        $appName, 'general', '站点名称', 'text', '出现在导航与页脚', 10],
+            ['site_name',        $siteName, 'general', '站点名称', 'text', '出现在导航与页脚', 10],
             ['site_description', '',       'general', '站点简介', 'textarea', '用于首页与默认 meta description', 40],
             ['icp_number',       '',       'general', 'ICP 备案号', 'text', '接入前填入，页脚展示', 50],
             ['police_number',    '',       'general', '公安备案号', 'text', '选填，页脚展示', 60],
