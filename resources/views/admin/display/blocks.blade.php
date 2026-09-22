@@ -1,6 +1,6 @@
 @extends('admin.layout')
 @section('title','首页装修')
-@section('page-desc','首页全部区块在本页一处装修：首屏模式、幻灯、中部横幅、能力点 / 车间 / 流程、信任数字与内容流；排序数字越小越靠前，关闭后前台不渲染。')
+@section('page-desc','首页全部区块在本页一处装修：首屏模式、幻灯、中部横幅、能力点 / 场景 / 流程、信任数字与内容流；排序数字越小越靠前，关闭后前台不渲染。')
 
 @section('content')
 
@@ -202,7 +202,7 @@
       @endif
     @endif
 
-    {{-- 可增删条目：能力点 / 车间 / 流程 --}}
+    {{-- 可增删条目：能力点 / 场景 / 流程 --}}
     @if(in_array($kind, ['items','steps']))
       @php
         $fields = config('home_blocks.types.'.$block->type.'.fields', []);

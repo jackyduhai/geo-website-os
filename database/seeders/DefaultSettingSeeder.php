@@ -44,15 +44,19 @@ class DefaultSettingSeeder extends Seeder
             ['nav_cta_text',     '',       'general', '主 CTA 按钮文案', 'text', '顶部导航与首屏主按钮文字，留空用默认', 70],
 
             // ---------- 主题（Design System 中性默认：品牌蓝 #2563EB / 辅助绿 #0E9F6E） ----------
-            ['theme_primary',      '#2563EB', 'theme', '主色', 'color', '用于标题、按钮、强调（品牌蓝）', 10],
-            ['theme_primary_dark', '#1D4ED8', 'theme', '主色（深）', 'color', '悬停态', 20],
-            ['theme_accent',       '#0E9F6E', 'theme', '辅色', 'color', '用于事实块、标签（辅助绿）', 30],
+            ['theme_primary',      '#2563EB', 'theme', '品牌主色（Brand Seed）', 'color', '一个基色自动派生悬停 / 浅底 / 反白 / 首屏渐变，并保证文字对比度达标', 10],
+            ['theme_primary_dark', '',       'theme', '主色（深 · 高级）', 'color', '留空则按品牌主色自动派生；仅在需要覆盖悬停色时填写', 20],
+            ['theme_accent',       '#0E9F6E', 'theme', '辅色 / CTA 种子色', 'color', '用于事实块、标签与主按钮，CTA 由其自动派生', 30],
             ['theme_bg',           '#F8FAFC', 'theme', '页面底色', 'color', '', 40],
             ['theme_surface',      '#FFFFFF', 'theme', '卡片底色', 'color', '', 50],
             ['theme_text',         '#1F2937', 'theme', '正文色', 'color', '', 60],
             ['theme_text_muted',   '#6B7280', 'theme', '次要文字色', 'color', '', 70],
             ['theme_radius',       '10',   'theme', '圆角（px）', 'number', '卡片与按钮圆角，0–48', 80],
             ['theme_container',    '1200', 'theme', '内容区最大宽度（px）', 'number', '800–2400', 90],
+            ['theme_density',      'comfortable', 'theme', '排版密度', 'text', '可选 comfortable（宽松，默认）/ compact（紧凑）；行业预设会自动设置', 92],
+            ['theme_shadow',       'flat', 'theme', '阴影质感', 'text', '可选 flat（去盒子化、默认无阴影）/ soft（柔和投影）；行业预设会自动设置', 94],
+            ['theme_color_mode',   'light', 'theme', '默认外观模式', 'select', '前台默认外观：light 浅色 / dark 深色 / system 跟随访客系统；访客仍可用右上角按钮自行切换并记忆', 95],
+            ['theme_allow_dark',   '1', 'theme', '允许深色模式', 'bool', '开启后前台支持浅色 / 深色切换；关闭则强制浅色且不显示外观切换按钮', 96],
             ['theme_font',         '',     'theme', '自定义字体', 'text', '留空使用系统字体栈', 100],
             ['theme_custom_css',   '',     'theme', '自定义 CSS', 'textarea', '追加到全站样式末尾；仅在确认可信时填写', 110],
 

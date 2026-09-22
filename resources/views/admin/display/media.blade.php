@@ -21,7 +21,7 @@
     </div>
     <div class="form-row grow">
       <label><span class="label-with-tip">alt 描述 <x-admin-tip text="图片的文字替代说明，用于无障碍读屏与图片搜索，建议描述画面主体。"/></span></label>
-      <input type="text" name="alt" placeholder="如：生产车间实拍">
+      <input type="text" name="alt" placeholder="如：产品 / 团队 / 场景实拍">
     </div>
     <button class="btn btn-primary">上传</button>
   </form>

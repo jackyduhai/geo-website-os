@@ -275,13 +275,13 @@ class SiteIdCoreTablesTest extends TestCase
         }
         // ContentSeeder creates 3 knowledge articles + 1 Demo-only about.profile narrative slot
         // (P-STEP 18B, type=page), StructureSeeder creates 2 categories + 6 groups,
-        // FactSeeder creates 23 facts, SettingSeeder (DefaultSettingSeeder + demo overrides) creates 65 settings
+        // FactSeeder creates 23 facts, SettingSeeder (DefaultSettingSeeder + demo overrides) creates 69 settings
         // (P-STEP 17F: RETIRE 4 consumer-less keys + add 2 newly-defined keys)
         $this->assertEquals(4, Content::withoutGlobalScopes()->count()); // 3 articles + 1 about.profile slot
         $this->assertEquals(2, Category::count());
         $this->assertEquals(6, Group::count());
         $this->assertEquals(23, Fact::count());
-        $this->assertEquals(65, Setting::count());
+        $this->assertEquals(69, Setting::count());
     }
 
     /** @test */

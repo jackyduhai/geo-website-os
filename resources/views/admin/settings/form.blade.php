@@ -11,6 +11,35 @@
 
 <div class="card narrow-md">
   <h2>{{ \App\Http\Controllers\Admin\SettingController::GROUPS[$group] }}</h2>
+
+  @if($group==='theme')
+  {{-- 行业视觉预设（P-STEP 18D）：仅写 theme_* 视觉令牌，绝不触碰 IA / 导航 / 文案 / 内容 --}}
+  <div style="border:1px solid #e6e9ee;border-radius:12px;padding:16px;margin-bottom:18px;background:#fbfcfe">
+    <div style="font-weight:600;margin-bottom:4px">行业视觉预设</div>
+    <p class="small muted" style="margin:0 0 4px">一键切换配色 / 圆角 / 版面密度 / 阴影质感。<strong>只改变外观</strong>，不会改动导航、栏目、文案或任何内容；行业示例内容需另行加载 Demo 数据（Blank System ≠ Demo Site）。</p>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(224px,1fr));gap:12px;margin-top:12px">
+      @foreach((array) config('theme-presets') as $pkey => $p)
+        <form method="post" action="{{ route('admin.settings.preset') }}"
+              style="border:1px solid #e6e9ee;border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:8px;background:#fff"
+              onsubmit="return confirm('应用「{{ $p['label'] }}」预设？仅覆盖外观设置，不影响内容与导航。')">
+          @csrf
+          <input type="hidden" name="preset" value="{{ $pkey }}">
+          <div style="display:flex;gap:6px">
+            @foreach($p['swatch'] as $sw)
+              <span style="width:22px;height:22px;border-radius:50%;background:{{ $sw }};border:1px solid rgba(0,0,0,.10);display:inline-block"></span>
+            @endforeach
+          </div>
+          <strong style="font-size:14px">{{ $p['label'] }}</strong>
+          <span class="small muted" style="flex:1;line-height:1.5">{{ $p['description'] }}</span>
+          <button class="btn" style="align-self:flex-start">应用预设</button>
+        </form>
+      @endforeach
+    </div>
+    <hr style="border:none;border-top:1px solid #eceff3;margin:16px 0 10px">
+    <div class="small muted">也可在下方逐项微调「品牌主色 / 辅色（Brand Seed）」：悬停、浅底、反白文字、CTA 与首屏深色渐变会自动派生，并保证文字对比度达到 WCAG AA；「主色（深）」留空即自动派生。</div>
+  </div>
+  @endif
+
   <form method="post" action="{{ route('admin.settings.update',$group) }}" enctype="multipart/form-data">
     @csrf @method('PUT')
 
@@ -23,9 +52,17 @@
 
         @if($s->type==='bool')
           <label class="checkline">
+            <input type="hidden" name="{{ $s->key }}" value="0">
             <input type="checkbox" name="{{ $s->key }}" value="1" @checked(($s->value ?? '')==='1' || $s->value===1)>
             开启
           </label>
+        @elseif($s->type==='select')
+          @php($selectOptions = $s->key==='theme_color_mode' ? ['light'=>'浅色（默认）','dark'=>'深色','system'=>'跟随系统'] : [])
+          <select name="{{ $s->key }}">
+            @foreach($selectOptions as $ov => $ol)
+              <option value="{{ $ov }}" @selected(old($s->key, $s->value)===$ov)>{{ $ol }}</option>
+            @endforeach
+          </select>
         @elseif($s->type==='textarea')
           <textarea name="{{ $s->key }}" rows="4">{{ old($s->key, $s->value) }}</textarea>
         @elseif($s->type==='number')

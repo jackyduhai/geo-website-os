@@ -8,6 +8,7 @@ use App\Models\Media;
 use App\Models\Setting;
 use App\Support\ImageOptimizer;
 use App\Support\PageCache;
+use App\Support\Theme\ThemePresets;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
@@ -146,6 +147,39 @@ class SettingController extends Controller
     }
 
     /**
+     * 一键应用行业视觉预设（P-STEP 18D）。
+     *
+     * 预设只写入 theme_* 视觉令牌（颜色 / 圆角 / 宽度 / 密度 / 阴影 / 字体），
+     * 不触碰任何 IA、导航、文案或内容；theme_primary_dark 恒置空，交由 ThemePalette
+     * 从新主色自动派生。写入限定在 ThemePresets::allowedKeys() 白名单，且键必须已在
+     * settings 表注册（updateOrCreate 天然按当前管理站点作用域）。
+     */
+    public function applyPreset(Request $request)
+    {
+        $validated = $request->validate([
+            'preset' => ['required', 'string'],
+        ]);
+
+        $preset = $validated['preset'];
+        abort_unless(ThemePresets::exists($preset), 404);
+
+        $tokens = ThemePresets::tokens($preset);
+        foreach (ThemePresets::allowedKeys() as $key) {
+            if (! array_key_exists($key, $tokens)) {
+                continue;
+            }
+            Setting::set($key, (string) $tokens[$key]);
+        }
+
+        Setting::flush();
+        PageCache::flush();
+        AuditLog::record('settings.theme_preset', "应用行业视觉预设：{$preset}");
+
+        return redirect()->route('admin.settings.index', ['group' => 'theme'])
+            ->with('success', '已应用视觉预设（仅外观，不影响内容与导航）。');
+    }
+
+    /**
      * 按字段类型 / 键做轻量服务端校验；返回中文错误信息，通过返回 null。
      * 空字符串视为「清空 / 回退默认」，一律放行。
      */
@@ -180,6 +214,18 @@ class SettingController extends Controller
 
         if ($item->key === 'contact_map_url' && filter_var($value, FILTER_VALIDATE_URL) === false) {
             return '「地图链接」不是合法的 URL（需以 http:// 或 https:// 开头）。';
+        }
+
+        if ($item->key === 'theme_density' && ! in_array($value, ['comfortable', 'compact'], true)) {
+            return '「排版密度」只能是 comfortable 或 compact。';
+        }
+
+        if ($item->key === 'theme_shadow' && ! in_array($value, ['flat', 'soft'], true)) {
+            return '「阴影质感」只能是 flat 或 soft。';
+        }
+
+        if ($item->key === 'theme_color_mode' && ! in_array($value, ['light', 'dark', 'system'], true)) {
+            return '「默认外观模式」只能是 light（浅色）、dark（深色）或 system（跟随系统）。';
         }
 
         return null;

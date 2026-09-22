@@ -173,6 +173,8 @@ Route::middleware(['admin.auth', 'admin.site'])->group(function () {
     Route::get('settings/{group?}', [SettingController::class, 'index'])
         ->where('group', 'general|theme|contact|copy|seo|geo|sync')->name('settings.index');
     Route::put('settings/{group}', [SettingController::class, 'update'])->name('settings.update');
+    Route::post('settings/theme/preset', [SettingController::class, 'applyPreset'])
+        ->name('settings.preset');
     Route::post('settings/sync/regenerate-token', [SettingController::class, 'regenerateToken'])
         ->name('settings.token');
 
