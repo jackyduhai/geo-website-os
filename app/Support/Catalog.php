@@ -4,6 +4,7 @@ namespace App\Support;
 
 use App\Models\Entity;
 use App\Models\EntityRelation;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * 站点隔离的目录（Catalog）读模型 —— Runtime 唯一的产品 / 场景 / 公司目录数据源。
@@ -62,6 +63,12 @@ class Catalog
 
     private static function buildDataset(): array
     {
+        // TD-09 缺表安全降级：fresh install 极早期 / 异常库（entities 尚未迁移）时，
+        // Catalog 一律返回空数据集（业务页 404、feed 不输出），绝不抛 SQL 白屏。
+        if (! Schema::hasTable((new Entity())->getTable())) {
+            return [];
+        }
+
         // 查询经 BelongsToSite::SiteScope 自动限定当前站点。
         $organization = Entity::published()
             ->ofType(Entity::TYPE_ORGANIZATION)
@@ -188,6 +195,11 @@ class Catalog
             'scene_adjacent'  => [],
             'scene_key_param' => [],
         ];
+
+        // 关系表尚未迁移（安装极早期）时按「无关系」降级，不抛 SQL。
+        if (! Schema::hasTable((new EntityRelation())->getTable())) {
+            return $map;
+        }
 
         $relations = EntityRelation::query()
             ->where('site_id', $organization->site_id)

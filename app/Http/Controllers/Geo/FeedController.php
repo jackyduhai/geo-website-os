@@ -7,6 +7,7 @@ use App\Models\Setting;
 use App\Services\Geo\GeoGraphBuilder;
 use App\Services\Geo\LlmsBuilder;
 use App\Services\Geo\SitemapBuilder;
+use App\Support\PublicUrl;
 
 /**
  * GEO 产出：sitemap.xml / llms.txt / robots.txt / feed.xml / geo.json
@@ -56,7 +57,7 @@ class FeedController extends Controller
     public function robots()
     {
         $lines = [];
-        $lines[] = '# robots.txt · ' . config('app.name') . ' · ' . url('/');
+        $lines[] = '# robots.txt · ' . config('app.name') . ' · ' . PublicUrl::home();
         $lines[] = '# 全站默认可抓取；仅阻断后台、接口、内部检索与临时资源。';
         $lines[] = '';
         $lines[] = '# ---------- 通用爬虫 ----------';
@@ -84,7 +85,7 @@ class FeedController extends Controller
         $lines[] = '# ---------- Sitemap ----------';
         // sitemap 被站点显式关闭时，robots 不再指向一个会 404 的地址。
         if (Setting::get('geo_sitemap_enabled', '1') !== '0') {
-            $lines[] = 'Sitemap: ' . url('/sitemap.xml');
+            $lines[] = 'Sitemap: ' . PublicUrl::url('sitemap.xml');
         }
         $lines[] = '';
 
@@ -103,6 +104,11 @@ class FeedController extends Controller
 
     public function rss()
     {
+        // RSS 独立产出开关（TD-20①，与 sitemap / llms 一致）：显式关闭时 /feed.xml 返回 404。
+        if (Setting::get('geo_rss_enabled', '1') === '0') {
+            abort(404);
+        }
+
         // RSS 只收录知识 / 新闻类文章；被 config 页取代的旧公司内容、产品综述不进 feed，
         // 且文章 URL 与前台一致采用扁平 /knowledge/{slug}（知识类）。
         // PublicIndex：published + 启用栏目 + 非 noindex + 当前站点，避免 RSS 泄漏
@@ -120,7 +126,7 @@ class FeedController extends Controller
         $xml = ['<?xml version="1.0" encoding="UTF-8"?>'];
         $xml[] = '<rss version="2.0"><channel>';
         $xml[] = '<title>' . e($siteTitle) . '</title>';
-        $xml[] = '<link>' . url('/') . '</link>';
+        $xml[] = '<link>' . PublicUrl::home() . '</link>';
         $xml[] = '<description>' . e($siteTitle) . '</description>';
 
         foreach ($items as $it) {

@@ -200,9 +200,10 @@ class SchemaBuilder
     {
         $seo ??= app(SeoMetaResolver::class)->resolveContent($c);
 
+        // Content 仅 article / page（17B 起产品是 Entity，不再走此分支）。
         $data = [
             '@context'         => 'https://schema.org',
-            '@type'            => $c->type === 'product' ? 'Product' : 'Article',
+            '@type'            => $c->schemaType(),
             '@id'              => PublicUrl::content($c) . '#main',
             'headline'         => $seo->title,
             'name'             => $seo->title,
@@ -226,13 +227,6 @@ class SchemaBuilder
 
         if ($c->summary) {
             $data['abstract'] = $c->summary;
-        }
-
-        // 产品页补充品牌与制造商
-        if ($c->type === 'product') {
-            $data['brand'] = ['@type' => 'Brand', 'name' => $this->siteName()];
-            $data['manufacturer'] = ['@id' => $this->baseUrl() . '/#organization'];
-            $data['category'] = $c->category?->name;
         }
 
         return array_filter($data, fn ($v) => $v !== null && $v !== '');
@@ -324,7 +318,7 @@ class SchemaBuilder
         return [
             '@context'   => 'https://schema.org',
             '@type'      => 'FAQPage',
-            '@id'        => $c->url() . '#faq',
+            '@id'        => PublicUrl::content($c) . '#faq',
             'mainEntity' => array_map(function ($f) {
                 return [
                     '@type'          => 'Question',

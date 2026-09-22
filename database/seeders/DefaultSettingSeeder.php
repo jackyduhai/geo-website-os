@@ -78,6 +78,7 @@ class DefaultSettingSeeder extends Seeder
             ['geo_org_logo',       '',       'geo', 'Organization Logo', 'image', '建议 512×512 以上方形 PNG', 30],
             ['geo_llms_enabled',   '1',      'geo', '生成 llms.txt', 'bool', '关闭后 /llms.txt 返回 404', 40],
             ['geo_sitemap_enabled', '1',     'geo', '生成 sitemap.xml', 'bool', '关闭后 /sitemap.xml 返回 404', 50],
+            ['geo_rss_enabled',    '1',      'geo', '生成 RSS Feed', 'bool', '关闭后 /feed.xml 返回 404', 60],
 
             // ---------- 文案话术（默认留空，Copy 层逐句回退 config 中性默认） ----------
             ['copy_bcta_title',             '', 'copy', '底部 CTA · 标题', 'text', '留空恢复默认', 10],

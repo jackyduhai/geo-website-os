@@ -21,7 +21,7 @@ use Tests\TestCase;
  *  - 后台七组可渲染、可保存并即时驱动前台；
  *  - RETIRE 键（site_short_name / site_slogan / sync_geoflow_endpoint /
  *    sync_pull_enabled）后台不渲染、伪造提交不可写；
- *  - sitemap / llms 站点开关关闭返回 404，robots 不再指向被关闭的 sitemap；
+ *  - sitemap / llms / RSS 站点开关关闭返回 404（三者各自独立门禁），robots 不再指向被关闭的 sitemap；
  *  - robots 自定义追加、公安备案空值隐藏 / 有值展示；
  *  - Token 重新生成使用产品中性前缀 gwos_；
  *  - 字段级校验（颜色 / 邮箱 / URL / 数值区间）；
@@ -34,13 +34,13 @@ class SettingsGovernanceTest extends TestCase
     protected User $super;
     protected Site $default;
 
-    /** 各组保留键数量（与 DefaultSettingSeeder 一致，合计 64）。 */
+    /** 各组保留键数量（与 DefaultSettingSeeder 一致，合计 65）。 */
     private const GROUP_COUNTS = [
         'general' => 5,
         'theme'   => 11,
         'contact' => 7,
         'seo'     => 5,
-        'geo'     => 5,
+        'geo'     => 6,
         'copy'    => 28,
         'sync'    => 3,
     ];
@@ -95,6 +95,7 @@ class SettingsGovernanceTest extends TestCase
         $this->assertSame('', Setting::get('sync_geoflow_token'));
         $this->assertSame('1', Setting::get('geo_sitemap_enabled'));
         $this->assertSame('1', Setting::get('geo_llms_enabled'));
+        $this->assertSame('1', Setting::get('geo_rss_enabled'));
         $this->assertSame('0', Setting::get('sync_auto_publish'));
         // 补定义的孤儿键现在有正式设置行。
         $this->assertNotNull(Setting::where('key', 'seo_head_code')->first());
@@ -136,11 +137,18 @@ class SettingsGovernanceTest extends TestCase
             ->whereIn('key', ['sync_pull_enabled', 'sync_geoflow_endpoint'])->count());
     }
 
-    public function test_sitemap_and_llms_toggle_off_returns_404_and_robots_drops_sitemap(): void
+    public function test_sitemap_llms_rss_toggles_off_return_404_and_robots_drops_sitemap(): void
     {
         $this->get('/sitemap.xml')->assertOk();
         $this->get('/llms.txt')->assertOk();
+        $this->get('/feed.xml')->assertOk();
         $this->get('/robots.txt')->assertOk()->assertSee('Sitemap:');
+
+        // RSS 独立门禁（TD-20①）：只关 RSS 时 /feed.xml 404，sitemap 不受影响。
+        Setting::set('geo_rss_enabled', '0');
+        Setting::flush();
+        $this->get('/feed.xml')->assertNotFound();
+        $this->get('/sitemap.xml')->assertOk();
 
         Setting::set('geo_sitemap_enabled', '0');
         Setting::set('geo_llms_enabled', '0');
@@ -154,9 +162,11 @@ class SettingsGovernanceTest extends TestCase
         // 恢复后重新可用。
         Setting::set('geo_sitemap_enabled', '1');
         Setting::set('geo_llms_enabled', '1');
+        Setting::set('geo_rss_enabled', '1');
         Setting::flush();
         $this->get('/sitemap.xml')->assertOk();
         $this->get('/llms.txt')->assertOk();
+        $this->get('/feed.xml')->assertOk();
     }
 
     public function test_robots_extra_setting_is_appended(): void

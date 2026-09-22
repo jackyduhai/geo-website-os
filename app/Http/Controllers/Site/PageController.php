@@ -174,8 +174,8 @@ class PageController extends Controller
             $crumbs[] = ['name' => $c->name, 'url' => $c->url()];
         }
 
-        // 单页型：渲染其下第一条内容
-        if ($category->type === 'single') {
+        // 单页型（type=page）：渲染其下第一条内容
+        if ($category->isSinglePage()) {
             $page = Content::published()
                 ->where('category_id', $category->id)
                 ->orderByDesc('published_at')

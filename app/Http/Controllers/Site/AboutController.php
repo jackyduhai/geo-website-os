@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Services\Geo\SchemaBuilder;
 use App\Support\Catalog;
 use App\Support\Narrative;
+use App\Support\PublicUrl;
 
 /**
  * 关于我们：企业简介 / 发展历程 / 企业文化（三子页，config facts + pages 成稿）
@@ -50,9 +51,9 @@ class AboutController extends Controller
         ];
 
         $crumbs = [
-            ['name' => '首页', 'url' => url('/')],
-            ['name' => '关于我们', 'url' => url('/about/profile/')],
-            ['name' => $titles[$page], 'url' => url('/about/' . $page . '/')],
+            ['name' => '首页', 'url' => PublicUrl::home()],
+            ['name' => '关于我们', 'url' => PublicUrl::url('about/profile/')],
+            ['name' => $titles[$page], 'url' => PublicUrl::url('about/' . $page . '/')],
         ];
 
         // 关于类 SubNav：与顶部导航「关于我们」下拉同源（固定四项 + 后台挂接的自定义二级项）
@@ -93,7 +94,7 @@ class AboutController extends Controller
                 'title'       => $titles[$page] . '｜' . ($company['name'] ?? ''),
                 'description' => $copy['meta_desc']
                     ?? ('了解' . ($company['name'] ?? '') . '的企业概况、产品与服务。'),
-                'canonical'   => url('/about/' . $page . '/'),
+                'canonical'   => PublicUrl::url('about/' . $page . '/'),
                 'noindex'     => false,
                 'type'        => 'website',
             ],

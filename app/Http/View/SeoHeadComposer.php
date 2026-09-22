@@ -3,6 +3,7 @@
 namespace App\Http\View;
 
 use App\Services\Seo\SeoMetaResolver;
+use App\Support\PublicUrl;
 use App\Support\SiteContext;
 use Illuminate\View\View;
 
@@ -64,7 +65,9 @@ class SeoHeadComposer
         $ogImage = $seo['image']
             ?? ($siteResult->ogImage ?? null)
             ?? ($settings['seo_og_image'] ?? null);
-        $ogImage = $ogImage ?: asset('img/og-default.png');
+        // 默认 OG 图是声明性绝对 URL（社交抓取），必须经 PublicUrl 裁决到站点规范
+        // host，不能用 asset() 跟随临时请求 origin（TD-09：HTTP / CLI host 不分叉）。
+        $ogImage = $ogImage ?: PublicUrl::base() . '/img/og-default.png';
 
         // ---- og / twitter ----
         $ogTitle = $seo['og_title']

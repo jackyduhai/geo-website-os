@@ -5,8 +5,10 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
 use App\Models\Category;
+use App\Support\SiteContext;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 /**
@@ -93,11 +95,11 @@ class CategoryController extends Controller
     protected function validateData(Request $request, ?Category $except = null): array
     {
         $data = $request->validate([
-            'parent_id'    => ['nullable', 'exists:categories,id'],
+            'parent_id'    => ['nullable', Rule::exists('categories', 'id')->where(fn ($q) => $q->where('site_id', SiteContext::currentSite()?->id))],
             'name'         => ['required', 'string', 'max:60'],
-            'slug'         => ['required', 'regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/', 'unique:categories,slug' . ($except ? ',' . $except->id : '')],
+            'slug'         => ['required', 'regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/', Rule::unique('categories', 'slug')->where(fn ($q) => $q->where('site_id', SiteContext::currentSite()?->id))->ignore($except?->id)],
             'icon'         => ['nullable', 'in:' . implode(',', array_keys(config('icons')))],
-            'type'         => ['required', 'in:list,page,product_list,external'],
+            'type'         => ['required', Rule::in(Category::TYPES)],
             'description'  => ['nullable', 'string', 'max:1000'],
             'seo_title'    => ['nullable', 'string', 'max:70'],
             'seo_desc'     => ['nullable', 'string', 'max:180'],
@@ -105,7 +107,7 @@ class CategoryController extends Controller
             'is_nav'       => ['nullable', 'boolean'],
             'is_active'    => ['nullable', 'boolean'],
             'is_index'     => ['nullable', 'boolean'],
-            'external_url' => ['nullable', 'string', 'max:255'],
+            'external_url' => ['nullable', 'url', 'max:255', Rule::requiredIf(fn () => $request->input('type') === Category::TYPE_EXTERNAL)],
         ]);
         $data['is_nav'] = $request->boolean('is_nav');
         $data['is_active'] = $request->boolean('is_active');

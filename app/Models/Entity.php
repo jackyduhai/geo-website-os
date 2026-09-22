@@ -6,12 +6,27 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use App\Support\BelongsToSite;
+use App\Support\PageCache;
 
 class Entity extends Model
 {
     use BelongsToSite;
 
     protected $guarded = [];
+
+    protected static function booted(): void
+    {
+        // P-STEP 18C / TD-08b：Entity（产品 / 服务 / 组织 / 地点……）是前台目录、
+        // Schema、GEO、Sitemap 的权威数据源（17B 起 Product 正式成为 Entity）。任何
+        // 写入 / 删除（后台、tinker、import、Seeder）都必须失效整页静态壳，否则匿名
+        // 访客仍命中旧 SSR HTML。与 EntityRelation（18A）对称，挂模型层覆盖全写入路径。
+        static::saved(function (self $entity): void {
+            PageCache::flush();
+        });
+        static::deleted(function (self $entity): void {
+            PageCache::flush();
+        });
+    }
 
     protected $casts = [
         'metadata' => 'array',

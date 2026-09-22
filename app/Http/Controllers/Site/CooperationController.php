@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Services\Geo\SchemaBuilder;
 use App\Support\Catalog;
 use App\Support\Narrative;
+use App\Support\PublicUrl;
 
 /**
  * 合作方式：多种合作模式 + 合作流程 + FAQ（结构化数据来自 Catalog / facts）。
@@ -22,7 +23,8 @@ class CooperationController extends Controller
             abort(404);
         }
         $faqs = config('pages.cooperation_faqs', []);
-        $url  = url('/cooperation/');
+        // 该 URL 同时用于 canonical、HowTo / FAQ JSON-LD 与面包屑，属声明性地址，经 PublicUrl 裁决（TD-09）。
+        $url  = PublicUrl::url('cooperation/');
         $lead = Narrative::lead('cooperation.lead', config('pages.narrative.cooperation.lead', ''));
 
         $company     = Catalog::company();
@@ -31,7 +33,7 @@ class CooperationController extends Controller
         $stepCnt     = count($coop['process'] ?? []);
 
         $crumbs = [
-            ['name' => '首页', 'url' => url('/')],
+            ['name' => '首页', 'url' => PublicUrl::home()],
             ['name' => '合作方式', 'url' => $url],
         ];
 

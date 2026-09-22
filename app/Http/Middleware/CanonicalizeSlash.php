@@ -78,7 +78,7 @@ class CanonicalizeSlash
     /**
      * 动态路径的实体级斜杠判定（与 PageController::dispatch 的匹配顺序一致）：
      *   true  = 目录型（列表 / 栏目页，带尾斜杠）
-     *   false = 详情型（文章 / single 型栏目渲染的文章，无尾斜杠）
+     *   false = 详情型（文章 / page 单页型栏目渲染的文章，无尾斜杠）
      *   null  = 无对应实体（不做跳转，交给控制器 404，避免给垃圾路径发 301）
      */
     public static function resolveWantsSlash(string $path): ?bool
@@ -108,8 +108,9 @@ class CanonicalizeSlash
             $parent = $node;
         }
 
-        // single 型栏目直接渲染其下文章，规范地址是文章 URL（无斜杠）；list/product 为目录型
-        return $node->type === 'single' ? false : true;
+        // 单页型栏目（type=page）直接渲染其下文章，规范地址是文章 URL（无斜杠）；
+        // list / product_list / external 为目录型（带尾斜杠）。
+        return $node->isSinglePage() ? false : true;
     }
 
     /**

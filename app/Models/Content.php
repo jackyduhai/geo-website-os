@@ -7,12 +7,15 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use App\Support\BelongsToSite;
+use App\Support\PublicUrl;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 /**
- * 内容（文章 / 单页 / 产品）
+ * 内容（文章 article / 单页 page）
+ *
+ * 17B 起产品不再是 Content 类型，而是正式 Entity（type=product），由 Catalog 投影。
  *
  * GEO 四层结构以独立字段承载，模板按固定顺序渲染：
  *   结论 → 解释 → 证据 → 边界
@@ -160,17 +163,20 @@ class Content extends Model
         return '/' . implode('/', $segs);
     }
 
-    /** 前台地址：/{栏目完整路径}/{slug}，语义化且唯一 */
+    /**
+     * 前台规范绝对地址：/{栏目完整路径}/{slug}（TD-09 经 PublicUrl 裁决 host）。
+     * 同时用于 canonical、Article/FAQ JSON-LD、sitemap / llms、面包屑与 301 跳转目标，
+     * 必须是站点规范 URL，不能用 url() 跟随临时请求 origin。
+     */
     public function url(): string
     {
-        return url($this->path());
+        return PublicUrl::content($this);
     }
 
-    /** 页面类型到 schema.org 类型的映射 */
+    /** 页面类型到 schema.org 类型的映射（Content 仅 article / page；产品是 Entity） */
     public function schemaType(): string
     {
         return match ($this->type) {
-            'product' => 'Product',
             'page'    => 'WebPage',
             default   => 'Article',
         };

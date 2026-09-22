@@ -61,12 +61,44 @@ class PublicUrl
     }
 
     /**
+     * 站内任意路径的规范绝对 URL（TD-09 通用裁决口）。
+     *
+     * 语义与 Laravel `url($path)` 相同（保留调用方给定的首尾 / 尾斜杠形态），
+     * 唯一区别是 host / scheme 走 {@see base()}：真实 HTTP 下等于请求 origin（与 url()
+     * 同源），CLI / 队列 / SubRequest 下回退当前站点规范 domain。专供 sitemap / llms /
+     * robots / RSS / canonical / JSON-LD 等「声明性绝对 URL」使用，杜绝 helper 层 host 分叉。
+     * 导航 href、表单 action、重定向 Location 等跟随当前 origin 的功能性 URL 仍用 url()。
+     */
+    public static function url(string $path = '/'): string
+    {
+        return self::base() . '/' . ltrim($path, '/');
+    }
+
+    /**
      * 内容的公开 URL：/{栏目完整路径}/{slug}（与 Content::path() 同源，绝对化）。
      * 知识文章即 /knowledge/{slug}；无栏目的单页为 /{slug}（catch-all 渲染）。
      */
     public static function content(Content $content): string
     {
         return self::base() . $content->path();
+    }
+
+    /** 核心产品详情页（详情型，无尾斜杠）：/products/{slug}。 */
+    public static function product(string $slug): string
+    {
+        return self::base() . '/products/' . $slug;
+    }
+
+    /** 产品系列 / 目录型页（带尾斜杠）：/products/{line}/。 */
+    public static function productLine(string $slug): string
+    {
+        return self::base() . '/products/' . $slug . '/';
+    }
+
+    /** 应用场景详情页（目录型，带尾斜杠）：/solutions/{slug}/。 */
+    public static function solution(string $slug): string
+    {
+        return self::base() . '/solutions/' . $slug . '/';
     }
 
     /**
@@ -77,10 +109,10 @@ class PublicUrl
     {
         return match ($entity->type) {
             Entity::TYPE_PRODUCT => Catalog::isCoreProduct($entity->slug)
-                ? self::base() . '/products/' . $entity->slug
+                ? self::product($entity->slug)
                 : null,
             Entity::TYPE_SERVICE => Catalog::scene($entity->slug) !== null
-                ? self::base() . '/solutions/' . $entity->slug . '/'
+                ? self::solution($entity->slug)
                 : null,
             default => null,
         };

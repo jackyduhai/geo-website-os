@@ -49,6 +49,10 @@ class CatalogSeeder extends Seeder
             'published_at' => $now,
             'sort_order'  => 0,
             'metadata'    => [
+                // TD-07：标记该 organization 实体为站点主体（Demo 目录中的主体公司
+                // 节点，供 produces/offers 关系边挂载）；GEO 通过 same_as 锚定 Site
+                // 聚合的唯一主体 {base}/#organization，避免出现第二个组织事实源。
+                'is_site_organization' => true,
                 'company'        => Facts::company(),
                 'brand_language' => Facts::brandLanguage(),
                 'product_lines'  => Facts::productLines(),

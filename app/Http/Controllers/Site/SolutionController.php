@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Services\Geo\SchemaBuilder;
 use App\Support\Catalog;
 use App\Support\Narrative;
+use App\Support\PublicUrl;
 
 /**
  * 应用场景（按应用行业分诊，当前站点 Catalog 站点隔离读模型驱动）
@@ -26,8 +27,8 @@ class SolutionController extends Controller
         $sceneCnt   = count($scenes);
         $sceneNames = implode('、', array_map(fn ($s) => $s['name'], $scenes));
         $crumbs = [
-            ['name' => '首页', 'url' => url('/')],
-            ['name' => '应用场景', 'url' => url('/solutions/')],
+            ['name' => '首页', 'url' => PublicUrl::home()],
+            ['name' => '应用场景', 'url' => PublicUrl::url('solutions/')],
         ];
 
         $itemList = [
@@ -39,7 +40,7 @@ class SolutionController extends Controller
                     '@type'    => 'ListItem',
                     'position' => $i + 1,
                     'name'     => $s['name'],
-                    'url'      => url('/solutions/' . $s['slug'] . '/'),
+                    'url'      => PublicUrl::solution($s['slug']),
                 ];
             }, $scenes, array_keys($scenes))),
         ];
@@ -56,7 +57,7 @@ class SolutionController extends Controller
             'seo' => [
                 'title'       => '应用场景：' . $sceneCnt . '类行业解决方案',
                 'description' => '覆盖' . $sceneNames . '等' . $sceneCnt . '类应用场景，给出对应产品组合、选型理由与关键工艺参数。',
-                'canonical'   => url('/solutions/'),
+                'canonical'   => PublicUrl::url('solutions/'),
                 'noindex'     => false,
                 'type'        => 'website',
             ],
@@ -79,10 +80,11 @@ class SolutionController extends Controller
         $prev = $adjacent[0] ?? null;
         $next = $adjacent[1] ?? null;
 
+        $sceneUrl = PublicUrl::solution($scene);
         $crumbs = [
-            ['name' => '首页', 'url' => url('/')],
-            ['name' => '应用场景', 'url' => url('/solutions/')],
-            ['name' => $data['name'], 'url' => url('/solutions/' . $scene . '/')],
+            ['name' => '首页', 'url' => PublicUrl::home()],
+            ['name' => '应用场景', 'url' => PublicUrl::url('solutions/')],
+            ['name' => $data['name'], 'url' => $sceneUrl],
         ];
 
         $schemas = [
@@ -90,7 +92,7 @@ class SolutionController extends Controller
             $schema->breadcrumb($crumbs),
         ];
         if (! empty($faqs)) {
-            $schemas[] = $schema->faqPageFromList($faqs, url('/solutions/' . $scene . '/'));
+            $schemas[] = $schema->faqPageFromList($faqs, $sceneUrl);
         }
 
         return view('site.solutions.show', [
@@ -105,7 +107,7 @@ class SolutionController extends Controller
             'seo' => [
                 'title'       => $data['title_q'] ?? $data['name'],
                 'description' => $data['desc'] . '。' . ($data['combo_reason'] ?? ''),
-                'canonical'   => url('/solutions/' . $scene . '/'),
+                'canonical'   => $sceneUrl,
                 'noindex'     => false,
                 'type'        => 'website',
             ],

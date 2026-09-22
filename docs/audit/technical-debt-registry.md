@@ -3,7 +3,7 @@
 - **定位**：本文件是 GEO Website OS **唯一**的技术债 / 架构债 / 产品化债 / Release Gate 登记与销项台账。所有阶段（P-STEP / 17x / 18x）的 Gate 对账以本文件为准；其他审计文档（product-uat-final、settings-inventory-17f、runtime-architecture-closure、admin-control-plane-final-acceptance、admin-management-completion-design 等）只作为**来源证据**，不再各自维护债务清单。
 - **建立时基线**：HEAD `4dbc95a`（= annotated tag `checkpoint-18A`）；Regression **801 tests / 3948 assertions / 0 failed / 0 skipped**；`v1.0.0-rc1` 冻结于 `965d63c`（HOLD）；无 remote、未 push、未发布。
 - **阶段口径修正**：P-STEP 17 中 **17A–17F = 六大管理面**（Site / Entity / EntityRelation / SeoMeta / Theme·Plugin / Settings）；**17G = 六大管理面的系统级 Full Admin UAT**，不是第七个管理面。
-- **最后更新**：P-STEP 18A 收口后。
+- **最后更新**：P-STEP 18C 收口后（tag `checkpoint-18C`；Regression **826 / 4139 / 0 / 0**）。v1.0 Required 仅剩 3 项 P0 外部工程依赖（TD-01/02/03）。
 
 ---
 
@@ -44,8 +44,8 @@ ACTIVE  →  FIXED  →  TESTED  →  ACCEPTED  →  CLOSED
 | Epic | 范围 | Current Status | Blocks v1.0.0? |
 | --- | --- | --- | --- |
 | **#86** Public Render Contract / Feed 泄漏 | 任何进入 Sitemap/GEO/LLMS/RSS/Search 的公开资源必须 Published + 当前 Site 可见 + Canonical 有效 + 前台 HTTP 200 | **CLOSED by 17G**（PublicIndex/PublicUrl 七大输出改派，90 URL×3 站全 200） | — |
-| **#114** Catalog Read Model / Entity Public Model | 后台生产模型 → Catalog 读模型 → 前台 / Schema / GEO / Sitemap / Search 的权威链路与公开 URL 体系 | **PARTIAL**：关系权威源 TD-04 已 CLOSED（18A）；TD-05 / TD-06 / TD-09 仍 ACTIVE | YES（须收口或逐项裁定） |
-| **#115** Default Template Neutralization | 出厂为行业中性空站，系统默认层与 Example Demo（工业材料）彻底分离 | **ACTIVE**（17G 仅完成空状态安全降级，未做行业中性出厂） | YES（开源公开形象） |
+| **#114** Catalog Read Model / Entity Public Model | 后台生产模型 → Catalog 读模型 → 前台 / Schema / GEO / Sitemap / Search 的权威链路与公开 URL 体系 | **CLOSED for v1.0 by 18A+18C**：关系权威源 TD-04 CLOSED（18A）；TD-05 URL 体系冻结、TD-09 @id/PublicUrl 统一 CLOSED（18C）；TD-06 `/article/` 收敛书面 DEFERRED v1.1（301 桥接已锁定） | —（v1.0 收口；TD-06 转 v1.1） |
+| **#115** Default Template Neutralization | 出厂为行业中性空站，系统默认层与 Example Demo（工业材料）彻底分离 | **CLOSED by 18B**（TD-10/11/12/13 + TD-25/26；Blank System ≠ Demo Site 两态 HTTP 对拍） | — |
 
 ---
 
@@ -64,13 +64,13 @@ ACTIVE  →  FIXED  →  TESTED  →  ACCEPTED  →  CLOSED
 | ID | Title | Source | Status | Acceptance Criteria | Blocks v1.0.0? | Parent/Related |
 | --- | --- | --- | --- | --- | --- | --- |
 | **TD-04** | 关系读模型双轨：前台 Catalog 读 `Entity.metadata` slug 数组，而非权威边表 EntityRelation | 17C 发现；17G §5 登记 | **CLOSED by 18A**（见 §5） | — | — | #114 |
-| **TD-05** | Entity 六类型公开 URL 体系未冻结 | 17G §5；现仅 core 产品 `/products`、场景服务 `/solutions` 有页，org/person/location/topic/非 core 产品 url=null | ACTIVE | 形成书面 URL 契约：哪些 Entity 类型有公开页、其余类型 url=null 且不进任何 feed；补页或维持现状均须有测试与文档锁定，Canonical/Schema @id/Sitemap/GEO/Search 一致 | **DECISION**（发布前必须冻结决策；补页可延后） | #114, TD-09 |
-| **TD-06** | Content 路径双轨：无 `/article/`，旧路径靠 301 桥接 | 17G §5 | ACTIVE | 裁定 Content 公开路径单一体系；301 桥接行为有测试锁定；或落地 `/article/` 并收敛 canonical/sitemap | NO（现有 301 桥接可用，建议 v1.1 收敛） | #114 |
-| **TD-07** | Organization 双载体：organization Entity 与 `sites.metadata.organization` 并存，SchemaBuilder 读后者 | P14 遗留；18A 附录 G | ACTIVE | 单一组织事实源：Schema/GEO/前台统一从 organization Entity（或正式指定的唯一源）读取；多站组织数据隔离；config/facts.php 安装期种子随之退场 | **YES**（影响多站 Schema 一致性） | #114, TD-10 |
-| **TD-08** | PageCache 整页缓存失效模型不完整 | 18A 实测发现并部分修复 | **PARTIAL** | 见下方子项；最终所有会改变前台 HTML 的写入路径都失效对应整页缓存，并有"写入→前台立即一致"防回归测试 | **YES**（剩余模型） | — |
+| **TD-05** | Entity 六类型公开 URL 体系未冻结 | 17G §5；现仅 core 产品 `/products`、场景服务 `/solutions` 有页，org/person/location/topic/非 core 产品 url=null | **CLOSED by 18C（DECISION 冻结）**（见 §5） | — | — | #114, TD-09 |
+| **TD-06** | Content 路径双轨：无 `/article/`，旧路径靠 301 桥接 | 17G §5 | **DEFERRED v1.1（18C 书面裁定）** | 维持 `Content::path()`=`/{栏目路径}/{slug}`，不引入 /article/；301 桥接测试锁定；schemaType 仅 page→WebPage/default→Article | NO（v1.1 收敛） | #114 |
+| **TD-07** | Organization 双载体：organization Entity 与 `sites.metadata.organization` 并存，SchemaBuilder 读后者 | P14 遗留；18A 附录 G | **CLOSED by 18C**（见 §5） | — | — | #114, TD-10 |
+| **TD-08** | PageCache 整页缓存失效模型不完整 | 18A 实测发现并部分修复 | **CLOSED by 18A+18C**（08a/08b 均闭合，见 §5） | — | — | — |
 | └ TD-08a | EntityRelation 写入失效整页缓存 | 18A | **CLOSED by 18A**（模型 saved/deleted → PageCache::flush） | — | — | TD-08 |
-| └ TD-08b | Entity / Site / SeoMeta / Content 写入后整页 HTML 失效未挂接 | 18A 附录 G | ACTIVE | 上述模型 saved/deleted 挂接触发（精确失效或全站 flush），覆盖后台/tinker/import 全写入路径；feed 端点维持不缓存 | **YES**（18C） | TD-08 |
-| **TD-09** | Product 自身 `@id` 仍用 `url()` helper；Catalog 早期路径缺 `Schema::hasTable` 守卫 | 17G（manufacturer.@id 已改 PublicUrl，product 自身未改） | ACTIVE | Product/各类型 Schema `@id`/url 统一经 PublicUrl，与 host/canonical 一致，多站不出现 localhost 串站；读模型在缺表时安全降级 | **YES**（小改，随 #114 收口） | #114, TD-05 |
+| └ TD-08b | Entity / Site / SeoMeta / Content 写入后整页 HTML 失效未挂接 | 18A 附录 G | **CLOSED by 18C**（见 §5） | — | — | TD-08 |
+| **TD-09** | Product 自身 `@id` 仍用 `url()` helper；Catalog 早期路径缺 `Schema::hasTable` 守卫 | 17G（manufacturer.@id 已改 PublicUrl，product 自身未改） | **CLOSED by 18C（#143）**（见 §5） | — | — | #114, TD-05 |
 
 ### P2 — 通用化与产品化（#115）
 
@@ -84,11 +84,11 @@ ACTIVE  →  FIXED  →  TESTED  →  ACCEPTED  →  CLOSED
 | --- | --- | --- | --- | --- | --- | --- |
 | **TD-14** | RBAC 仅两级（super admin / admin），蓝图 §12.2 要求三角色 + 站点成员 | 蓝图 admin-management-completion-design §12.2 | ACTIVE | 角色模型（如 owner/admin/editor）+ 站点成员关系 + 越权测试；普通管理员不可跨站 | NO（v1.1；单组织开源 v1 两级可接受） | — |
 | **TD-15** | 校验 i18n 缺失 + 无字段级 `@error` | 16A；Laravel 校验文案为英文，仅顶部汇总 | ACTIVE | zh-CN 校验语言包；关键字段字段级错误展示；不削弱后端校验 | NO（v1.1） | — |
-| **TD-16** | Category 多项不规范：slug unique 未按 site_id、type 枚举漂移、外链接线、栏目 seo_title/seo_desc 疑似第三套 SEO | 17F/17G 遗留 | ACTIVE | ① slug 站点作用域唯一（多站正确性）；② type 枚举收敛；③ 外链栏目前台接线或移除；④ 栏目 SEO 归并 SeoMeta/Resolver，不造第三套 | **MIXED**：①建议 YES（多站正确性，18C 评估）；②③④ NO（v1.1） | SeoMeta(17D) |
+| **TD-16** | Category 多项不规范：slug unique 未按 site_id、type 枚举漂移、外链接线、栏目 seo_title/seo_desc 疑似第三套 SEO | 17F/17G 遗留 | **PARTIAL：① CLOSED by 18C；②③④ DEFERRED v1.1** | ① slug 站点作用域唯一 + type 四类型常量/访问器收敛（18C 完成，AdminCategoryCrud +4 测试）；② 外链接线、③ 栏目 SEO 归并 v1.1 | ① 已闭合；②③④ NO（v1.1） | SeoMeta(17D) |
 | **TD-17** | 缺后台友好 500 错误页 | 16A/17F | ACTIVE | 后台/前台异常展示友好错误页，绝不泄漏堆栈/路径；有模拟 500 的验证 | NO（v1.1；安全上已不泄漏堆栈） | — |
 | **TD-18** | Theme/Plugin 上传安装 / SDK / 应用市场缺失 | 蓝图明确划出 v1.x | ACTIVE（规划中） | 蓝图定义的上传安装、SDK 规范、市场能力（按蓝图里程碑） | NO（v1.x） | Theme/Plugin(17E) |
 | **TD-19** | GEOFlow 等旧概念后台 IA 命名未清理 | 16A F2；token 前缀 `yhf_` 已在 17F 中性化 | PARTIAL | token 前缀已中性化（DONE）；后台菜单/术语重命名为 Site/Content/Entity/Relation/SEO/GEO/Theme/Plugin/Settings 体系 | NO（v1.1） | — |
-| **TD-20** | md-editor 内联上传未测；RSS 未接独立 enabled 门禁；搜索不召回 Entity 且英文召回弱 | 16A/17F | ACTIVE | ① RSS enabled 门禁与 feed 一致（小改）；② md-editor 内联上传实测；③ 搜索召回 Entity；④ 英文分词/召回改善 | **MIXED**：①建议 YES（feed 一致性，18C）；②③④ NO（v1.1） | #86, #114 |
+| **TD-20** | md-editor 内联上传未测；RSS 未接独立 enabled 门禁；搜索不召回 Entity 且英文召回弱 | 16A/17F | **PARTIAL：① CLOSED by 18C；②③④ DEFERRED v1.1** | ① RSS `geo_rss_enabled` 独立门禁（默认开，=0 时 /feed.xml 404），设置 64→65（18C 完成）；② md-editor 上传、③ 搜索召回 Entity、④ 英文召回 v1.1 | ① 已闭合；②③④ NO（v1.1） | #86, #114 |
 
 ### P4 — 观察与测试限制（默认 NON-BLOCKING，记录在案）
 
@@ -98,6 +98,7 @@ ACTIVE  →  FIXED  →  TESTED  →  ACCEPTED  →  CLOSED
 | **TD-22** | release archive export-ignore docs 后，个别守护测试仅在完整 checkout 成立 | 15/16 | NON-DEBT（打包限制） | 发布包测试矩阵中注明"完整 checkout vs release archive"差异，CI 跑完整 checkout | NO |
 | **TD-23** | PHPUnit doc-comment metadata deprecation | 多阶段 | DEFERRED（v1.1） | 升级 PHPUnit 12 时改用 attribute 语法 | NO |
 | **TD-24** | PageCache file store 在 `cache:clear` 后磁盘回收不即时 | 18A 观察 | DEFERRED | 功能不影响正确性（flush 逻辑生效）；磁盘回收策略优化延后 | NO |
+| **TD-27** | `GeoflowApiTest` 测试顺序依赖：自定义分批顺序下 `insert facts site_id=2` FK failed（RefreshDatabase 同进程 autoincrement / 静态 SiteContext memo 与测试 site id 假设叠加） | 18C 分批回归时发现 | DEFERRED（测试隔离） | 单独跑 12 passed、全量固定顺序 826 全绿，非产品 Runtime bug、CI 固定顺序不受影响；v1.1 加固夹具（显式取 site id / 每类重置 memo） | NO |
 
 ---
 
@@ -117,6 +118,14 @@ ACTIVE  →  FIXED  →  TESTED  →  ACCEPTED  →  CLOSED
 | **TD-13** | 27 个制造/化工垂直内置图标 | **P-STEP 18B** | 全站收敛为单一通用 SVG 图标库 `site/_icon.blade.php`（通用名 registry）+ config/icons.php 中性 label registry，数据驱动、无 slug→垂直图标硬编码；出厂图标序列中性，垂直语义仅随 Demo 数据出现 |
 | **TD-25** | PageCache 整页缓存键只用 `getHost()`（不含端口），同主机异端口多实例（本地并排 / 同机非标端口反代）命中同一 shell，正文与 canonical 串站 | **P-STEP 18B**（两态 HTTP 实测发现） | keyFor 改 `getHttpHost()`（含端口；标准 80/443 行为不变，生产按域名分区不受影响）；新增 test_cache_key_distinguishes_same_host_different_port（同主机异端口键不同 / 同 origin UTM 共享 / 异域名分区）；修复后 blank 8096 与 demo 8097 首页 HIT 互不串 |
 | **TD-26** | SQLite 下 `Schema::getTableListing()` 返回 `main.<table>` 限定名，SiteController 删除保护动态表白名单整体失配，空站（含 settings 镜像行）被误判有业务数据无法删除 | **P-STEP 18B**（空站删除复现发现） | resourceCounts 循环开头 `Str::afterLast($listed,'.')` 去除 schema 前缀；settings 列入 CONFIG_TABLES 并在事务内随空站删除后 Setting::flush()；空站可正常删除、有数据站点仍受保护 |
+| **#114** | Catalog Read Model / Entity Public Model 权威链路与公开 URL 体系 | **P-STEP 18A + 18C**（tag `checkpoint-18C`） | 关系权威源 TD-04（18A）、Entity URL 冻结 TD-05、Schema @id/PublicUrl TD-09（18C）均 CLOSED；Catalog 单向从 EntityRelation 派生；TD-06 `/article/` 收敛书面 DEFERRED v1.1（301 桥接锁定）。v1.0 权威链路收口 |
+| **TD-05** | Entity 六类型公开 URL 体系未冻结 | **P-STEP 18C（DECISION）** | 书面契约 + ReleaseResidual18CTest 锁定：core product→`/products/{slug}` 无斜杠；有场景 service→`/solutions/{slug}/` 带斜杠（301 契约）；organization/person/location/topic/非 core product/无场景 service→url=null 且不进 feed；v1.0 不补 org/person/location 详情页。实测 core 200 / 非 core 404 / 单数 /product/ 404 |
+| **TD-07** | Organization 双载体（organization Entity vs sites.metadata.organization） | **P-STEP 18C** | 裁定 **Site 聚合（Site.name + geo_org_* Setting + Site.metadata.organization）为主体组织唯一事实源**，organization Entity 仅为挂边目录节点；GeoGraph site 块 organization 锚点 @id=`home()#organization` 对齐 SchemaBuilder，主体 org 节点 `is_site_organization` 输出 same_as 且节点 id 不变；facts 仅 seeder 消费、geo:install 不装载，前台 Runtime 零 `Facts::`（grep 证实） |
+| **TD-08 / TD-08b** | Entity/Site/SeoMeta/Content 写入后整页 HTML 失效未挂接；Site 改名同进程 stale memo | **P-STEP 18C**（08a=18A） | Entity booted saved/deleted → PageCache::flush；Site saved 独立 try/catch flush 并在 currentSite 为本站时 setSite 刷新 memo、deleted flush；改名连带 Setting 镜像 +2 幂等（断言 ≥+1）；Entity 写入只失效本站；4 个 feed 端点不命中整页缓存；缓存批 90 tests 绿 |
+| **TD-09 / #143** | 声明性绝对 URL 用 `url()` 随请求 origin，与 PublicUrl 按站点 domain 裁决形成 host/scheme 分叉；Catalog 缺表守卫 | **P-STEP 18C** | 新增 PublicUrl::url()；canonical/og:url/og:image/JSON-LD @id/url/item/image、sitemap loc、llms、robots、rss、crumbs 全部改派 PublicUrl；功能性同源 URL（导航/卡片/表单 action/favicon/重定向/后台 label）显式保留 url()/asset()；sitemap 首页 loc=base()（无斜杠）与首页 canonical=home()（带斜杠）契约分离并注释；SitemapRobotsTest host 预期改 example.com（强化排除断言）；Catalog 缺 entities 表安全降级；ReleaseResidual18CTest 锁定所有 ld+json 无 localhost |
+| **#144** | Release Gate 单一事实源反向审计 | **P-STEP 18C** | 倒推 Fresh→Admin→Entity/Relation/SEO→Theme/Plugin/Settings→Frontend→Schema/GEO/Feed→Cache→Multi-Site→CLI，未发现新双源；组织/关系/公开 URL/SEO/站点名/feed 准入各有唯一事实源 |
+| **TD-16①** | Category slug 未按 site_id 唯一、type 枚举漂移 | **P-STEP 18C** | Category 冻结 list/product_list/page/external 常量+访问器（single=page、product=product_list 只读别名）；slug/parent Rule::unique/exists 带 where site_id、type Rule::in、external 强制 external_url；PageController/CanonicalizeSlash/SitemapBuilder/blade 统一访问器；AdminCategoryCrud +4 测试（②③④ v1.1） |
+| **TD-20①** | RSS 无独立 enabled 门禁 | **P-STEP 18C** | FeedController::rss 读 geo_rss_enabled，=0 时 404，与 sitemap/llms 同标准；DefaultSettingSeeder 默认 '1'，设置 64→65，fresh geo:install settings=65 实测；空站/Demo /feed.xml 均 200（②③④ v1.1） |
 
 ---
 
@@ -145,12 +154,8 @@ ACTIVE  →  FIXED  →  TESTED  →  ACCEPTED  →  CLOSED
 | TD-01 GitHub Actions 云端首跑全绿 | P0 | Private GitHub + Cloud CI |
 | TD-02 基于最终 HEAD 重建干净 RC + Manifest + SHA-256 | P0 | Final RC |
 | TD-03 Private 全验证 → 授权转 Public / v1.0.0 | P0 | Release |
-| TD-05 Entity 公开 URL 体系**冻结决策**（补页可延后） | P1 / DECISION | 18C |
-| TD-07 Organization 单一事实源 | P1 | 18C |
-| TD-08b Entity/Site/SeoMeta/Content 整页缓存失效 | P1 | 18C |
-| TD-09 Product/Schema `@id` 统一 PublicUrl | P1 | 18C（随 #114） |
-| TD-16① Category slug 站点作用域 | P3（多站正确性） | 18C 评估 |
-| TD-20① RSS enabled 门禁 | P3（feed 一致性） | 18C |
+
+> 18C 已将原 v1.0 Required 中的 TD-05（DECISION 冻结）、TD-07、TD-08b（TD-08 整体）、TD-09（#143）、TD-16①、TD-20① 全部 CLOSED（见 §5）；#114 v1.0 收口。**v1.0 Required 未闭合仅剩上述 3 项 P0 外部工程依赖。**
 
 ### v1.1+ Planned（不阻塞 v1.0.0，须有明确验收条件）
 
@@ -166,13 +171,14 @@ ACTIVE  →  FIXED  →  TESTED  →  ACCEPTED  →  CLOSED
 | TD-20②③④ md-editor 上传 / 搜索召回 Entity / 英文召回 | P3 |
 | TD-23 PHPUnit 12 attribute 迁移 | P4 |
 | TD-24 PageCache file store 回收 | P4 |
+| TD-27 GeoflowApiTest 测试顺序隔离加固 | P4 |
 
 ### 计数（当前）
 
-- CLOSED：#86、TD-04、TD-08a、TD-10、TD-11、TD-12、TD-13、TD-25、TD-26、P17 六管理面 + 17G
-- v1.0.0 Required 未闭合：**9**（P0×3、P1×4 含 1 个 DECISION、P3 拆分×2）；#115（TD-10/11/12）已由 18B 闭合移出
-- v1.1+ Planned：**10**（TD-13 已由 18B 闭合移出）
-- NON-DEBT / DEFERRED 观察项：TD-21 / TD-22 / TD-23 / TD-24
+- CLOSED：#86、**#114（18A+18C）**、**#143 / TD-09**、**#144**、TD-04、**TD-05（DECISION）**、**TD-07**、TD-08a / **TD-08b（TD-08 整体）**、**TD-16①**、**TD-20①**、TD-10、TD-11、TD-12、TD-13、TD-25、TD-26、P17 六管理面 + 17G
+- v1.0.0 Required 未闭合：**3**（仅 P0×3 = TD-01 / TD-02 / TD-03，均为需外部授权的发布工程项）；18C 已闭合 TD-05/07/08b/09/16①/20①，#115 由 18B 闭合
+- v1.1+ Planned：TD-06（/article/ 收敛）、TD-14、TD-15、TD-16②③④、TD-17、TD-18、TD-19、TD-20②③④、TD-23、TD-24、TD-27
+- NON-DEBT / DEFERRED 观察项：TD-21 / TD-22 / TD-23 / TD-24 / TD-27
 
 ---
 
@@ -191,3 +197,4 @@ ACTIVE  →  FIXED  →  TESTED  →  ACCEPTED  →  CLOSED
 | --- | --- | --- |
 | 2026-09-22 | P-STEP 18A（`4dbc95a` / `checkpoint-18A`） | 建立唯一 Registry；汇总 16A/17F/17G/P14/蓝图散落债务为 TD-01..TD-24 + Epic #86/#114/#115；#86 与 TD-04、TD-08a 登记 CLOSED；#114 标 PARTIAL；#115 标 ACTIVE；锁定 v1.0.0 Required / v1.1 Planned 建议基线 |
 | 2026-09-22 | P-STEP 18B（`checkpoint-18B`） | #115 子项 TD-10/11/12/13 全部 CLOSED：出厂 Blank System 与 db:seed Demo Site 分离（BlankHomepageSeeder / Demo StructureSeeder）、Site.name 单一事实源、图标 registry 中性化；两态 Fresh Install + HTTP/浏览器对拍；新发现并修复 TD-25（PageCache 键不含端口致同机异端口串整页）、TD-26（SQLite getTableListing 返回 main. 限定名致空站删除保护失效），各补防回归测试；v1.0 Required 12→9 |
+| 2026-09-22 | P-STEP 18C（`checkpoint-18C`，826/4139/0/0） | Release Residual Audit：TD-05 Entity URL 体系书面冻结（DECISION）、TD-07 Organization 裁定 Site 聚合为唯一事实源（facts 降为安装期种子、前台零消费）、TD-08/08b Entity·Site 缓存失效+stale memo、TD-09/#143 声明性绝对 URL 全改派 PublicUrl（功能性 URL 显式保留 url()/asset()，sitemap loc 与首页 canonical 斜杠契约分离）、TD-16① Category slug 站点作用域+type 收敛、TD-20① RSS geo_rss_enabled 门禁（设置 64→65）全部 CLOSED；#114 v1.0 收口；#144 单一事实源反向审计无新双源；TD-06 /article/ 书面 DEFERRED v1.1；新登记 TD-27 GeoflowApiTest 测试顺序依赖（P4，CI 固定顺序绿）；fresh geo:install settings=65、空站/Demo 两态真实 HTTP 对拍；**v1.0 Required 未闭合 9→3（仅 P0 TD-01/02/03 外部发布工程）**；报告 `docs/audit/release-residual-audit-18c.md` |

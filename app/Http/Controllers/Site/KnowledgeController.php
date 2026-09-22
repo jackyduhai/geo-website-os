@@ -8,6 +8,7 @@ use App\Models\Content;
 use App\Models\Group;
 use App\Services\Geo\SchemaBuilder;
 use App\Services\Seo\SeoMetaResolver;
+use App\Support\PublicUrl;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 
@@ -57,11 +58,11 @@ class KnowledgeController extends Controller
         $channelMap = $channels->pluck('name', 'slug')->all(); // slug => 名称，供视图 H1 取值
 
         $crumbs = [
-            ['name' => '首页', 'url' => url('/')],
-            ['name' => '知识中心', 'url' => url('/knowledge/')],
+            ['name' => '首页', 'url' => PublicUrl::home()],
+            ['name' => '知识中心', 'url' => PublicUrl::url('knowledge/')],
         ];
         if ($active !== null && isset($channelMap[$active])) {
-            $crumbs[] = ['name' => $channelMap[$active], 'url' => url('/knowledge/' . $active . '/')];
+            $crumbs[] = ['name' => $channelMap[$active], 'url' => PublicUrl::url('knowledge/' . $active . '/')];
         }
 
         // 二级 Tab 与顶部导航下拉同源：内容分组动态项 + 后台挂接到「知识中心」的自定义二级项
@@ -82,8 +83,8 @@ class KnowledgeController extends Controller
         }
 
         $canonical = $active
-            ? url('/knowledge/' . $active . '/')
-            : url('/knowledge/');
+            ? PublicUrl::url('knowledge/' . $active . '/')
+            : PublicUrl::url('knowledge/');
 
         return view('site.knowledge.index', [
             'items'      => $items,

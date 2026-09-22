@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Services\Geo\SchemaBuilder;
 use App\Support\Catalog;
 use App\Support\Narrative;
+use App\Support\PublicUrl;
 
 /**
  * 联系我们：左侧公司信息 / 右侧统一咨询表单（移动端表单提前）。
@@ -25,9 +26,9 @@ class ContactController extends Controller
         $localBusiness = array_filter([
             '@context'    => 'https://schema.org',
             '@type'       => 'LocalBusiness',
-            '@id'         => url('/contact/') . '#business',
+            '@id'         => PublicUrl::url('contact/') . '#business',
             'name'        => $company['name'],
-            'url'         => url('/'),
+            'url'         => PublicUrl::home(),
             'telephone'   => $company['phone'] ?? null,
             'address'     => [
                 '@type'           => 'PostalAddress',
@@ -40,8 +41,8 @@ class ContactController extends Controller
         ]);
 
         $crumbs = [
-            ['name' => '首页', 'url' => url('/')],
-            ['name' => '联系我们', 'url' => url('/contact/')],
+            ['name' => '首页', 'url' => PublicUrl::home()],
+            ['name' => '联系我们', 'url' => PublicUrl::url('contact/')],
         ];
 
         $contactBits = [];
@@ -67,7 +68,7 @@ class ContactController extends Controller
             'seo' => [
                 'title'       => '联系我们',
                 'description' => $contactDesc,
-                'canonical'   => url('/contact/'),
+                'canonical'   => PublicUrl::url('contact/'),
                 'noindex'     => false,
                 'type'        => 'website',
             ],

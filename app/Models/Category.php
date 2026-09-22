@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use App\Support\BelongsToSite;
+use App\Support\PublicUrl;
 use Illuminate\Support\Facades\Schema;
 
 /**
@@ -24,6 +25,51 @@ class Category extends Model
         'sort' => 'integer',
         'parent_id' => 'integer',
     ];
+
+    // ---------- 栏目类型（v1.0 冻结，TD-16）----------
+    // list          内容列表（文章 / 新闻）
+    // product_list  产品列表（富卡片）
+    // page          单页：栏目地址直接规范到其下首篇文章（无尾斜杠、不进 sitemap）
+    // external      外链跳转：导航指向 external_url，不产生站内栏目页
+    public const TYPE_LIST = 'list';
+    public const TYPE_PRODUCT_LIST = 'product_list';
+    public const TYPE_PAGE = 'page';
+    public const TYPE_EXTERNAL = 'external';
+
+    public const TYPES = [
+        self::TYPE_LIST,
+        self::TYPE_PRODUCT_LIST,
+        self::TYPE_PAGE,
+        self::TYPE_EXTERNAL,
+    ];
+
+    /** 历史别名（建表注释期的旧枚举值），仅用于读取兼容，新数据不再写入。 */
+    private const LEGACY_SINGLE = 'single';
+    private const LEGACY_PRODUCT = 'product';
+
+    /** 单页型：渲染其下首篇文章，规范地址是文章 URL（无尾斜杠、不进 sitemap）。 */
+    public function isSinglePage(): bool
+    {
+        return $this->type === self::TYPE_PAGE || $this->type === self::LEGACY_SINGLE;
+    }
+
+    /** 产品列表型：前台使用产品富卡片模板。 */
+    public function isProductList(): bool
+    {
+        return $this->type === self::TYPE_PRODUCT_LIST || $this->type === self::LEGACY_PRODUCT;
+    }
+
+    /** 外链型：不产生站内可索引栏目地址。 */
+    public function isExternalLink(): bool
+    {
+        return $this->type === self::TYPE_EXTERNAL;
+    }
+
+    /** 不进 sitemap 的栏目类型（单页直接渲染文章、外链无站内页；含历史 single 别名）。 */
+    public static function typesExcludedFromSitemap(): array
+    {
+        return [self::TYPE_PAGE, self::TYPE_EXTERNAL, self::LEGACY_SINGLE];
+    }
 
     // ---------- 关系 ----------
 
@@ -66,7 +112,13 @@ class Category extends Model
 
     // ---------- 辅助 ----------
 
-    /** 栏目前台地址（自动拼接完整层级路径） */
+    /**
+     * 栏目前台地址（自动拼接完整层级路径）。
+     *
+     * 经 PublicUrl 裁决规范 host（TD-09）：该地址同时用于 canonical、CollectionPage
+     * JSON-LD、sitemap / llms 与可见面包屑，必须是站点规范绝对 URL，不能用 url() 跟随
+     * 临时请求 origin，避免 CLI / 队列 / SubRequest 下 host 分叉。
+     */
     public function url(): string
     {
         $segs = [];
@@ -76,7 +128,7 @@ class Category extends Model
             array_unshift($segs, $node->slug);
             $node = $node->parent;
         }
-        return url('/' . implode('/', $segs) . '/');
+        return PublicUrl::url(implode('/', $segs) . '/');
     }
 
     /** 该栏目在导航中的层级深度（0 为顶级） */

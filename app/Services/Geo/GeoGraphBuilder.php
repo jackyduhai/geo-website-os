@@ -47,6 +47,15 @@ class GeoGraphBuilder
                 'url'         => PublicUrl::home(),
                 'description' => (string) ($site?->description ?? ''),
                 'logo'        => (string) ($site?->logo ?? ''),
+                // TD-07 单一事实源：站点主体组织锚点与 SchemaBuilder 的
+                // {base}/#organization 同一 @id（Site 聚合为唯一事实源）。GEO 中
+                // 代表主体的 organization 实体节点通过 same_as 指回此锚点，不再形成
+                // 与 Schema 互不相干的第二个组织对象。
+                'organization' => [
+                    '@id'  => PublicUrl::home() . '#organization',
+                    'name' => (string) ($site?->name ?? ''),
+                    'url'  => PublicUrl::home(),
+                ],
             ],
             'facts'     => $this->facts(),
             'entities'  => $this->entities(),
@@ -109,6 +118,16 @@ class GeoGraphBuilder
         $url = PublicUrl::entity($e);
         if ($url !== null) {
             $node['url'] = $url;
+        }
+
+        // TD-07：被标记为站点主体的 organization 实体（Demo 目录中的主体公司节点，
+        // 供 produces/offers 关系边挂载）通过 same_as 锚定 Site 聚合的唯一主体
+        // {base}/#organization，节点 id 保持 entity/organization/{slug} 不断关系边，
+        // 但不再是与 Schema 互不相干的第二个组织事实。
+        $metadata = is_array($e->metadata) ? $e->metadata : [];
+        if ($e->type === Entity::TYPE_ORGANIZATION
+            && ! empty($metadata['is_site_organization'])) {
+            $node['same_as'] = [PublicUrl::home() . '#organization'];
         }
 
         return $node;

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Site;
 
 use App\Http\Controllers\Controller;
 use App\Support\PublicIndex;
+use App\Support\PublicUrl;
 use Illuminate\Http\Request;
 
 /**
@@ -34,12 +35,12 @@ class SearchController extends Controller
         return view('site.search', [
             'q'      => $q,
             'items'  => $items,
-            'crumbs' => [['name' => '搜索', 'url' => url('/search')]],
+            'crumbs' => [['name' => '搜索', 'url' => PublicUrl::url('search')]],
             'schemas' => [],
             'seo' => [
                 'title'       => $q !== '' ? "搜索：{$q}" : '站内搜索',
                 'description' => '站内内容检索',
-                'canonical'   => url('/search'),
+                'canonical'   => PublicUrl::url('search'),
                 'noindex'     => true,   // 搜索结果页不进索引
                 'type'        => 'website',
             ],

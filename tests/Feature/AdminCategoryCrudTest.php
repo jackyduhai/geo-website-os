@@ -3,7 +3,10 @@
 namespace Tests\Feature;
 
 use App\Models\Category;
+use App\Models\Site;
 use App\Models\User;
+use App\Support\PageCache;
+use App\Support\SiteContext;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -130,5 +133,112 @@ class AdminCategoryCrudTest extends TestCase
             ->assertRedirect('/admin/categories');
 
         $this->assertDatabaseHas('categories', ['slug' => 'knowledge']);
+    }
+
+    /**
+     * TD-16①：栏目 slug 唯一约束按站点作用域——同站重复拒绝，跨站允许复用。
+     */
+    public function test_slug_unique_is_scoped_per_site(): void
+    {
+        $siteB = Site::create([
+            'name' => 'Site B', 'slug' => 'site-b', 'domain' => 'b.test',
+            'status' => 'active', 'is_default' => false,
+        ]);
+
+        // Site B 先占用 slug（在 B 上下文写入）。
+        SiteContext::withSite($siteB, function () {
+            Category::create([
+                'name' => 'Shared', 'slug' => 'shared-cat', 'type' => 'list',
+                'is_active' => true, 'is_nav' => false,
+            ]);
+        });
+
+        // 默认站使用同一 slug 必须成功（跨站不冲突）。
+        $this->actingAs($this->admin)->post('/admin/categories', [
+            'name' => 'Shared On Default', 'slug' => 'shared-cat', 'type' => 'list',
+        ])->assertRedirect(route('admin.categories.index'));
+
+        // 默认站再次使用同一 slug 必须被拒（同站唯一）。
+        $this->actingAs($this->admin)->from('/admin/categories/create')
+            ->post('/admin/categories', [
+                'name' => 'Dup', 'slug' => 'shared-cat', 'type' => 'list',
+            ])->assertSessionHasErrors('slug');
+    }
+
+    /**
+     * TD-16①：父栏目必须属于当前站点，禁止把跨站栏目设为父级。
+     */
+    public function test_parent_category_must_belong_to_same_site(): void
+    {
+        $siteB = Site::create([
+            'name' => 'Site B', 'slug' => 'site-b', 'domain' => 'b.test',
+            'status' => 'active', 'is_default' => false,
+        ]);
+        $bParent = SiteContext::withSite($siteB, fn () => Category::create([
+            'name' => 'B Parent', 'slug' => 'b-parent', 'type' => 'list',
+            'is_active' => true, 'is_nav' => false,
+        ]));
+
+        $this->actingAs($this->admin)->from('/admin/categories/create')
+            ->post('/admin/categories', [
+                'name' => 'Cross Parent', 'slug' => 'cross-parent', 'type' => 'list',
+                'parent_id' => $bParent->id,
+            ])->assertSessionHasErrors('parent_id');
+    }
+
+    /**
+     * TD-16①：外链型栏目必须提供合法 external_url，其余类型不要求。
+     */
+    public function test_external_type_requires_valid_url(): void
+    {
+        // 缺 URL 被拒。
+        $this->actingAs($this->admin)->from('/admin/categories/create')
+            ->post('/admin/categories', [
+                'name' => 'Partner', 'slug' => 'partner', 'type' => 'external',
+            ])->assertSessionHasErrors('external_url');
+
+        // 非法 URL 被拒。
+        $this->actingAs($this->admin)->from('/admin/categories/create')
+            ->post('/admin/categories', [
+                'name' => 'Partner', 'slug' => 'partner', 'type' => 'external',
+                'external_url' => 'not-a-url',
+            ])->assertSessionHasErrors('external_url');
+
+        // 合法 URL 通过。
+        $this->actingAs($this->admin)->post('/admin/categories', [
+            'name' => 'Partner', 'slug' => 'partner', 'type' => 'external',
+            'external_url' => 'https://partner.example.com/',
+        ])->assertRedirect(route('admin.categories.index'));
+
+        // 普通列表型不要求 external_url。
+        $this->actingAs($this->admin)->post('/admin/categories', [
+            'name' => 'Plain', 'slug' => 'plain-list', 'type' => 'list',
+        ])->assertRedirect(route('admin.categories.index'));
+    }
+
+    /**
+     * TD-16①：单页（page）与外链（external）栏目不进 sitemap，列表型收录。
+     */
+    public function test_page_and_external_categories_are_excluded_from_sitemap(): void
+    {
+        PageCache::flush();
+
+        Category::create([
+            'name' => 'List Cat', 'slug' => 'list-cat-td16', 'type' => Category::TYPE_LIST,
+            'is_active' => true, 'is_nav' => false,
+        ]);
+        Category::create([
+            'name' => 'Page Cat', 'slug' => 'page-cat-td16', 'type' => Category::TYPE_PAGE,
+            'is_active' => true, 'is_nav' => false,
+        ]);
+        Category::create([
+            'name' => 'Ext Cat', 'slug' => 'ext-cat-td16', 'type' => Category::TYPE_EXTERNAL,
+            'is_active' => true, 'is_nav' => false, 'external_url' => 'https://x.example.com/',
+        ]);
+
+        $xml = $this->get('/sitemap.xml')->assertOk();
+        $xml->assertSee('list-cat-td16');
+        $xml->assertDontSee('page-cat-td16');
+        $xml->assertDontSee('ext-cat-td16');
     }
 }

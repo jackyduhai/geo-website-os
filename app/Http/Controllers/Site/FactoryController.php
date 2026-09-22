@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Services\Geo\SchemaBuilder;
 use App\Support\Catalog;
 use App\Support\Narrative;
+use App\Support\PublicUrl;
 
 /**
  * 工厂与资质（独立一级页面，config/facts 驱动）
@@ -54,18 +55,20 @@ class FactoryController extends Controller
         $imageObjects = [];
         foreach ($workshops as $w) {
             if (! empty($w['image'])) {
+                $img = (string) $w['image'];
                 $imageObjects[] = [
                     '@context'   => 'https://schema.org',
                     '@type'      => 'ImageObject',
-                    'contentUrl' => asset($w['image']),
+                    // JSON-LD 声明性图片地址：外链原样，站内资源经 PublicUrl 裁决规范 host（TD-09）
+                    'contentUrl' => preg_match('#^https?://#', $img) ? $img : PublicUrl::url(ltrim($img, '/')),
                     'caption'    => $w['image_alt'] ?? $w['name'],
                 ];
             }
         }
 
         $crumbs = [
-            ['name' => '首页', 'url' => url('/')],
-            ['name' => '工厂与资质', 'url' => url('/factory/')],
+            ['name' => '首页', 'url' => PublicUrl::home()],
+            ['name' => '工厂与资质', 'url' => PublicUrl::url('factory/')],
         ];
 
         return view('site.factory', [
@@ -87,7 +90,7 @@ class FactoryController extends Controller
                 'description' => ($company['name'] ?? '') . '自有' . ($company['area_display'] ?? '') . '厂区，设'
                     . $workshopNames . count($workshops) . '大车间，年产能' . ($company['annual_capacity_display'] ?? '')
                     . '，覆盖全国' . count($regions) . '大销售区域。',
-                'canonical'   => url('/factory/'),
+                'canonical'   => PublicUrl::url('factory/'),
                 'noindex'     => false,
                 'type'        => 'website',
             ],

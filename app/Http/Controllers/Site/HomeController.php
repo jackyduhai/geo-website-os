@@ -11,6 +11,7 @@ use App\Services\Geo\SchemaBuilder;
 use App\Services\Seo\SeoMetaResolver;
 use App\Support\Catalog;
 use App\Support\HomeBlockDefaults;
+use App\Support\PublicUrl;
 use App\Support\SiteContext;
 use Illuminate\Http\Request;
 
@@ -97,7 +98,7 @@ class HomeController extends Controller
         // 首页 FAQ 输出 FAQPage（与可见内容一致）
         if (! empty($data['homeFaqs'])) {
             $faqPairs = array_map(fn ($f) => ['q' => $f['title'] ?? $f['q'] ?? '', 'a' => $f['text'] ?? $f['a'] ?? ''], $data['homeFaqs']);
-            $data['schemas'][] = $schema->faqPageFromList($faqPairs, url('/'));
+            $data['schemas'][] = $schema->faqPageFromList($faqPairs, PublicUrl::home());
         }
 
         // SEO: 使用 SeoMetaResolver 统一解析
@@ -121,7 +122,7 @@ class HomeController extends Controller
             $data['seo'] = [
                 'title_full'  => 'Website',
                 'description' => '',
-                'canonical'   => url('/'),
+                'canonical'   => PublicUrl::home(),
                 'noindex'     => false,
                 'type'        => 'website',
             ];

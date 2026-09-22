@@ -46,7 +46,7 @@
 <section class="sec" style="padding-top:28px">
   <div class="wrap">
     @if($items->count())
-      @if($category->type === 'product')
+      @if($category->isProductList())
         {{-- 产品叶子栏目：系列内容用与产品中心一致的富卡片 --}}
         <div class="grid g3">
           @foreach($items as $p)

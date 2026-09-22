@@ -49,9 +49,12 @@ class ProductController extends Controller
         $brandName = ! empty($company['brand']) ? $company['brand'] : ($company['name'] ?? '');
         $lineNames = implode('、', array_map(fn ($l) => $l['name'], $lines));
 
+        // TD-09：进入 JSON-LD / canonical 的绝对地址统一由 PublicUrl 裁决（与
+        // GeoGraph / Sitemap / canonical 同源，多站 / CLI 不出现 localhost 串站）。
+        $productsIndexUrl = PublicUrl::base() . '/products/';
         $crumbs = [
-            ['name' => '首页', 'url' => url('/')],
-            ['name' => '产品中心', 'url' => url('/products/')],
+            ['name' => '首页', 'url' => PublicUrl::home()],
+            ['name' => '产品中心', 'url' => $productsIndexUrl],
         ];
 
         // ItemList：产品系列（与可见分组一致）
@@ -59,23 +62,23 @@ class ProductController extends Controller
             '@context'        => 'https://schema.org',
             '@type'           => 'ItemList',
             'name'            => $brandName . '产品体系',
-            'itemListElement' => array_values(array_map(function ($line, $i) {
+            'itemListElement' => array_values(array_map(function ($line, $i) use ($productsIndexUrl) {
                 return [
                     '@type'    => 'ListItem',
                     'position' => $i + 1,
                     'name'     => $line['name'],
-                    'url'      => url('/products/#' . $line['slug']),
+                    'url'      => $productsIndexUrl . '#' . $line['slug'],
                 ];
             }, $lines, array_keys($lines))),
         ];
 
         if ($flatMode) {
-            $itemList['itemListElement'] = array_values(array_map(function ($p, $i) {
+            $itemList['itemListElement'] = array_values(array_map(function ($p, $i) use ($productsIndexUrl) {
                 return [
                     '@type'    => 'ListItem',
                     'position' => $i + 1,
                     'name'     => $p['name'],
-                    'url'      => Catalog::isCoreProduct($p['slug']) ? url('/products/' . $p['slug']) : url('/products/'),
+                    'url'      => Catalog::isCoreProduct($p['slug']) ? PublicUrl::product($p['slug']) : $productsIndexUrl,
                 ];
             }, $lines[0]['products'], array_keys($lines[0]['products'])));
         }
@@ -96,7 +99,7 @@ class ProductController extends Controller
                 'description' => $flatMode
                     ? (trim($brandName) !== '' ? $brandName . '产品中心，展示全部产品。' : '产品中心，展示全部产品。')
                     : $brandName . '产品体系涵盖' . $lineNames . '，可按系列浏览产品规格与适用场景，如有需求欢迎联系我们。',
-                'canonical'   => url('/products/'),
+                'canonical'   => $productsIndexUrl,
                 'noindex'     => false,
                 'type'        => 'website',
             ],
@@ -129,26 +132,29 @@ class ProductController extends Controller
         $data['desc'] = Narrative::lead('products.line.' . $line, $data['desc'] ?? '');
         $products = Catalog::productsByLine($line);
 
+        $productsIndexUrl = PublicUrl::base() . '/products/';
+        $lineUrl = PublicUrl::productLine($line);
+
         // 该系列没有产品则不建独立分类页，回到总览对应锚点（规范硬规则，数据驱动）
         if (count($products) < 1) {
-            return redirect(url('/products/#' . $line), 301);
+            return redirect($productsIndexUrl . '#' . $line, 301);
         }
 
         $crumbs = [
-            ['name' => '首页', 'url' => url('/')],
-            ['name' => '产品中心', 'url' => url('/products/')],
-            ['name' => $data['name'], 'url' => url('/products/' . $line . '/')],
+            ['name' => '首页', 'url' => PublicUrl::home()],
+            ['name' => '产品中心', 'url' => $productsIndexUrl],
+            ['name' => $data['name'], 'url' => $lineUrl],
         ];
 
         $itemList = [
             '@context'        => 'https://schema.org',
             '@type'           => 'ItemList',
             'name'            => $data['name'],
-            'itemListElement' => array_values(array_map(function ($p, $i) {
-                $url = Catalog::isCoreProduct($p['slug'])
-                    ? url('/products/' . $p['slug'])
-                    : url('/products/#' . $p['line']);
-                return ['@type' => 'ListItem', 'position' => $i + 1, 'name' => $p['name'], 'url' => $url];
+            'itemListElement' => array_values(array_map(function ($p, $i) use ($productsIndexUrl) {
+                $u = Catalog::isCoreProduct($p['slug'])
+                    ? PublicUrl::product($p['slug'])
+                    : $productsIndexUrl . '#' . $p['line'];
+                return ['@type' => 'ListItem', 'position' => $i + 1, 'name' => $p['name'], 'url' => $u];
             }, $products, array_keys($products))),
         ];
 
@@ -165,7 +171,7 @@ class ProductController extends Controller
             'seo' => [
                 'title'       => $data['name'] . '产品系列与配比参数',
                 'description' => $data['desc'] ?? '',
-                'canonical'   => url('/products/' . $line . '/'),
+                'canonical'   => $lineUrl,
                 'noindex'     => false,
                 'type'        => 'website',
             ],
@@ -185,14 +191,16 @@ class ProductController extends Controller
         $scenes   = Catalog::scenesOfProduct($product);
         $faqs     = config('pages.product_faqs.' . $slug, []);
 
+        $productsIndexUrl = PublicUrl::base() . '/products/';
+        $productUrl = PublicUrl::product($slug);
         $crumbs = [
-            ['name' => '首页', 'url' => url('/')],
-            ['name' => '产品中心', 'url' => url('/products/')],
+            ['name' => '首页', 'url' => PublicUrl::home()],
+            ['name' => '产品中心', 'url' => $productsIndexUrl],
         ];
         if ($line !== null) {
-            $crumbs[] = ['name' => $line['name'] ?? '产品', 'url' => url('/products/' . $lineSlug . '/')];
+            $crumbs[] = ['name' => $line['name'] ?? '产品', 'url' => PublicUrl::productLine($lineSlug)];
         }
-        $crumbs[] = ['name' => $product['name'], 'url' => url('/products/' . $slug)];
+        $crumbs[] = ['name' => $product['name'], 'url' => $productUrl];
 
         $schemas = [
             $schema->organization(),
@@ -204,7 +212,7 @@ class ProductController extends Controller
             $schemas[] = $this->howTo($product);
         }
         if (! empty($faqs)) {
-            $schemas[] = $schema->faqPageFromList($faqs, url('/products/' . $slug));
+            $schemas[] = $schema->faqPageFromList($faqs, $productUrl);
         }
 
         return view('site.products.show', [
@@ -219,7 +227,7 @@ class ProductController extends Controller
             'seo' => [
                 'title'       => $product['name'] . '配比用量与工艺参数',
                 'description' => $product['tagline'],
-                'canonical'   => url('/products/' . $slug),
+                'canonical'   => $productUrl,
                 'noindex'     => false,
                 'type'        => 'product',
             ],
@@ -281,7 +289,7 @@ class ProductController extends Controller
         return array_filter([
             '@context'    => 'https://schema.org',
             '@type'       => 'Product',
-            '@id'         => url('/products/' . $product['slug']) . '#product',
+            '@id'         => PublicUrl::product($product['slug']) . '#product',
             'name'        => $product['name'],
             'description' => $product['tagline'],
             'category'    => $line['name'] ?? null,
@@ -309,7 +317,7 @@ class ProductController extends Controller
         return [
             '@context' => 'https://schema.org',
             '@type'    => 'HowTo',
-            '@id'      => url('/products/' . $product['slug']) . '#howto',
+            '@id'      => PublicUrl::product($product['slug']) . '#howto',
             'name'     => $product['name'] . '使用工艺',
             'step'     => $steps,
         ];

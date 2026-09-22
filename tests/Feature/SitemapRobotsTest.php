@@ -69,10 +69,13 @@ class SitemapRobotsTest extends TestCase
 
         $locs = $this->locs();
 
-        $this->assertContains(url('/'), $locs);
-        $this->assertContains(url('/knowledge/sitemap-article'), $locs);
+        // TD-09：sitemap 是声明性 feed，<loc> 按当前站点规范 domain（example.com）裁决，
+        // 不跟随测试请求 origin（localhost）。这里仅把 host 预期从 url()（localhost）修正为
+        // 站点规范地址；收录 / 排除与「详情型无尾斜杠」的断言强度保持不变。
+        $this->assertContains('https://example.com', $locs);
+        $this->assertContains('https://example.com/knowledge/sitemap-article', $locs);
         // 详情型 URL 无尾斜杠，与 CanonicalizeSlash 规则一致
-        $this->assertNotContains(url('/knowledge/sitemap-article/'), $locs);
+        $this->assertNotContains('https://example.com/knowledge/sitemap-article/', $locs);
     }
 
     public function test_sitemap_excludes_noindex_draft_and_inactive_category(): void
@@ -96,9 +99,11 @@ class SitemapRobotsTest extends TestCase
 
         $locs = $this->locs();
 
-        $this->assertNotContains(url('/knowledge/legacy-noindex'), $locs);
-        $this->assertNotContains(url('/knowledge/draft-article'), $locs);
-        $this->assertNotContains(url('/archived-cat/inactive-cat-article'), $locs);
+        // TD-09：loc 按站点规范 domain 输出，排除断言也必须用 example.com，
+        // 否则用 localhost 断言「不包含」会恒真、失去排除验证意义。
+        $this->assertNotContains('https://example.com/knowledge/legacy-noindex', $locs);
+        $this->assertNotContains('https://example.com/knowledge/draft-article', $locs);
+        $this->assertNotContains('https://example.com/archived-cat/inactive-cat-article', $locs);
     }
 
     public function test_sitemap_includes_indexable_content_with_seo_meta(): void
@@ -109,7 +114,8 @@ class SitemapRobotsTest extends TestCase
             'site_id' => $this->site->id, 'content_id' => $article->id, 'noindex' => false,
         ]);
 
-        $this->assertContains(url('/knowledge/seometa-ok'), $this->locs());
+        // TD-09：loc 按站点规范 domain（example.com）裁决，而非请求 origin（localhost）。
+        $this->assertContains('https://example.com/knowledge/seometa-ok', $this->locs());
     }
 
     public function test_sitemap_is_site_scoped(): void
