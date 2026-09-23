@@ -14,6 +14,7 @@ use App\Http\Controllers\Admin\InquiryController;
 use App\Http\Controllers\Admin\MediaController;
 use App\Http\Controllers\Admin\MenuController;
 use App\Http\Controllers\Admin\NarrativeController;
+use App\Http\Controllers\Admin\PageController;
 use App\Http\Controllers\Admin\PluginController;
 use App\Http\Controllers\Admin\RedirectController;
 use App\Http\Controllers\Admin\SeoMetaController;
@@ -129,6 +130,27 @@ Route::middleware(['admin.auth', 'admin.site'])->group(function () {
     // ---------- 展示：首页装修（首屏/中部横幅在此就地维护，不再单设 Banner 模块） ----------
     Route::get('blocks', [BlockController::class, 'index'])->name('blocks.index');
     Route::put('blocks/{block}', [BlockController::class, 'update'])->name('blocks.update');
+
+    // ---------- 组合页面（模板 + 区块，P-STEP 18G） ----------
+    // Page 是页面实例（不存业务事实）；Block 在模板槽位内组合，结构化 JSON 存储。
+    // {page}/{block} 模型绑定经 BelongsToSite 全局作用域，跨站 id 自动 404。
+    Route::get('pages', [PageController::class, 'index'])->name('pages.index');
+    Route::get('pages/create', [PageController::class, 'create'])->name('pages.create');
+    Route::post('pages', [PageController::class, 'store'])->name('pages.store');
+    Route::get('pages/{page}/edit', [PageController::class, 'edit'])->name('pages.edit');
+    Route::put('pages/{page}', [PageController::class, 'update'])->name('pages.update');
+    Route::delete('pages/{page}', [PageController::class, 'destroy'])->name('pages.destroy');
+    Route::post('pages/{page}/publish/{action}', [PageController::class, 'publish'])
+        ->where('action', 'publish|unpublish')->name('pages.publish');
+    Route::get('pages/{page}/composer', [PageController::class, 'composer'])->name('pages.composer');
+    Route::get('pages/{page}/blocks/add', [PageController::class, 'addBlock'])->name('pages.addBlock');
+    Route::post('pages/{page}/blocks', [PageController::class, 'storeBlock'])->name('pages.storeBlock');
+    Route::get('pages/{page}/blocks/{block}/edit', [PageController::class, 'editBlock'])->name('pages.editBlock');
+    Route::put('pages/{page}/blocks/{block}', [PageController::class, 'updateBlock'])->name('pages.updateBlock');
+    Route::delete('pages/{page}/blocks/{block}', [PageController::class, 'destroyBlock'])->name('pages.destroyBlock');
+    Route::post('pages/{page}/blocks/{block}/move/{dir}', [PageController::class, 'moveBlock'])
+        ->where('dir', 'up|down')->name('pages.moveBlock');
+    Route::post('pages/{page}/blocks/{block}/toggle', [PageController::class, 'toggleBlock'])->name('pages.toggleBlock');
 
     // ---------- 媒体库 ----------
     Route::get('media', [MediaController::class, 'index'])->name('media.index');

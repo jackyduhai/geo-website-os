@@ -1664,8 +1664,8 @@ a.ft-v:hover{color:#fff;}
     var btns=document.querySelectorAll('[data-theme-toggle]');
     if(!btns.length) return;
     var order=['light','dark','system'];
-    var labels={light:{{ json_encode(__('ui.mode_light')) }},dark:{{ json_encode(__('ui.mode_dark')) }},system:{{ json_encode(__('ui.mode_system')) }}};
-    var ariaCurrent={{ json_encode(__('ui.mode_aria_current')) }};
+    var labels={light:{!! json_encode(__('ui.mode_light')) !!},dark:{!! json_encode(__('ui.mode_dark')) !!},system:{!! json_encode(__('ui.mode_system')) !!}};
+    var ariaCurrent={!! json_encode(__('ui.mode_aria_current')) !!};
     function sysDark(){ return window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches; }
     function paint(pref){
       var root=document.documentElement;

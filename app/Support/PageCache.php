@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Models\Page;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 /**
@@ -25,6 +26,7 @@ class PageCache
     public const TTL = 21600; // 6 小时
 
     private const KEY_PREFIX  = 'pagecache:html:';
+    private const PATHVER_PREFIX = 'pagecache:pathver:';
 
     /** CSRF token、CSP nonce 与归因隐藏字段的占位符（纯大写，不会与正文冲突）。 */
     public const P_CSRF = '{{PC_CSRF_TOKEN}}';
@@ -70,8 +72,62 @@ class PageCache
     public static function keyFor(Request $request): string
     {
         $path = '/'.ltrim($request->path(), '/');
+        $pathVersion = (int) (self::pathVersions(self::hostToken($request))[$path] ?? 0);
 
-        return self::KEY_PREFIX.self::version().':'.sha1($request->getHttpHost().$path);
+        return self::KEY_PREFIX.self::version().':'.$pathVersion.':'
+            .sha1($request->getHttpHost().$path);
+    }
+
+    /** 主机标识（含端口）：path 版本映射按主机分区，避免多站 / 多端口串用。 */
+    private static function hostToken(Request $request): string
+    {
+        return sha1($request->getHttpHost());
+    }
+
+    /** @return array<string,int> 该主机各 path 的失效版本号。 */
+    private static function pathVersions(string $hostToken): array
+    {
+        return (array) self::store()->get(self::PATHVER_PREFIX.$hostToken, []);
+    }
+
+    /**
+     * 使单个公开 path 的整页缓存失效（path 版本 +1，旧 key 不再被命中）。
+     * 用于 Block / 排序 / 显隐等只影响某一页面的改动，而非整站 flush。
+     */
+    public static function forgetPath(string $path, ?string $host = null): void
+    {
+        $host = $host ?? request()?->getHttpHost();
+        if ($host === null) {
+            return; // 无 HTTP 主机上下文（纯 CLI）时无法定位，跳过页面级失效
+        }
+
+        $ht = sha1($host);
+        $versions = self::pathVersions($ht);
+        $versions[$path] = ((int) ($versions[$path] ?? 0)) + 1;
+        self::store()->forever(self::PATHVER_PREFIX.$ht, $versions);
+    }
+
+    /**
+     * 使某个 Page（当前语言版本对应 path）的整页缓存失效。
+     * 中文 → /{slug}，英文 → /en/{slug}；首页 slug 为空 → / 或 /en。
+     */
+    public static function forgetPage(Page $page): void
+    {
+        $prefix = $page->locale === 'en' ? '/en' : '';
+        $path = $page->slug
+            ? $prefix.'/'.ltrim((string) $page->slug, '/')
+            : ($prefix !== '' ? $prefix : '/');
+
+        self::forgetPath($path);
+    }
+
+    /**
+     * 模板结构变更影响所有使用该模板的页面，且槽位映射无法逐 path 枚举，
+     * 直接整站版本 +1（模板改动罕见，可接受）。
+     */
+    public static function forgetTemplate(): void
+    {
+        self::flush();
     }
 
     public static function get(Request $request): ?string

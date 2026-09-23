@@ -14,6 +14,7 @@ class SeoMeta extends Model
         'site_id',
         'content_id',
         'entity_id',
+        'page_id',
         'title',
         'description',
         'keywords',
@@ -34,6 +35,7 @@ class SeoMeta extends Model
         'site_id' => 'integer',
         'content_id' => 'integer',
         'entity_id' => 'integer',
+        'page_id' => 'integer',
         'keywords' => 'array',
         'noindex' => 'boolean',
         'nofollow' => 'boolean',
@@ -56,9 +58,19 @@ class SeoMeta extends Model
         return $this->belongsTo(Entity::class);
     }
 
+    public function page(): BelongsTo
+    {
+        return $this->belongsTo(Page::class);
+    }
+
     public function isSiteLevel(): bool
     {
-        return $this->content_id === null && $this->entity_id === null;
+        return $this->content_id === null && $this->entity_id === null && $this->page_id === null;
+    }
+
+    public function isPageLevel(): bool
+    {
+        return $this->page_id !== null;
     }
 
     public function isContentLevel(): bool

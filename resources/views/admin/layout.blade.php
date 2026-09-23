@@ -22,6 +22,7 @@
       ['仪表盘', $is('admin.dashboard'), route('admin.dashboard'), null, 'grid'],
       ['客户留言', str_starts_with($routeName,'admin.inquiries'), route('admin.inquiries.index',['status'=>'new']), $newInquiries, 'inbox'],
       ['首页整体装修', str_starts_with($routeName,'admin.blocks'), route('admin.blocks.index'), null, 'template'],
+      ['组合页面 / Landing', str_starts_with($routeName,'admin.pages'), route('admin.pages.index'), null, 'grid'],
       ['顶部导航与页脚', str_starts_with($routeName,'admin.menus'), route('admin.menus.index'), null, 'panel-top'],
       ['事实库', str_starts_with($routeName,'admin.facts'), route('admin.facts.index'), null, 'shield'],
   ];

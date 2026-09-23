@@ -6,6 +6,7 @@ use App\Contracts\UrlResolverInterface;
 use App\Models\Content;
 use App\Models\Entity;
 use App\Models\Media;
+use App\Models\Page;
 use App\Models\SeoMeta;
 use App\Models\Setting;
 use App\Models\Site;
@@ -26,6 +27,7 @@ class SeoMetaResolver
     private static array $siteSeoMemo = [];     // site_id => SeoMeta|false
     private static array $contentSeoMemo = [];  // "site:content" => SeoMeta|false
     private static array $entitySeoMemo = [];   // "site:entity" => SeoMeta|false
+    private static array $pageSeoMemo = [];     // "site:page" => SeoMeta|false
     private static array $mediaPathMemo = [];   // media_id => ?string
 
     public function __construct(
@@ -40,6 +42,7 @@ class SeoMetaResolver
         self::$siteSeoMemo = [];
         self::$contentSeoMemo = [];
         self::$entitySeoMemo = [];
+        self::$pageSeoMemo = [];
         self::$mediaPathMemo = [];
     }
 
@@ -128,6 +131,21 @@ class SeoMetaResolver
         }
 
         return self::$entitySeoMemo[$key] ?: null;
+    }
+
+    private function pageSeoMeta(int $siteId, int $pageId): ?SeoMeta
+    {
+        $locale = LocaleContext::current();
+        $key = "{$siteId}:{$pageId}:{$locale}";
+        if (! array_key_exists($key, self::$pageSeoMemo)) {
+            self::$pageSeoMemo[$key] = SeoMeta::query()
+                ->where('site_id', $siteId)
+                ->where('page_id', $pageId)
+                ->where('locale', $locale)
+                ->first() ?? false;
+        }
+
+        return self::$pageSeoMemo[$key] ?: null;
     }
 
     /**
@@ -267,6 +285,46 @@ class SeoMetaResolver
             ogTitle: $seoMeta?->og_title ?? ($seoMeta?->title ?? $title),
             ogDescription: $seoMeta?->og_description ?? ($seoMeta?->description ?? $description),
             ogImage: $seoMeta?->og_image_path ?? $this->mediaPath($entityOgImageId) ?? $fallback['ogImage'],
+            ogType: $seoMeta?->og_type ?? 'website',
+            twitterCard: $seoMeta?->twitter_card ?? 'summary_large_image',
+            noindex: $seoMeta?->noindex ?? false,
+            nofollow: $seoMeta?->nofollow ?? false,
+            robots: $seoMeta?->robots ?? [],
+            schemaType: $seoMeta?->schema_type ?? null
+        );
+    }
+
+    /**
+     * Resolve SEO meta for a composed Page（P-STEP 18G）。
+     * Title chain：page-level SeoMeta -> Page.title -> Site -> System；
+     * Description / OG image 无 Page 字段，回退站点级；canonical 为 Page 公开 URL。
+     */
+    public function resolvePage(Page $page): SeoResult
+    {
+        $site = SiteContext::currentSite();
+        $seoMeta = $this->pageSeoMeta($page->site_id, $page->id);
+        $fallback = $this->siteFallback($site);
+
+        $title = $seoMeta?->title
+            ?? ((string) $page->title !== '' ? $page->title : $fallback['title']);
+        if (empty($title)) {
+            $title = self::SYSTEM_DEFAULT_TITLE;
+        }
+
+        $description = $seoMeta?->description ?? $fallback['description'];
+
+        $defaultCanonical = $page->slug
+            ? PublicUrl::url('/'.ltrim((string) $page->slug, '/'))
+            : PublicUrl::home();
+
+        return new SeoResult(
+            title: $title,
+            description: $description,
+            keywords: $seoMeta?->keywords ?? [],
+            canonical: $seoMeta?->canonical ?? $defaultCanonical,
+            ogTitle: $seoMeta?->og_title ?? ($seoMeta?->title ?? $title),
+            ogDescription: $seoMeta?->og_description ?? ($seoMeta?->description ?? $description),
+            ogImage: $seoMeta?->og_image_path ?? $fallback['ogImage'],
             ogType: $seoMeta?->og_type ?? 'website',
             twitterCard: $seoMeta?->twitter_card ?? 'summary_large_image',
             noindex: $seoMeta?->noindex ?? false,

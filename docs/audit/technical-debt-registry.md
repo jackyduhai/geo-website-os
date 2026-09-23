@@ -4,6 +4,7 @@
 - **建立时基线**：HEAD `4dbc95a`（= annotated tag `checkpoint-18A`）；Regression **801 tests / 3948 assertions / 0 failed / 0 skipped**；`v1.0.0-rc1` 冻结于 `965d63c`（HOLD）；无 remote、未 push、未发布。
 - **阶段口径修正**：P-STEP 17 中 **17A–17F = 六大管理面**（Site / Entity / EntityRelation / SeoMeta / Theme·Plugin / Settings）；**17G = 六大管理面的系统级 Full Admin UAT**，不是第七个管理面。
 - **最后更新**：P-STEP 18F **Gate Validation** 后（annotated tag `checkpoint-18F`；Regression **872 passed / 4655 assertions / 0 failed / 0 skipped**）。对切换设备前会话产出的实现 commit `d886d5d` 做独立验收（流程异常已记录），新发现并修复 **TD-51**（英文页内部链接缺 /en）、**TD-52**（英文页可见/属性 UI 中文残留），en 页渲染 visible/属性 CJK=0，均 CLOSED（见 §5）。**v1.0 Required 未闭合仍为 3 项 P0 外部工程依赖（TD-01/02/03）**——18F 未新增发布阻塞。
+- **P-STEP 18G-1（Page Composition / Template System）启动**：18G Discovery 已 ACCEPTED，登记父 Epic **#116** 与 **TD-53..TD-59**（Block / Template / Page Registry + Detail·Listing Composition + Composition Admin + Form Block）；18G-1 建立三层并完成 Landing 闭环，18G-2 迁移系统页。
 
 ---
 
@@ -46,6 +47,7 @@ ACTIVE  →  FIXED  →  TESTED  →  ACCEPTED  →  CLOSED
 | **#86** Public Render Contract / Feed 泄漏 | 任何进入 Sitemap/GEO/LLMS/RSS/Search 的公开资源必须 Published + 当前 Site 可见 + Canonical 有效 + 前台 HTTP 200 | **CLOSED by 17G**（PublicIndex/PublicUrl 七大输出改派，90 URL×3 站全 200） | — |
 | **#114** Catalog Read Model / Entity Public Model | 后台生产模型 → Catalog 读模型 → 前台 / Schema / GEO / Sitemap / Search 的权威链路与公开 URL 体系 | **CLOSED for v1.0 by 18A+18C**：关系权威源 TD-04 CLOSED（18A）；TD-05 URL 体系冻结、TD-09 @id/PublicUrl 统一 CLOSED（18C）；TD-06 `/article/` 收敛书面 DEFERRED v1.1（301 桥接已锁定） | —（v1.0 收口；TD-06 转 v1.1） |
 | **#115** Default Template Neutralization | 出厂为行业中性空站，系统默认层与 Example Demo（工业材料）彻底分离 | **CLOSED by 18B**（TD-10/11/12/13 + TD-25/26；Blank System ≠ Demo Site 两态 HTTP 对拍） | — |
+| **#116** Page Composition / Template System | 把"仅首页可装修"升级为"任意页面可组合"：Block Registry + Template Registry + Page 模型 + Landing 闭环 + Page Composition Manager；18G-2 迁移系统页 | **ACTIVE（P-STEP 18G-1 实现中）** | **YES**（v1.0 产品完整性：Page Composition / Template System） |
 
 ---
 
@@ -71,12 +73,19 @@ ACTIVE  →  FIXED  →  TESTED  →  ACCEPTED  →  CLOSED
 | └ TD-08a | EntityRelation 写入失效整页缓存 | 18A | **CLOSED by 18A**（模型 saved/deleted → PageCache::flush） | — | — | TD-08 |
 | └ TD-08b | Entity / Site / SeoMeta / Content 写入后整页 HTML 失效未挂接 | 18A 附录 G | **CLOSED by 18C**（见 §5） | — | — | TD-08 |
 | **TD-09** | Product 自身 `@id` 仍用 `url()` helper；Catalog 早期路径缺 `Schema::hasTable` 守卫 | 17G（manufacturer.@id 已改 PublicUrl，product 自身未改） | **CLOSED by 18C（#143）**（见 §5） | — | — | #114, TD-05 |
+| **TD-53** | 无通用 Block Registry：block 类型 / 字段 / 渲染器散落，首页 16 section 与通用 block 未统一 | 18G Discovery（page-composition-discovery-18g） | ACTIVE（18G-1） | BlockRegistry + BlockType/Definition（type/label/category/fields schema/data source/renderer view/allowed slots/per-locale/cacheable）；16 Core Block 全部注册并有渲染器；`if type==` 不散落 Controller/Blade；测试覆盖 | **YES** | #116 |
+| **TD-54** | 无 Template 模型 / 注册表 / 选择器，"模板"即 Blade、由 Controller 硬编码 | 18G Discovery | ACTIVE（18G-1） | TemplateRegistry + TemplateDefinition + Slot（继承 base）；Base→Home/Listing/Detail(Article·Product·Service)/Contact/Landing；槽位声明允许 block、不存内容；模板可在 Admin 选择 | **YES** | #116, TD-53 |
+| **TD-55** | 无 Page 模型、Landing Page 完全缺失（"单页"只能 Category(type=page)+Content 正文驱动、非组合） | 18G Discovery | ACTIVE（18G-1） | pages 表 + Page 模型（site/template/slug/status/locale/translation_group，**不存业务事实**）；Landing 全流程：新建→选模板→加 block→排序/隐藏→preview→publish→前台 200，不改 PHP/Blade/JS/CSS；draft 404 | **YES** | #116, TD-53, TD-54 |
 
 ### P2 — 通用化与产品化（#115）
 
 | ID | Title | Source | Status | Acceptance Criteria | Blocks v1.0.0? | Parent/Related |
 | --- | --- | --- | --- | --- | --- | --- |
 > **#115 全部子项（TD-10 / TD-11 / TD-12 / TD-13）已由 P-STEP 18B 销项 CLOSED**，证据见 §5 与 `docs/audit/default-template-neutralization-18b.md`。出厂为行业中性空站（Blank System）；工业材料制造 Example 仅经 `db:seed` 可选装载（Demo Site）。两态经 Fresh Install + 真实 HTTP/浏览器对拍，验证 **Blank System ≠ Demo Site**。
+
+| **TD-56** | Detail 页面（Article/Product/Service）结构写死，未迁入 Template+Block 组合 | 18G Discovery | ACTIVE（18G-2） | Article/Product/Service 统一 Detail Template + blocks，读 Entity/Content/Media/Relation/SEO，**不把业务内容复制进 Page**；模板默认 + 页面 block 覆盖；不为每个产品做独立模板 | **YES** | #116, TD-53, TD-54 |
+| **TD-57** | Listing 页面（Products/Solutions/Knowledge/Content 列表）结构写死 | 18G Discovery | ACTIVE（18G-2） | Listing Template + blocks（header/grid/sidebar/pagination）；数据 site+locale+published 过滤；结构不写死 | **YES** | #116, TD-53, TD-54 |
+| **TD-58** | 后台仅"首页装修器"，无 Page Composition Manager；BlockController 仅 index/update、无 create/store/destroy | 18G Discovery | ACTIVE（18G-1 PARTIAL→18G-2） | Page CRUD + block 编排（add/edit/move up/down/hide/duplicate/delete/preview/publish）；动态 block 编辑器（按 registry fields）；非自由拖拽；18G-1 覆盖 Landing/Page，18G-2 覆盖系统页 | **YES** | #116, TD-53..TD-55 |
 
 ### P3 — 后台与体验
 
@@ -93,6 +102,7 @@ ACTIVE  →  FIXED  →  TESTED  →  ACCEPTED  →  CLOSED
 | **TD-37** | 产品列表系列卡在窄屏两列、每卡约 165px 偏密 | 18D-09 | DEFERRED v1.1 | 窄屏单列或密度/间距优化；当前不横向溢出、信息可读 | NO（v1.1） | TD-33 |
 | **TD-38** | example 极简主题（31 行、零设计系统）未对齐深色/响应式体系 | 18D | DEFERRED v1.1（说明项） | example 为"零引擎依赖"极简示范主题；完整设计系统在 default。评估是否补齐或在主题文档标注能力边界 | NO（v1.1） | TD-28 |
 | **TD-46** | factory / cooperation Core 路由与 IA 命名制造业特定：URL factory、概念 Factory & Certifications / workshops / annual capacity in Tons | 18F（en-only B 对拍登记） | **DEFERRED v1.1** | 数据驱动可见：无 production / facility 数据的站点 FactoryController 实质 404、sitemap/feed 不输出 URL，非制造业不暴露；重命名 factory→facilities、单位 Tons 中性化涉及路由 / sitemap / 翻译键，需独立 IA 阶段。验收：非制造业 Core 默认不出现 factory 概念，或路由 / 文案中性（Facilities & Certifications） | NO（v1.1；数据驱动 404 已保证不串行业） | TD-19 |
+| **TD-59** | 无可被页面组合引用的 Form block；Inquiry 表单固定、无法作为 block 嵌入 Landing | 18G Discovery；用户裁定 | ACTIVE（18G-1 最小 FormReference；完整 Form Builder→18H） | 18G：FormReference block 引用现有 Inquiry 表单（title/desc 可配）、提交可用；18H：完整 Form Builder（fields/validation/notification/spam/consent） | **YES**（18G 最小 + 18H 完整） | #116, TD-55 |
 
 ### P4 — 观察与测试限制（默认 NON-BLOCKING，记录在案）
 
@@ -151,6 +161,7 @@ ACTIVE  →  FIXED  →  TESTED  →  ACCEPTED  →  CLOSED
 | **TD-50** | 英文 sitemap 首页 loc 用 `PublicUrl::base()`（无 locale 前缀），输出中文首页根地址而非英文首页 | **P-STEP 18F**（两态对拍发现） | SitemapBuilder 首页 loc 改 locale-aware：默认语言 base()、非默认 base()/{locale}（/en，无尾斜杠契约）；Localization18FTest 补两语首页 loc 断言（en 含 base/en、不含无根 base）；真实 HTTP 首项已为 /en |
 | **TD-51** | 英文页 header mega menu / footer / 首页与列表正文内部链接用 `url()` 不带 locale 前缀，点击跳回中文站（zh 路由），en 访客被带回中文页 | **P-STEP 18F Gate**（真实链接审计 + HTTP 点击发现） | 两层修复：显式改 PublicUrl（AppServiceProvider resolveMenuHref、layouts/site、search 共约 8 处）+ GeoUrlGenerator 新增 `withLocalePrefix()` 兜底（en 请求相对 url() 自动补 /en；console/后台/默认/外链/tel/mailto/锚点/已带前缀幂等）；新增 `test_en_internal_links_keep_en_prefix`；中英 13 页链接审计 bad=0；Focused 9/42 |
 | **TD-52** | 英文页可见/属性 UI 中文残留：header/footer logo alt·aria 用中文 site_name、nav/checkbox/tel aria-label 经 config/copy 中文兜底、系列页 eyebrow「产品系列」、搜索空状态、_subnav「栏目导航」 | **P-STEP 18F Gate**（剥离 style/script/注释的渲染 CJK 审计发现） | config/copy nav.ariaLabels 中文值改 null（翻译键生效，不造第二事实源）、布局 logo alt/aria 改 `$brandDisplayName`、telBase 兜底改 `__('ui.phone_aria')`、line eyebrow/search 空状态/_subnav 改翻译键；en/zh ui.php 补键；PageCache flush 后 en 7 页可见/属性 CJK=0；Focused 9/42、Full 872/4655 |
+| **TD-60** | 前台主脚本 SyntaxError：layout `<script>` 内 `{{ json_encode() }}` 被 Blade e()（ENT_QUOTES）二次转义，JSON 双引号→`&quot;`，主脚本 `Unexpected token '&'` 整块失效，导航收缩/下拉/抽屉/数字动画/IntersectionObserver 全不建立，首屏以下 `.reveal` 区块永久 opacity:0 | **P-STEP 18G-1 Gate**（真实浏览器 UAT 发现） | labels/ariaCurrent 改 `{!! json_encode() !!}`（json_encode 本身即合法 JS 字面量）；新增 test_frontend_inline_theme_script_is_not_double_escaped；Focused 26/78；真实 Chrome 滚动后 feature_grid 自动加 `in`/opacity1、console 零错误 |
 
 ---
 
@@ -180,6 +191,13 @@ ACTIVE  →  FIXED  →  TESTED  →  ACCEPTED  →  CLOSED
 | TD-01 GitHub Actions 云端首跑全绿 | P0 | Private GitHub + Cloud CI |
 | TD-02 基于最终 HEAD 重建干净 RC + Manifest + SHA-256 | P0 | Final RC |
 | TD-03 Private 全验证 → 授权转 Public / v1.0.0 | P0 | Release |
+| TD-53 Block Registry | P1 | P-STEP 18G-1 |
+| TD-54 Template Registry | P1 | P-STEP 18G-1 |
+| TD-55 Page / Landing Model | P1 | P-STEP 18G-1 |
+| TD-56 Detail Composition（Article/Product/Service） | P2 | P-STEP 18G-2 |
+| TD-57 Listing Composition | P2 | P-STEP 18G-2 |
+| TD-58 Page Composition Manager | P2 | P-STEP 18G-1 / 18G-2 |
+| TD-59 Form Block（18G 最小 FormReference / 18H 完整 Form Builder） | P3 | P-STEP 18G-1 / 18H |
 
 > 18C 已将原 v1.0 Required 中的 TD-05（DECISION 冻结）、TD-07、TD-08b（TD-08 整体）、TD-09（#143）、TD-16①、TD-20① 全部 CLOSED（见 §5）；#114 v1.0 收口。**v1.0 Required 未闭合仅剩上述 3 项 P0 外部工程依赖。**
 
@@ -205,8 +223,8 @@ ACTIVE  →  FIXED  →  TESTED  →  ACCEPTED  →  CLOSED
 
 ### 计数（当前）
 
-- CLOSED：#86、**#114（18A+18C）**、**#143 / TD-09**、**#144**、TD-04、**TD-05（DECISION）**、**TD-07**、TD-08a / **TD-08b（TD-08 整体）**、**TD-16①**、**TD-20①**、TD-10、TD-11、TD-12、TD-13、TD-25、TD-26、P17 六管理面 + 17G、**TD-28..TD-35（18D Design System）**、**TD-39..TD-41（18E 能力对账）**、**TD-42..TD-45（18F 本地化）**、**TD-47..TD-48（18F 路由守卫 / Entity 搜索）**、**TD-49..TD-50（18F geo.json 直出 / en-sitemap 首页 locale）**、**TD-51..TD-52（18F Gate：en 链接 locale 前缀 / en UI 中文残留清零）**
-- v1.0.0 Required 未闭合：**3**（仅 P0×3 = TD-01 / TD-02 / TD-03，均为需外部授权的发布工程项）；18F Gate 未新增 v1.0 阻塞项
+- CLOSED：#86、**#114（18A+18C）**、**#143 / TD-09**、**#144**、TD-04、**TD-05（DECISION）**、**TD-07**、TD-08a / **TD-08b（TD-08 整体）**、**TD-16①**、**TD-20①**、TD-10、TD-11、TD-12、TD-13、TD-25、TD-26、P17 六管理面 + 17G、**TD-28..TD-35（18D Design System）**、**TD-39..TD-41（18E 能力对账）**、**TD-42..TD-45（18F 本地化）**、**TD-47..TD-48（18F 路由守卫 / Entity 搜索）**、**TD-49..TD-50（18F geo.json 直出 / en-sitemap 首页 locale）**、**TD-51..TD-52（18F Gate：en 链接 locale 前缀 / en UI 中文残留清零）**、**TD-60（18G-1 Gate：主脚本二次转义 SyntaxError 修复）**
+- v1.0.0 Required 未闭合：**10** = P0×3 外部发布工程（TD-01 / TD-02 / TD-03）+ Page Composition ×7（TD-53/54/55 计划 18G-1 闭合；TD-56/57 计划 18G-2；TD-58 18G-1 PARTIAL→18G-2；TD-59 18G-1 最小 / 18H 完整）；18G-1 进行中
 - v1.1+ Planned：TD-06（/article/ 收敛）、TD-14、TD-15、TD-16②③④、TD-17、TD-18、TD-19、TD-20②③④、TD-23、TD-24、TD-27、**TD-36、TD-37、TD-38**、**TD-46**
 - NON-DEBT / DEFERRED 观察项：TD-21 / TD-22 / TD-23 / TD-24 / TD-27
 
@@ -232,3 +250,5 @@ ACTIVE  →  FIXED  →  TESTED  →  ACCEPTED  →  CLOSED
 | 2026-09-23 | P-STEP 18E（收尾提交 / `checkpoint-18E`，861/4590/0/0） | Frontend ↔ Backend Capability Closure 能力对账：通读首页 16 区块 + Header/Footer/导航 + 全部列表/详情/表单/关于页 + Catalog 投影 + 组件，确认绝大多数前台元素数据驱动、空则隐藏；发现并最小修复 TD-39（factory 部分生产事实裸输出 0：H1/stats/SEO 按数据拼接）、TD-40（_bottom_cta 电话行门控）、TD-41（solutions「你的店」→「你的业务」），新增 FrontendBackendClosure18ETest 4 用例（16 assertions）；疑似 phone.invalid 缺失经核实 `Copy::form()` 组装层已兜底（不读 config 该键），判 NON-DEBT、撤销对 config/copy.php 的多余改动；后台字段 consumer 反查复用 17A–17G / 17F 64 键矩阵结论；v1.0 Required 未闭合仍为 3（TD-01/02/03），18E 未新增发布阻塞；产出 `frontend-backend-capability-matrix.md`、`hardcoded-capability-register.md` |
 | 2026-09-23 | P-STEP 18F（`checkpoint-18F`） | Localization 前端 zh-CN + en：Locale Registry / SetLocale / URL（zh 无前缀、en /en）/ 同表多行 translation_group 翻译模型 / 双语 feed / hreflang / 本地化 Schema·GEO·Sitemap·Search；Multi-Site × Locale：en-only Site B 验证 zh 404、en 200、双向隔离；发现并修复 TD-42（Catalog 硬依赖 zh-CN org → baseLocale 回退 + nullable）、TD-43（area_served ??）、TD-44（blank 描述单语泄漏 → 优先 Catalog company summary）、TD-45（knowledge/products SEO 翻译键工业措辞中性化），TD-47（路由 PublicUrlLocalized 重复声明 fatal → function_exists 守卫）、TD-48（搜索补齐 Entity：SearchResult + 合并 entityQuery），均 CLOSED；新登记 TD-46（factory/cooperation IA 制造业命名，数据驱动 404 不暴露，DEFERRED v1.1）；收尾另修 TD-49（geo.json 中文/URL Unicode 转义 → JSON_UNESCAPED 直出 + GeoGraph 防回归）、TD-50（英文 sitemap 首页 loc 缺 /en → locale-aware + 断言）；「LocaleContext 跨请求泄漏 P0」经三重查证裁定 NON-DEBT（误判）；v1.0 Required 未闭合仍为 3（TD-01/02/03）；报告 `docs/audit/localization-final-audit.md` |
 | 2026-09-23 | P-STEP 18F **Gate Validation**（`checkpoint-18F`，**872/4655/0/0**） | 对切换设备前会话产出的实现 `d886d5d` 做独立验收（流程异常已记录，≠直接认可 PASS）：Focused 9/42、Full 872/4655、Fresh blank/demo install、Blank/Demo HTTP、Browser 四组合（zh/en × light/dark）、Multi-Site × Locale、PageCache zh↔en 内容对拍全过；真实链接/渲染审计发现并修复 **TD-51**（en 内部链接缺 /en：PublicUrl 显式改约 8 处 + GeoUrlGenerator `withLocalePrefix()` 兜底 + 防回归测试）、**TD-52**（en 可见/属性 UI 中文残留：config/copy ariaLabels 中文值改 null + logo `$brandDisplayName` + tel/eyebrow/空状态/subnav 翻译键 + 字典补键），均 CLOSED，en 7 页渲染 visible/属性 CJK=0；唯一 `local.ERROR` 系本轮 tinker 命令被 shell 剥离双引号的 ParseError（命令构造问题、非产品缺陷，无引号写法重跑成功）；serve(8111/8112)/端口/临时 sqlite/smoke 缓存全清；v1.0 Required 未闭合仍 3（TD-01/02/03），18F 未新增发布阻塞 |
+| 2026-09-23 | P-STEP 18G-1 START（Discovery ACCEPTED / 实现授权） | 登记父 Epic **#116** Page Composition / Template System 与 **TD-53..TD-59**：TD-53 Block Registry、TD-54 Template Registry、TD-55 Page/Landing（P1，18G-1）；TD-56 Detail、TD-57 Listing Composition（P2，18G-2）；TD-58 Page Composition Manager（18G-1 PARTIAL→18G-2）；TD-59 Form Block（18G-1 最小 FormReference，完整 Form Builder→18H）。v1.0 Required 未闭合 3→10（Page Composition 7 项在 18G/18H 闭合，P0×3 仍待外部授权） |
+| 2026-09-23 | P-STEP 18G-1 Gate Validation（进行中） | 真实浏览器 UAT 发现并修复 **TD-60**：layout 主脚本 `{{ json_encode() }}` 二次转义 `&quot;` 致全站前台 JS SyntaxError、IntersectionObserver 不建立、`.reveal` 永久 opacity0；改 `{!! json_encode() !!}` + 防回归（Focused 26/78）；console 零错误、feature_grid 滚动自然显现。v1.0 Required 未闭合仍 10（TD-60 发现即 CLOSED，不新增阻塞） |
