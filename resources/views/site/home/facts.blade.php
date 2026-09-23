@@ -5,16 +5,16 @@
   <div class="wrap">
     <div class="sec-head row">
       <div>
-        <span class="eyebrow">TRUST · 资质与实力</span>
-        <h2 class="sec-h">{{ $blk->title ?: '可核验的资质与交付能力' }}</h2>
+        <span class="eyebrow">{{ __('ui.eyebrow_trust') }}</span>
+        <h2 class="sec-h">{{ $blk->title ?: __('ui.home_facts_title') }}</h2>
       </div>
-      <a class="btn-text" href="{{ url('/about/profile/') }}">查看企业概况<span class="arr">→</span></a>
+      <a class="btn-text" href="{{ url('/about/profile/') }}">{{ __('ui.home_facts_btn') }}<span class="arr">→</span></a>
     </div>
     <dl class="facts reveal">
       @foreach($homeFacts as $f)
         <div class="fact">
-          <dt>{{ $f->label }}</dt>
-          <dd>{{ $f->value }}</dd>
+          <dt>{{ $f['label'] }}</dt>
+          <dd>{{ $f['value'] }}</dd>
         </div>
       @endforeach
     </dl>

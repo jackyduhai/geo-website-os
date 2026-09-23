@@ -84,6 +84,18 @@ class Group extends Model
         return self::$knowledgeMemo;
     }
 
+    /**
+     * 前台显示名称（P-STEP 18F）：内置知识分组（selection / process / business）
+     * 走 nav.knowledge-{slug} 翻译键；自定义分组回退其 name。
+     */
+    public function displayName(): string
+    {
+        $key = 'nav.knowledge-' . $this->slug;
+        $translated = __($key);
+
+        return $translated === $key ? (string) $this->name : $translated;
+    }
+
     /** 后台写入分组后调用，保证同进程不读到旧值 */
     public static function flushKnowledgeMemo(): void
     {

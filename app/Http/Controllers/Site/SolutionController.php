@@ -5,7 +5,9 @@ namespace App\Http\Controllers\Site;
 use App\Http\Controllers\Controller;
 use App\Services\Geo\SchemaBuilder;
 use App\Support\Catalog;
+use App\Support\Localization\LocaleContext;
 use App\Support\Narrative;
+use App\Support\Pages;
 use App\Support\PublicUrl;
 
 /**
@@ -21,20 +23,22 @@ class SolutionController extends Controller
         abort_if(empty(Catalog::company()), 404);
 
         $scenes = Catalog::scenes();
-        $lead = Narrative::lead('solutions.index.lead', config('pages.narrative.solutions_index.lead', ''));
+        $lead = Narrative::lead('solutions.index.lead', Pages::narrative('solutions_index'));
         $company    = Catalog::company();
         $brandName  = ! empty($company['brand']) ? $company['brand'] : ($company['name'] ?? '');
         $sceneCnt   = count($scenes);
         $sceneNames = implode('、', array_map(fn ($s) => $s['name'], $scenes));
         $crumbs = [
-            ['name' => '首页', 'url' => PublicUrl::home()],
-            ['name' => '应用场景', 'url' => PublicUrl::url('solutions/')],
+            ['name' => __('nav.home'), 'url' => PublicUrl::home()],
+            ['name' => __('nav.solutions'), 'url' => PublicUrl::url('solutions/')],
         ];
 
+        $solutionsIndexUrl = PublicUrl::url('solutions/');
         $itemList = [
             '@context'        => 'https://schema.org',
             '@type'           => 'ItemList',
-            'name'            => $brandName . '应用场景',
+            '@id'             => $solutionsIndexUrl . '#itemlist',
+            'name'            => __('seo.solutions_itemlist_name', ['brand' => $brandName]),
             'itemListElement' => array_values(array_map(function ($s, $i) {
                 return [
                     '@type'    => 'ListItem',
@@ -52,11 +56,12 @@ class SolutionController extends Controller
             'schemas' => array_values(array_filter([
                 $schema->organization(),
                 $schema->breadcrumb($crumbs),
+                $schema->webPage($solutionsIndexUrl, __('seo.solutions_index_title', ['count' => $sceneCnt]), __('seo.solutions_index_desc', ['names' => $sceneNames, 'count' => $sceneCnt]), 'CollectionPage', $solutionsIndexUrl . '#itemlist'),
                 $itemList,
             ])),
             'seo' => [
-                'title'       => '应用场景：' . $sceneCnt . '类行业解决方案',
-                'description' => '覆盖' . $sceneNames . '等' . $sceneCnt . '类应用场景，给出对应产品组合、选型理由与关键工艺参数。',
+                'title'       => __('seo.solutions_index_title', ['count' => $sceneCnt]),
+                'description' => __('seo.solutions_index_desc', ['names' => $sceneNames, 'count' => $sceneCnt]),
                 'canonical'   => PublicUrl::url('solutions/'),
                 'noindex'     => false,
                 'type'        => 'website',
@@ -74,7 +79,7 @@ class SolutionController extends Controller
         $combo     = Catalog::sceneCombo($data);
         $adjacent  = Catalog::adjacentScenes($data);
         $keyProduct = ! empty($data['key_param_product']) ? Catalog::product($data['key_param_product']) : null;
-        $faqs      = config('pages.scene_faqs.' . $scene, []);
+        $faqs      = Pages::faqs('scene_faqs', $scene);
 
         // 上一/下一相邻场景
         $prev = $adjacent[0] ?? null;
@@ -82,14 +87,15 @@ class SolutionController extends Controller
 
         $sceneUrl = PublicUrl::solution($scene);
         $crumbs = [
-            ['name' => '首页', 'url' => PublicUrl::home()],
-            ['name' => '应用场景', 'url' => PublicUrl::url('solutions/')],
+            ['name' => __('nav.home'), 'url' => PublicUrl::home()],
+            ['name' => __('nav.solutions'), 'url' => PublicUrl::url('solutions/')],
             ['name' => $data['name'], 'url' => $sceneUrl],
         ];
 
         $schemas = [
             $schema->organization(),
             $schema->breadcrumb($crumbs),
+            $schema->webPage($sceneUrl, $data['name'], $data['desc'] ?? '', 'WebPage'),
         ];
         if (! empty($faqs)) {
             $schemas[] = $schema->faqPageFromList($faqs, $sceneUrl);
@@ -105,8 +111,12 @@ class SolutionController extends Controller
             'crumbs'     => array_slice($crumbs, 1),
             'schemas'    => array_values(array_filter($schemas)),
             'seo' => [
-                'title'       => $data['title_q'] ?? $data['name'],
-                'description' => $data['desc'] . '。' . ($data['combo_reason'] ?? ''),
+                'title'       => LocaleContext::current() === 'en'
+                    ? $data['name']
+                    : ($data['title_q'] ?? $data['name']),
+                'description' => LocaleContext::current() === 'en'
+                    ? $data['desc']
+                    : __('seo.solution_show_desc', ['desc' => $data['desc'], 'reason' => $data['combo_reason'] ?? '']),
                 'canonical'   => $sceneUrl,
                 'noindex'     => false,
                 'type'        => 'website',

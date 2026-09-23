@@ -7,7 +7,9 @@ use App\Models\Content;
 use App\Models\Entity;
 use App\Models\Media;
 use App\Models\SeoMeta;
+use App\Models\Setting;
 use App\Models\Site;
+use App\Support\Localization\LocaleContext;
 use App\Support\PublicUrl;
 use App\Support\SiteContext;
 
@@ -48,11 +50,12 @@ class SeoMetaResolver
         foreach ($contents as $c) {
             $idsBySite[$c->site_id][] = $c->id;
         }
+        $locale = LocaleContext::current();
         foreach ($idsBySite as $siteId => $ids) {
-            $found = SeoMeta::query()->where('site_id', $siteId)->whereIn('content_id', $ids)->get()
-                ->keyBy('content_id');
+            $found = SeoMeta::query()->where('site_id', $siteId)->where('locale', $locale)
+                ->whereIn('content_id', $ids)->get()->keyBy('content_id');
             foreach ($ids as $id) {
-                self::$contentSeoMemo["{$siteId}:{$id}"] = $found->get($id) ?? false;
+                self::$contentSeoMemo["{$siteId}:{$id}:{$locale}"] = $found->get($id) ?? false;
             }
         }
     }
@@ -64,11 +67,12 @@ class SeoMetaResolver
         foreach ($entities as $e) {
             $idsBySite[$e->site_id][] = $e->id;
         }
+        $locale = LocaleContext::current();
         foreach ($idsBySite as $siteId => $ids) {
-            $found = SeoMeta::query()->where('site_id', $siteId)->whereIn('entity_id', $ids)->get()
-                ->keyBy('entity_id');
+            $found = SeoMeta::query()->where('site_id', $siteId)->where('locale', $locale)
+                ->whereIn('entity_id', $ids)->get()->keyBy('entity_id');
             foreach ($ids as $id) {
-                self::$entitySeoMemo["{$siteId}:{$id}"] = $found->get($id) ?? false;
+                self::$entitySeoMemo["{$siteId}:{$id}:{$locale}"] = $found->get($id) ?? false;
             }
         }
     }
@@ -98,11 +102,13 @@ class SeoMetaResolver
 
     private function contentSeoMeta(int $siteId, int $contentId): ?SeoMeta
     {
-        $key = "{$siteId}:{$contentId}";
+        $locale = LocaleContext::current();
+        $key = "{$siteId}:{$contentId}:{$locale}";
         if (! array_key_exists($key, self::$contentSeoMemo)) {
             self::$contentSeoMemo[$key] = SeoMeta::query()
                 ->where('site_id', $siteId)
                 ->where('content_id', $contentId)
+                ->where('locale', $locale)
                 ->first() ?? false;
         }
 
@@ -111,11 +117,13 @@ class SeoMetaResolver
 
     private function entitySeoMeta(int $siteId, int $entityId): ?SeoMeta
     {
-        $key = "{$siteId}:{$entityId}";
+        $locale = LocaleContext::current();
+        $key = "{$siteId}:{$entityId}:{$locale}";
         if (! array_key_exists($key, self::$entitySeoMemo)) {
             self::$entitySeoMemo[$key] = SeoMeta::query()
                 ->where('site_id', $siteId)
                 ->where('entity_id', $entityId)
+                ->where('locale', $locale)
                 ->first() ?? false;
         }
 
@@ -144,14 +152,15 @@ class SeoMetaResolver
     public function resolveSite(Site $site): SeoResult
     {
         $seoMeta = $this->findSiteLevelSeo($site);
+        [$siteName, $siteDesc] = $this->siteIdentity($site);
 
         return new SeoResult(
-            title: $seoMeta?->title ?? $site->name ?? self::SYSTEM_DEFAULT_TITLE,
-            description: $seoMeta?->description ?? $site->description ?? self::SYSTEM_DEFAULT_DESCRIPTION,
+            title: $seoMeta?->title ?? ($siteName !== '' ? $siteName : self::SYSTEM_DEFAULT_TITLE),
+            description: $seoMeta?->description ?? ($siteDesc !== '' ? $siteDesc : self::SYSTEM_DEFAULT_DESCRIPTION),
             keywords: $seoMeta?->keywords ?? [],
             canonical: $seoMeta?->canonical ?? PublicUrl::home(),
-            ogTitle: $seoMeta?->og_title ?? ($seoMeta?->title ?? $site->name ?? self::SYSTEM_DEFAULT_TITLE),
-            ogDescription: $seoMeta?->og_description ?? ($seoMeta?->description ?? $site->description ?? self::SYSTEM_DEFAULT_DESCRIPTION),
+            ogTitle: $seoMeta?->og_title ?? ($seoMeta?->title ?? ($siteName !== '' ? $siteName : self::SYSTEM_DEFAULT_TITLE)),
+            ogDescription: $seoMeta?->og_description ?? ($seoMeta?->description ?? ($siteDesc !== '' ? $siteDesc : self::SYSTEM_DEFAULT_DESCRIPTION)),
             ogImage: $seoMeta?->og_image_path ?? $site->logo,
             ogType: $seoMeta?->og_type ?? 'website',
             twitterCard: $seoMeta?->twitter_card ?? 'summary_large_image',
@@ -272,15 +281,18 @@ class SeoMetaResolver
      */
     private function findSiteLevelSeo(Site $site): ?SeoMeta
     {
-        if (! array_key_exists($site->id, self::$siteSeoMemo)) {
-            self::$siteSeoMemo[$site->id] = SeoMeta::query()
+        $locale = LocaleContext::current();
+        $key = "{$site->id}:{$locale}";
+        if (! array_key_exists($key, self::$siteSeoMemo)) {
+            self::$siteSeoMemo[$key] = SeoMeta::query()
                 ->where('site_id', $site->id)
+                ->where('locale', $locale)
                 ->whereNull('content_id')
                 ->whereNull('entity_id')
                 ->first() ?? false;
         }
 
-        return self::$siteSeoMemo[$site->id] ?: null;
+        return self::$siteSeoMemo[$key] ?: null;
     }
 
     /**
@@ -289,11 +301,38 @@ class SeoMetaResolver
     private function siteFallback(Site $site): array
     {
         $seo = $this->findSiteLevelSeo($site);
+        [$siteName, $siteDesc] = $this->siteIdentity($site);
 
         return [
-            'title' => $seo?->title ?? $site->name ?? self::SYSTEM_DEFAULT_TITLE,
-            'description' => $seo?->description ?? $site->description ?? self::SYSTEM_DEFAULT_DESCRIPTION,
+            'title' => $seo?->title ?? ($siteName !== '' ? $siteName : self::SYSTEM_DEFAULT_TITLE),
+            'description' => $seo?->description ?? ($siteDesc !== '' ? $siteDesc : self::SYSTEM_DEFAULT_DESCRIPTION),
             'ogImage' => $seo?->og_image_path ?? $site->logo,
         ];
+    }
+
+    /**
+     * 站点主体身份（Site 聚合，TD-07 唯一事实源）按当前语言解析。
+     * zh：Site.name / Site.description；
+     * en：优先 Site 级 Setting geo_org_en_name / seo_default_en_desc，缺省回退 Site 字段。
+     *
+     * @return array{0:string,1:string} [name, description]
+     */
+    private function siteIdentity(Site $site): array
+    {
+        $name = (string) ($site->name ?? '');
+        $desc = (string) ($site->description ?? '');
+
+        if (LocaleContext::current() === 'en') {
+            $enName = Setting::get('geo_org_en_name', '');
+            $enDesc = Setting::get('seo_default_en_desc', '');
+            if (is_string($enName) && trim($enName) !== '') {
+                $name = $enName;
+            }
+            if (is_string($enDesc) && trim($enDesc) !== '') {
+                $desc = $enDesc;
+            }
+        }
+
+        return [$name, $desc];
     }
 }

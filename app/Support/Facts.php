@@ -216,6 +216,11 @@ class Facts
         return config('facts.production.sales_regions', []);
     }
 
+    public static function salesRegionsEnglish(): array
+    {
+        return config('facts.production.sales_regions_en', []);
+    }
+
     public static function certifications(): array
     {
         return config('facts.production.certifications', []);

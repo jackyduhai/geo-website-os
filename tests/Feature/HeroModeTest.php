@@ -176,7 +176,8 @@ class HeroModeTest extends TestCase
         $this->assertStringNotContainsString('<section class="hb"', $html);
         $this->assertStringNotContainsString('hero-split-media', $html);
         // 价值主张文案在初始 HTML（SSR，利于 SEO/GEO），且整页唯一 H1
-        $this->assertStringContainsString('一站式定制制造', $html);
+        // 18B 行业中性化：mode C 默认标题为品牌名模板（不内置「一站式定制制造」行业话术）
+        $this->assertStringContainsString('示例制造 官方网站', $html);
         $this->assertSame(1, substr_count($html, '<h1'));
     }
 

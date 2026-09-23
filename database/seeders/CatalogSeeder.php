@@ -40,6 +40,7 @@ class CatalogSeeder extends Seeder
         $organization = Entity::firstOrNew([
             'type' => Entity::TYPE_ORGANIZATION,
             'slug' => 'example-organization',
+            'locale' => 'zh-CN',
         ]);
         $organization->fill([
             'name'        => $company['name'] ?? 'Example Organization',
@@ -59,6 +60,7 @@ class CatalogSeeder extends Seeder
                 'production'     => [
                     'workshops'      => Facts::workshops(),
                     'sales_regions'  => Facts::salesRegions(),
+                    'sales_regions_en' => Facts::salesRegionsEnglish(),
                     'certifications' => Facts::certifications(),
                 ],
                 'cooperation'    => Facts::cooperation(),
@@ -74,6 +76,7 @@ class CatalogSeeder extends Seeder
             $entity = Entity::firstOrNew([
                 'type' => Entity::TYPE_PRODUCT,
                 'slug' => $product['slug'],
+                'locale' => 'zh-CN',
             ]);
             $entity->fill([
                 'name'         => $product['name'],
@@ -93,6 +96,7 @@ class CatalogSeeder extends Seeder
             $entity = Entity::firstOrNew([
                 'type' => Entity::TYPE_SERVICE,
                 'slug' => $scene['slug'],
+                'locale' => 'zh-CN',
             ]);
             $entity->fill([
                 'name'         => $scene['name'],
@@ -185,6 +189,81 @@ class CatalogSeeder extends Seeder
                 }
             }
         }
+
+        // 5) English 翻译行（P-STEP 18F）：站点主体 + 核心产品 + 全部应用场景提供 en；
+        //    非核心产品暂不翻译，en 目录只列有译项，关系按 translation_group 部分保留。
+        $this->ensureEnglish($organization, [
+            'name'    => $company['name_en'] ?? 'Example Organization',
+            'summary' => 'Industrial materials manufacturing',
+            'description' => $company['name_en'] ?? 'Example Organization',
+        ]);
+
+        foreach ([
+            'epoxy-primer-100' => [
+                'name' => 'Zinc-Rich Epoxy Primer ZP-100',
+                'summary' => 'Anti-corrosion primer for steel structures; recommended DFT 60-80 um, applied with a polyurethane topcoat.',
+                'metadata' => [
+                    'short_name' => 'Zinc-Rich Epoxy Primer',
+                    'tag' => 'Industrial Protective Coatings',
+                    'mains' => ['Steel', 'Steel structural parts'],
+                    'key_params' => [
+                        ['label' => 'Substrate', 'value' => 'Blast-cleaned steel'],
+                        ['label' => 'Mix ratio', 'value' => 'Base : hardener = 9 : 1'],
+                        ['label' => 'Touch-dry', 'value' => 'About 30 minutes'],
+                    ],
+                    'params' => [
+                        ['step' => 'Surface prep', 'value' => 'Blast to Sa 2.5', 'note' => 'Remove oil and mill scale'],
+                        ['step' => 'Mixing', 'value' => 'Base : hardener 9 : 1', 'note' => 'Mix by weight; induct 10 minutes'],
+                        ['step' => 'Application', 'value' => 'DFT 60-80 um', 'note' => 'Spray or brush'],
+                        ['step' => 'Curing', 'value' => 'Touch-dry 30 min at 25 C', 'note' => 'Recoat interval per spec'],
+                        ['step' => 'Inspection', 'value' => 'Measure DFT', 'note' => 'Apply topcoat after approval'],
+                    ],
+                ],
+            ],
+            'polyurethane-topcoat-200' => [
+                'name' => 'Polyurethane Topcoat PC-200',
+                'summary' => 'Weatherable, gloss-retentive topcoat forming a multi-coat system with the epoxy primer.',
+                'metadata' => [
+                    'short_name' => 'Polyurethane Topcoat',
+                    'tag' => 'Industrial Protective Coatings',
+                    'mains' => ['Steel', 'Aluminum alloy'],
+                    'key_params' => [
+                        ['label' => 'Substrate', 'value' => 'Primed metal surface'],
+                        ['label' => 'Mix ratio', 'value' => 'Base : hardener = 6 : 1'],
+                        ['label' => 'Touch-dry', 'value' => 'About 40 minutes'],
+                    ],
+                    'params' => [
+                        ['step' => 'Surface check', 'value' => 'Primer cured', 'note' => 'Clean, no oil'],
+                        ['step' => 'Mixing', 'value' => 'Base : hardener 6 : 1', 'note' => 'Induct 10 minutes'],
+                        ['step' => 'Application', 'value' => 'DFT 40-60 um', 'note' => 'Spray preferred'],
+                        ['step' => 'Curing', 'value' => 'Touch-dry 40 min at 25 C', 'note' => 'Full cure 7 days'],
+                    ],
+                ],
+            ],
+        ] as $slug => $en) {
+            if (isset($productEntities[$slug])) {
+                $this->ensureEnglish($productEntities[$slug], $en);
+            }
+        }
+
+        foreach ([
+            'equipment-manufacturing' => [
+                'name' => 'Equipment Manufacturing',
+                'summary' => 'Coating durability, structural bonding strength and batch consistency.',
+            ],
+            'construction-infrastructure' => [
+                'name' => 'Construction & Infrastructure',
+                'summary' => 'Weatherability, waterproof sealing and on-site application.',
+            ],
+            'automotive-parts' => [
+                'name' => 'Automotive Parts',
+                'summary' => 'Heat resistance, bonding strength and production-line takt.',
+            ],
+        ] as $slug => $en) {
+            if (isset($serviceEntities[$slug])) {
+                $this->ensureEnglish($serviceEntities[$slug], $en);
+            }
+        }
     }
 
     private function relate(Entity $from, Entity $to, string $type, int $sortOrder = 0, ?array $metadata = null): void
@@ -202,5 +281,33 @@ class CatalogSeeder extends Seeder
             'metadata'   => $metadata,
         ]);
         $relation->save();
+    }
+
+    /**
+     * P-STEP 18F：为 zh 权威实体确保对应 en 翻译行（幂等）。
+     * en 行共享 translation_group；共享列从 zh 复制，独立字段取 $en。
+     */
+    private function ensureEnglish(Entity $zh, array $en): Entity
+    {
+        $row = Entity::firstOrNew([
+            'type'   => $zh->type,
+            'slug'   => $en['slug'] ?? $zh->slug,
+            'locale' => 'en',
+        ]);
+        $row->translation_group = $zh->translation_group;
+        $row->fill([
+            'name'         => $en['name'],
+            'summary'      => $en['summary'] ?? null,
+            'description'  => $en['description'] ?? $en['summary'] ?? null,
+            'status'       => $zh->status,
+            'published_at' => $zh->published_at,
+            'metadata'     => isset($en['metadata'])
+                ? array_merge(is_array($zh->metadata) ? $zh->metadata : [], $en['metadata'])
+                : $zh->metadata,
+            'sort_order'   => $zh->sort_order,
+        ]);
+        $row->save();
+
+        return $row;
     }
 }

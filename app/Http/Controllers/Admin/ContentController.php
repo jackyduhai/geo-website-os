@@ -10,17 +10,24 @@ use App\Models\ContentRevision;
 use App\Models\Fact;
 use App\Models\Group;
 use App\Models\Media;
+use App\Models\Setting;
 use App\Services\Gate\ContentGate;
+use App\Support\Localization\LocaleRegistry;
+use App\Support\SiteContext;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 /**
- * 内容管理（文章 / 单页 / 产品共用）
+ * 内容管理（文章 / 单页）
  *
  * 关键纪律：草稿可以不完整；一旦点「发布」必须通过 ContentGate。
  * 手动发布与 GEOFlow 推送共用同一套门禁，没有第二条宽松路径。
+ *
+ * P-STEP 18F：同一内容的多语言版本 = 同表多行 + translation_group；
+ * 编辑页通过 ?trans=<locale> 在各语言行间切换，翻译状态在顶部 Tabs 可见。
  */
 class ContentController extends Controller
 {
@@ -52,16 +59,46 @@ class ContentController extends Controller
 
     public function create(string $type = 'article'): View
     {
-        return $this->form(new Content(['type' => $type, 'status' => 'draft']));
+        $content = new Content([
+            'type'    => $type,
+            'status'  => 'draft',
+            'site_id' => SiteContext::currentSiteId(),
+            'locale'  => LocaleRegistry::default(),
+        ]);
+
+        return $this->form($content, $content, LocaleRegistry::default());
     }
 
     public function store(Request $request): RedirectResponse
     {
+        $transLocale = $this->resolveTransLocale($request);
         $data = $this->validateForm($request);
         $data = $this->hydrate($data, $request);
 
+        // 路径一：基于默认语言 anchor 创建翻译行
+        if ($transLocale !== LocaleRegistry::default() && $request->filled('translation_group')) {
+            $anchor = Content::withoutSiteScope()
+                ->where('translation_group', $request->input('translation_group'))
+                ->where('locale', LocaleRegistry::default())
+                ->firstOrFail();
+
+            unset($data['locale'], $data['translation_group'], $data['site_id']);
+            $content = $anchor->createTranslation($transLocale, $data);
+
+            $this->snapshot($content, '创建翻译 ' . $transLocale);
+            AuditLog::record('content.translation.created', '创建翻译：' . $content->title, [], 'content', $content->id);
+
+            return redirect()->route('admin.contents.edit', [
+                'content' => $anchor,
+                'trans'   => $transLocale,
+            ])->with('success', '翻译草稿已保存。');
+        }
+
+        // 路径二：全新默认语言内容
         $content = new Content();
         $content->fill($data);
+        $content->site_id = SiteContext::currentSiteId();
+        $content->locale = LocaleRegistry::default();
         $content->status = 'draft';
         $content->content_hash = $content->computeHash();
         $content->save();
@@ -73,25 +110,48 @@ class ContentController extends Controller
             ->with('success', '草稿已保存。完善四层结构后可提交发布。');
     }
 
-    public function edit(Content $content): View
+    public function edit(Request $request, Content $content): View
     {
-        return $this->form($content);
+        // 以默认语言行作为锚点
+        $anchor = $content->locale === LocaleRegistry::default()
+            ? $content
+            : ($content->translation(LocaleRegistry::default()) ?? $content);
+
+        $transLocale = $this->resolveTransLocale($request);
+
+        if ($transLocale === LocaleRegistry::default()) {
+            $editing = $anchor;
+        } else {
+            $editing = $anchor->translation($transLocale)
+                ?: $this->blankTranslation($anchor, $transLocale);
+        }
+
+        return $this->form($editing, $anchor, $transLocale);
     }
 
     public function update(Request $request, Content $content): RedirectResponse
     {
+        $transLocale = $this->resolveTransLocale($request);
         $data = $this->validateForm($request, $content);
         $data = $this->hydrate($data, $request);
 
-        // 已发布内容编辑后保持发布状态，但仍需重新过门禁；此处先保存，发布状态由发布动作把关
+        unset($data['locale'], $data['translation_group']);
+
         $content->fill($data);
         $content->content_hash = $content->computeHash();
         $content->save();
 
-        $this->snapshot($content, '编辑保存');
+        $this->snapshot($content, '编辑保存 ' . $transLocale);
         AuditLog::record('content.updated', '编辑内容：' . $content->title, [], 'content', $content->id);
 
-        return back()->with('success', '内容已保存');
+        $anchor = $content->locale === LocaleRegistry::default()
+            ? $content
+            : ($content->translation(LocaleRegistry::default()) ?? $content);
+
+        return redirect()->route('admin.contents.edit', [
+            'content' => $anchor,
+            'trans'   => $transLocale,
+        ])->with('success', '内容已保存');
     }
 
     public function destroy(Content $content): RedirectResponse
@@ -108,7 +168,7 @@ class ContentController extends Controller
      */
     public function publish(Request $request, Content $content, ContentGate $gate): RedirectResponse
     {
-        // 先把表单外可能的编辑落库？不——发布只针对已保存内容；先保存再发布是固定流程
+        // 发布只针对默认语言行；翻译行的发布状态由共享列同步。
         $result = $gate->check($content);
 
         if (! $result['passed']) {
@@ -178,22 +238,42 @@ class ContentController extends Controller
     // 内部
     // ---------------------------------------------------------------
 
-    protected function form(Content $content): View
+    protected function form(Content $content, ?Content $anchor = null, ?string $transLocale = null): View
     {
+        $anchor = $anchor ?? $content;
+        $transLocale = $transLocale ?? LocaleRegistry::default();
+
+        // 各语言版本完成状态（用于顶部 Tabs 标记）。
+        $versions = [];
+        foreach ($this->editableLocales() as $loc) {
+            if ($loc === LocaleRegistry::default()) {
+                $versions[$loc] = (bool) $anchor->title;
+            } else {
+                $row = $anchor->translation($loc);
+                $versions[$loc] = $row && (bool) $row->title;
+            }
+        }
+
         return view('admin.contents.form', [
-            'content'    => $content,
-            'categories' => Category::with('children')->whereNull('parent_id')->orderBy('sort')->get(),
-            'groups'     => Group::with('category')->orderBy('sort')->get(),
-            'facts'      => Fact::orderBy('sort')->get(),
+            'content'     => $content,
+            'anchor'      => $anchor,
+            'transLocale' => $transLocale,
+            'versions'    => $versions,
+            'categories'  => Category::with('children')->whereNull('parent_id')->orderBy('sort')->get(),
+            'groups'      => Group::with('category')->orderBy('sort')->get(),
+            'facts'       => Fact::orderBy('sort')->get(),
         ]);
     }
 
     protected function validateForm(Request $request, ?Content $except = null): array
     {
+        $siteId = ($except && $except->site_id) ? $except->site_id : SiteContext::currentSiteId();
+        $locale = ($except && $except->locale) ? $except->locale : $this->resolveTransLocale($request);
+
         $slugRule = ['required', 'regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/'];
-        $slugRule[] = $except
-            ? 'unique:contents,slug,' . $except->id
-            : 'unique:contents,slug';
+        $slugRule[] = Rule::unique('contents', 'slug')
+            ->where(fn ($q) => $q->where('site_id', $siteId)->where('locale', $locale))
+            ->ignore($except?->id);
 
         return $request->validate([
             'type'        => ['required', 'in:article,page'],
@@ -213,8 +293,6 @@ class ContentController extends Controller
             'geo_explanation'  => ['nullable', 'string'],
             'geo_boundary'     => ['nullable', 'string'],
 
-            // legacy SEO 字段（seo_title/seo_desc/canonical/noindex）已随 P0-B 移除：
-            // 内容级 SEO 由独立 SeoMeta 管理（SeoMetaResolver 统一 Resolution）。
             'lock_manual'  => ['nullable', 'boolean'],
 
             'owner'        => ['nullable', 'string', 'max:60'],
@@ -316,5 +394,51 @@ class ContentController extends Controller
                 'status', 'published_at',
             ]),
         ]);
+    }
+
+    /** 请求 ?trans=<locale>；非法 / 缺省回退默认语言。 */
+    protected function resolveTransLocale(Request $request): string
+    {
+        $loc = (string) $request->input('trans', '');
+
+        return LocaleRegistry::supports($loc) ? $loc : LocaleRegistry::default();
+    }
+
+    /** 当前站点可编辑的语言（Setting site_supported_locales），默认语言置首。 */
+    protected function editableLocales(): array
+    {
+        $raw = Setting::get('site_supported_locales', [LocaleRegistry::default()]);
+
+        if (is_array($raw)) {
+            $locales = array_values(array_filter(array_map(
+                fn ($v) => is_string($v) ? trim($v) : '',
+                $raw
+            )));
+        } else {
+            $locales = array_values(array_filter(array_map('trim', explode(',', (string) $raw))));
+        }
+
+        $locales = $locales !== [] ? $locales : [LocaleRegistry::default()];
+
+        usort($locales, function ($a, $b): int {
+            if ($a === LocaleRegistry::default()) { return -1; }
+            if ($b === LocaleRegistry::default()) { return 1; }
+            return 0;
+        });
+
+        return $locales;
+    }
+
+    /** 未保存的新翻译行（复制站点 / 分组 / 类型 / 状态，locale 切换）。 */
+    protected function blankTranslation(Content $anchor, string $locale): Content
+    {
+        $row = new Content();
+        $row->site_id = $anchor->site_id;
+        $row->translation_group = $anchor->translation_group;
+        $row->locale = $locale;
+        $row->type = $anchor->type;
+        $row->status = $anchor->status;
+
+        return $row;
     }
 }

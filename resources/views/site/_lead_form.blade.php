@@ -89,7 +89,7 @@
     }
     function validate(input){
       var v = (input.value || '').trim(), msg = '';
-      if(input.hasAttribute('data-required') && v === ''){ msg = input.dataset.err || '此项必填'; }
+      if(input.hasAttribute('data-required') && v === ''){ msg = input.dataset.err || @json(__('ui.form_required_js')); }
       else if(input.hasAttribute('data-phone') && v !== '' && !/^[0-9+\-\s()wx微信,，]{6,30}$/.test(v)){ msg = @json($ff['phone']['invalid']); }
       return show(input, msg);
     }

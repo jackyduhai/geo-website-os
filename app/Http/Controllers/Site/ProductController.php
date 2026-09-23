@@ -6,7 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Providers\AppServiceProvider;
 use App\Services\Geo\SchemaBuilder;
 use App\Support\Catalog;
+use App\Support\Localization\LocaleContext;
 use App\Support\Narrative;
+use App\Support\Pages;
 use App\Support\PublicUrl;
 
 /**
@@ -37,31 +39,35 @@ class ProductController extends Controller
             $flatMode = true;
             $lines = [[
                 'slug'     => null,
-                'name'     => '全部产品',
+                'name'     => __('nav.all_products'),
                 'desc'     => '',
                 'products' => Catalog::products(),
             ]];
         }
 
-        $lead = Narrative::lead('products.index.lead', config('pages.narrative.products_index.lead', ''));
+        $lead = Narrative::lead('products.index.lead', Pages::narrative('products_index'));
 
         $company   = Catalog::company();
-        $brandName = ! empty($company['brand']) ? $company['brand'] : ($company['name'] ?? '');
-        $lineNames = implode('、', array_map(fn ($l) => $l['name'], $lines));
+        $isEn      = LocaleContext::current() === 'en';
+        $brandName = $isEn
+            ? ($company['name'] ?? '')
+            : (! empty($company['brand']) ? $company['brand'] : ($company['name'] ?? ''));
+        $lineNames = implode($isEn ? ', ' : '、', array_map(fn ($l) => $l['name'], $lines));
 
         // TD-09：进入 JSON-LD / canonical 的绝对地址统一由 PublicUrl 裁决（与
         // GeoGraph / Sitemap / canonical 同源，多站 / CLI 不出现 localhost 串站）。
-        $productsIndexUrl = PublicUrl::base() . '/products/';
+        $productsIndexUrl = PublicUrl::url('products/');
         $crumbs = [
-            ['name' => '首页', 'url' => PublicUrl::home()],
-            ['name' => '产品中心', 'url' => $productsIndexUrl],
+            ['name' => __('nav.home'), 'url' => PublicUrl::home()],
+            ['name' => __('nav.products'), 'url' => $productsIndexUrl],
         ];
 
         // ItemList：产品系列（与可见分组一致）
         $itemList = [
             '@context'        => 'https://schema.org',
             '@type'           => 'ItemList',
-            'name'            => $brandName . '产品体系',
+            '@id'             => $productsIndexUrl . '#itemlist',
+            'name'            => __('seo.products_itemlist_name', ['brand' => $brandName]),
             'itemListElement' => array_values(array_map(function ($line, $i) use ($productsIndexUrl) {
                 return [
                     '@type'    => 'ListItem',
@@ -92,13 +98,16 @@ class ProductController extends Controller
             'schemas' => array_values(array_filter([
                 $schema->organization(),
                 $schema->breadcrumb($crumbs),
+                $schema->webPage($productsIndexUrl, __('seo.products_index_title'), __('seo.products_index_desc', ['brand' => $brandName, 'lines' => $lineNames]), 'CollectionPage', $productsIndexUrl . '#itemlist'),
                 $itemList,
             ])),
             'seo' => [
-                'title'       => '产品中心',
+                'title'       => __('seo.products_index_title'),
                 'description' => $flatMode
-                    ? (trim($brandName) !== '' ? $brandName . '产品中心，展示全部产品。' : '产品中心，展示全部产品。')
-                    : $brandName . '产品体系涵盖' . $lineNames . '，可按系列浏览产品规格与适用场景，如有需求欢迎联系我们。',
+                    ? (trim($brandName) !== ''
+                        ? __('seo.products_index_flat_with_brand', ['brand' => $brandName])
+                        : __('seo.products_index_flat'))
+                    : __('seo.products_index_desc', ['brand' => $brandName, 'lines' => $lineNames]),
                 'canonical'   => $productsIndexUrl,
                 'noindex'     => false,
                 'type'        => 'website',
@@ -132,7 +141,7 @@ class ProductController extends Controller
         $data['desc'] = Narrative::lead('products.line.' . $line, $data['desc'] ?? '');
         $products = Catalog::productsByLine($line);
 
-        $productsIndexUrl = PublicUrl::base() . '/products/';
+        $productsIndexUrl = PublicUrl::url('products/');
         $lineUrl = PublicUrl::productLine($line);
 
         // 该系列没有产品则不建独立分类页，回到总览对应锚点（规范硬规则，数据驱动）
@@ -141,14 +150,15 @@ class ProductController extends Controller
         }
 
         $crumbs = [
-            ['name' => '首页', 'url' => PublicUrl::home()],
-            ['name' => '产品中心', 'url' => $productsIndexUrl],
+            ['name' => __('nav.home'), 'url' => PublicUrl::home()],
+            ['name' => __('nav.products'), 'url' => $productsIndexUrl],
             ['name' => $data['name'], 'url' => $lineUrl],
         ];
 
         $itemList = [
             '@context'        => 'https://schema.org',
             '@type'           => 'ItemList',
+            '@id'             => $lineUrl . '#itemlist',
             'name'            => $data['name'],
             'itemListElement' => array_values(array_map(function ($p, $i) use ($productsIndexUrl) {
                 $u = Catalog::isCoreProduct($p['slug'])
@@ -166,10 +176,11 @@ class ProductController extends Controller
             'schemas'  => array_values(array_filter([
                 $schema->organization(),
                 $schema->breadcrumb($crumbs),
+                $schema->webPage($lineUrl, $data['name'], $data['desc'] ?? '', 'CollectionPage', $lineUrl . '#itemlist'),
                 $itemList,
             ])),
             'seo' => [
-                'title'       => $data['name'] . '产品系列与配比参数',
+                'title'       => __('seo.product_line_title', ['name' => $data['name']]),
                 'description' => $data['desc'] ?? '',
                 'canonical'   => $lineUrl,
                 'noindex'     => false,
@@ -189,22 +200,23 @@ class ProductController extends Controller
         $line     = $lineSlug !== null ? Catalog::line($lineSlug) : null;
         $related  = Catalog::relatedProducts($product, 5);
         $scenes   = Catalog::scenesOfProduct($product);
-        $faqs     = config('pages.product_faqs.' . $slug, []);
+        $faqs     = Pages::faqs('product_faqs', $slug);
 
-        $productsIndexUrl = PublicUrl::base() . '/products/';
+        $productsIndexUrl = PublicUrl::url('products/');
         $productUrl = PublicUrl::product($slug);
         $crumbs = [
-            ['name' => '首页', 'url' => PublicUrl::home()],
-            ['name' => '产品中心', 'url' => $productsIndexUrl],
+            ['name' => __('nav.home'), 'url' => PublicUrl::home()],
+            ['name' => __('nav.products'), 'url' => $productsIndexUrl],
         ];
         if ($line !== null) {
-            $crumbs[] = ['name' => $line['name'] ?? '产品', 'url' => PublicUrl::productLine($lineSlug)];
+            $crumbs[] = ['name' => $line['name'] ?? __('nav.products'), 'url' => PublicUrl::productLine($lineSlug)];
         }
         $crumbs[] = ['name' => $product['name'], 'url' => $productUrl];
 
         $schemas = [
             $schema->organization(),
             $schema->breadcrumb($crumbs),
+            $schema->webPage($productUrl, $product['name'], $product['tagline'], 'ItemPage', $productUrl . '#product'),
             $this->productSchema($product, $line),
         ];
         // HowTo：有分步 params 时输出
@@ -225,7 +237,7 @@ class ProductController extends Controller
             'subnav'  => $this->subnav($lineSlug),
             'schemas' => array_values(array_filter($schemas)),
             'seo' => [
-                'title'       => $product['name'] . '配比用量与工艺参数',
+                'title'       => __('seo.product_show_title', ['name' => $product['name']]),
                 'description' => $product['tagline'],
                 'canonical'   => $productUrl,
                 'noindex'     => false,
@@ -258,7 +270,7 @@ class ProductController extends Controller
         }
 
         $items = [[
-            'name' => '全部产品', 'slug' => null, 'url' => url('/products/'),
+            'name' => __('nav.all_products'), 'slug' => null, 'url' => url('/products/'),
             'on'   => $cur === 'products',
         ]];
         foreach (AppServiceProvider::mergedMenuChildren('products') as $ch) {
@@ -279,7 +291,9 @@ class ProductController extends Controller
     private function productSchema(array $product, ?array $line): array
     {
         $company   = Catalog::company();
-        $brandName = ! empty($company['brand']) ? $company['brand'] : ($company['name'] ?? '');
+        $brandName = LocaleContext::current() === 'en'
+            ? ($company['name'] ?? '')
+            : (! empty($company['brand']) ? $company['brand'] : ($company['name'] ?? ''));
 
         $props = [];
         foreach (($product['key_params'] ?? []) as $kp) {
@@ -318,7 +332,7 @@ class ProductController extends Controller
             '@context' => 'https://schema.org',
             '@type'    => 'HowTo',
             '@id'      => PublicUrl::product($product['slug']) . '#howto',
-            'name'     => $product['name'] . '使用工艺',
+            'name'     => __('seo.product_howto_name', ['name' => $product['name']]),
             'step'     => $steps,
         ];
     }

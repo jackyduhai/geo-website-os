@@ -44,18 +44,21 @@ class CanonicalizeSlash
         if (! $skipCanonical && $request->isMethodSafe() && $isDocRequest && ! $looksLikeFile && ! $skipPrefix && $path !== '/') {
             $route = $request->route();
             $routeName = $route?->getName();
+            // P-STEP 18F：en 组路由名带 .en 后缀（knowledge.channel.en / page.en /
+            // products.show.en），统一去掉后缀再按基础路由名判定，避免回退到 _slash 默认值。
+            $baseName = preg_replace('/\.en$/', '', (string) $routeName);
 
             $wantSlash = null;
-            if ($routeName === 'knowledge.channel') {
+            if ($baseName === 'knowledge.channel') {
                 // 启用中的知识频道 = 目录型；其余 slug 是扁平文章，按分发器实体判定
                 $channel = (string) $route->parameter('channel');
                 $wantSlash = Group::knowledgeChannels()->firstWhere('slug', $channel) !== null
                     ? true
                     : self::resolveWantsSlash('knowledge/' . $channel);
-            } elseif ($routeName === 'page') {
+            } elseif ($baseName === 'page') {
                 // 统一分发器：栏目页目录型、文章详情型
                 $wantSlash = self::resolveWantsSlash($path);
-            } elseif ($routeName === 'products.show') {
+            } elseif ($baseName === 'products.show') {
                 // 同一路由承载产品系列（目录型）与核心产品详情（详情型），按当前站 Catalog 判定
                 $wantSlash = self::resolveProductWantsSlash((string) $route->parameter('param'));
             } else {

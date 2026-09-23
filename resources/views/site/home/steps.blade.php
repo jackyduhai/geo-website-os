@@ -4,8 +4,8 @@
 <section class="sec sec-tint">
   <div class="wrap">
     <div class="sec-head center">
-      <span class="eyebrow">PROCESS · 合作流程</span>
-      <h2 class="sec-h">{{ $blk->title ?: count($st).' 步标准合作流程' }}</h2>
+      <span class="eyebrow">{{ __('ui.eyebrow_process') }}</span>
+      <h2 class="sec-h">{{ $blk->title ?: __('ui.home_steps_title', ['count' => count($st)]) }}</h2>
       <p class="sec-sub">{{ $blk->subtitle }}</p>
     </div>
     <div class="steps">

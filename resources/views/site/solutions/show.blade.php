@@ -24,7 +24,7 @@
 {{-- 1. 页头（问句式 H1） --}}
 <section class="page-hero">
   <div class="wrap-narrow">
-    <span class="eyebrow">SOLUTION · 应用场景</span>
+    <span class="eyebrow">{{ __('ui.eyebrow_solution') }}</span>
     <h1 class="ph-h">{{ $scene['title_q'] ?? $scene['name'] }}</h1>
     <p class="ph-lead">{{ $scene['desc'] }}</p>
   </div>
@@ -35,8 +35,8 @@
 <section class="sec">
   <div class="wrap">
     <div class="sec-head">
-      <span class="eyebrow">PAIN POINTS · 你的麻烦</span>
-      <h2 class="sec-h">这个场景下，最头疼的三件事</h2>
+      <span class="eyebrow">{{ __('ui.pain_eyebrow') }}</span>
+      <h2 class="sec-h">{{ __('ui.pain_h2') }}</h2>
     </div>
     <div class="pain-grid">
       @foreach($scene['pain_points'] as $pp)
@@ -55,8 +55,8 @@
 <section class="sec sec-tint">
   <div class="wrap">
     <div class="sec-head">
-      <span class="eyebrow">COMBO · 推荐组合</span>
-      <h2 class="sec-h">这套组合，正好覆盖你的需求</h2>
+      <span class="eyebrow">{{ __('ui.combo_eyebrow') }}</span>
+      <h2 class="sec-h">{{ __('ui.combo_h2') }}</h2>
       @if(!empty($scene['combo_reason']))<p class="sec-sub">{{ $scene['combo_reason'] }}</p>@endif
     </div>
     <div class="prod-grid combo-grid">
@@ -73,8 +73,8 @@
 <section class="sec is-inverse">
   <div class="wrap-narrow">
     <div class="sec-head">
-      <span class="eyebrow accent">PARAMETERS · 关键参数</span>
-      <h2 class="sec-h">{{ $isP2 ? '用法与参数原则' : '一组可直接复现的参数' }}</h2>
+      <span class="eyebrow accent">{{ __('ui.params_eyebrow') }}</span>
+      <h2 class="sec-h">{{ $isP2 ? __('ui.params_h2_p2') : __('ui.params_h2_p0') }}</h2>
     </div>
     @include('site._param_table', ['rows' => $paramRows])
     @if(!$isP2 && !empty($scene['key_param_display']))
@@ -89,8 +89,8 @@
 <section class="sec">
   <div class="wrap">
     <div class="sec-head">
-      <span class="eyebrow">WORKFLOW · 使用流程</span>
-      <h2 class="sec-h">照着这套流程落地</h2>
+      <span class="eyebrow">{{ __('ui.workflow_eyebrow') }}</span>
+      <h2 class="sec-h">{{ __('ui.workflow_h2') }}</h2>
     </div>
     @include('site._process_steps', ['steps' => $flowSteps])
   </div>
@@ -101,7 +101,7 @@
 @if(!empty($faqs))
 <section class="sec sec-tint">
   <div class="wrap-narrow">
-    <div class="sec-head center"><span class="eyebrow">FAQ · 常见问题</span><h2 class="sec-h">关于「{{ $scene['name'] }}」的常见问题</h2></div>
+    <div class="sec-head center"><span class="eyebrow">{{ __('ui.eyebrow_faq') }}</span><h2 class="sec-h">{{ __('ui.scene_faq_h2', ['name' => $scene['name']]) }}</h2></div>
     @include('site._faq_list', ['faqs' => $faqs])
   </div>
 </section>
@@ -115,7 +115,7 @@
       @foreach(['prev' => $prev, 'next' => $next] as $dir => $adj)
         @if(!empty($adj))
           <a class="adj-card" href="{{ url('/solutions/' . $adj['slug'] . '/') }}">
-            <span class="adj-dir">{{ $dir === 'prev' ? '上一场景' : '下一场景' }}</span>
+            <span class="adj-dir">{{ $dir === 'prev' ? __('ui.adj_prev') : __('ui.adj_next') }}</span>
             <span class="adj-name">{{ $adj['name'] }}<span class="arr">→</span></span>
           </a>
         @endif

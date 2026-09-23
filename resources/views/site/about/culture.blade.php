@@ -7,8 +7,8 @@
 
 <section class="page-hero">
   <div class="wrap-narrow">
-    <span class="eyebrow">CULTURE · 企业文化</span>
-    <h1 class="ph-h">我们做事的标准</h1>
+    <span class="eyebrow">{{ __('ui.eyebrow_culture') }}</span>
+    <h1 class="ph-h">{{ __('ui.culture_h1') }}</h1>
     <p class="ph-lead">{{ $lead }}</p>
   </div>
 </section>
@@ -30,9 +30,9 @@
 @if(!empty($workshops))
 <section class="sec">
   <div class="wrap-narrow center-txt">
-    <p class="prose">自有生产与交付设施的实拍，比任何形容词都有说服力。</p>
+    <p class="prose">{{ __('ui.culture_prose') }}</p>
     <div class="actions" style="justify-content:center;margin-top:20px">
-      <a class="btn btn-primary btn-lg" href="{{ url('/factory/') }}">查看工厂与资质<span class="arr">→</span></a>
+      <a class="btn btn-primary btn-lg" href="{{ url('/factory/') }}">{{ __('ui.view_factory') }}<span class="arr">→</span></a>
     </div>
   </div>
 </section>

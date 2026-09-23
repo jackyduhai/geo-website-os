@@ -6,27 +6,28 @@ use App\Http\Controllers\Controller;
 use App\Models\Entity;
 use App\Models\EntityRelation;
 use App\Models\Media;
+use App\Models\Setting;
 use App\Services\Seo\SeoMetaResolver;
 use App\Support\Catalog;
+use App\Support\Localization\LocaleRegistry;
 use App\Support\SiteContext;
 use Database\Seeders\CatalogSeeder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 /**
- * 实体（Entity）后台管理 —— P-STEP 17B。
+ * 实体（Entity）后台管理 —— P-STEP 17B / 18F。
  *
  * Entity 是 GEO 知识图谱与前台 Catalog 的正式目录资源：组织 / 产品 / 服务 /
  * 人物 / 地点 / 主题。对外的产品 / 服务 / 组织 / 地点统一在此生产，由
  * {@see Catalog} 按站点投影到 /products/{slug}、/solutions/{slug} 与 Schema /
- * GEO / Sitemap，根治 16A 发现的「后台 Content(product) 可发布、前台 Entity
- * Catalog 取不到 → 404，feed 仍输出 URL」双轨缺陷。
+ * GEO / Sitemap。
  *
- * 边界：Content 与 Entity 为平行资源（5.6-C 冻结），本控制器不建立任何
- * Content ↔ Entity 隐式关联；EntityRelation 的可视化编辑在 17C 交付。
+ * P-STEP 18F：同一实体多语言 = 同表多行 + translation_group；编辑页通过
+ * ?trans=<locale> 切换。name/slug/summary/description 每行独立；type / status /
+ * metadata / sort_order 为跨语言共享列，仅默认语言表单维护。
  */
 class EntityController extends Controller
 {
@@ -92,13 +93,41 @@ class EntityController extends Controller
             'status'     => Entity::STATUS_DRAFT,
             'sort_order' => 0,
             'metadata'   => ['core' => true],
+            'site_id'    => SiteContext::currentSiteId(),
+            'locale'     => LocaleRegistry::default(),
         ]);
 
-        return $this->form($entity);
+        return $this->form($entity, $entity, LocaleRegistry::default());
     }
 
     public function store(Request $request): RedirectResponse
     {
+        $transLocale = $this->resolveTransLocale($request);
+
+        // 路径一：基于默认语言 anchor 创建翻译行（仅翻译字段）
+        if ($transLocale !== LocaleRegistry::default() && $request->filled('translation_group')) {
+            $anchor = Entity::withoutSiteScope()
+                ->where('translation_group', $request->input('translation_group'))
+                ->where('locale', LocaleRegistry::default())
+                ->firstOrFail();
+
+            $data = $this->validateData($request, null, $anchor->type);
+            $entity = $anchor->createTranslation($transLocale, [
+                'name'        => $data['name'],
+                'slug'        => $data['slug'],
+                'summary'     => $data['summary'] ?? null,
+                'description' => $data['description'] ?? null,
+            ]);
+
+            $this->resetReadModels();
+
+            return redirect()->route('admin.entities.edit', [
+                'entity' => $anchor,
+                'trans'  => $transLocale,
+            ])->with('success', '翻译已保存。');
+        }
+
+        // 路径二：全新默认语言实体
         $type = (string) $request->input('type');
         abort_unless(array_key_exists($type, self::TYPES), 404);
 
@@ -106,6 +135,8 @@ class EntityController extends Controller
 
         $entity = new Entity();
         $entity->fill([
+            'site_id'     => SiteContext::currentSiteId(),
+            'locale'      => LocaleRegistry::default(),
             'type'        => $type,
             'name'        => $data['name'],
             'slug'        => $data['slug'],
@@ -124,32 +155,59 @@ class EntityController extends Controller
             ->with('success', '实体已创建。');
     }
 
-    public function edit(Entity $entity): View
+    public function edit(Request $request, Entity $entity): View
     {
-        return $this->form($entity);
+        $anchor = $entity->locale === LocaleRegistry::default()
+            ? $entity
+            : ($entity->translation(LocaleRegistry::default()) ?? $entity);
+
+        $transLocale = $this->resolveTransLocale($request);
+
+        if ($transLocale === LocaleRegistry::default()) {
+            $editing = $anchor;
+        } else {
+            $editing = $anchor->translation($transLocale)
+                ?: $this->blankTranslation($anchor, $transLocale);
+        }
+
+        return $this->form($editing, $anchor, $transLocale);
     }
 
     public function update(Request $request, Entity $entity): RedirectResponse
     {
+        $transLocale = $this->resolveTransLocale($request);
         $type = $entity->type; // 类型创建后不可修改
         $data = $this->validateData($request, $entity, $type);
 
+        // 翻译字段每行都更新
         $entity->fill([
             'name'        => $data['name'],
             'slug'        => $data['slug'],
             'summary'     => $data['summary'] ?? null,
             'description' => $data['description'] ?? null,
-            'status'      => $data['status'],
-            'sort_order'  => $data['sort_order'] ?? 0,
         ]);
-        $this->applyMetadata($request, $entity, $type);
-        $this->applyPublication($entity);
-        $entity->save();
 
+        // 共享列仅默认语言表单维护
+        if ($transLocale === LocaleRegistry::default()) {
+            $entity->fill([
+                'status'     => $data['status'],
+                'sort_order' => $data['sort_order'] ?? 0,
+            ]);
+            $this->applyMetadata($request, $entity, $type);
+            $this->applyPublication($entity);
+        }
+
+        $entity->save();
         $this->resetReadModels();
 
-        return redirect()->route('admin.entities.edit', $entity)
-            ->with('success', '实体已保存。');
+        $anchor = $entity->locale === LocaleRegistry::default()
+            ? $entity
+            : ($entity->translation(LocaleRegistry::default()) ?? $entity);
+
+        return redirect()->route('admin.entities.edit', [
+            'entity' => $anchor,
+            'trans'  => $transLocale,
+        ])->with('success', '实体已保存。');
     }
 
     public function destroy(Entity $entity): RedirectResponse
@@ -203,13 +261,29 @@ class EntityController extends Controller
             ->with('success', "已从示例种子生成 / 同步实体（新增 {$created} 个，幂等）。");
     }
 
-    private function form(Entity $entity): View
+    private function form(Entity $entity, ?Entity $anchor = null, ?string $transLocale = null): View
     {
+        $anchor = $anchor ?? $entity;
+        $transLocale = $transLocale ?? LocaleRegistry::default();
+
+        $versions = [];
+        foreach ($this->editableLocales() as $loc) {
+            if ($loc === LocaleRegistry::default()) {
+                $versions[$loc] = (bool) $anchor->name;
+            } else {
+                $row = $anchor->translation($loc);
+                $versions[$loc] = $row && (bool) $row->name;
+            }
+        }
+
         $mediaImages = Media::where('mime', 'like', 'image/%')
             ->orderByDesc('id')->limit(100)->get();
 
         return view('admin.entities.form', [
             'entity'      => $entity,
+            'anchor'      => $anchor,
+            'transLocale' => $transLocale,
+            'versions'    => $versions,
             'typeNames'   => self::TYPES,
             'mediaImages' => $mediaImages,
         ]);
@@ -221,51 +295,56 @@ class EntityController extends Controller
     private function validateData(Request $request, ?Entity $except, string $type): array
     {
         $siteId = SiteContext::currentSiteId();
+        $transLocale = ($except && $except->locale) ? $except->locale : $this->resolveTransLocale($request);
 
         $rules = [
-            'type'        => ['required', Rule::in(array_keys(self::TYPES))],
             'name'        => ['required', 'string', 'max:255'],
             'slug'        => [
                 'required', 'regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/',
                 Rule::unique('entities', 'slug')
-                    ->where(fn ($q) => $q->where('site_id', $siteId)->where('type', $type))
+                    ->where(fn ($q) => $q->where('site_id', $siteId)
+                        ->where('type', $type)->where('locale', $transLocale))
                     ->ignore($except?->id),
             ],
             'summary'     => ['nullable', 'string', 'max:1000'],
             'description' => ['nullable', 'string'],
-            'status'      => ['required', Rule::in([
-                Entity::STATUS_DRAFT, Entity::STATUS_PUBLISHED, Entity::STATUS_ARCHIVED,
-            ])],
-            'sort_order'  => ['nullable', 'integer', 'min:0'],
-            // 通用媒体字段
-            'card_image'  => ['nullable', 'integer'],
-            'og_image'    => ['nullable', 'integer'],
         ];
 
-        if ($type === Entity::TYPE_PRODUCT) {
-            $rules['meta_line'] = ['nullable', 'string', 'max:128'];
-            $rules['meta_tagline'] = ['nullable', 'string', 'max:255'];
-        }
-        if ($type === Entity::TYPE_ORGANIZATION) {
-            $rules['org_brand'] = ['nullable', 'string', 'max:255'];
-            $rules['org_industry'] = ['nullable', 'string', 'max:255'];
-            $rules['org_phone'] = ['nullable', 'string', 'max:64'];
-            $rules['org_email'] = ['nullable', 'email', 'max:255'];
-            $rules['org_address'] = ['nullable', 'string', 'max:255'];
-        }
-        if ($type === Entity::TYPE_LOCATION) {
-            $rules['loc_address'] = ['nullable', 'string', 'max:255'];
-            $rules['loc_latitude'] = ['nullable', 'numeric', 'between:-90,90'];
-            $rules['loc_longitude'] = ['nullable', 'numeric', 'between:-180,180'];
-        }
-        if ($type === Entity::TYPE_SERVICE) {
-            $rules['svc_scope'] = ['nullable', 'string', 'max:255'];
-            $rules['svc_title_q'] = ['nullable', 'string', 'max:255'];
+        // 共享列 / metadata 字段仅默认语言表单校验
+        if ($transLocale === LocaleRegistry::default()) {
+            $rules['type'] = ['required', Rule::in(array_keys(self::TYPES))];
+            $rules['status'] = ['required', Rule::in([
+                Entity::STATUS_DRAFT, Entity::STATUS_PUBLISHED, Entity::STATUS_ARCHIVED,
+            ])];
+            $rules['sort_order'] = ['nullable', 'integer', 'min:0'];
+            $rules['card_image'] = ['nullable', 'integer'];
+            $rules['og_image'] = ['nullable', 'integer'];
+
+            if ($type === Entity::TYPE_PRODUCT) {
+                $rules['meta_line'] = ['nullable', 'string', 'max:128'];
+                $rules['meta_tagline'] = ['nullable', 'string', 'max:255'];
+            }
+            if ($type === Entity::TYPE_ORGANIZATION) {
+                $rules['org_brand'] = ['nullable', 'string', 'max:255'];
+                $rules['org_industry'] = ['nullable', 'string', 'max:255'];
+                $rules['org_phone'] = ['nullable', 'string', 'max:64'];
+                $rules['org_email'] = ['nullable', 'email', 'max:255'];
+                $rules['org_address'] = ['nullable', 'string', 'max:255'];
+            }
+            if ($type === Entity::TYPE_LOCATION) {
+                $rules['loc_address'] = ['nullable', 'string', 'max:255'];
+                $rules['loc_latitude'] = ['nullable', 'numeric', 'between:-90,90'];
+                $rules['loc_longitude'] = ['nullable', 'numeric', 'between:-180,180'];
+            }
+            if ($type === Entity::TYPE_SERVICE) {
+                $rules['svc_scope'] = ['nullable', 'string', 'max:255'];
+                $rules['svc_title_q'] = ['nullable', 'string', 'max:255'];
+            }
         }
 
         return $request->validate($rules, [
             'slug.regex' => 'slug 仅允许小写字母、数字与连字符（如 industrial-coating）。',
-            'slug.unique' => '同站点下同类型实体已存在相同 slug。',
+            'slug.unique' => '同站点下同类型同语言实体已存在相同 slug。',
         ]);
     }
 
@@ -302,8 +381,7 @@ class EntityController extends Controller
         }
 
         if ($type === Entity::TYPE_ORGANIZATION) {
-            // Catalog::company() 读 metadata.company；至少保证 name 非空，
-            // 否则 /products/、/solutions/ 等目录页会按空站 404。
+            // Catalog::company() 读 metadata.company；至少保证 name 非空。
             $company = is_array($metadata['company'] ?? null) ? $metadata['company'] : [];
             if ($v = trim((string) $request->input('org_brand'))) {
                 $company['brand'] = $v;
@@ -368,5 +446,52 @@ class EntityController extends Controller
     {
         Catalog::flush();
         SeoMetaResolver::resetRequestMemo();
+    }
+
+    /** 请求 ?trans=<locale>；非法 / 缺省回退默认语言。 */
+    private function resolveTransLocale(Request $request): string
+    {
+        $loc = (string) $request->input('trans', '');
+
+        return LocaleRegistry::supports($loc) ? $loc : LocaleRegistry::default();
+    }
+
+    /** 当前站点可编辑的语言（Setting site_supported_locales），默认语言置首。 */
+    private function editableLocales(): array
+    {
+        $raw = Setting::get('site_supported_locales', [LocaleRegistry::default()]);
+
+        if (is_array($raw)) {
+            $locales = array_values(array_filter(array_map(
+                fn ($v) => is_string($v) ? trim($v) : '',
+                $raw
+            )));
+        } else {
+            $locales = array_values(array_filter(array_map('trim', explode(',', (string) $raw))));
+        }
+
+        $locales = $locales !== [] ? $locales : [LocaleRegistry::default()];
+
+        usort($locales, function ($a, $b): int {
+            if ($a === LocaleRegistry::default()) { return -1; }
+            if ($b === LocaleRegistry::default()) { return 1; }
+            return 0;
+        });
+
+        return $locales;
+    }
+
+    /** 未保存的新翻译行（复制站点 / 类型 / 状态 / metadata，locale 切换）。 */
+    private function blankTranslation(Entity $anchor, string $locale): Entity
+    {
+        $row = new Entity();
+        $row->site_id = $anchor->site_id;
+        $row->translation_group = $anchor->translation_group;
+        $row->locale = $locale;
+        $row->type = $anchor->type;
+        $row->status = $anchor->status;
+        $row->metadata = $anchor->metadata;
+
+        return $row;
     }
 }

@@ -94,9 +94,16 @@ class SettingController extends Controller
             if ($item->type === 'bool') {
                 $value = $request->boolean($key) ? '1' : '0';
             } elseif ($item->type === 'json') {
-                $value = is_array($request->input($key))
-                    ? json_encode($request->input($key), JSON_UNESCAPED_UNICODE)
-                    : (string) $request->input($key, '');
+                $decoded = is_array($request->input($key)) ? $request->input($key) : [];
+                if ($key === 'site_supported_locales') {
+                    // 默认语言必须始终可用；只保留官方支持语言，防止伪造提交写入非法语言码。
+                    $defaultLocale = (string) Setting::get('site_default_locale', \App\Support\Localization\LocaleRegistry::default());
+                    $decoded = array_values(array_intersect(
+                        array_unique(array_merge($decoded, [$defaultLocale])),
+                        \App\Support\Localization\LocaleRegistry::supported()
+                    ));
+                }
+                $value = json_encode($decoded, JSON_UNESCAPED_UNICODE);
             } else {
                 $value = (string) $request->input($key, '');
             }

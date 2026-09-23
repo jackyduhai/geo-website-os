@@ -4,7 +4,7 @@
 
 <div class="page-head">
   <div class="wrap">
-    <h1>{{ $category->name }}</h1>
+    <h1>{{ $category->displayName() }}</h1>
     @if($category->description)
       <p>{{ $category->description }}</p>
     @endif
@@ -20,10 +20,10 @@
           <a class="pcard" href="{{ $c->url() }}">
             <span class="pcard-h">
               <span class="feat-ic">@if(!empty($c->icon))@include('site._icon', ['name' => $c->icon])@else@include('site._product_icon', ['slug' => $c->slug])@endif</span>
-              <h3>{{ $c->name }}</h3>
+              <h3>{{ $c->displayName() }}</h3>
             </span>
             <p>{{ $c->description }}</p>
-            <span class="go">查看系列 <span class="arr">→</span></span>
+            <span class="go">{{ __('ui.cat_view_line') }} <span class="arr">→</span></span>
           </a>
         @endforeach
       </div>
@@ -33,7 +33,7 @@
 
 @if(($groups ?? false) && $groups->isNotEmpty())
   <div class="wrap" style="margin-top:8px">
-    <a class="tag {{ !request('group') ? 'tag-a' : '' }}" href="{{ $category->url() }}">全部</a>
+    <a class="tag {{ !request('group') ? 'tag-a' : '' }}" href="{{ $category->url() }}">{{ __('ui.cat_all') }}</a>
     @foreach($groups as $g)
       <a class="tag {{ (int)request('group') === $g->id ? 'tag-a' : '' }}"
          href="{{ $category->url() }}?group={{ $g->id }}">{{ $g->name }}</a>
@@ -56,7 +56,7 @@
                 <h3>{{ $p->title }}</h3>
               </span>
               @if($p->summary)<p>{{ $p->summary }}</p>@endif
-              <span class="go">查看产品 <span class="arr">→</span></span>
+              <span class="go">{{ __('ui.cat_view_product') }} <span class="arr">→</span></span>
             </a>
           @endforeach
         </div>
@@ -74,9 +74,9 @@
       <div style="margin-top:28px">{{ $items->links('pagination::bootstrap-5') }}</div>
     @else
       <div class="card" style="text-align:center;padding:48px 20px;color:var(--ink-muted)">
-        <p style="margin:0 0 14px">本栏目暂无内容</p>
+        <p style="margin:0 0 14px">{{ __('ui.cat_empty') }}</p>
         @if(!empty($siteSettings['contact_phone']))
-          <p style="margin:0">业务咨询：<strong style="color:var(--brand)">{{ $siteSettings['contact_phone'] }}</strong></p>
+          <p style="margin:0">{{ __('ui.cat_hotline') }}<strong style="color:var(--brand)">{{ $siteSettings['contact_phone'] }}</strong></p>
         @endif
       </div>
     @endif

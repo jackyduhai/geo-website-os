@@ -4,6 +4,8 @@ namespace App\Services\Geo;
 
 use App\Models\Category;
 use App\Support\Catalog;
+use App\Support\Localization\LocaleContext;
+use App\Support\Localization\LocaleRegistry;
 use App\Support\PublicIndex;
 use App\Support\PublicUrl;
 
@@ -41,10 +43,12 @@ class SitemapBuilder
             $urls[] = ['loc' => $loc, 'lastmod' => $lastmod ?? $today, 'changefreq' => $changefreq, 'priority' => $priority];
         };
 
-        // 首页 loc 历史冻结为「无尾斜杠根地址」（PublicUrl::base()），与旧 url('/')
-        // 形态及多站 sitemap 断言一致；声明性 feed 绝对地址统一经 PublicUrl 裁决规范
-        // host（TD-09）。注意首页 canonical 仍是带尾斜杠的 PublicUrl::home()，二者契约不同。
-        $add(PublicUrl::base(), 'daily', '1.0');
+        // 首页 loc 冻结为「无尾斜杠」形态：默认语言为根地址 PublicUrl::base()，
+        // 非默认语言为 base()/{locale}（如 /en，与 /en 路由 200、/en/ 301 的契约一致）。
+        // 声明性 feed 绝对地址统一经 PublicUrl 裁决规范 host（TD-09）。注意首页 canonical
+        // 仍是带尾斜杠的 PublicUrl::home()，二者契约不同。
+        $homePrefix = LocaleRegistry::prefix(LocaleContext::current());
+        $add(PublicUrl::base() . ($homePrefix !== '' ? '/' . $homePrefix : ''), 'daily', '1.0');
 
         // 业务目录（产品 / 场景 / 工厂 / 合作 / 关于 / 联系）只在当前站点确实存在
         // 目录数据（organization Entity）时收录。目录按站点隔离（Catalog），空站 /
@@ -95,6 +99,7 @@ class SitemapBuilder
         }
         // 仅收录知识分类下、公开可索引（启用栏目 + 非 noindex）的文章（扁平 /knowledge/{slug}）。
         $knowledgeArticles = PublicIndex::contentQuery()
+            ->forLocale(LocaleContext::current())
             ->whereHas('category', fn ($q) => $q->where('slug', 'knowledge'))
             ->with('category.parent')
             ->orderByDesc('published_at')->get();
@@ -127,6 +132,7 @@ class SitemapBuilder
         // 后台发布的全部公开可索引文章（知识类已在上面以 0.6 收录，此处自动去重；
         // 新闻等其余栏目在此补齐）。PublicIndex 已排除停用栏目与 noindex 内容。
         $extraArticles = PublicIndex::contentQuery()
+            ->forLocale(LocaleContext::current())
             ->whereHas('category', fn ($q) => $q->where('is_active', true))
             ->with('category.parent')
             ->orderByDesc('published_at')

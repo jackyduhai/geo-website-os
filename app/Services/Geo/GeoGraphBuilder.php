@@ -6,7 +6,11 @@ use App\Models\Content;
 use App\Models\Entity;
 use App\Models\EntityRelation;
 use App\Models\Fact;
+use App\Models\Setting;
 use App\Services\Seo\SeoMetaResolver;
+use App\Support\Catalog;
+use App\Support\Localization\LocaleContext;
+use App\Support\Localization\LocaleRegistry;
 use App\Support\PublicIndex;
 use App\Support\PublicUrl;
 use App\Support\SiteContext;
@@ -39,13 +43,15 @@ class GeoGraphBuilder
     {
         $site = SiteContext::currentSite();
 
+        $company = Catalog::company();
+
         return [
             '$schema'   => 'geo-os/graph/v1',
             'generated_at' => now()->toIso8601String(),
             'site'      => [
-                'name'        => (string) ($site?->name ?? ''),
+                'name'        => $this->siteOrgName(),
                 'url'         => PublicUrl::home(),
-                'description' => (string) ($site?->description ?? ''),
+                'description' => (string) ($company['summary'] ?? $site?->description ?? ''),
                 'logo'        => (string) ($site?->logo ?? ''),
                 // TD-07 单一事实源：站点主体组织锚点与 SchemaBuilder 的
                 // {base}/#organization 同一 @id（Site 聚合为唯一事实源）。GEO 中
@@ -53,7 +59,7 @@ class GeoGraphBuilder
                 // 与 Schema 互不相干的第二个组织对象。
                 'organization' => [
                     '@id'  => PublicUrl::home() . '#organization',
-                    'name' => (string) ($site?->name ?? ''),
+                    'name' => $this->siteOrgName(),
                     'url'  => PublicUrl::home(),
                 ],
             ],
@@ -62,6 +68,22 @@ class GeoGraphBuilder
             'relations' => $this->relations(),
             'contents'  => $this->contents(),
         ];
+    }
+
+    /**
+     * 站点主体组织名（Site 聚合为唯一事实源，口径与 SchemaBuilder::orgName 一致）：
+     * 默认语言取 geo_org_name、其他语言取 geo_org_en_name，缺省回退 Site.name。
+     * 不读目录 organization Entity 的 name（它只是挂边节点，非主体事实源，见 TD-07）。
+     */
+    protected function siteOrgName(): string
+    {
+        $site = SiteContext::currentSite();
+
+        if (LocaleContext::current() !== LocaleRegistry::default()) {
+            return (string) (Setting::get('geo_org_en_name') ?: $site?->name ?? '');
+        }
+
+        return (string) (Setting::get('geo_org_name') ?: $site?->name ?? '');
     }
 
     /** 正式事实库公开行：事实 + 来源 + 核定/复核时间，口径与可见页面一致 */
@@ -86,6 +108,7 @@ class GeoGraphBuilder
     protected function entities(): array
     {
         $entities = PublicIndex::entityQuery()
+            ->forLocale(LocaleContext::current())
             ->orderBy('type')->orderBy('slug')
             ->get();
 
@@ -140,6 +163,8 @@ class GeoGraphBuilder
     protected function relations(): array
     {
         $siteId = SiteContext::currentSite()?->id;
+        $locale = LocaleContext::current();
+        $defaultLocale = LocaleRegistry::default();
 
         $relations = EntityRelation::query()
             ->where('site_id', $siteId)
@@ -147,17 +172,37 @@ class GeoGraphBuilder
             ->get();
 
         $entityIds = $relations->flatMap(fn ($r) => [$r->from_entity_id, $r->to_entity_id])->unique();
-        $published = PublicIndex::entityQuery()
+
+        // 边权威 id 指向默认语言行：取默认语言端（公开可索引）用于匹配。
+        $zh = PublicIndex::entityQuery()
+            ->forLocale($defaultLocale)
             ->whereIn('id', $entityIds)
             ->get()
             ->keyBy('id');
 
+        // 当前语言端：按 translation_group 反查（默认语言时即 zh 本身）。
+        $current = $locale === $defaultLocale ? $zh : PublicIndex::entityQuery()
+            ->forLocale($locale)
+            ->whereIn('translation_group', $zh->pluck('translation_group')->unique())
+            ->get();
+        $currentByGroup = $current->keyBy('translation_group');
+
         return $relations
-            ->map(function (EntityRelation $r) use ($published) {
-                $from = $published->get($r->from_entity_id);
-                $to = $published->get($r->to_entity_id);
+            ->map(function (EntityRelation $r) use ($zh, $currentByGroup, $locale, $defaultLocale) {
+                $fromZh = $zh->get($r->from_entity_id);
+                $toZh   = $zh->get($r->to_entity_id);
+                if (! $fromZh || ! $toZh) {
+                    return null; // 默认语言端不公开
+                }
+
+                $from = $locale === $defaultLocale
+                    ? $fromZh
+                    : $currentByGroup->get($fromZh->translation_group);
+                $to = $locale === $defaultLocale
+                    ? $toZh
+                    : $currentByGroup->get($toZh->translation_group);
                 if (! $from || ! $to) {
-                    return null;
+                    return null; // 当前语言缺译 → 不输出该边
                 }
 
                 return [
@@ -180,6 +225,7 @@ class GeoGraphBuilder
     protected function contents(): array
     {
         $contents = PublicIndex::contentQuery()
+            ->forLocale(LocaleContext::current())
             ->orderByDesc('published_at')
             ->get();
 

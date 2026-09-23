@@ -3,8 +3,8 @@
 @php
   // 布局 <title> / robots 读取 $seo（不读 @section('title')），错误页需显式声明
   $seo = [
-      'title_full'  => '页面未找到｜GEO Website OS',
-      'description' => '抱歉，你访问的页面不存在。',
+      'title_full'  => __('ui.404_title').'｜GEO Website OS',
+      'description' => __('ui.404_desc'),
       'noindex'     => true,
   ];
 @endphp
@@ -23,7 +23,7 @@
       $entries[] = [$m['name'], $href];
   }
   if (! collect($entries)->contains(fn ($e) => str_contains($e[1], '/contact'))) {
-      $entries[] = ['联系我们', url('/contact/')];
+      $entries[] = [__('nav.contact'), \App\Support\PublicUrl::url('contact/')];
   }
 @endphp
 
@@ -34,12 +34,12 @@
     <h1 style="font-size:28px;margin:0 0 12px">{{ $e404['title'] }}</h1>
     <p class="prose" style="margin:0 auto 28px;max-width:520px">{{ $e404['desc'] }}</p>
     <div class="actions" style="justify-content:center;margin-bottom:40px">
-      <a class="btn btn-primary btn-lg" href="{{ url('/') }}">{{ $e404['primaryCta'] }}<span class="arr">→</span></a>
-      <a class="btn btn-secondary btn-lg" href="{{ url('/contact/') }}">{{ $e404['secondaryCta'] }}</a>
+      <a class="btn btn-primary btn-lg" href="{{ \App\Support\PublicUrl::home() }}">{{ $e404['primaryCta'] }}<span class="arr">→</span></a>
+      <a class="btn btn-secondary btn-lg" href="{{ \App\Support\PublicUrl::url('contact/') }}">{{ $e404['secondaryCta'] }}</a>
     </div>
     <div class="kgrid kgrid-3 err-entries" style="text-align:left">
       @foreach($entries as [$label, $href])
-        <a class="kcard" href="{{ $href }}"><h3 style="margin:0">{{ $label }}</h3><span class="km"><span>进入<span class="arr">→</span></span></span></a>
+        <a class="kcard" href="{{ $href }}"><h3 style="margin:0">{{ $label }}</h3><span class="km"><span>{{ __('ui.enter') }}<span class="arr">→</span></span></span></a>
       @endforeach
     </div>
   </div>

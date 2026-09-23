@@ -13,20 +13,20 @@
   <div class="wrap">
     <div class="sec-head row">
       <div>
-        <span class="eyebrow">PRODUCT SYSTEM · 产品体系</span>
-        <h2 class="sec-h">{{ $blk->title ?: count($lines).' 大产品系列' }}</h2>
-        <p class="sec-sub">{{ $blk->subtitle ?: '系统化的产品矩阵，满足多样化需求。' }}</p>
+        <span class="eyebrow">{{ __('ui.eyebrow_product_system') }}</span>
+        <h2 class="sec-h">{{ $blk->title ?: __('ui.big_lines', ['count' => count($lines)]) }}</h2>
+        <p class="sec-sub">{{ $blk->subtitle ?: __('ui.home_products_sub') }}</p>
       </div>
-      <a class="btn-text" href="{{ url('/products/') }}">查看全部产品<span class="arr">→</span></a>
+      <a class="btn-text" href="{{ url('/products/') }}">{{ __('ui.home_products_btn') }}<span class="arr">→</span></a>
     </div>
     <div class="pgrid">
       @foreach($lines as $line)
         <a class="pcard reveal" href="{{ $lineHref($line) }}">
           <span class="feat-ic">@include('site._icon', ['name' => $line['icon'] ?? ($lineIconSeq[$loop->index] ?? 'default')])</span>
           <div>
-            <h3>{{ $line['name'] }}<span class="pcard-count">{{ $line['count'] ?? 0 }} 款</span></h3>
+            <h3>{{ $line['name'] }}<span class="pcard-count">{{ __('ui.unit_count', ['count' => $line['count'] ?? 0]) }}</span></h3>
             <p>{{ $line['desc'] ?? '' }}</p>
-            <span class="go">查看系列<span class="arr">→</span></span>
+            <span class="go">{{ __('ui.cat_view_line') }}<span class="arr">→</span></span>
           </div>
         </a>
       @endforeach

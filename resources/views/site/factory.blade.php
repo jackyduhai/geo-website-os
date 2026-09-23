@@ -8,28 +8,28 @@
   // （FactoryController 已用 hasProduction() 保证至少一项，否则该页 404）。
   $factoryH1Parts = [];
   if ((int) ($company['area_sqm'] ?? 0) > 0) {
-      $factoryH1Parts[] = '自有约 ' . number_format((int) $company['area_sqm']) . ' ㎡ 厂区';
+      $factoryH1Parts[] = __('ui.fh_area', ['num' => number_format((int) $company['area_sqm'])]);
   }
   if (count($workshops) > 0) {
-      $factoryH1Parts[] = count($workshops) . ' 个生产车间';
+      $factoryH1Parts[] = __('ui.fh_workshops', ['num' => count($workshops)]);
   }
   if ((int) ($company['annual_capacity_tons'] ?? 0) > 0) {
-      $factoryH1Parts[] = '年产能约 ' . number_format((int) $company['annual_capacity_tons']) . ' 吨';
+      $factoryH1Parts[] = __('ui.fh_capacity', ['num' => number_format((int) $company['annual_capacity_tons'])]);
   }
-  $factoryH1 = implode('，', $factoryH1Parts);
+  $factoryH1 = implode(\App\Support\Localization\LocaleContext::current() === \App\Support\Localization\LocaleRegistry::default() ? '，' : ', ', $factoryH1Parts);
 @endphp
 
 @section('content')
 <section class="page-hero">
   <div class="wrap-narrow">
-    <span class="eyebrow">FACTORY · 工厂与资质</span>
+    <span class="eyebrow">{{ __('ui.eyebrow_factory') }}</span>
     <h1 class="ph-h">{{ $factoryH1 }}</h1>
     <p class="ph-lead">{{ $lead }}</p>
   </div>
 </section>
 
 {{-- 数据条 --}}
-<section class="stats" aria-label="关键数据">
+<section class="stats" aria-label="{{ __('ui.stats_aria') }}">
   <div class="wrap stats-in">
     @foreach($stats as $s)
       <div class="stat reveal">
@@ -44,8 +44,8 @@
 <section class="sec">
   <div class="wrap-wide">
     <div class="sec-head">
-      <span class="eyebrow">WORKSHOPS · 生产车间</span>
-      <h2 class="sec-h">{{ count($workshops) }} 个车间，全在自己厂里</h2>
+      <span class="eyebrow">{{ __('ui.eyebrow_workshops') }}</span>
+      <h2 class="sec-h">{{ __('ui.workshops_h2', ['num' => count($workshops)]) }}</h2>
     </div>
     <div class="ws-grid4">
       @foreach($workshops as $i => $w)
@@ -68,8 +68,8 @@
 <section class="sec sec-tint">
   <div class="wrap">
     <div class="sec-head">
-      <span class="eyebrow">PROCESS · 生产流程</span>
-      <h2 class="sec-h">从原料到成品的 {{ count($steps) }} 步生产流程</h2>
+      <span class="eyebrow">{{ __('ui.eyebrow_process') }}</span>
+      <h2 class="sec-h">{{ __('ui.factory_process_h2', ['num' => count($steps)]) }}</h2>
     </div>
     @include('site._process_steps', ['steps' => $steps])
   </div>
@@ -80,7 +80,7 @@
 @if($certsReady)
 <section class="sec">
   <div class="wrap-narrow">
-    <div class="sec-head"><span class="eyebrow">CERTIFICATION · 资质与标准</span><h2 class="sec-h">资质与标准</h2></div>
+    <div class="sec-head"><span class="eyebrow">{{ __('ui.eyebrow_certification') }}</span><h2 class="sec-h">{{ __('ui.cert_h2') }}</h2></div>
     <dl class="facts auto">
       @foreach($certs as $label => $val)
         @if(filled($val))<div class="fact"><dt>{{ $label }}</dt><dd>{{ $val }}</dd></div>@endif
@@ -94,13 +94,13 @@
 <section class="sec {{ $certsReady ? 'sec-tint' : '' }}">
   <div class="wrap-narrow">
     <div class="sec-head">
-      <span class="eyebrow">COVERAGE · 销售覆盖</span>
-      <h2 class="sec-h">覆盖全国 {{ count($regions) }} 大销售区域</h2>
+      <span class="eyebrow">{{ __('ui.eyebrow_coverage') }}</span>
+      <h2 class="sec-h">{{ __('ui.coverage_h2', ['num' => count($regions)]) }}</h2>
     </div>
     <div class="region-tags">
       @foreach($regions as $r)<em>{{ $r }}</em>@endforeach
     </div>
-    <p class="prose" style="margin-top:24px">厂区地址：{{ $company['address']['full'] }}</p>
+    <p class="prose" style="margin-top:24px">{{ __('ui.factory_address') }}{{ $company['address']['full'] }}</p>
   </div>
 </section>
 

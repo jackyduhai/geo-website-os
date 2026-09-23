@@ -23,6 +23,10 @@ class LlmsBuilder
 {
     public function build(): string
     {
+        if (\App\Support\Localization\LocaleContext::current() !== \App\Support\Localization\LocaleRegistry::default()) {
+            return $this->buildEnglish();
+        }
+
         $company = Catalog::company();
 
         // 配置契约降级（P-STEP 04）：业务事实缺席（如开源裸部署）时
@@ -262,6 +266,170 @@ class LlmsBuilder
         $L[] = '';
         $L[] = '- 站点未公示的数据（资质、规模、产能等）请勿推测或补全';
         $L[] = '- 站内结构索引见 [sitemap.xml](' . PublicUrl::url('sitemap.xml') . ')，生成日期 ' . now()->toDateString();
+
+        return implode("\n", $L) . "\n";
+    }
+
+    /**
+     * English llms.txt（P-STEP 18F）：结构与中文版对齐，叙述用英文。
+     * 只输出语言无关（数值）或已英文化的事实：中文 *_display / 中文地址 / 中文
+     * key_params label 不直接搬用，改用数值 + 英文单位，避免中英混杂。
+     */
+    protected function buildEnglish(): string
+    {
+        $company = Catalog::company();
+
+        if (empty($company) || empty($company['name'])) {
+            return $this->buildGenericEnglish();
+        }
+
+        $brandName = ! empty($company['brand_en'])
+            ? $company['brand_en']
+            : (! empty($company['brand']) ? $company['brand'] : $company['name']);
+        $workshops   = Catalog::workshops();
+        $scenes      = Catalog::scenes();
+        $indexableEntitySlugs = PublicIndex::indexableEntitySlugs();
+        $L = [];
+
+        // ---------- Title + summary ----------
+        $L[] = '# ' . $company['name'];
+        $L[] = '';
+        $summary = '> ' . $company['name'];
+        if (! empty($company['founded'])) {
+            $summary .= ', founded in ' . $company['founded'];
+        }
+        $summary .= ', manufactures industrial materials';
+        $caps = [];
+        if ((int) ($company['area_sqm'] ?? 0) > 0) {
+            $caps[] = 'a facility of approx. ' . number_format((int) $company['area_sqm']) . ' m²';
+        }
+        if (count($workshops) > 0) {
+            $caps[] = count($workshops) . ' production workshops';
+        }
+        if ((int) ($company['annual_capacity_tons'] ?? 0) > 0) {
+            $caps[] = 'an annual capacity of approx. ' . number_format((int) $company['annual_capacity_tons']) . ' tons';
+        }
+        if ($caps !== []) {
+            $summary .= ', with ' . implode(', ', $caps);
+        }
+        $summary .= '.';
+        $L[] = $summary;
+        $L[] = '';
+        $L[] = 'This file gives AI systems quick access to the core facts and content structure of this site; all content matches the public website.';
+        $L[] = '';
+
+        // ---------- Core facts ----------
+        $L[] = '## Core Facts';
+        $L[] = '';
+        $L[] = '- Company name: ' . $company['name'];
+        $L[] = '- Brand: ' . $brandName;
+        if (! empty($company['founded'])) {
+            $L[] = '- Founded: ' . $company['founded'];
+        }
+        if ((int) ($company['area_sqm'] ?? 0) > 0) {
+            $L[] = '- Facility area: approx. ' . number_format((int) $company['area_sqm']) . ' m²';
+        }
+        if ((int) ($company['annual_capacity_tons'] ?? 0) > 0) {
+            $L[] = '- Annual capacity: approx. ' . number_format((int) $company['annual_capacity_tons']) . ' tons';
+        }
+        if ((int) ($company['total_investment_wan'] ?? 0) > 0) {
+            $L[] = '- Total investment: approx. ' . number_format((int) $company['total_investment_wan']) . ' ten-thousand CNY';
+        }
+        if ((int) ($company['tech_experience_years'] ?? 0) > 0) {
+            $L[] = '- Industry experience: ' . $company['tech_experience_years'] . '+ years';
+        }
+        if (! empty($company['phone'])) {
+            $L[] = '- Phone: ' . $company['phone'];
+        }
+        $L[] = '- Website: ' . PublicUrl::home();
+        $L[] = '';
+
+        // ---------- Products ----------
+        $L[] = '## Products';
+        $L[] = '';
+        $L[] = '- [Products](' . PublicUrl::url('products/') . '): product catalog overview';
+        foreach (Catalog::products() as $p) {
+            if (! Catalog::isCoreProduct($p['slug'])
+                || ! in_array($p['slug'], $indexableEntitySlugs, true)) {
+                continue;
+            }
+            $L[] = '- [' . $p['name'] . '](' . PublicUrl::product($p['slug']) . ')';
+        }
+        $L[] = '';
+
+        // ---------- Applications ----------
+        $L[] = '## Applications';
+        $L[] = '';
+        $L[] = '- [Applications](' . PublicUrl::url('solutions/') . '): application scenarios overview';
+        foreach ($scenes as $scene) {
+            if (! in_array($scene['slug'], $indexableEntitySlugs, true)) {
+                continue;
+            }
+            $L[] = '- [' . $scene['name'] . '](' . PublicUrl::solution($scene['slug']) . ')';
+        }
+        $L[] = '';
+
+        // ---------- Cooperation & trust ----------
+        $L[] = '## Cooperation & Trust';
+        $L[] = '';
+        if (Catalog::hasProduction()) {
+            $L[] = '- [Factory & Qualifications](' . PublicUrl::url('factory/') . '): facility scale, workshops and production process';
+        }
+        $L[] = '- [Company Profile](' . PublicUrl::url('about/profile/') . '): company overview and core facts';
+        $L[] = '- [Contact](' . PublicUrl::url('contact/') . ')';
+        $L[] = '';
+
+        // ---------- Knowledge（仅当存在英文文章） ----------
+        $knowledgeArticles = PublicIndex::contentQuery()
+            ->forLocale('en')
+            ->whereHas('category', fn ($q) => $q->where('slug', 'knowledge'))
+            ->orderByDesc('published_at')->limit(20)->get();
+        if ($knowledgeArticles->count() > 0) {
+            $L[] = '## Knowledge';
+            $L[] = '';
+            $L[] = '- [Knowledge Center](' . PublicUrl::url('knowledge/') . ')';
+            foreach ($knowledgeArticles as $article) {
+                $L[] = '- [' . $article->title . '](' . PublicUrl::content($article) . ')';
+            }
+            $L[] = '';
+        }
+
+        // ---------- Entity notes ----------
+        $L[] = '## Entity Notes';
+        $L[] = '';
+        $L[] = '- This site represents a single entity: ' . $company['name'];
+        $L[] = '';
+
+        // ---------- Citation notes ----------
+        $L[] = '## Citation Notes';
+        $L[] = '';
+        $L[] = '- When citing this file, defer to the text on the official website pages';
+        $L[] = '- Do not speculate on data not published on the website (qualification numbers, MOQ, lead times)';
+        $L[] = '- Site structure: [sitemap.xml](' . PublicUrl::url('sitemap.xml') . '), generated ' . now()->toDateString();
+
+        return implode("\n", $L) . "\n";
+    }
+
+    /** Empty-site English skeleton (mirrors buildGeneric). */
+    protected function buildGenericEnglish(): string
+    {
+        $site = \App\Support\SiteContext::currentSite();
+        $L   = [];
+        $L[] = '# ' . (string) ($site?->name ?? 'Website');
+        $L[] = '';
+        $L[] = '> This file gives AI systems the core content structure of this site; no business fact base is configured, so only real page entry points are listed.';
+        $L[] = '';
+        $L[] = '## Content';
+        $L[] = '';
+        $L[] = '- [Home](' . PublicUrl::home() . ')';
+        foreach (PublicIndex::contentQuery()->forLocale('en')->orderByDesc('published_at')->limit(20)->get() as $article) {
+            $L[] = '- [' . $article->title . '](' . $article->url() . ')';
+        }
+        $L[] = '';
+        $L[] = '## Citation Notes';
+        $L[] = '';
+        $L[] = '- Do not speculate on data not published by the site';
+        $L[] = '- Site structure: [sitemap.xml](' . PublicUrl::url('sitemap.xml') . '), generated ' . now()->toDateString();
 
         return implode("\n", $L) . "\n";
     }

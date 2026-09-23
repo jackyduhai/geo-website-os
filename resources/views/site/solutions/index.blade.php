@@ -5,8 +5,8 @@
 @section('content')
 <section class="page-hero">
   <div class="wrap-narrow">
-    <span class="eyebrow">SOLUTIONS · 应用场景</span>
-    <h1 class="ph-h">你的业务属于哪一类？</h1>
+    <span class="eyebrow">{{ __('ui.eyebrow_solutions') }}</span>
+    <h1 class="ph-h">{{ __('ui.solutions_h1') }}</h1>
     <p class="ph-lead">{{ $lead }}</p>
   </div>
 </section>

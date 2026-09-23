@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Services\Geo\SchemaBuilder;
 use App\Support\Catalog;
 use App\Support\Narrative;
+use App\Support\Pages;
 use App\Support\PublicUrl;
 
 /**
@@ -21,7 +22,7 @@ class AboutController extends Controller
 
         $company = Catalog::company();
         $brand   = Catalog::brandLanguage();
-        $copy    = config('pages.about.' . $page, []);
+        $copy    = Pages::about($page);
 
         // 配置契约降级（P-STEP 04）：无业务数据时该业务页不渲染（404），不抛错
         if (empty($company) || empty($copy)) {
@@ -45,14 +46,14 @@ class AboutController extends Controller
         }
 
         $titles = [
-            'profile' => '企业简介',
-            'history' => '发展历程',
-            'culture' => '企业文化',
+            'profile' => __('seo.about_profile_title'),
+            'history' => __('seo.about_history_title'),
+            'culture' => __('seo.about_culture_title'),
         ];
 
         $crumbs = [
-            ['name' => '首页', 'url' => PublicUrl::home()],
-            ['name' => '关于我们', 'url' => PublicUrl::url('about/profile/')],
+            ['name' => __('nav.home'), 'url' => PublicUrl::home()],
+            ['name' => __('nav.about'), 'url' => PublicUrl::url('about/profile/')],
             ['name' => $titles[$page], 'url' => PublicUrl::url('about/' . $page . '/')],
         ];
 
@@ -89,11 +90,12 @@ class AboutController extends Controller
             'schemas' => array_values(array_filter([
                 $schema->organization(),
                 $schema->breadcrumb($crumbs),
+                $schema->webPage(PublicUrl::url('about/' . $page . '/'), $titles[$page], $copy['meta_desc'] ?? '', 'AboutPage'),
             ])),
             'seo' => [
                 'title'       => $titles[$page] . '｜' . ($company['name'] ?? ''),
                 'description' => $copy['meta_desc']
-                    ?? ('了解' . ($company['name'] ?? '') . '的企业概况、产品与服务。'),
+                    ?? __('seo.about_desc_fallback', ['name' => $company['name'] ?? '']),
                 'canonical'   => PublicUrl::url('about/' . $page . '/'),
                 'noindex'     => false,
                 'type'        => 'website',
@@ -111,10 +113,10 @@ class AboutController extends Controller
     {
         $nodes = [];
         if (! empty($company['founded_display'])) {
-            $nodes[] = ['time' => $company['founded_display'], 'title' => '公司成立', 'desc' => '公司注册成立，开始正式运营。'];
+            $nodes[] = ['time' => $company['founded_display'], 'title' => __('seo.about_founded_title'), 'desc' => __('seo.about_founded_desc')];
         }
         if (! empty($company['established_production_display'])) {
-            $nodes[] = ['time' => $company['established_production_display'], 'title' => '生产基地投产', 'desc' => '生产或服务能力建成并投入使用。'];
+            $nodes[] = ['time' => $company['established_production_display'], 'title' => __('seo.about_production_title'), 'desc' => __('seo.about_production_desc')];
         }
 
         return $nodes;

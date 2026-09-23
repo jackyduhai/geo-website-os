@@ -5,7 +5,9 @@ namespace App\Http\Controllers\Site;
 use App\Http\Controllers\Controller;
 use App\Services\Geo\SchemaBuilder;
 use App\Support\Catalog;
+use App\Support\Localization\LocaleContext;
 use App\Support\Narrative;
+use App\Support\Pages;
 use App\Support\PublicUrl;
 
 /**
@@ -21,7 +23,7 @@ class ContactController extends Controller
         if (empty($company)) {
             abort(404);
         }
-        $lead = Narrative::lead('contact.lead', config('pages.narrative.contact.lead', ''));
+        $lead = Narrative::lead('contact.lead', Pages::narrative('contact'));
 
         $localBusiness = array_filter([
             '@context'    => 'https://schema.org',
@@ -41,20 +43,23 @@ class ContactController extends Controller
         ]);
 
         $crumbs = [
-            ['name' => '首页', 'url' => PublicUrl::home()],
-            ['name' => '联系我们', 'url' => PublicUrl::url('contact/')],
+            ['name' => __('nav.home'), 'url' => PublicUrl::home()],
+            ['name' => __('nav.contact'), 'url' => PublicUrl::url('contact/')],
         ];
 
+        $isEn = LocaleContext::current() === 'en';
         $contactBits = [];
         if (! empty($company['phone'])) {
-            $contactBits[] = '合作热线 ' . $company['phone'];
+            $contactBits[] = __('seo.contact_hotline', ['phone' => $company['phone']]);
         }
-        if (! empty($company['address']['full'])) {
-            $contactBits[] = '地址：' . $company['address']['full'];
+        // address.full 为共享单语中文，英文页暂不附加（避免中英混杂）。
+        if (! $isEn && ! empty($company['address']['full'])) {
+            $contactBits[] = __('seo.contact_address', ['address' => $company['address']['full']]);
         }
-        $contactDesc = '联系' . $company['name'] . '：'
-            . ($contactBits ? implode('，', $contactBits) . '。' : '')
-            . '填写表单或通过页面上的联系方式与我们沟通，我们会尽快与你联系。';
+        $contactDesc = __('seo.contact_desc', [
+            'name' => $company['name'],
+            'bits' => $contactBits ? implode($isEn ? ' ' : '，', $contactBits) . ($isEn ? ' ' : '。') : '',
+        ]);
 
         return view('site.contact', [
             'company' => $company,
@@ -63,10 +68,11 @@ class ContactController extends Controller
             'schemas' => array_values(array_filter([
                 $schema->organization(),
                 $schema->breadcrumb($crumbs),
+                $schema->webPage(PublicUrl::url('contact/'), __('seo.contact_title'), $contactDesc, 'ContactPage', PublicUrl::url('contact/') . '#business'),
                 $localBusiness,
             ])),
             'seo' => [
-                'title'       => '联系我们',
+                'title'       => __('seo.contact_title'),
                 'description' => $contactDesc,
                 'canonical'   => PublicUrl::url('contact/'),
                 'noindex'     => false,

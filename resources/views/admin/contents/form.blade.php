@@ -30,13 +30,41 @@
   if (! $kfRows) { $kfRows = [['key'=>'','value'=>'']]; }
 
   $refKeys = old('fact_refs', $content->fact_refs ?: []);
+
+  use App\Support\Localization\LocaleRegistry;
+  $isDefault = $transLocale === LocaleRegistry::default();
+  $localeLabels = ['zh-CN' => '中文', 'en' => 'English'];
 @endphp
 
 @section('content')
+
+@if($anchor->exists)
+  <div class="locale-tabs">
+    @foreach($versions as $loc => $done)
+      @php
+        $tabUrl = $loc === LocaleRegistry::default()
+          ? route('admin.contents.edit', ['content' => $anchor])
+          : route('admin.contents.edit', ['content' => $anchor, 'trans' => $loc]);
+      @endphp
+      @if($loc === $transLocale)
+        <span class="lt-cur">{{ $localeLabels[$loc] ?? $loc }}
+          <span class="lt-state" aria-label="{{ $done ? '已完成' : '未完成' }}">{{ $done ? '✓' : '○' }}</span></span>
+      @else
+        <a class="lt-link" href="{{ $tabUrl }}">{{ $localeLabels[$loc] ?? $loc }}
+          <span class="lt-state {{ $done ? 'done' : 'todo' }}" aria-label="{{ $done ? '已完成' : '未完成' }}">{{ $done ? '✓' : '○' }}</span></a>
+      @endif
+    @endforeach
+  </div>
+@endif
+
 <form id="contentForm" method="post"
       action="{{ $content->exists ? route('admin.contents.update',$content) : route('admin.contents.store') }}"
       enctype="multipart/form-data">
 @csrf @if($content->exists) @method('PUT') @endif
+<input type="hidden" name="trans" value="{{ $transLocale }}">
+@if(! $isDefault && ! $content->exists)
+  <input type="hidden" name="translation_group" value="{{ $anchor->translation_group }}">
+@endif
 
 <div class="editor-layout">
   {{-- ============ 主栏 ============ --}}
@@ -159,6 +187,7 @@
 
   {{-- ============ 侧栏 ============ --}}
   <div class="editor-side">
+@if($isDefault)
     <div class="card">
       <h2>归属</h2>
       <div class="form-row"><label>栏目 <span class="req">*</span></label>
@@ -185,7 +214,9 @@
           @endforeach
         </select></div>
     </div>
+@endif
 
+@if($isDefault)
     <div class="card">
       <h2>封面图</h2>
       <div class="cover-preview">
@@ -201,7 +232,9 @@
         <div class="help">文章封面建议 1280×720（16:9），≤6MB，jpg/png/webp；上传自动入媒体库。</div>
       </div>
     </div>
+@endif
 
+@if($isDefault)
     <div class="card">
       <h2>发布纪律</h2>
       <div class="form-row"><label><span class="label-with-tip">责任人 <span class="req">*</span><x-admin-tip text="发布门禁必填，填写对本页内容真实性负责的部门或姓名。"/></span></label>
@@ -219,11 +252,13 @@
         🔒 人工锁定（GEOFlow 等外部推送不得覆盖本页）</label>
     </div>
 
+@endif
+
     <div class="save-bar">
       <button class="btn btn-primary" type="submit">保存</button>
       <button type="button" class="btn" id="btnCheck">门禁预检</button>
       <div class="save-spacer"></div>
-      @if($content->exists)
+      @if($isDefault && $content->exists)
         @if($content->status==='published')
           <button type="submit" class="btn" form="unpublishForm">下架为草稿</button>
         @else
@@ -246,7 +281,7 @@
 {{-- 发布 / 下架载体表单：必须位于主表单 #contentForm 之外。HTML 不允许 <form> 嵌套，
      原先内联在主表单里的发布表单会被浏览器忽略，导致“发布”按钮实际只触发保存（PUT update）。
      按钮通过 form="publishForm|unpublishForm" 属性关联到这里的独立表单。 --}}
-@if($content->exists)
+@if($isDefault && $content->exists)
   @if($content->status==='published')
     <form id="unpublishForm" method="post" action="{{ route('admin.contents.unpublish',$content) }}" style="display:none">@csrf</form>
   @else

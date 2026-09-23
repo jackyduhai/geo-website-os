@@ -8,6 +8,7 @@ use App\Models\Content;
 use App\Models\Group;
 use App\Services\Geo\SchemaBuilder;
 use App\Services\Seo\SeoMetaResolver;
+use App\Support\Localization\LocaleContext;
 use App\Support\PublicUrl;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -26,13 +27,13 @@ class KnowledgeController extends Controller
     public function index(SchemaBuilder $schema, Request $request)
     {
         $cat = Category::where('slug', 'knowledge')->where('is_active', true)->first();
-        $query = Content::published()->with(['category', 'group', 'cover']);
+        $query = Content::published()->forLocale(LocaleContext::current())->with(['category', 'group', 'cover']);
         if ($cat) {
             $query->where('category_id', $cat->id);
         }
         $items = $query->orderByDesc('published_at')->paginate(self::PER_PAGE);
 
-        return $this->render($schema, $items, null, '知识中心：选型、工艺施工与采购合作指南', $request);
+        return $this->render($schema, $items, null, __('seo.knowledge_index_title'), $request);
     }
 
     public function channel(string $channel, SchemaBuilder $schema, Request $request, PageController $page, SeoMetaResolver $seoResolver)
@@ -44,7 +45,7 @@ class KnowledgeController extends Controller
             return $page->dispatch($request, 'knowledge/' . $channel, $schema, $seoResolver);
         }
 
-        $items = Content::published()->with(['category', 'group', 'cover'])
+        $items = Content::published()->forLocale(LocaleContext::current())->with(['category', 'group', 'cover'])
             ->where('group_id', $group->id)
             ->orderByDesc('published_at')
             ->paginate(self::PER_PAGE);
@@ -58,8 +59,8 @@ class KnowledgeController extends Controller
         $channelMap = $channels->pluck('name', 'slug')->all(); // slug => 名称，供视图 H1 取值
 
         $crumbs = [
-            ['name' => '首页', 'url' => PublicUrl::home()],
-            ['name' => '知识中心', 'url' => PublicUrl::url('knowledge/')],
+            ['name' => __('nav.home'), 'url' => PublicUrl::home()],
+            ['name' => __('nav.knowledge'), 'url' => PublicUrl::url('knowledge/')],
         ];
         if ($active !== null && isset($channelMap[$active])) {
             $crumbs[] = ['name' => $channelMap[$active], 'url' => PublicUrl::url('knowledge/' . $active . '/')];
@@ -67,7 +68,7 @@ class KnowledgeController extends Controller
 
         // 二级 Tab 与顶部导航下拉同源：内容分组动态项 + 后台挂接到「知识中心」的自定义二级项
         $cur = trim($request->path(), '/');
-        $subItems = [['name' => '全部', 'slug' => null, 'url' => url('/knowledge/'), 'on' => $active === null]];
+        $subItems = [['name' => __('nav.all'), 'slug' => null, 'url' => url('/knowledge/'), 'on' => $active === null]];
         foreach (\App\Providers\AppServiceProvider::mergedMenuChildren('knowledge') as $ch) {
             $path = trim((string) parse_url($ch['url'], PHP_URL_PATH), '/');
             $slug = preg_match('#^knowledge/([^/]+)$#', $path, $m) ? $m[1] : null;
@@ -95,10 +96,11 @@ class KnowledgeController extends Controller
             'schemas'    => array_values(array_filter([
                 $schema->organization(),
                 $schema->breadcrumb($crumbs),
+                $schema->webPage($canonical, $title, __('seo.knowledge_desc'), 'CollectionPage'),
             ])),
             'seo' => [
                 'title'       => $title,
-                'description' => '知识中心：产品选型、工艺与施工、采购与合作内容，帮助客户把材料用对、把生产做稳定。',
+                'description' => __('seo.knowledge_desc'),
                 'canonical'   => $canonical,
                 'noindex'     => false,
                 'type'        => 'website',

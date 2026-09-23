@@ -8,9 +8,9 @@
 <section class="sec sec-tint ws-heavy" id="s05">
   <div class="wrap-wide grid ws-layout" style="gap:56px;align-items:center;grid-template-columns:0.92fr 1.08fr">
     <div class="reveal">
-      <span class="eyebrow">CAPABILITY · 核心能力</span>
-      <h2 class="sec-h">{{ $blk->title ?: count($ws).' 处生产设施一体协同' }}</h2>
-      <p class="sec-sub">{{ $blk->subtitle ?: '自有生产设施，支撑一体化交付。' }}</p>
+      <span class="eyebrow">{{ __('ui.eyebrow_capability') }}</span>
+      <h2 class="sec-h">{{ $blk->title ?: __('ui.home_workshops_title', ['count' => count($ws)]) }}</h2>
+      <p class="sec-sub">{{ $blk->subtitle ?: __('ui.home_workshops_sub') }}</p>
       @if($wsStats->count())
       <div class="ws-facts">
         @foreach($wsStats as $s)
@@ -22,8 +22,8 @@
       </div>
       @endif
       <div class="actions" style="margin-top:26px">
-        <a class="btn-text" href="{{ url('/factory/') }}">查看生产实力<span class="arr">→</span></a>
-        <a class="btn-text" href="{{ url('/') }}#s08">预约实地参观<span class="arr">→</span></a>
+        <a class="btn-text" href="{{ url('/factory/') }}">{{ __('ui.home_workshops_btn1') }}<span class="arr">→</span></a>
+        <a class="btn-text" href="{{ url('/') }}#s08">{{ __('ui.home_workshops_btn2') }}<span class="arr">→</span></a>
       </div>
     </div>
     <div class="grid g2 reveal ws-grid" style="gap:20px">

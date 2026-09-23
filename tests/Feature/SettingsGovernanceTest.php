@@ -34,12 +34,12 @@ class SettingsGovernanceTest extends TestCase
     protected User $super;
     protected Site $default;
 
-    /** 各组保留键数量（与 DefaultSettingSeeder 一致，合计 69）。 */
+    /** 各组保留键数量（与 DefaultSettingSeeder 一致，合计 72）。 */
     private const GROUP_COUNTS = [
-        'general' => 5,
+        'general' => 7,
         'theme'   => 15,
         'contact' => 7,
-        'seo'     => 5,
+        'seo'     => 6,
         'geo'     => 6,
         'copy'    => 28,
         'sync'    => 3,

@@ -7,21 +7,21 @@
 <section class="sec sec-tint" id="s08">
   <div class="wrap contact-grid">
     <div class="cta-info reveal">
-      <span class="eyebrow">CONTACT · 联系我们</span>
-      <h2 class="sec-h">{{ $blk->title ?: '告诉我们你的需求' }}</h2>
-      <p class="sec-sub">{{ $blk->subtitle ?: '留下你的需求与联系方式，我们会尽快与你沟通。' }}</p>
+      <span class="eyebrow">{{ __('ui.eyebrow_contact') }}</span>
+      <h2 class="sec-h">{{ $blk->title ?: __('ui.home_cta_title') }}</h2>
+      <p class="sec-sub">{{ $blk->subtitle ?: __('ui.home_cta_sub') }}</p>
       <ul class="cta-facts">
         @if(!empty($navPhone))
           <li>
-            <span class="ci-k">合作热线</span>
+            <span class="ci-k">{{ __('ui.dt_hotline') }}</span>
             <a class="ci-v" href="tel:{{ $navPhoneTel }}">{{ $navPhone }}</a>
           </li>
         @endif
         @if(!empty($company['address']['full']))
-        <li><span class="ci-k">地址</span><span class="ci-v">{{ $company['address']['full'] }}</span></li>
+        <li><span class="ci-k">{{ __('ui.dt_address') }}</span><span class="ci-v">{{ $company['address']['full'] }}</span></li>
         @endif
         @if(!empty($company['target_customers']))
-        <li><span class="ci-k">服务客户</span><span class="ci-v">{{ implode(' · ', $company['target_customers']) }}</span></li>
+        <li><span class="ci-k">{{ __('ui.dt_target') }}</span><span class="ci-v">{{ implode(' · ', $company['target_customers']) }}</span></li>
         @endif
       </ul>
     </div>

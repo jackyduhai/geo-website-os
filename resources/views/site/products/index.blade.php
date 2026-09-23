@@ -7,11 +7,11 @@
 
 <section class="page-hero">
   <div class="wrap-narrow">
-    <span class="eyebrow">PRODUCTS · 产品中心</span>
+    <span class="eyebrow">{{ __('ui.eyebrow_products') }}</span>
     @if($flatMode ?? false)
-    <h1 class="ph-h">产品中心</h1>
+    <h1 class="ph-h">{{ __('ui.products') }}</h1>
     @else
-    <h1 class="ph-h">{{ count($lines) }} 大产品系列</h1>
+    <h1 class="ph-h">{{ __('ui.big_lines', ['count' => count($lines)]) }}</h1>
     @endif
     <p class="ph-lead">{{ $lead }}</p>
   </div>
@@ -22,11 +22,11 @@
     <div class="wrap">
       <div class="sec-head row">
         <div>
-          <h2 class="sec-h">{{ $line['name'] }}<span class="pcard-count">{{ count($line['products']) }} 款</span></h2>
+          <h2 class="sec-h">{{ $line['name'] }}<span class="pcard-count">{{ __('ui.unit_count', ['count' => count($line['products'])]) }}</span></h2>
           <p class="sec-sub">{{ $line['desc'] ?? '' }}</p>
         </div>
         @if(!empty($line['slug']) && count($line['products']) >= 1)
-          <a class="btn-text" href="{{ url('/products/' . $line['slug'] . '/') }}">查看该系列<span class="arr">→</span></a>
+          <a class="btn-text" href="{{ url('/products/' . $line['slug'] . '/') }}">{{ __('ui.view_line') }}<span class="arr">→</span></a>
         @endif
       </div>
       @if(count($line['products']))
@@ -36,7 +36,7 @@
           @endforeach
         </div>
       @else
-        <p class="empty-note">该系列产品正在整理中，可先联系我们了解详情。</p>
+        <p class="empty-note">{{ __('ui.line_empty') }}</p>
       @endif
     </div>
   </section>

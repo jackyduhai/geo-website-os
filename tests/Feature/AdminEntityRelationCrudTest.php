@@ -466,4 +466,26 @@ class AdminEntityRelationCrudTest extends TestCase
         $page = $this->get('https://brel.test/products/fe-prod')->assertOk();
         $page->assertSee('FE Prod');
     }
+
+    /**
+     * P-STEP 18F：关系语言中性、权威边指向默认语言行。源 / 目标下拉只列默认语言
+     * 权威行，同一翻译组的其他语言行不得作为选项（误选会导致建边后 GEO/前台不生效）。
+     */
+    public function test_relation_form_dropdown_lists_only_default_locale_entities(): void
+    {
+        $b = $this->makeSiteB();
+        $this->switchTo($this->super, $b);
+        $org = $this->makeEntity($b, 'organization', 'dd-org', 'DD Org');
+        $prod = $this->makeEntity($b, 'product', 'dd-prod', 'DD Prod');
+        $orgEn = $org->createTranslation('en', ['name' => 'DD Org EN', 'slug' => 'dd-org-en']);
+        $prodEn = $prod->createTranslation('en', ['name' => 'DD Prod EN', 'slug' => 'dd-prod-en']);
+
+        $html = $this->actingAs($this->super)
+            ->get(route('admin.relations.create'))->assertOk()->content();
+
+        $this->assertStringContainsString('value="'.$org->id.'"', $html);
+        $this->assertStringContainsString('value="'.$prod->id.'"', $html);
+        $this->assertStringNotContainsString('value="'.$orgEn->id.'"', $html);
+        $this->assertStringNotContainsString('value="'.$prodEn->id.'"', $html);
+    }
 }

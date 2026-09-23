@@ -7,11 +7,32 @@
   $isOrg = $type === 'organization';
   $isLocation = $type === 'location';
   $isService = $type === 'service';
+  use App\Support\Localization\LocaleRegistry;
+  $isDefault = $transLocale === LocaleRegistry::default();
+  $localeLabels = ['zh-CN' => '中文', 'en' => 'English'];
 @endphp
 @section('title', $entity->exists ? '编辑实体：'.$entity->name : '新建'.$typeLabel)
 @section('page-desc','实体是 GEO 知识图谱与前台目录的正式资源。带 * 为必填；slug 为小写字母 / 数字 / 连字符，同站点下同类型唯一。保存后类型不可修改。')
 
 @section('content')
+@if($anchor->exists)
+  <div class="locale-tabs">
+    @foreach($versions as $loc => $done)
+      @php
+        $tabUrl = $loc === LocaleRegistry::default()
+          ? route('admin.entities.edit', ['entity' => $anchor])
+          : route('admin.entities.edit', ['entity' => $anchor, 'trans' => $loc]);
+      @endphp
+      @if($loc === $transLocale)
+        <span class="lt-cur">{{ $localeLabels[$loc] ?? $loc }}
+          <span class="lt-state" aria-label="{{ $done ? '已完成' : '未完成' }}">{{ $done ? '✓' : '○' }}</span></span>
+      @else
+        <a class="lt-link" href="{{ $tabUrl }}">{{ $localeLabels[$loc] ?? $loc }}
+          <span class="lt-state {{ $done ? 'done' : 'todo' }}" aria-label="{{ $done ? '已完成' : '未完成' }}">{{ $done ? '✓' : '○' }}</span></a>
+      @endif
+    @endforeach
+  </div>
+@endif
 <div class="card narrow">
   <h2>
     {{ $entity->exists ? '编辑实体' : '新建实体' }}
@@ -30,7 +51,12 @@
   <form method="post"
         action="{{ $entity->exists ? route('admin.entities.update',$entity) : route('admin.entities.store') }}">
     @csrf @if($entity->exists)@method('PUT')@endif
-    <input type="hidden" name="type" value="{{ $type }}">
+    <input type="hidden" name="trans" value="{{ $transLocale }}">
+    @if($isDefault)
+      <input type="hidden" name="type" value="{{ $type }}">
+    @elseif(! $entity->exists)
+      <input type="hidden" name="translation_group" value="{{ $anchor->translation_group }}">
+    @endif
 
     <div class="form-grid">
       <div class="form-row"><label>名称 <span class="req">*</span></label>
@@ -45,6 +71,7 @@
       </div>
     </div>
 
+    @if($isDefault)
     <div class="form-grid">
       <div class="form-row"><label>状态 <span class="req">*</span></label>
         <select name="status">
@@ -60,6 +87,7 @@
         @error('sort_order')<div class="field-err">{{ $message }}</div>@enderror
       </div>
     </div>
+    @endif
 
     <div class="form-row"><label>摘要</label>
       <textarea name="summary" rows="2" maxlength="1000"
@@ -73,7 +101,7 @@
     </div>
 
     {{-- 产品专属 --}}
-    @if($isProduct)
+    @if($isDefault && $isProduct)
       <h2 class="mt-2">产品设置</h2>
       <div class="form-row">
         <label class="checkline">
@@ -100,7 +128,7 @@
     @endif
 
     {{-- 组织专属：投影 metadata.company，Catalog::company() 依赖它 --}}
-    @if($isOrg)
+    @if($isDefault && $isOrg)
       @php $company = is_array($meta['company'] ?? null) ? $meta['company'] : []; @endphp
       <h2 class="mt-2">公司 / 品牌信息</h2>
       <div class="form-grid">
@@ -131,7 +159,7 @@
     @endif
 
     {{-- 地点专属 --}}
-    @if($isLocation)
+    @if($isDefault && $isLocation)
       <h2 class="mt-2">地点信息</h2>
       <div class="form-row"><label>地址</label>
         <input type="text" name="loc_address" value="{{ old('loc_address', $meta['address'] ?? '') }}" maxlength="255">
@@ -150,7 +178,7 @@
     @endif
 
     {{-- 服务专属 --}}
-    @if($isService)
+    @if($isDefault && $isService)
       <h2 class="mt-2">服务信息</h2>
       <div class="form-grid">
         <div class="form-row"><label>服务范围</label>
@@ -164,6 +192,7 @@
       </div>
     @endif
 
+    @if($isDefault)
     {{-- 媒体：卡片图 + OG 分享图 --}}
     <h2 class="mt-2">图片</h2>
     <div class="form-grid">
@@ -197,6 +226,7 @@
 
     @if($entity->exists && $entity->published_at)
       <p class="hint mt-2">首次发布时间：{{ $entity->published_at->format('Y-m-d H:i') }}（由状态自动维护）</p>
+    @endif
     @endif
 
     <div class="form-actions">

@@ -7,12 +7,18 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use App\Support\BelongsToSite;
 use App\Support\PageCache;
+use App\Support\Translatable;
 
 class Entity extends Model
 {
-    use BelongsToSite;
+    use BelongsToSite, Translatable;
 
     protected $guarded = [];
+
+    /** 跨语言共享列（默认语言权威行单向同步）；name/slug/summary/description 按语言独立。 */
+    protected static array $sharedTranslatableColumns = [
+        'type', 'status', 'published_at', 'metadata', 'sort_order',
+    ];
 
     protected static function booted(): void
     {

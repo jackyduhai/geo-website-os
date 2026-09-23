@@ -3,6 +3,8 @@
 namespace App\Support;
 
 use App\Models\Site;
+use App\Support\Localization\LocaleContext;
+use App\Support\Localization\LocaleRegistry;
 use App\Support\SiteContext;
 use Illuminate\Support\Facades\Schema;
 
@@ -54,6 +56,14 @@ class SiteCacheKey
         self::$defaultIdMemo = null;
     }
 
+    /** 当前语言（LocaleContext，缺省默认）：前台菜单/导航类缓存按语言分隔。 */
+    private static function currentLocale(): string
+    {
+        $locale = LocaleContext::current();
+
+        return ($locale !== null && $locale !== '') ? $locale : LocaleRegistry::default();
+    }
+
     /**
      * 生成 Site-scoped Cache Key
      *
@@ -80,37 +90,37 @@ class SiteCacheKey
     /** 导航树 */
     public static function navTree(): string
     {
-        return self::make('nav', 'tree');
+        return self::make('nav', 'tree.'.self::currentLocale());
     }
 
     /** 主导航蓝图 */
     public static function mainMenuBlueprint(): string
     {
-        return self::make('menu', 'main.blueprint');
+        return self::make('menu', 'main.blueprint.'.self::currentLocale());
     }
 
     /** 主导航 */
     public static function mainMenu(): string
     {
-        return self::make('menu', 'main');
+        return self::make('menu', 'main.'.self::currentLocale());
     }
 
     /** 页脚蓝图 */
     public static function footerBlueprint(): string
     {
-        return self::make('footer', 'blueprint');
+        return self::make('footer', 'blueprint.'.self::currentLocale());
     }
 
     /** 页脚菜单 */
     public static function footerMenu(): string
     {
-        return self::make('footer', 'menu');
+        return self::make('footer', 'menu.'.self::currentLocale());
     }
 
     /** 页脚附加信息 */
     public static function footerExtra(): string
     {
-        return self::make('footer', 'extra');
+        return self::make('footer', 'extra.'.self::currentLocale());
     }
 
     /** 激活的重定向规则 */

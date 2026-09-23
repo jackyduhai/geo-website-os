@@ -146,13 +146,26 @@ class Category extends Model
         return $d;
     }
 
+    /**
+     * 前台显示名称（P-STEP 18F）：固定栏目（products / solutions / knowledge /
+     * about / contact / cooperation / factory）走 nav 翻译键、随前台语言切换；
+     * 自定义栏目 v1 无翻译模型，回退其 name。
+     */
+    public function displayName(): string
+    {
+        $key = 'nav.' . $this->slug;
+        $translated = __($key);
+
+        return $translated === $key ? (string) $this->name : $translated;
+    }
+
     /** 面包屑：从根到当前 */
     public function breadcrumbs(): array
     {
         $crumbs = [];
         $node = $this;
         while ($node) {
-            array_unshift($crumbs, ['name' => $node->name, 'url' => $node->url()]);
+            array_unshift($crumbs, ['name' => $node->displayName(), 'url' => $node->url()]);
             $node = $node->parent;
         }
         return $crumbs;

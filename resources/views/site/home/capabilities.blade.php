@@ -4,14 +4,14 @@
 <section class="sec">
   <div class="wrap grid g2 ws-layout" style="gap:56px;align-items:center">
     <div class="reveal">
-      <span class="eyebrow">WHO WE ARE · 我们是谁</span>
-      <h2 class="sec-h">{{ $blk->title ?: '我们能为你做什么' }}</h2>
-      <p class="sec-sub">{{ $siteSettings['site_description'] ?? '' }}</p>
+      <span class="eyebrow">{{ __('ui.eyebrow_who') }}</span>
+      <h2 class="sec-h">{{ $blk->title ?: __('ui.home_cap_title') }}</h2>
+      <p class="sec-sub">{{ \App\Support\Catalog::company()['summary'] ?? '' }}</p>
       <div class="actions" style="margin-top:30px">
         @if(\App\Support\Catalog::hasProduction())
-        <a class="btn" href="{{ url('/factory/') }}">了解我们的实力<span class="arr">→</span></a>
+        <a class="btn" href="{{ url('/factory/') }}">{{ __('ui.home_cap_btn1') }}<span class="arr">→</span></a>
         @endif
-        <a class="btn-o" href="{{ url('/') }}#s08">联系我们获取方案<span class="arr">→</span></a>
+        <a class="btn-o" href="{{ url('/') }}#s08">{{ __('ui.home_cap_btn2') }}<span class="arr">→</span></a>
       </div>
     </div>
     <div class="grid reveal" style="gap:0">

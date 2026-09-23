@@ -52,7 +52,7 @@ class CopySettingsTest extends TestCase
         $this->assertSame(config('copy.form.submit'), $form['submit']);
 
         // 404 标题的出厂默认内置于 Copy（config 同名段落为历史死配置）
-        $this->assertSame('没有找到这个页面', Copy::error404()['title']);
+        $this->assertSame('这个页面找不到了', Copy::error404()['title']);
         $this->assertSame(config('copy.footer.brandColumn.slogan'), Copy::footerSlogan());
     }
 

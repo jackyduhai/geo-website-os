@@ -3,7 +3,7 @@
 - **定位**：本文件是 GEO Website OS **唯一**的技术债 / 架构债 / 产品化债 / Release Gate 登记与销项台账。所有阶段（P-STEP / 17x / 18x）的 Gate 对账以本文件为准；其他审计文档（product-uat-final、settings-inventory-17f、runtime-architecture-closure、admin-control-plane-final-acceptance、admin-management-completion-design 等）只作为**来源证据**，不再各自维护债务清单。
 - **建立时基线**：HEAD `4dbc95a`（= annotated tag `checkpoint-18A`）；Regression **801 tests / 3948 assertions / 0 failed / 0 skipped**；`v1.0.0-rc1` 冻结于 `965d63c`（HOLD）；无 remote、未 push、未发布。
 - **阶段口径修正**：P-STEP 17 中 **17A–17F = 六大管理面**（Site / Entity / EntityRelation / SeoMeta / Theme·Plugin / Settings）；**17G = 六大管理面的系统级 Full Admin UAT**，不是第七个管理面。
-- **最后更新**：P-STEP 18E 收口后（tag `checkpoint-18E`；Regression **861 / 4590 / 0 / 0**）。18E 能力对账发现并修复 TD-39..TD-41（数据门控，登记后 CLOSED）；一度疑似 phone.invalid 缺失，经核实 `Copy::form()` 已兜底，判 NON-DEBT、不占编号。**v1.0 Required 未闭合仍为 3 项 P0 外部工程依赖（TD-01/02/03）**——18E 属能力对账、未新增 v1.0 阻塞项。
+- **最后更新**：P-STEP 18F 收口后（tag `checkpoint-18F`；Regression 见 Gate）。18E 能力对账发现并修复 TD-39..TD-41（数据门控，登记后 CLOSED）；一度疑似 phone.invalid 缺失，经核实 `Copy::form()` 已兜底，判 NON-DEBT、不占编号。**v1.0 Required 未闭合仍为 3 项 P0 外部工程依赖（TD-01/02/03）**——18E 属能力对账、未新增 v1.0 阻塞项。
 
 ---
 
@@ -92,6 +92,7 @@ ACTIVE  →  FIXED  →  TESTED  →  ACCEPTED  →  CLOSED
 | **TD-36** | 全站无统一组件 loading / `aria-busy` 模式（当前以整页 POST 刷新为主） | 18D-07 | DEFERRED v1.1 | 建立统一 loading 组件、aria-busy 与提交/加载反馈；不影响当前整页刷新可用性 | NO（v1.1） | TD-32 |
 | **TD-37** | 产品列表系列卡在窄屏两列、每卡约 165px 偏密 | 18D-09 | DEFERRED v1.1 | 窄屏单列或密度/间距优化；当前不横向溢出、信息可读 | NO（v1.1） | TD-33 |
 | **TD-38** | example 极简主题（31 行、零设计系统）未对齐深色/响应式体系 | 18D | DEFERRED v1.1（说明项） | example 为"零引擎依赖"极简示范主题；完整设计系统在 default。评估是否补齐或在主题文档标注能力边界 | NO（v1.1） | TD-28 |
+| **TD-46** | factory / cooperation Core 路由与 IA 命名制造业特定：URL factory、概念 Factory & Certifications / workshops / annual capacity in Tons | 18F（en-only B 对拍登记） | **DEFERRED v1.1** | 数据驱动可见：无 production / facility 数据的站点 FactoryController 实质 404、sitemap/feed 不输出 URL，非制造业不暴露；重命名 factory→facilities、单位 Tons 中性化涉及路由 / sitemap / 翻译键，需独立 IA 阶段。验收：非制造业 Core 默认不出现 factory 概念，或路由 / 文案中性（Facilities & Certifications） | NO（v1.1；数据驱动 404 已保证不串行业） | TD-19 |
 
 ### P4 — 观察与测试限制（默认 NON-BLOCKING，记录在案）
 
@@ -140,6 +141,14 @@ ACTIVE  →  FIXED  →  TESTED  →  ACCEPTED  →  CLOSED
 | **TD-39** | 工厂页对缺失生产事实裸输出 0：H1「自有约 0 ㎡…年产能约 0 吨」、数据条渲染 0 值项、SEO 拼出空 / 0 片段（Demo 三项齐全故未暴露） | **P-STEP 18E**（FactoryController + factory.blade） | H1 改为按真实事实（area / workshops / capacity）逐项拼接、缺失不写入；stats 过滤 `num>0`；SEO title/description 按数据拼接。新增 FrontendBackendClosure18ETest 锁定（部分生产站点无 0 ㎡ / 年产能约 0 / 空厂区标题） |
 | **TD-40** | 底部统一 CTA「或直接致电」行无电话门控，空站（/knowledge/ 可访问）渲染空号码行 | **P-STEP 18E**（_bottom_cta） | 电话行以 `@if(!empty($bcPhone))` 包裹，未配置电话整行不渲染；test_bottom_cta_hides_phone_row_when_no_phone 锁定 |
 | **TD-41** | 应用场景总览 H1「你的**店**属于哪一类？」零售 / 餐饮口径 | **P-STEP 18E**（solutions/index） | 中性化为「你的**业务**属于哪一类？」；test_solutions_index_uses_neutral_business_wording 锁定 |
+| **TD-42** | Catalog 硬依赖 zh-CN organization：en-only 站点无 zh-CN 主体行时 relationMap() 传 null，非 nullable 签名在进方法体前 TypeError，首页 / sitemap / geo 全 500 | **P-STEP 18F** | buildDataset 新增关系权威基础语言 baseLocale：默认 zh-CN，站点无该语言主体时回退 site_default_locale（前提该语言主体存在），关系 base 行查询改用 baseLocale；relationMap 首参改 ?Entity（方法体本有 ! zhOrganization 守卫，nullable 后可触达）。en-only 站 B 不再 500 |
+| **TD-43** | SchemaBuilder 服务区域 area_served 三元 true 分支（非默认语言）直接访问无 ??，en-only 站点无 production 时 Undefined array key 500 | **P-STEP 18F** | 改 (array) (area_served ?? [])，与 else 分支一致；en-only B 首页 200 |
+| **TD-44** | 首页 blank 兜底分支（无 page_blocks）<p> 直接用单语 site_description，en-only / 跨语言站点显示另一语言（中文）描述 | **P-STEP 18F** | blank 描述优先当前语言组织摘要 Catalog::company()['summary']（站点隔离 + locale-aware），其次 site_description，最后 ui.blank_home_lead；B en 首页显示英文自身描述 |
+| **TD-45** | 默认 SEO 翻译键带行业特定：knowledge「Selection, Process & Construction / materials / production」、products「Mixing Parameters / Process Parameters / Application Process」 | **P-STEP 18F** | lang/{en,zh-CN}/seo.php 中性化：knowledge_index_title=Knowledge Center / 知识中心、knowledge_desc 通用引导；product line/show/howto 去掉 mixing/process/application 工业措辞（Product Series / Specifications / Product Overview）。factory IA / 单位余项见 TD-46 |
+| **TD-47** | routes/web.php 顶层函数 PublicUrlLocalized() 在同一进程路由文件被重复加载（多测试 / 路由重载）时 Cannot redeclare fatal | **P-STEP 18F** | 函数声明以 if (!function_exists('PublicUrlLocalized')) 守卫包裹；全量测试进程不再 fatal |
+| **TD-48** | 站内搜索只覆盖 Content（contentQuery），不搜索 Entity，蓝图 §23 要求 V1 统一搜索 Content/Entity/Product/Service | **P-STEP 18F** | 新增 SearchResult 值对象，SearchController 合并 contentQuery + entityQuery（仅纳入 PublicUrl::entity() 有公开落地页的产品 / 场景），LengthAwarePaginator 手动分页，查询层满足 Public Render Contract；双语 / en-only 对拍通过 |
+| **TD-49** | geo.json 默认 JSON 编码把中文转义为 `\uXXXX`、URL 斜杠转义，AI 直读不友好（输出质量项，非功能 bug） | **P-STEP 18F** | FeedController::graph 加 `JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES`，中文与 URL 直出；GeoGraphTest `test_graph_emits_unescaped_unicode_for_ai_friendly_output` 锁定（原始 body 含中文、不含 `\u793a`）；两态对拍直出 |
+| **TD-50** | 英文 sitemap 首页 loc 用 `PublicUrl::base()`（无 locale 前缀），输出中文首页根地址而非英文首页 | **P-STEP 18F**（两态对拍发现） | SitemapBuilder 首页 loc 改 locale-aware：默认语言 base()、非默认 base()/{locale}（/en，无尾斜杠契约）；Localization18FTest 补两语首页 loc 断言（en 含 base/en、不含无根 base）；真实 HTTP 首项已为 /en |
 
 ---
 
@@ -154,6 +163,7 @@ ACTIVE  →  FIXED  →  TESTED  →  ACCEPTED  →  CLOSED
 | 口径 C 通用行业词（食品/制造/OEM/ODM/工业涂料/胶粘剂/装备制造/工厂/车间/产能/打样/配方等） | 无法单独指向原客户，按口径 C 保留；强身份词必须清零 |
 | `config/facts.php` | 现仅作**安装期 Example Seed 来源**（P14 已降级，Runtime 不消费）；随 TD-07 演示数据完全 Entity 化后退场 |
 | 「示例制造有限公司」等 Example Demo 数据 | 通用虚构示例企业，与真实客户无语义关联；18B 将其与系统默认层分离 |
+| 「LocaleContext 跨请求泄漏」疑似 P0（en 预热后 zh /geo.json 被初判含英文） | 经 SetLocale trace（每请求正确 set / finally clear）+ json_decode 各层（全中文）+ 编码检查三重查证为**误判**：中文在 JSON body 被 Unicode 转义（字面 str_contains 必然 N），「Example Manufacturing」命中实体 metadata 的 `name_en` 字段而非英文 GEO；TD-49 修复转义后断言恢复 |
 
 ---
 
@@ -189,12 +199,13 @@ ACTIVE  →  FIXED  →  TESTED  →  ACCEPTED  →  CLOSED
 | TD-36 组件 loading / aria-busy 模式 | P3 |
 | TD-37 产品列表移动系列卡密度优化 | P3 |
 | TD-38 example 极简主题对齐 / 能力边界标注 | P3 |
+| TD-46 factory/cooperation IA 与 URL 命名制造业特定（数据驱动 404，v1.1 中性化） | P3 |
 
 ### 计数（当前）
 
-- CLOSED：#86、**#114（18A+18C）**、**#143 / TD-09**、**#144**、TD-04、**TD-05（DECISION）**、**TD-07**、TD-08a / **TD-08b（TD-08 整体）**、**TD-16①**、**TD-20①**、TD-10、TD-11、TD-12、TD-13、TD-25、TD-26、P17 六管理面 + 17G、**TD-28..TD-35（18D Design System）**、**TD-39..TD-41（18E 能力对账）**
+- CLOSED：#86、**#114（18A+18C）**、**#143 / TD-09**、**#144**、TD-04、**TD-05（DECISION）**、**TD-07**、TD-08a / **TD-08b（TD-08 整体）**、**TD-16①**、**TD-20①**、TD-10、TD-11、TD-12、TD-13、TD-25、TD-26、P17 六管理面 + 17G、**TD-28..TD-35（18D Design System）**、**TD-39..TD-41（18E 能力对账）**、**TD-42..TD-45（18F 本地化）**、**TD-47..TD-48（18F 路由守卫 / Entity 搜索）**、**TD-49..TD-50（18F geo.json 直出 / en-sitemap 首页 locale）**
 - v1.0.0 Required 未闭合：**3**（仅 P0×3 = TD-01 / TD-02 / TD-03，均为需外部授权的发布工程项）；18E 未新增 v1.0 阻塞项
-- v1.1+ Planned：TD-06（/article/ 收敛）、TD-14、TD-15、TD-16②③④、TD-17、TD-18、TD-19、TD-20②③④、TD-23、TD-24、TD-27、**TD-36、TD-37、TD-38**
+- v1.1+ Planned：TD-06（/article/ 收敛）、TD-14、TD-15、TD-16②③④、TD-17、TD-18、TD-19、TD-20②③④、TD-23、TD-24、TD-27、**TD-36、TD-37、TD-38**、**TD-46**
 - NON-DEBT / DEFERRED 观察项：TD-21 / TD-22 / TD-23 / TD-24 / TD-27
 
 ---
@@ -217,3 +228,4 @@ ACTIVE  →  FIXED  →  TESTED  →  ACCEPTED  →  CLOSED
 | 2026-09-22 | P-STEP 18C（`checkpoint-18C`，826/4139/0/0） | Release Residual Audit：TD-05 Entity URL 体系书面冻结（DECISION）、TD-07 Organization 裁定 Site 聚合为唯一事实源（facts 降为安装期种子、前台零消费）、TD-08/08b Entity·Site 缓存失效+stale memo、TD-09/#143 声明性绝对 URL 全改派 PublicUrl（功能性 URL 显式保留 url()/asset()，sitemap loc 与首页 canonical 斜杠契约分离）、TD-16① Category slug 站点作用域+type 收敛、TD-20① RSS geo_rss_enabled 门禁（设置 64→65）全部 CLOSED；#114 v1.0 收口；#144 单一事实源反向审计无新双源；TD-06 /article/ 书面 DEFERRED v1.1；新登记 TD-27 GeoflowApiTest 测试顺序依赖（P4，CI 固定顺序绿）；fresh geo:install settings=65、空站/Demo 两态真实 HTTP 对拍；**v1.0 Required 未闭合 9→3（仅 P0 TD-01/02/03 外部发布工程）**；报告 `docs/audit/release-residual-audit-18c.md` |
 | 2026-09-23 | P-STEP 18D（`862ff1d` → 收尾提交 / `checkpoint-18D`，857/4574/0/0） | Final Product Completeness 第一阶段 Design System 2.0：新增 TD-28 Light/Dark/System 深色（独立深色令牌 + AA 提亮 + SSR 防闪 + 记忆）、TD-29 行业预设扩 8 类（finance/healthcare/Consumer，只改视觉不改 IA）、TD-30 12 档 rem 字阶 token（结构性 27 处 + 辅助 82 处归并）、TD-31 彩色硬编码清零（彩色 hex/rgba=0）、TD-32 全局 focus-visible 焦点环 + disabled、TD-33 `.ph-h` 移动缩小（CSS 源顺序根因）、TD-34 aria-required、TD-35 geo:upgrade 部署清 view/PageCache，全部 CLOSED；新登记 DEFERRED TD-36（loading）、TD-37（移动系列卡密度）、TD-38（example 极简主题对齐）；Blank System ≠ Demo Site 视觉再确认；v1.0 Required 未闭合仍为 3（TD-01/02/03），18D 未新增发布阻塞；报告 `docs/audit/design-system-final-audit.md` |
 | 2026-09-23 | P-STEP 18E（收尾提交 / `checkpoint-18E`，861/4590/0/0） | Frontend ↔ Backend Capability Closure 能力对账：通读首页 16 区块 + Header/Footer/导航 + 全部列表/详情/表单/关于页 + Catalog 投影 + 组件，确认绝大多数前台元素数据驱动、空则隐藏；发现并最小修复 TD-39（factory 部分生产事实裸输出 0：H1/stats/SEO 按数据拼接）、TD-40（_bottom_cta 电话行门控）、TD-41（solutions「你的店」→「你的业务」），新增 FrontendBackendClosure18ETest 4 用例（16 assertions）；疑似 phone.invalid 缺失经核实 `Copy::form()` 组装层已兜底（不读 config 该键），判 NON-DEBT、撤销对 config/copy.php 的多余改动；后台字段 consumer 反查复用 17A–17G / 17F 64 键矩阵结论；v1.0 Required 未闭合仍为 3（TD-01/02/03），18E 未新增发布阻塞；产出 `frontend-backend-capability-matrix.md`、`hardcoded-capability-register.md` |
+| 2026-09-23 | P-STEP 18F（`checkpoint-18F`） | Localization 前端 zh-CN + en：Locale Registry / SetLocale / URL（zh 无前缀、en /en）/ 同表多行 translation_group 翻译模型 / 双语 feed / hreflang / 本地化 Schema·GEO·Sitemap·Search；Multi-Site × Locale：en-only Site B 验证 zh 404、en 200、双向隔离；发现并修复 TD-42（Catalog 硬依赖 zh-CN org → baseLocale 回退 + nullable）、TD-43（area_served ??）、TD-44（blank 描述单语泄漏 → 优先 Catalog company summary）、TD-45（knowledge/products SEO 翻译键工业措辞中性化），TD-47（路由 PublicUrlLocalized 重复声明 fatal → function_exists 守卫）、TD-48（搜索补齐 Entity：SearchResult + 合并 entityQuery），均 CLOSED；新登记 TD-46（factory/cooperation IA 制造业命名，数据驱动 404 不暴露，DEFERRED v1.1）；收尾另修 TD-49（geo.json 中文/URL Unicode 转义 → JSON_UNESCAPED 直出 + GeoGraph 防回归）、TD-50（英文 sitemap 首页 loc 缺 /en → locale-aware + 断言）；「LocaleContext 跨请求泄漏 P0」经三重查证裁定 NON-DEBT（误判）；v1.0 Required 未闭合仍为 3（TD-01/02/03）；报告 `docs/audit/localization-final-audit.md` |

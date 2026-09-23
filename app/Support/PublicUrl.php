@@ -4,6 +4,8 @@ namespace App\Support;
 
 use App\Models\Content;
 use App\Models\Entity;
+use App\Support\Localization\LocaleContext;
+use App\Support\Localization\LocaleRegistry;
 
 /**
  * 公开资源 URL 的唯一裁决层（P-STEP 17G / Public Render Contract）。
@@ -54,10 +56,19 @@ class PublicUrl
         return $configured !== '' ? $configured : rtrim(url('/'), '/');
     }
 
+    /** 当前语言 URL 前缀（默认语言为空，en 为 /en）。 */
+    private static function localePrefix(): string
+    {
+        $locale = LocaleContext::current();
+        $prefix = LocaleRegistry::prefix($locale);
+
+        return $prefix !== '' ? '/' . $prefix : '';
+    }
+
     /** 首页（带尾斜杠，与首页 canonical 冻结契约一致）。 */
     public static function home(): string
     {
-        return self::base() . '/';
+        return self::base() . self::localePrefix() . '/';
     }
 
     /**
@@ -71,7 +82,7 @@ class PublicUrl
      */
     public static function url(string $path = '/'): string
     {
-        return self::base() . '/' . ltrim($path, '/');
+        return self::base() . self::localePrefix() . '/' . ltrim($path, '/');
     }
 
     /**
@@ -80,25 +91,25 @@ class PublicUrl
      */
     public static function content(Content $content): string
     {
-        return self::base() . $content->path();
+        return self::base() . self::localePrefix() . $content->path();
     }
 
     /** 核心产品详情页（详情型，无尾斜杠）：/products/{slug}。 */
     public static function product(string $slug): string
     {
-        return self::base() . '/products/' . $slug;
+        return self::base() . self::localePrefix() . '/products/' . $slug;
     }
 
     /** 产品系列 / 目录型页（带尾斜杠）：/products/{line}/。 */
     public static function productLine(string $slug): string
     {
-        return self::base() . '/products/' . $slug . '/';
+        return self::base() . self::localePrefix() . '/products/' . $slug . '/';
     }
 
     /** 应用场景详情页（目录型，带尾斜杠）：/solutions/{slug}/。 */
     public static function solution(string $slug): string
     {
-        return self::base() . '/solutions/' . $slug . '/';
+        return self::base() . self::localePrefix() . '/solutions/' . $slug . '/';
     }
 
     /**

@@ -16,5 +16,5 @@
   @if(!empty($sc['reveal']))
     <span class="scp"><i>{{ $sc['reveal'] }}</i></span>
   @endif
-  <span class="sc-go">看看这类场景用什么 <span class="arr" aria-hidden="true">→</span></span>
+  <span class="sc-go">{{ __('ui.scene_go') }} <span class="arr" aria-hidden="true">→</span></span>
 </span>

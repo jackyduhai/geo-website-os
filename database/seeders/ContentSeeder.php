@@ -73,6 +73,16 @@ class ContentSeeder extends Seeder
                 $saved->content_hash = $saved->computeHash();
                 $saved->save();
 
+                // P-STEP 18F：同步维护英文翻译行（幂等，同 translation_group）
+                $enFields = $this->enRow($data['slug']);
+                $enExist = Content::where('translation_group', $saved->translation_group)
+                    ->where('locale', 'en')->first();
+                if ($enExist) {
+                    $enExist->update($enFields);
+                } else {
+                    $saved->createTranslation('en', $enFields);
+                }
+
                 $this->command->info('内容就绪：' . $saved->title);
             }
         });
@@ -196,6 +206,72 @@ class ContentSeeder extends Seeder
                         ['q' => '可以先试样再决定吗？', 'a' => '可以，合作流程中包含打样试样环节，性能确认后再进入报价与排产。'],
                     ],
                     'fact_refs' => ['FACT-BIZ-001','FACT-PRODUCT-002','FACT-COMPANY-009'],
+                ],
+            ],
+        ];
+    }
+
+    /**
+     * 知识文章英文翻译字段（P-STEP 18F），按 zh slug 键控。
+     * slug 与中文相同（英文经 /en 前缀区分），仅翻译字段独立。
+     */
+    protected function enRow(string $slug): array
+    {
+        return $this->enRows()[$slug] ?? ['slug' => $slug];
+    }
+
+    protected function enRows(): array
+    {
+        return [
+            'how-to-choose-industrial-coatings' => [
+                'slug' => 'how-to-choose-industrial-coatings',
+                'title' => 'How to Choose Industrial Coatings: Resin Systems, Performance Indicators and Selection Logic',
+                'summary' => 'Industrial coatings are formulated from film-forming resins, pigments and fillers and functional additives. The resin system sets the baseline for adhesion, weather and corrosion resistance, and can be customized to substrate and operating conditions.',
+                'body' => "## What determines coating performance\n\nIndustrial coatings are generally formulated from film-forming resins, pigments and fillers, solvents and functional additives. The resin system determines adhesion, weather and corrosion baseline, while additives adjust leveling, defoaming and curing behavior.\n\n## Which indicators to check\n\nWhen selecting, first clarify the substrate material, service environment (corrosion, temperature change, outdoor exposure) and application method, then narrow the range against indicators such as adhesion, salt-spray resistance, temperature resistance and drying time.\n\n## Why customize\n\nSubstrate pretreatment, baking conditions and performance priorities differ across production lines. Adjusting the formulation to target parameters keeps coating performance stable during batch supply.",
+                'geo_conclusion' => 'Industrial coatings are surface materials formulated from film-forming resins, pigments and fillers and functional additives; performance is determined jointly by the resin system and formulation. They should be selected based on substrate, environment and application parameters, and can be customized to target indicators.',
+                'geo_explanation' => 'Resin sets the baseline for adhesion and weather and corrosion resistance, pigments and fillers provide hiding and mechanical properties, and additives affect application and curing; Example Manufacturing turns target performance into standardized, reproducible formulations through its mixing and processing workshops.',
+                'geo_evidence' => [
+                    ['label' => 'Workshop support', 'value' => 'Mixing and processing workshops support formulation production', 'source' => 'Demo materials'],
+                    ['label' => 'Product lines', 'value' => 'Three product lines established: industrial coatings, structural adhesives, functional additives', 'source' => 'Company materials (demo)'],
+                ],
+                'geo_boundary' => 'Specific formulations and performance parameters are custom content and require separate sampling against the customer substrate and conditions; this page only explains general selection principles and does not constitute a specific performance commitment.',
+                'geo_faq' => [
+                    ['q' => 'Are coatings and adhesives the same thing?', 'a' => 'No. Coatings mainly form a protective or decorative film on the substrate surface, while adhesives bond materials together; the two have different evaluation indicators and application methods.'],
+                ],
+            ],
+            'adhesive-customization-process' => [
+                'slug' => 'adhesive-customization-process',
+                'title' => 'Adhesive Customization Process: From Requirement Alignment to Batch Delivery',
+                'summary' => 'Adhesive customization generally goes through four stages: requirement alignment, formulation sampling, sample confirmation and batch delivery, usually requiring 2 to 3 rounds of samples.',
+                'body' => "## Four stages\n\n1. **Requirement alignment**: confirm bonding substrates, operating environment, strength and temperature requirements and target cost;\n2. **Formulation sampling**: R and D produces 2 to 3 candidate formulations against the indicators;\n3. **Sample confirmation**: the customer bonds and tests using the real process and gives adjustment feedback;\n4. **Batch delivery**: after the formulation is locked, schedule production in the processing workshop.\n\n## The meaning of standardization\n\nA locked formulation is reproduced with fixed process parameters to keep bonding strength and curing performance stable across batches.",
+                'geo_conclusion' => 'Example Manufacturing divides adhesive customization into four stages: requirement alignment, formulation sampling, sample confirmation and batch delivery, usually locking the formulation after 2 to 3 sample rounds, then producing in batches under a standardized process.',
+                'geo_explanation' => 'The requirement stage clarifies substrate and operating boundaries; the sampling stage produces multiple versions in parallel to improve the hit rate; the sample stage is verified with the real customer process; after the formulation is locked, fixed ratios and mixing processes ensure batch consistency.',
+                'geo_evidence' => [
+                    ['label' => 'R and D sampling', 'value' => 'R and D sampling supports parallel multi-version formulations', 'source' => 'Demo materials'],
+                    ['label' => 'Batch production', 'value' => 'Processing and QC and packaging workshops handle production and outgoing inspection', 'source' => 'Demo materials'],
+                ],
+                'geo_boundary' => 'Sample rounds and delivery time vary with category complexity; specific MOQ and scheduling must be confirmed by the business, and this page makes no uniform commitment.',
+                'geo_faq' => [
+                    ['q' => 'How many sample rounds does customization usually take?', 'a' => 'Usually 2 to 3 rounds, subject to the progress of performance confirmation.'],
+                    ['q' => 'Can adjustments be made after the formulation is locked?', 'a' => 'Yes, adjustments require re-sampling and confirmation and an update to the standardized formulation version.'],
+                ],
+            ],
+            'oem-cooperation-faq' => [
+                'slug' => 'oem-cooperation-faq',
+                'title' => 'Industrial Materials OEM and ODM Manufacturing FAQ: Process, Quality and Boundaries',
+                'summary' => 'Explains the cooperation process, quality system and information boundaries for industrial materials OEM and ODM manufacturing; MOQ and delivery time must be confirmed by the business based on category.',
+                'body' => "## Manufacturing models\n\nOEM produces to the customer formulation or specified requirements, while ODM has the manufacturer provide the formulation and process solution; both are organized within the relevant qualifications and standardized quality system.\n\n## Cooperation process\n\nRequirement discussion, formulation and process confirmation, sampling, quotation and contract, scheduling, delivery.\n\n## Common questions\n\nSee the Q and A below.",
+                'geo_conclusion' => 'Example Manufacturing provides OEM and ODM manufacturing of industrial coatings, structural adhesives and functional additives. The cooperation process is requirement discussion, formulation and process confirmation, sampling, quotation and contract, scheduling and delivery, with production under a standardized quality system.',
+                'geo_explanation' => 'OEM suits brands with mature formulations, while ODM suits customers needing R and D support; the company uses multi-workshop coordination to complete production from formulation to forming, and can align with the customer quality system and incoming and outgoing inspection requirements.',
+                'geo_evidence' => [
+                    ['label' => 'Quality system', 'value' => 'Production is organized under a standardized quality management system, with key batch samples retained for traceability', 'source' => 'Company materials (demo)'],
+                    ['label' => 'Workshop capability', 'value' => 'Mixing, processing and QC and packaging workshops jointly support manufacturing', 'source' => 'Demo materials'],
+                ],
+                'geo_boundary' => 'MOQ, delivery time, payment terms and price are case-by-case items, quoted by the business based on category, specification and order volume; this page does not publish uniform numbers.',
+                'geo_faq' => [
+                    ['q' => 'What is the difference between OEM and ODM?', 'a' => 'OEM produces to the formulation and requirements provided by the customer; ODM has the manufacturer provide the formulation and process solution, which the customer then selects and adjusts.'],
+                    ['q' => 'What is the minimum order quantity?', 'a' => 'MOQ varies by category and must be confirmed by the business with the category and specification; this page sets no uniform number.'],
+                    ['q' => 'Can I sample before deciding?', 'a' => 'Yes, the cooperation process includes a sampling stage; after performance is confirmed, move to quotation and scheduling.'],
                 ],
             ],
         ];

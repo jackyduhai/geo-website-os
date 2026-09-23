@@ -8,7 +8,7 @@
   $multi = $mb->count() > 1;
 @endphp
 @if($mb->isNotEmpty())
-<section class="midbanner{{ $multi ? ' is-multi-sec' : '' }}" aria-label="中部横幅">
+<section class="midbanner{{ $multi ? ' is-multi-sec' : '' }}" aria-label="{{ __('ui.mid_banner_alt') }}">
   <div class="mb-track{{ $multi ? ' is-multi' : '' }}">
     @foreach($mb as $b)
       @php
@@ -19,7 +19,7 @@
         $mHref = $mLink !== ''
             ? (preg_match('~^(https?:|tel:|/)~', $mLink) ? (str_starts_with($mLink, '/') ? url($mLink) : $mLink) : url('/' . ltrim($mLink, '/')))
             : null;
-        $mAlt = $mTitle !== '' ? $mTitle : '中部横幅';
+        $mAlt = $mTitle !== '' ? $mTitle : __('ui.mid_banner_alt');
         // 不写死 width/height 属性：响应式高度由 CSS aspect-ratio 决定，写死 HTML 属性会与 aspect-ratio 冲突导致误裁切。
         // WebP 渐进增强：存在 .webp 兄弟文件时首选 webp，否则/旧浏览器回退原图（picture 包一层 .pic 保持块级满宽）。
         $mbSrc = $b->imageUrl();

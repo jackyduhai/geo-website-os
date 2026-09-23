@@ -7,6 +7,8 @@ use App\Models\Category;
 use App\Models\Content;
 use App\Services\Geo\SchemaBuilder;
 use App\Services\Seo\SeoMetaResolver;
+use App\Support\Localization\LocaleContext;
+use App\Support\Localization\LocaleRegistry;
 use Illuminate\Http\Request;
 
 /**
@@ -50,7 +52,11 @@ class PageController extends Controller
 
     protected function matchContent(string $slug, array $catSegs): ?Content
     {
-        $content = Content::published()->with('category')->where('slug', $slug)->first();
+        // P-STEP 18F：严格按当前语言取翻译行（无该语言版本 → null → 404，不回退内容）
+        $content = Content::published()->with('category')
+            ->where('slug', $slug)
+            ->where('locale', LocaleContext::current())
+            ->first();
         if (! $content) {
             return null;
         }
@@ -101,8 +107,15 @@ class PageController extends Controller
     protected function renderContent(Content $content, SchemaBuilder $schema, SeoMetaResolver $seoResolver)
     {
         // 路径不匹配则跳到规范地址，避免同一内容多入口
+        $reqPath = trim(request()->path(), '/');
+        // P-STEP 18F：剥离当前语言 URL 前缀（/en），使栏目路径比较与语言无关；
+        // 否则 /en/knowledge/{slug} 会被误判路径不符而 301 到自身（重定向循环）。
+        $localePrefix = trim(LocaleRegistry::prefix(LocaleContext::current()), '/');
+        if ($localePrefix !== '' && str_starts_with($reqPath, $localePrefix . '/')) {
+            $reqPath = substr($reqPath, strlen($localePrefix) + 1);
+        }
         $requested = '/' . implode('/', array_slice(
-            array_filter(explode('/', trim(request()->path(), '/'))),
+            array_filter(explode('/', $reqPath)),
             0, -1
         ));
         $canonicalPath = '/' . implode('/', $this->categoryPathSegments($content->category));
@@ -120,12 +133,13 @@ class PageController extends Controller
             $node = $node->parent;
         }
         foreach ($chain as $c) {
-            $crumbList[] = ['name' => $c->name, 'url' => $c->url()];
+            $crumbList[] = ['name' => $c->displayName(), 'url' => $c->url()];
         }
         $crumbList[] = ['name' => $content->title, 'url' => $content->url()];
 
         $related = Content::published()
             ->where('category_id', $content->category_id)
+            ->where('locale', LocaleContext::current())
             ->where('id', '!=', $content->id)
             ->orderByDesc('published_at')
             ->limit(4)
@@ -171,7 +185,7 @@ class PageController extends Controller
             $node = $node->parent;
         }
         foreach ($chain as $c) {
-            $crumbs[] = ['name' => $c->name, 'url' => $c->url()];
+            $crumbs[] = ['name' => $c->displayName(), 'url' => $c->url()];
         }
 
         // 单页型（type=page）：渲染其下第一条内容

@@ -119,10 +119,13 @@ class AppServiceProvider extends ServiceProvider
             $view->with('mainMenu', static::mainMenu());
             $view->with('footerMenu', static::footerMenu());
             $view->with('footerExtra', static::footerExtra());
-            // 全站主 CTA 文案：后台「基础信息 → 主 CTA 按钮文案」可改，留空回退 config 默认
-            $view->with('ctaText', trim((string) ($settings['nav_cta_text'] ?? '')) !== ''
+            // 全站主 CTA 文案：后台「基础信息 → 主 CTA 按钮文案」可改，留空回退翻译默认。
+            // 非默认语言（/en）时单语言 CTA 不跨语言套用，回退当前语言翻译。
+            $ctaDefault = __('ui.bcta_primary');
+            $view->with('ctaText', \App\Support\Localization\LocaleContext::current() === \App\Support\Localization\LocaleRegistry::default()
+                && trim((string) ($settings['nav_cta_text'] ?? '')) !== ''
                 ? $settings['nav_cta_text']
-                : (config('copy.nav.cta') ?? 'Contact us'));
+                : $ctaDefault);
             $view->with('publicFacts', Fact::publicMap());
             // 留言归因（首次落地页 / 外部来源 / UTM），由 CaptureAttribution 写入 session
             if (session()->isStarted()) {
@@ -233,6 +236,11 @@ class AppServiceProvider extends ServiceProvider
                 $o = $overrides->get($key);
                 $overridden = $o !== null;
                 $visible = ! ($o && ! (bool) $o->is_active);
+                // 固定栏目 label 走翻译（nav.<key>）；动态/自定义项无翻译键时保留数据 label。
+                $navTrans = __("nav.$key");
+                if ($navTrans !== "nav.$key") {
+                    $defaultName = $navTrans;
+                }
                 $name = ($o && trim((string) $o->label) !== '') ? $o->label : $defaultName;
                 $sortValue = ($o && (int) $o->sort > 0) ? (int) $o->sort : null;
                 $sort = $sortValue ?? $defaultSort;
@@ -289,7 +297,10 @@ class AppServiceProvider extends ServiceProvider
                 $rawChildren = [];
                 if ($topKey === 'knowledge') {
                     foreach (\App\Models\Group::knowledgeChannels() as $g) {
-                        $rawChildren[] = ['label' => $g->name, 'href' => '/knowledge/' . $g->slug . '/', 'dynamic' => true];
+                        $kgKey = 'nav.knowledge-' . $g->slug;
+                        $kgTrans = __($kgKey);
+                        $kgLabel = $kgTrans !== $kgKey ? $kgTrans : $g->name;
+                        $rawChildren[] = ['label' => $kgLabel, 'href' => '/knowledge/' . $g->slug . '/', 'dynamic' => true];
                     }
                 } elseif ($topKey === 'products') {
                     foreach (\App\Support\Catalog::productLines() as $line) {
@@ -453,6 +464,11 @@ class AppServiceProvider extends ServiceProvider
             $applyItem = function (string $key, array $raw, int $defaultSort, bool $locked = false, bool $dynamic = false) use ($overrides) {
                 $o = $overrides->get($key);
                 $defaultName = (string) ($raw['label'] ?? '');
+                // 固定页脚项 label 走翻译（nav.<key>）；动态/自定义项无翻译键保留数据 label。
+                $navTrans = __("nav.$key");
+                if ($navTrans !== "nav.$key") {
+                    $defaultName = $navTrans;
+                }
                 $rawHref = (string) ($raw['href'] ?? '');
                 $type = (string) ($raw['type'] ?? 'link');
                 $name = ($o && trim((string) $o->label) !== '') ? $o->label : $defaultName;
@@ -537,10 +553,12 @@ class AppServiceProvider extends ServiceProvider
                     }
                 }
 
+                $titleTrans = __("nav.$colKey");
+                $resolvedTitle = ($titleTrans !== "nav.$colKey") ? $titleTrans : $title;
                 $columns[] = [
                     'key'           => $colKey,
                     'default_title' => $title,
-                    'title'         => ($co && trim((string) $co->label) !== '') ? $co->label : $title,
+                    'title'         => ($co && trim((string) $co->label) !== '') ? $co->label : $resolvedTitle,
                     'contact'       => $isContact,
                     'visible'       => ! ($co && ! (bool) $co->is_active),
                     'sort'          => ($co && (int) $co->sort > 0) ? (int) $co->sort : ($ci + 1) * 10,
@@ -728,11 +746,22 @@ class AppServiceProvider extends ServiceProvider
         self::$blueprintMemo = null;
         self::$footerBlueprintMemo = null;
         self::$footerMenuMemo = null;
-        Cache::forget(SiteCacheKey::navTree());
-        Cache::forget(SiteCacheKey::mainMenu());
-        Cache::forget(SiteCacheKey::mainMenuBlueprint());
-        Cache::forget(SiteCacheKey::footerExtra());
-        Cache::forget(SiteCacheKey::footerBlueprint());
-        Cache::forget(SiteCacheKey::footerMenu());
+        // 菜单缓存按语言分隔：后台改动须失效当前站点所有语言副本。
+        $locales = array_values(array_unique(array_merge(
+            [\App\Support\Localization\LocaleRegistry::default()],
+            \App\Support\Localization\LocaleRegistry::supported(),
+            (array) \App\Models\Setting::get('site_supported_locales', [])
+        )));
+        $previous = \App\Support\Localization\LocaleContext::current();
+        foreach ($locales as $loc) {
+            \App\Support\Localization\LocaleContext::set($loc);
+            Cache::forget(SiteCacheKey::navTree());
+            Cache::forget(SiteCacheKey::mainMenu());
+            Cache::forget(SiteCacheKey::mainMenuBlueprint());
+            Cache::forget(SiteCacheKey::footerExtra());
+            Cache::forget(SiteCacheKey::footerBlueprint());
+            Cache::forget(SiteCacheKey::footerMenu());
+        }
+        \App\Support\Localization\LocaleContext::set($previous);
     }
 }

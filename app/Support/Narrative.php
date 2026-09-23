@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use App\Models\Content;
+use App\Support\Localization\LocaleContext;
 use Illuminate\Support\Str;
 
 /**
@@ -49,6 +50,7 @@ class Narrative
             self::$cache[$key] = Content::withoutGlobalScope('not_slot')
                 ->published()
                 ->where('slot', $key)
+                ->forLocale(LocaleContext::current())
                 ->first();
         }
         return self::$cache[$key];

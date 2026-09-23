@@ -37,6 +37,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'admin.site' => \App\Http\Middleware\SetAdminSiteContext::class,
             'super.admin' => \App\Http\Middleware\EnsureSuperAdmin::class,
             'geoflow.token' => \App\Http\Middleware\VerifyGeoflowToken::class,
+            'locale' => \App\Http\Middleware\SetLocale::class,
         ]);
 
         // 后台鉴权先于路由模型绑定：未登录访问不存在的后台资源 ID 时返回 302 登录，

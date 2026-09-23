@@ -2,7 +2,7 @@
      移动端用 td::before(data-label) 变键值卡，禁止横向滚动。
      变量：$rows=[['label','value','note'=>?]]；可选 $head=['参数项','规格 / 说明']、$inverse、$caption --}}
 @php
-  $head = $head ?? ['参数项', '规格 / 说明'];
+  $head = $head ?? [__('ui.pt_head_item'), __('ui.pt_head_spec')];
   $inverse = $inverse ?? false;
 @endphp
 <div class="param-table-wrap">

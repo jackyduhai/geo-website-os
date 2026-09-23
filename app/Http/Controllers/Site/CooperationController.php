@@ -5,7 +5,9 @@ namespace App\Http\Controllers\Site;
 use App\Http\Controllers\Controller;
 use App\Services\Geo\SchemaBuilder;
 use App\Support\Catalog;
+use App\Support\Localization\LocaleContext;
 use App\Support\Narrative;
+use App\Support\Pages;
 use App\Support\PublicUrl;
 
 /**
@@ -22,19 +24,19 @@ class CooperationController extends Controller
         if (empty($coop)) {
             abort(404);
         }
-        $faqs = config('pages.cooperation_faqs', []);
+        $faqs = Pages::faqs('cooperation_faqs');
         // 该 URL 同时用于 canonical、HowTo / FAQ JSON-LD 与面包屑，属声明性地址，经 PublicUrl 裁决（TD-09）。
         $url  = PublicUrl::url('cooperation/');
-        $lead = Narrative::lead('cooperation.lead', config('pages.narrative.cooperation.lead', ''));
+        $lead = Narrative::lead('cooperation.lead', Pages::narrative('cooperation'));
 
         $company     = Catalog::company();
-        $typeNames   = implode('、', array_map(fn ($t) => $t['name'], $coop['types'] ?? []));
+        $typeNames   = implode(LocaleContext::current() === 'en' ? ', ' : '、', array_map(fn ($t) => $t['name'], $coop['types'] ?? []));
         $typeCnt     = count($coop['types'] ?? []);
         $stepCnt     = count($coop['process'] ?? []);
 
         $crumbs = [
-            ['name' => '首页', 'url' => PublicUrl::home()],
-            ['name' => '合作方式', 'url' => $url],
+            ['name' => __('nav.home'), 'url' => PublicUrl::home()],
+            ['name' => __('nav.cooperation'), 'url' => $url],
         ];
 
         // 合作流程 → HowTo（步数由 process 数据驱动）
@@ -44,7 +46,7 @@ class CooperationController extends Controller
                 '@context' => 'https://schema.org',
                 '@type'    => 'HowTo',
                 '@id'      => $url . '#howto',
-                'name'     => '从需求沟通到合作落地的' . $stepCnt . '步合作流程',
+                'name'     => __('seo.cooperation_howto', ['count' => $stepCnt]),
                 'step'     => array_map(function ($s, $i) {
                     return [
                         '@type'    => 'HowToStep',
@@ -64,13 +66,25 @@ class CooperationController extends Controller
             'schemas' => array_values(array_filter([
                 $schema->organization(),
                 $schema->breadcrumb($crumbs),
+                $schema->webPage($url, __('seo.cooperation_title'), __('seo.cooperation_desc', [
+                    'name' => $company['name'] ?? '',
+                    'types' => $typeNames,
+                    'count' => $typeCnt,
+                    'steps' => $stepCnt,
+                ]), 'WebPage'),
                 $howTo,
                 $schema->faqPageFromList($faqs, $url),
             ])),
             'seo' => [
-                'title'       => '合作方式' . ($typeNames !== '' ? '：' . $typeNames : ''),
-                'description' => ($company['name'] ?? '') . '提供' . $typeNames . '等'
-                    . $typeCnt . '种合作方式，' . $stepCnt . '步完成从需求沟通到合作落地，欢迎联系洽谈。',
+                'title'       => __('seo.cooperation_title') . ($typeNames !== ''
+                    ? (LocaleContext::current() === 'en' ? ': ' : '：') . $typeNames
+                    : ''),
+                'description' => __('seo.cooperation_desc', [
+                    'name' => $company['name'] ?? '',
+                    'types' => $typeNames,
+                    'count' => $typeCnt,
+                    'steps' => $stepCnt,
+                ]),
                 'canonical'   => $url,
                 'noindex'     => false,
                 'type'        => 'website',

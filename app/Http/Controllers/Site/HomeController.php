@@ -5,12 +5,12 @@ namespace App\Http\Controllers\Site;
 use App\Http\Controllers\Controller;
 use App\Models\Banner;
 use App\Models\Content;
-use App\Models\Fact;
 use App\Models\PageBlock;
 use App\Services\Geo\SchemaBuilder;
 use App\Services\Seo\SeoMetaResolver;
 use App\Support\Catalog;
 use App\Support\HomeBlockDefaults;
+use App\Support\Localization\LocaleContext;
 use App\Support\PublicUrl;
 use App\Support\SiteContext;
 use Illuminate\Http\Request;
@@ -63,6 +63,12 @@ class HomeController extends Controller
         $data['paramRows'] = $this->s04Rows();
         $paramsBlock = $byType->get('params');
         $data['paramDifferentiators'] = ($paramsBlock && $paramsItems = $paramsBlock->items()) ? $paramsItems : [];
+        // 区块未自定义时的缺省差异化条目：渲染时按当前 locale 取翻译键（不写死、不进 block content）
+        $data['differentiatorItems'] = [
+            ['title' => __('ui.param_diff_1_title'), 'text' => __('ui.param_diff_1_text')],
+            ['title' => __('ui.param_diff_2_title'), 'text' => __('ui.param_diff_2_text')],
+            ['title' => __('ui.param_diff_3_title'), 'text' => __('ui.param_diff_3_text')],
+        ];
 
         // S05 信任数据条 + 生产车间（后台区块可覆盖，缺省取 Catalog 站点目录并带默认图标）
         $data['stats'] = $this->buildStats($company);
@@ -83,13 +89,9 @@ class HomeController extends Controller
         // 能力点（后台可装修，缺省内置）
         $data['capabilityItems'] = $this->capabilityItems($byType->get('capabilities'));
 
-        // 资质与产能事实条（S6 GEO 证据层）：取公开事实，剔除已在页眉/页脚出现的
-        // 公司全称、品牌名、官方电话等身份/联系项，首页精选部分，全量见关于页。
-        $data['factRows'] = Fact::publicRows()->reject(fn ($f) => in_array($f->key, [
-            'FACT-COMPANY-001', // 公司全称（页眉已有）
-            'FACT-COMPANY-002', // 品牌名（页眉已有）
-            'FACT-COMPANY-013', // 官方电话（页脚已有）
-        ], true))->values();
+        // 资质与产能事实条（S6 GEO 证据层）：统一从 Catalog 站点目录派生（中英同源），
+        // 不直接读单语言 Fact 表；剔除已在页眉/页脚出现的公司全称、品牌名、官方电话。
+        $data['factRows'] = $this->homeFactRows($company);
 
         // 知识 / 新闻：手动指定优先，否则按来源栏目取最新
         $data['knowledgeItems'] = $this->sourceItems($byType->get('knowledge'));
@@ -206,18 +208,70 @@ class HomeController extends Controller
         }
         $ids = $block->pickedIds();
         if ($ids) {
-            $list = Content::published()->with(['category', 'cover'])->whereIn('id', $ids)->get();
-            return $list->sortBy(fn ($c) => array_search($c->id, $ids, true))->values();
+            $base = Content::published()->with(['category', 'cover'])->whereIn('id', $ids)->get();
+            $groupOrder = $base->pluck('translation_group')->all();
+            $list = $this->localizeContentRows($base, LocaleContext::current());
+            return $list->sortBy(function ($c) use ($groupOrder) {
+                $pos = array_search($c->translation_group, $groupOrder, true);
+                return $pos === false ? 999 : $pos;
+            })->values();
         }
         if (! $block->category) {
             return collect();
         }
-        return Content::published()
+        $base = Content::published()
             ->with(['category', 'cover'])
+            ->where('locale', \App\Support\Localization\LocaleRegistry::default())
             ->where('category_id', $block->category->id)
             ->orderByDesc('published_at')
             ->limit($block->limit ?: 6)
             ->get();
+
+        return $this->localizeContentRows($base, LocaleContext::current());
+    }
+
+    /**
+     * 把默认语言权威内容行映射为目标语言行（同 translation_group）。
+     * 默认语言直接返回；目标语言无翻译的行不出现（Missing Translation Policy）。
+     */
+    private function localizeContentRows($base, string $locale)
+    {
+        if ($locale === \App\Support\Localization\LocaleRegistry::default()) {
+            return $base;
+        }
+        $groups = $base->pluck('translation_group')->all();
+        if ($groups === []) {
+            return collect();
+        }
+        return Content::published()
+            ->with(['category', 'cover'])
+            ->where('locale', $locale)
+            ->whereIn('translation_group', $groups)
+            ->get();
+    }
+
+    /**
+     * 首页资质与产能事实条：从 Catalog 站点目录（中英同源）构建，标签走翻译键，
+     * 空值条目不渲染；避免直接读单语言 Fact 表导致英文页中文。
+     */
+    private function homeFactRows(array $company)
+    {
+        $workshops = collect(Catalog::workshops())->pluck('name')->implode(' / ');
+        $regions = collect(Catalog::salesRegions())->implode(' / ');
+        $lines = collect(Catalog::productLines())->pluck('name')->implode(' / ');
+
+        $rows = [
+            ['label' => __('ui.fact_founded'),    'value' => ($company['founded_display'] ?? '') ?: ($company['founded'] ?? '')],
+            ['label' => __('ui.fact_production'), 'value' => $company['established_production_display'] ?? ''],
+            ['label' => __('ui.fact_area'),       'value' => $company['area_display'] ?? ''],
+            ['label' => __('ui.fact_capacity'),   'value' => $company['annual_capacity_display'] ?? ''],
+            ['label' => __('ui.fact_investment'), 'value' => $company['total_investment_display'] ?? ''],
+            ['label' => __('ui.fact_workshops'),  'value' => $workshops],
+            ['label' => __('ui.fact_regions'),    'value' => $regions],
+            ['label' => __('ui.fact_lines'),      'value' => $lines],
+        ];
+
+        return collect($rows)->filter(fn ($r) => trim((string) $r['value']) !== '')->values();
     }
 
     /**
@@ -231,13 +285,16 @@ class HomeController extends Controller
         }
         $industry = trim((string) ($company['industry'] ?? ''));
 
-        // 仅输出真实存在的事实数值，数值为 0 的条目整体隐藏，绝不渲染全 0 空壳
+        // 仅输出真实存在的事实数值，数值为 0 的条目整体隐藏；单位 / 标签按 locale。
+        $isEn = LocaleContext::current() === 'en';
         $stats = [
-            ['num' => (int) ($company['tech_experience_years'] ?? 0), 'unit' => '年', 'label' => ($industry !== '' ? $industry : '行业') . '经验'],
-            ['num' => (int) ($company['area_sqm'] ?? 0), 'unit' => '㎡', 'label' => '自有场地'],
-            ['num' => (int) ($company['annual_capacity_tons'] ?? 0), 'unit' => '吨', 'label' => '年产能'],
-            ['num' => count(Catalog::workshops()), 'unit' => '个', 'label' => '生产设施'],
-            ['num' => count(Catalog::salesRegions()), 'unit' => '个', 'label' => '覆盖区域'],
+            ['num' => (int) ($company['tech_experience_years'] ?? 0), 'unit' => __('seo.factory_unit_year'), 'label' => $isEn
+                ? __('seo.home_stat_exp_generic')
+                : ($industry !== '' ? __('seo.home_stat_exp_label', ['industry' => $industry]) : __('seo.home_stat_exp_generic'))],
+            ['num' => (int) ($company['area_sqm'] ?? 0), 'unit' => '㎡', 'label' => __('seo.home_stat_area_label')],
+            ['num' => (int) ($company['annual_capacity_tons'] ?? 0), 'unit' => __('seo.factory_unit_ton'), 'label' => __('seo.home_stat_capacity_label')],
+            ['num' => count(Catalog::workshops()), 'unit' => __('seo.home_unit_count'), 'label' => __('seo.home_stat_workshops_label')],
+            ['num' => count(Catalog::salesRegions()), 'unit' => __('seo.home_unit_count'), 'label' => __('seo.home_stat_regions_label')],
         ];
 
         return array_values(array_filter($stats, static fn ($row) => (int) $row['num'] > 0));

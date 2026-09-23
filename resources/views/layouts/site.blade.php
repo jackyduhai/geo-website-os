@@ -8,7 +8,7 @@
   $allowDark = ! in_array($allowDarkRaw, ['0', 0, false], true);
   $ssrMode = in_array($colorMode, ['light', 'dark'], true) ? $colorMode : '';
 @endphp
-<html lang="zh-CN"@if($allowDark && $ssrMode !== '') data-color-scheme="{{ $ssrMode }}"@endif>
+<html lang="{{ \App\Support\Localization\LocaleContext::current() }}"@if($allowDark && $ssrMode !== '') data-color-scheme="{{ $ssrMode }}"@endif>
 <head>
 <meta charset="utf-8">
 <meta name="color-scheme" content="{{ $allowDark ? 'light dark' : 'light' }}">
@@ -47,10 +47,14 @@
 <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1">
 @endif
 <link rel="canonical" href="{{ $seo['canonical'] }}">
+@foreach($seo['hreflang_alternates'] ?? [] as $alt)
+<link rel="alternate" hreflang="{{ $alt['hreflang'] }}" href="{{ $alt['href'] }}">
+@endforeach
+<link rel="alternate" hreflang="x-default" href="{{ $seo['hreflang_xdefault'] }}">
 
 {{-- SEO 头部唯一消费点：$seo 由 SeoHeadComposer 归一化（Controller SeoResult → 站点级 Resolution → 遗留设置兜底）。
      Blade 在此不做任何 SEO 计算或回读（STEP 02 单一来源）。 --}}
-<meta property="og:locale" content="zh_CN">
+<meta property="og:locale" content="{{ \App\Support\Localization\LocaleContext::current() === 'en' ? 'en_US' : 'zh_CN' }}">
 <meta property="og:type" content="{{ $seo['type'] }}">
 <meta property="og:title" content="{{ $seo['og_title'] }}">
 <meta property="og:description" content="{{ $seo['og_description'] }}">
@@ -298,6 +302,19 @@ a.card:focus-visible, summary:focus-visible, .page-link:focus-visible, .pcard .g
 :root[data-color-mode-pref="system"] .tmt-sun{display:none;}
 :root[data-color-mode-pref="system"] .tmt-sys{display:block;}
 @media(max-width:768px){.theme-mode-toggle{width:38px;height:38px;}}
+/* 语言切换器（P-STEP 18F） */
+.locale-switch{display:inline-flex;align-items:center;gap:2px;flex-shrink:0;padding:3px;
+  border:1px solid var(--line);border-radius:var(--radius-full);background:var(--surface);}
+.locale-switch .ls-link,.locale-switch .ls-cur{display:inline-flex;align-items:center;justify-content:center;
+  min-width:34px;height:30px;padding:0 10px;border-radius:var(--radius-full);
+  font-size:var(--fs-xs);font-weight:600;line-height:1;}
+.locale-switch .ls-link{color:var(--ink-2);text-decoration:none;
+  transition:color var(--motion-base),background var(--motion-base);}
+.locale-switch .ls-link:hover{color:var(--brand);background:var(--brand-soft);}
+.locale-switch .ls-link:focus-visible{outline:2px solid var(--brand);outline-offset:1px;}
+.locale-switch .ls-cur{color:var(--brand);background:var(--brand-soft);}
+@media(max-width:768px){.locale-switch .ls-link,.locale-switch .ls-cur{min-width:30px;height:28px;padding:0 8px;}}
+
 .nav-toggle{display:none;width:44px;height:44px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--surface);
   cursor:pointer;position:relative;flex-shrink:0}
 .nav-toggle span{position:absolute;left:12px;right:12px;height:2px;background:var(--ink);border-radius:2px;transition:.22s}
@@ -1431,12 +1448,13 @@ a.ft-v:hover{color:#fff;}
         </a>
       @endif
       @if($allowDark)
-      <button type="button" class="theme-mode-toggle" data-theme-toggle aria-label="切换浅色 / 深色 / 跟随系统外观" title="外观：浅色 / 深色 / 跟随系统（点击切换）">
+      <button type="button" class="theme-mode-toggle" data-theme-toggle aria-label="{{ __('ui.mode_aria_toggle') }}" title="{{ __('ui.mode_aria_toggle') }}">
         <svg class="tmt-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
         <svg class="tmt-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
         <svg class="tmt-sys" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
       </button>
       @endif
+      @include('site.partials.locale-switcher')
       <a class="btn btn-sm hd-cta" href="{{ url('/') }}#s08">{{ $ctaText ?? (config('copy.nav.cta') ?? '联系我们') }}</a>
       <label class="nav-toggle" for="nav-toggle" aria-label="菜单"><span></span><span></span><span></span></label>
     </div>
@@ -1448,7 +1466,7 @@ a.ft-v:hover{color:#fff;}
   <div class="wrap">
     <nav class="crumb" aria-label="面包屑导航">
       <ol>
-        <li><a href="{{ url('/') }}">首页</a></li>
+        <li><a href="{{ url('/') }}">{{ __('nav.home') }}</a></li>
         @foreach($crumbs as $c)
           <li><span class="sep" aria-hidden="true">/</span>
             @if(!empty($c['url']) && ! $loop->last)<a href="{{ $c['url'] }}">{{ $c['name'] }}</a>
@@ -1481,6 +1499,13 @@ a.ft-v:hover{color:#fff;}
       $ftBrand['companyName'] ?? null,
   ]));
   $ftLegal = $footer['legal'] ?? [];
+  // 当前语言公司名：非默认语言（/en）优先英文主体名（geo_org_en_name），缺省回退站点名
+  $ftIsEn = \App\Support\Localization\LocaleContext::current() !== \App\Support\Localization\LocaleRegistry::default();
+  $ftCompanyName = $ftIsEn
+      ? (trim((string) ($siteSettings['geo_org_en_name'] ?? '')) !== ''
+          ? $siteSettings['geo_org_en_name']
+          : ($siteSettings['site_name'] ?? config('app.name')))
+      : ($siteSettings['site_name'] ?? config('app.name'));
   $ftPhone = trim((string) ($siteSettings['contact_phone'] ?? ''));
   $ftMobile = trim((string) ($siteSettings['contact_mobile'] ?? ''));
   $ftAddress = trim((string) ($siteSettings['contact_address'] ?? ''));
@@ -1558,7 +1583,7 @@ a.ft-v:hover{color:#fff;}
       @endforeach
       @if(!empty($footerExtra))
         <div class="ft-col ft-c-extra">
-          <h4>快捷入口</h4>
+          <h4>{{ __('nav.quick_links') }}</h4>
           <ul>
             @foreach($footerExtra as $fe)
               <li><a href="{{ $fe['url'] }}" @if(!empty($fe['external'])) target="_blank" rel="noopener" @endif>{{ $fe['name'] }}</a></li>
@@ -1568,7 +1593,7 @@ a.ft-v:hover{color:#fff;}
       @endif
     </div>
     <div class="ft-btm">
-      <span>{{ $ftLegal['copyright'] ?? ('© ' . date('Y') . ' ' . ($siteSettings['site_name'] ?? config('app.name'))) }}</span>
+      <span>{{ $ftLegal['copyright'] ?? ('© ' . date('Y') . ' ' . $ftCompanyName) }}</span>
       @if(!empty($ftLegal['icp']))
         <span><a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener">{{ $ftLegal['icp'] }}</a></span>
       @elseif(!empty($siteSettings['icp_number']))
@@ -1630,7 +1655,9 @@ a.ft-v:hover{color:#fff;}
   (function(){
     var btns=document.querySelectorAll('[data-theme-toggle]');
     if(!btns.length) return;
-    var order=['light','dark','system'], labels={light:'浅色',dark:'深色',system:'跟随系统'};
+    var order=['light','dark','system'];
+    var labels={light:{{ json_encode(__('ui.mode_light')) }},dark:{{ json_encode(__('ui.mode_dark')) }},system:{{ json_encode(__('ui.mode_system')) }}};
+    var ariaCurrent={{ json_encode(__('ui.mode_aria_current')) }};
     function sysDark(){ return window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches; }
     function paint(pref){
       var root=document.documentElement;
@@ -1643,8 +1670,8 @@ a.ft-v:hover{color:#fff;}
         var next=order[(order.indexOf(cur)+1)%order.length];
         try{ localStorage.setItem('gwos-color-mode',next); }catch(e){}
         paint(next);
-        btn.setAttribute('aria-label','当前外观：'+labels[next]+'，点击切换浅色 / 深色 / 跟随系统');
-        btn.title='当前外观：'+labels[next]+'（点击循环切换）';
+        btn.setAttribute('aria-label', ariaCurrent.replace('{mode}', labels[next]));
+        btn.title=ariaCurrent.replace('{mode}', labels[next]);
       });
     });
   })();

@@ -4,11 +4,11 @@
   <div class="wrap">
     <div class="sec-head row">
       <div>
-        <span class="eyebrow">SOLUTIONS · 应用场景</span>
-        <h2 class="sec-h">{{ $blk->title ?: '先选你的应用场景，再看用什么产品' }}</h2>
-        <p class="sec-sub">{{ $blk->subtitle ?: '按应用场景分类：每类场景给出推荐产品组合，以及可参考的规格参数与选型建议。' }}</p>
+        <span class="eyebrow">{{ __('ui.eyebrow_solutions') }}</span>
+        <h2 class="sec-h">{{ $blk->title ?: __('ui.home_scenes_title') }}</h2>
+        <p class="sec-sub">{{ $blk->subtitle ?: __('ui.home_scenes_sub') }}</p>
       </div>
-      <a class="btn-text" href="{{ url('/solutions/') }}">全部场景<span class="arr">→</span></a>
+      <a class="btn-text" href="{{ url('/solutions/') }}">{{ __('ui.all_scen') }}<span class="arr">→</span></a>
     </div>
     <div class="scene-grid">
       @foreach($sceneList as $sc)

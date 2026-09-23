@@ -38,6 +38,8 @@ class DefaultSettingSeeder extends Seeder
         $rows = [
             // ---------- 基础信息 ----------
             ['site_name',        $siteName, 'general', '站点名称', 'text', '出现在导航与页脚', 10],
+            ['site_supported_locales', ['zh-CN'], 'general', '前台可用语言', 'json', '前端语言（BCP-47）；默认仅 zh-CN，可启用 en', 20],
+            ['site_default_locale', 'zh-CN', 'general', '前台默认语言', 'text', '访客默认语言，须在可用语言内', 30],
             ['site_description', '',       'general', '站点简介', 'textarea', '用于首页与默认 meta description', 40],
             ['icp_number',       '',       'general', 'ICP 备案号', 'text', '接入前填入，页脚展示', 50],
             ['police_number',    '',       'general', '公安备案号', 'text', '选填，页脚展示', 60],
@@ -72,6 +74,7 @@ class DefaultSettingSeeder extends Seeder
             // ---------- SEO ----------
             ['seo_title_suffix', $appName, 'seo', '标题后缀', 'text', '页面标题追加，用 - 连接', 10],
             ['seo_default_desc', '',       'seo', '默认描述', 'textarea', '页面未单独设置描述时使用', 20],
+            ['seo_default_en_desc', '',    'seo', '默认描述（English）', 'textarea', '英文页面未单独设置描述时使用', 25],
             ['seo_og_image',     '',       'seo', '默认分享图', 'image', '社交分享默认图，建议 1200×630', 30],
             ['seo_robots_extra', '',       'seo', 'robots.txt 追加内容', 'textarea', '高级项，追加到 robots.txt 末尾', 40],
             ['seo_head_code',    '',       'seo', '自定义 head 代码', 'textarea', '高级项：原样输出到前台 </head> 前（统计 / 验证代码），内容须自行确保可信', 50],

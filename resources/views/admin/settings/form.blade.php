@@ -50,7 +50,19 @@
           <span class="small muted mono">[{{ $s->key }}]</span>
         </span></label>
 
-        @if($s->type==='bool')
+        @if($s->key==='site_supported_locales')
+          @php($locVal = is_array($s->value) ? $s->value : [])
+          <div style="display:flex;flex-direction:column;gap:8px">
+            @foreach(\App\Support\Localization\LocaleRegistry::supported() as $locOpt)
+              <label class="checkline">
+                <input type="checkbox" name="site_supported_locales[]" value="{{ $locOpt }}"
+                       @checked(in_array($locOpt, $locVal, true))>
+                {{ $locOpt === 'en' ? 'English' : '中文' }}（{{ $locOpt }}）
+              </label>
+            @endforeach
+          </div>
+          <div class="help mt-1">勾选后前台出现对应语言；默认语言始终保留。</div>
+        @elseif($s->type==='bool')
           <label class="checkline">
             <input type="hidden" name="{{ $s->key }}" value="0">
             <input type="checkbox" name="{{ $s->key }}" value="1" @checked(($s->value ?? '')==='1' || $s->value===1)>

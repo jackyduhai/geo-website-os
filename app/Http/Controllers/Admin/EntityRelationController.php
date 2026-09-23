@@ -122,7 +122,11 @@ class EntityRelationController extends Controller
      */
     private function siteEntities()
     {
+        // 关系语言中性、权威边 from/to 指向默认语言行（GeoGraph/Catalog 按
+        // translation_group 自动映射其他语言）。下拉只列默认语言权威行，避免同一逻辑
+        // 实体出现多语言选项、误选非默认行导致建边后关系不生效。
         return Entity::query()
+            ->where('locale', \App\Support\Localization\LocaleRegistry::default())
             ->orderBy('type')->orderBy('sort_order')->orderBy('id')
             ->get();
     }

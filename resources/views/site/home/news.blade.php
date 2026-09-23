@@ -4,11 +4,11 @@
   <div class="wrap">
     <div class="sec-head row">
       <div>
-        <span class="eyebrow">NEWS · 新闻动态</span>
-        <h2 class="sec-h">{{ $blk->title ?: '企业动态与产品更新' }}</h2>
+        <span class="eyebrow">{{ __('ui.eyebrow_news') }}</span>
+        <h2 class="sec-h">{{ $blk->title ?: __('ui.home_news_title') }}</h2>
         <p class="sec-sub">{{ $blk->subtitle }}</p>
       </div>
-      <a class="btn-text" href="{{ url('/news/') }}">查看全部动态<span class="arr">→</span></a>
+      <a class="btn-text" href="{{ url('/news/') }}">{{ __('ui.home_news_btn') }}<span class="arr">→</span></a>
     </div>
     <div class="posts">
       @foreach($newsItems as $c)

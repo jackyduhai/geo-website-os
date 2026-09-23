@@ -552,3 +552,15 @@ th .size-tag{font-weight:400}
   .nav-group-head{height:30px;font-size:13px}
   .nav-sub-link{height:40px;line-height:40px;font-size:14px}
 }
+
+/* 语言版本 Tabs（P-STEP 18F 内容 / 实体翻译） */
+.locale-tabs{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 16px;}
+.locale-tabs .lt-link,.locale-tabs .lt-cur{display:inline-flex;align-items:center;gap:6px;
+  padding:8px 14px;border-radius:8px;font-size:14px;font-weight:600;border:1px solid #d8dee6;}
+.locale-tabs .lt-link{color:#3a4658;background:#fff;text-decoration:none;
+  transition:border-color .15s,color .15s;}
+.locale-tabs .lt-link:hover{border-color:#2563eb;color:#2563eb;}
+.locale-tabs .lt-cur{color:#2563eb;background:#eff4ff;border-color:#2563eb;}
+.locale-tabs .lt-state{font-size:12px;font-weight:700;}
+.locale-tabs .lt-state.todo{color:#9aa5b5;}
+.locale-tabs .lt-state.done{color:#16a34a;}

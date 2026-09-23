@@ -32,15 +32,20 @@ class SettingSeeder extends Seeder
         $overrides = [
             // 基础 / 导航
             'site_name'        => $siteName,
+            'site_supported_locales' => ['zh-CN', 'en'],
             'site_description' => '示例制造有限公司专注工业涂料、结构胶粘剂与功能性助剂的研发与生产，'
                 . '提供从配方定制、打样到稳定量产的 OEM/ODM 代工与供货服务。',
             'nav_cta_text'     => '获取产品方案',
             'contact_hours'    => '周一至周五 9:00 - 18:00',
+            'contact_hours_en' => 'Monday to Friday 9:00 - 18:00',
 
             // SEO / GEO
             'seo_title_suffix' => $siteName,
             'seo_default_desc' => '示例制造有限公司，工业涂料、结构胶粘剂与功能性助剂源头工厂，'
                 . '支持配方定制、打样与 OEM/ODM 代工，按规格参数稳定供货。',
+            'seo_default_en_desc' => 'Example Manufacturing Co., Ltd., a source factory for industrial '
+                . 'coatings, structural adhesives and functional additives, offering formulation '
+                . 'customization, sampling and OEM/ODM, with stable supply to specification.',
             'geo_org_name'     => $siteName,
             'geo_org_en_name'  => $enName,
 

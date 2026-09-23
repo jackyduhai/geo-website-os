@@ -4,11 +4,11 @@
   <div class="wrap">
     <div class="sec-head row">
       <div>
-        <span class="eyebrow">COOPERATION · 合作方式</span>
-        <h2 class="sec-h">{{ $blk->title ?: count($coopModes).' 种合作方式，按需选择' }}</h2>
-        <p class="sec-sub">{{ $blk->subtitle ?: '多种合作路径，满足不同业务需求。' }}</p>
+        <span class="eyebrow">{{ __('ui.eyebrow_cooperation') }}</span>
+        <h2 class="sec-h">{{ $blk->title ?: __('ui.coop_h1', ['count' => count($coopModes)]) }}</h2>
+        <p class="sec-sub">{{ $blk->subtitle ?: __('ui.home_coop_sub') }}</p>
       </div>
-      <a class="btn-text" href="{{ url('/cooperation/') }}">合作流程与常见问题<span class="arr">→</span></a>
+      <a class="btn-text" href="{{ url('/cooperation/') }}">{{ __('ui.home_coop_btn') }}<span class="arr">→</span></a>
     </div>
     <div class="home-coop">
       @foreach($coopModes as $m)
@@ -28,7 +28,7 @@
               @foreach($m['points'] as $pt)<li>{{ $pt }}</li>@endforeach
             </ul>
           @endif
-          <a class="btn-text" href="{{ $mLink }}">{{ $m['cta'] ?? '了解合作方式' }}<span class="arr">→</span></a>
+          <a class="btn-text" href="{{ $mLink }}">{{ $m['cta'] ?? __('ui.home_coop_more') }}<span class="arr">→</span></a>
         </div>
       @endforeach
     </div>

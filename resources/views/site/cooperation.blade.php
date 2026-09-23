@@ -5,8 +5,8 @@
 @section('content')
 <section class="page-hero">
   <div class="wrap-narrow">
-    <span class="eyebrow">COOPERATION · 合作方式</span>
-    <h1 class="ph-h">{{ count($coop['types']) }} 种合作方式，按需选择</h1>
+    <span class="eyebrow">{{ __('ui.eyebrow_cooperation') }}</span>
+    <h1 class="ph-h">{{ __('ui.coop_h1', ['count' => count($coop['types'])]) }}</h1>
     <p class="ph-lead">{{ $lead }}</p>
   </div>
 </section>
@@ -35,8 +35,8 @@
 <section class="sec sec-tint">
   <div class="wrap">
     <div class="sec-head center">
-      <span class="eyebrow">PROCESS · 合作流程</span>
-      <h2 class="sec-h">{{ count($coop['process']) }} 步走完，从沟通到持续供货</h2>
+      <span class="eyebrow">{{ __('ui.eyebrow_process') }}</span>
+      <h2 class="sec-h">{{ __('ui.process_h2', ['count' => count($coop['process'])]) }}</h2>
     </div>
     @include('site._process_steps', [
       'steps' => array_map(fn($s) => ['title' => $s['name'], 'text' => $s['desc']], $coop['process']),
@@ -50,7 +50,7 @@
 @if(!empty($faqs))
 <section class="sec">
   <div class="wrap-narrow">
-    <div class="sec-head center"><span class="eyebrow">FAQ · 常见问题</span><h2 class="sec-h">合作前，你可能想先确认这些</h2></div>
+    <div class="sec-head center"><span class="eyebrow">{{ __('ui.eyebrow_faq') }}</span><h2 class="sec-h">{{ __('ui.coop_faq_h2') }}</h2></div>
     @include('site._faq_list', ['faqs' => $faqs])
   </div>
 </section>

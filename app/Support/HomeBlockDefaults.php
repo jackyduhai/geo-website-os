@@ -65,7 +65,7 @@ class HomeBlockDefaults
                 'title'  => $m['name'] ?? ($m['title'] ?? ''),
                 'text'   => $m['fit'] ?? ($m['desc'] ?? ''),
                 'points' => $m['includes'] ?? ($m['points'] ?? []),
-                'cta'    => $m['cta'] ?? '了解合作方式',
+                'cta'    => $m['cta'] ?? __('ui.cooperation_cta'),
                 'link'   => url('/cooperation/'),
             ];
         }, Catalog::cooperation()['types'] ?? []);
@@ -89,7 +89,7 @@ class HomeBlockDefaults
                 'title' => $case['title'],
                 'sub'   => $case['region_label'] ?? '',
                 'tags'  => $tags,
-                'text'  => $tags ? '使用组合：' . implode('、', $tags) : '',
+                'text'  => $tags ? __('ui.case_combo_label') . implode(__('ui.case_combo_sep'), $tags) : '',
             ];
         }
         return $out;
@@ -118,12 +118,21 @@ class HomeBlockDefaults
     }
 
     /**
-     * S03 能力点：出厂缺省为空（行业中立）。
-     * Example 演示站的能力点由 Demo StructureSeeder 写入 capabilities 区块 content.items，
-     * 后台也可在「首页装修」中自定义；不在核心模板内置任何行业条目。
+     * S03 能力点：缺省从合作方式（Catalog，当前 locale）投影前三项；空站无 Catalog
+     * 生产数据时返回空、区块不渲染。Example Demo 与自定义站点都无需写死条目，
+     * 后台也可在「首页装修」中覆盖。
      */
     public static function capabilities(): array
     {
-        return [];
+        $types = Catalog::cooperation()['types'] ?? [];
+
+        return array_map(
+            fn ($m) => [
+                'icon'  => 'check',
+                'title' => $m['name'] ?? '',
+                'text'  => $m['fit'] ?? ($m['desc'] ?? ''),
+            ],
+            array_slice($types, 0, 3)
+        );
     }
 }

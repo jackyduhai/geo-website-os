@@ -325,7 +325,8 @@ class CatalogRelationAuthorityTest extends TestCase
 
         // 管理员在后台新建一个场景实体，并把核心产品关联到该场景（仅建边，不动 metadata）
         $newScene = $this->entity('service', 'custom-scene-x', '定制场景 X-Ray');
-        $epoxy = Entity::where('slug', 'epoxy-primer-100')->firstOrFail();
+        // 关系权威边 from/to 必须指向默认语言(zh-CN)行 id（见 Catalog::relationMap 契约）
+        $epoxy = Entity::where('slug', 'epoxy-primer-100')->where('locale', 'zh-CN')->firstOrFail();
         $this->relate($epoxy, $newScene, 'uses');
         Catalog::flush();
 

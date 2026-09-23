@@ -9,7 +9,7 @@
       if ($prod) $comboNames[] = $prod['short_name'] ?? $prod['name'];
   }
   $reveal = $sc['hover_reveal'] ?? ($sc['key_param_display'] ?? '');
-  $ctaText = ($fullCta ?? false) ? '查看完整组合与参数' : '看看这类场景用什么';
+  $ctaText = ($fullCta ?? false) ? __('ui.scene_go_full') : __('ui.scene_go');
 @endphp
 <a class="scene-card" href="{{ url('/solutions/' . $sc['slug'] . '/') }}">
   <span class="sc-top" aria-hidden="true"></span>

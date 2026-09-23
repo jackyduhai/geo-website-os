@@ -8,6 +8,8 @@ use App\Models\Entity;
 use App\Models\Setting;
 use App\Services\Seo\SeoMetaResolver;
 use App\Services\Seo\SeoResult;
+use App\Support\Localization\LocaleContext;
+use App\Support\Localization\LocaleRegistry;
 use App\Support\PublicUrl;
 use App\Support\SiteContext;
 use Illuminate\Support\Str;
@@ -48,12 +50,20 @@ class SchemaBuilder
     {
         $site = SiteContext::currentSite();
 
+        if (LocaleContext::current() !== LocaleRegistry::default()) {
+            return $this->setting('geo_org_en_name') ?: (string) ($site?->name ?? '');
+        }
+
         return $this->setting('geo_org_name') ?: (string) ($site?->name ?? '');
     }
 
     protected function siteName(): string
     {
         $site = SiteContext::currentSite();
+
+        if (LocaleContext::current() !== LocaleRegistry::default()) {
+            return $this->setting('geo_org_en_name') ?: (string) ($site?->name ?? '');
+        }
 
         return $this->setting('site_name') ?: (string) ($site?->name ?? '');
     }
@@ -63,6 +73,18 @@ class SchemaBuilder
         // 与 PublicUrl / canonical 同源：真实 HTTP 用请求 origin（多站 / 反代可达），
         // CLI / 队列回退当前站点 domain（https），再回退 app.url。
         return PublicUrl::base();
+    }
+
+    protected function locale(): string
+    {
+        return LocaleContext::current();
+    }
+
+    protected function localePrefix(): string
+    {
+        $p = LocaleRegistry::prefix($this->locale());
+
+        return $p !== '' ? '/' . $p : '';
     }
 
     /** Site.metadata 通用扩展读取 */
@@ -89,7 +111,11 @@ class SchemaBuilder
             'url'      => $this->baseUrl() . '/',
         ];
 
-        if ($en = $this->setting('geo_org_en_name')) {
+        if ($this->locale() !== LocaleRegistry::default()) {
+            if ($zh = $this->setting('geo_org_name')) {
+                $data['alternateName'] = $zh;
+            }
+        } elseif ($en = $this->setting('geo_org_en_name')) {
             $data['alternateName'] = $en;
         }
 
@@ -106,18 +132,22 @@ class SchemaBuilder
 
         $data += $this->organizationAddress($ext);
 
-        if (! empty($ext['legal_name'])) {
-            $data['legalName'] = (string) $ext['legal_name'];
+        $legalName = $this->setting('geo_org_name') ?: (string) ($ext['legal_name'] ?? '');
+        if ($legalName !== '') {
+            $data['legalName'] = $legalName;
         }
 
         if (! empty($ext['founding_date'])) {
             $data['foundingDate'] = (string) $ext['founding_date'];
         }
 
-        if (! empty($ext['area_served']) && is_array($ext['area_served'])) {
+        $servedRegions = $this->locale() !== LocaleRegistry::default()
+            ? (\App\Support\Catalog::salesRegions() ?: (array) ($ext['area_served'] ?? []))
+            : (array) ($ext['area_served'] ?? []);
+        if (! empty($servedRegions)) {
             $data['areaServed'] = array_map(
                 fn ($r) => ['@type' => 'Place', 'name' => (string) $r],
-                array_values($ext['area_served'])
+                array_values($servedRegions)
             );
         }
 
@@ -129,19 +159,31 @@ class SchemaBuilder
                 'telephone'   => $contactTel,
                 'contactType' => 'customer service',
                 'areaServed'  => 'CN',
-                'availableLanguage' => ['zh-CN'],
+                'availableLanguage' => $this->locale() !== LocaleRegistry::default() ? ['en'] : ['zh-CN'],
             ]];
         }
 
-        if (! empty($ext['knows_about']) && is_array($ext['knows_about'])) {
-            $data['knowsAbout'] = array_values(array_map('strval', $ext['knows_about']));
+        $knows = $this->locale() !== LocaleRegistry::default()
+            ? array_merge(
+                collect(\App\Support\Catalog::productLines())->pluck('name')->take(4)->filter()->values()->all(),
+                ['OEM/ODM Custom Manufacturing']
+            )
+            : (array) ($ext['knows_about'] ?? []);
+        if (! empty($knows)) {
+            $data['knowsAbout'] = array_values(array_map('strval', $knows));
         }
 
         if (! empty($ext['same_as']) && is_array($ext['same_as'])) {
             $data['sameAs'] = array_values(array_map('strval', $ext['same_as']));
         }
 
-        if ($desc = $this->setting('site_description')) {
+        if ($this->locale() !== LocaleRegistry::default()) {
+            $desc = (string) (\App\Support\Catalog::company()['summary'] ?? '');
+        } else {
+            $desc = (string) (SiteContext::currentSite()?->description ?? '')
+                ?: $this->setting('site_description');
+        }
+        if ($desc !== '') {
             $data['description'] = $desc;
         }
 
@@ -151,6 +193,21 @@ class SchemaBuilder
     /** 组织地址：Setting 街道 + metadata 补充行政区的通用组合，不含任何业务硬编码 */
     protected function organizationAddress(array $ext): array
     {
+        if ($this->locale() !== LocaleRegistry::default()) {
+            $enCompany = \App\Support\Catalog::company();
+            $enFull = (string) ($enCompany['address']['full'] ?? '');
+            if ($enFull === '') {
+                return [];
+            }
+            $enCountry = (string) ($enCompany['address']['country'] ?? 'CN');
+
+            return ['address' => [
+                '@type'          => 'PostalAddress',
+                'streetAddress'  => $enFull,
+                'addressCountry' => $enCountry !== '' ? $enCountry : 'CN',
+            ]];
+        }
+
         $extAddress = is_array($ext['address'] ?? null) ? $ext['address'] : [];
 
         $street = $this->setting('contact_address') ?: (string) ($extAddress['street'] ?? '');
@@ -178,14 +235,14 @@ class SchemaBuilder
             '@type'           => 'WebSite',
             '@id'             => $this->baseUrl() . '/#website',
             'name'            => $this->siteName(),
-            'url'             => $this->baseUrl() . '/',
-            'inLanguage'      => 'zh-CN',
+            'url'             => $this->baseUrl() . $this->localePrefix() . '/',
+            'inLanguage'      => $this->locale(),
             'publisher'       => ['@id' => $this->baseUrl() . '/#organization'],
             'potentialAction' => [
                 '@type'       => 'SearchAction',
                 'target'      => [
                     '@type'       => 'EntryPoint',
-                    'urlTemplate' => $this->baseUrl() . '/search?q={search_term_string}',
+                    'urlTemplate' => $this->baseUrl() . $this->localePrefix() . '/search?q={search_term_string}',
                 ],
                 'query-input' => 'required name=search_term_string',
             ],
@@ -208,7 +265,7 @@ class SchemaBuilder
             'headline'         => $seo->title,
             'name'             => $seo->title,
             'description'      => $seo->description,
-            'inLanguage'       => 'zh-CN',
+            'inLanguage'       => $this->locale(),
             'mainEntityOfPage' => [
                 '@type' => 'WebPage',
                 '@id'   => PublicUrl::content($c),
@@ -268,7 +325,7 @@ class SchemaBuilder
             '@id'        => ($publicUrl ?? PublicUrl::home()) . '#' . $e->type . '-' . $e->slug,
             'name'       => $seo->title,
             'description' => $seo->description,
-            'inLanguage' => 'zh-CN',
+            'inLanguage' => $this->locale(),
         ];
 
         // 仅当实体有真实前台落地页时才输出 url；组织 / 人物 / 地点 / 主题、非核心
@@ -395,8 +452,37 @@ class SchemaBuilder
             'name'        => $cat->seo_title ?: $cat->name,
             'description' => $cat->description,
             'url'         => $url,
-            'inLanguage'  => 'zh-CN',
+            'inLanguage'  => $this->locale(),
         ]);
+    }
+
+    /**
+     * 通用 WebPage 节点（内页统一页面实体，承载 inLanguage / isPartOf）。
+     *
+     * @param  string       $url     规范 URL（绝对）
+     * @param  string       $name    页面名（SEO title 主体）
+     * @param  string       $desc    页面描述
+     * @param  string       $type    WebPage / CollectionPage / AboutPage / ContactPage
+     * @param  string|null  $mainId  主实体 @id（ItemList / Product 等）
+     */
+    public function webPage(string $url, string $name, string $desc = '', string $type = 'WebPage', ?string $mainId = null): array
+    {
+        $node = array_filter([
+            '@context'    => 'https://schema.org',
+            '@type'       => $type,
+            '@id'         => $url . '#webpage',
+            'name'        => $name,
+            'description' => $desc,
+            'url'         => $url,
+            'inLanguage'  => $this->locale(),
+            'isPartOf'    => ['@id' => PublicUrl::home() . '#website'],
+        ]);
+
+        if ($mainId !== null && $mainId !== '') {
+            $node['mainEntity'] = ['@id' => $mainId];
+        }
+
+        return $node;
     }
 
     // ---------------------------------------------------------------

@@ -213,4 +213,17 @@ class GeoGraphTest extends TestCase
         $this->assertSame('https://example.com/about-page', $node['canonical']);
         $this->assertSame('https://example.com/about-page', $node['url']);
     }
+
+    public function test_graph_emits_unescaped_unicode_for_ai_friendly_output(): void
+    {
+        Entity::create([
+            'site_id' => $this->site->id, 'type' => 'organization', 'slug' => 'example-org',
+            'name' => '示例制造有限公司', 'status' => 'published',
+        ]);
+
+        $raw = $this->get('/geo.json')->assertOk()->getContent();
+
+        $this->assertStringContainsString('示例制造有限公司', $raw, 'geo.json 中文应直出（JSON_UNESCAPED_UNICODE），便于 AI 直接读取');
+        $this->assertStringNotContainsString('\u793a', $raw, '中文不应被 Unicode 转义');
+    }
 }

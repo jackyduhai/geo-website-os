@@ -16,10 +16,10 @@
   $heroCustomers = implode('、', array_slice($company['target_customers'] ?? [], 0, 3));
   $heroBrand = $company['brand'] ?? ($company['name'] ?? config('app.name'));
   $heroCapacity = number_format((int) ($company['annual_capacity_tons'] ?? 0));
-  $defaultKicker = $heroBrand . ($heroYears > 0 ? ' · 深耕行业 ' . $heroYears . ' 年' : '');
+  $defaultKicker = $heroBrand . ($heroYears > 0 ? __('ui.hero_kicker_years', ['years' => $heroYears]) : '');
 
   // 行业中立兜底：标题默认即品牌 / 站点名，不内置任何行业话术。
-  $defaultTitle = $heroBrand . ' 官方网站';
+  $defaultTitle = __('ui.hero_title_tpl', ['brand' => $heroBrand]);
   $heroTitle = $blk->title ?? null;
   if (blank($heroTitle) || trim((string) $heroTitle) === trim((string) $siteName)) {
       $heroTitle = $defaultTitle;
@@ -30,15 +30,16 @@
   $leadParts = [];
   $heroArea = (int) ($company['area_sqm'] ?? 0);
   $heroCapacityTons = (int) ($company['annual_capacity_tons'] ?? 0);
-  if ($heroArea > 0) { $leadParts[] = '自有约 ' . number_format($heroArea) . ' ㎡ 场地'; }
-  if ($heroWsCount > 0) { $leadParts[] = $heroWsCount . ' 个生产设施'; }
-  if ($heroCapacityTons > 0) { $leadParts[] = '年产能约 ' . number_format($heroCapacityTons) . ' 吨'; }
-  if ($heroCustomers !== '') { $leadParts[] = '为' . $heroCustomers . '等客户提供产品与服务'; }
-  if ($heroRegionCount > 0) { $leadParts[] = '销售覆盖全国 ' . $heroRegionCount . ' 大区域'; }
-  $blankLead = trim((string) ($siteSettings['site_description'] ?? '')) !== ''
-      ? trim((string) $siteSettings['site_description'])
-      : '欢迎访问' . $heroBrand . '官网，在这里了解我们的产品、方案与服务。';
-  $defaultLead = $leadParts !== [] ? implode('，', $leadParts) . '。' : $blankLead;
+  if ($heroArea > 0) { $leadParts[] = __('ui.hero_lead_area', ['area' => number_format($heroArea)]); }
+  if ($heroWsCount > 0) { $leadParts[] = __('ui.hero_lead_ws', ['count' => $heroWsCount]); }
+  if ($heroCapacityTons > 0) { $leadParts[] = __('ui.hero_lead_capacity', ['capacity' => number_format($heroCapacityTons)]); }
+  if ($heroCustomers !== '') { $leadParts[] = __('ui.hero_lead_customers', ['customers' => $heroCustomers]); }
+  if ($heroRegionCount > 0) { $leadParts[] = __('ui.hero_lead_regions', ['count' => $heroRegionCount]); }
+  $coSummary = trim((string) (\App\Support\Catalog::company()['summary'] ?? ''));
+  $blankLead = $coSummary !== ''
+      ? $coSummary
+      : __('ui.hero_welcome', ['brand' => $heroBrand]);
+  $defaultLead = $leadParts !== [] ? implode(\App\Support\Localization\LocaleContext::current() === 'en' ? ', ' : '，', $leadParts) . (\App\Support\Localization\LocaleContext::current() === 'en' ? '.' : '。') : $blankLead;
   $heroLead = trim((string) ($blkCfg['lead'] ?? '')) !== '' ? trim((string) $blkCfg['lead']) : $defaultLead;
 
   // B 模式可用 Banner：必须有图；控制器已按启用 + 投放位置=home_top 过滤
@@ -59,7 +60,7 @@
   @php $hbCount = $hbList->count(); $hbId = 'hbanner'; @endphp
   <section class="hb" id="top"
            data-autoplay="{{ $heroAutoplay ? '1' : '0' }}"
-           aria-label="首屏轮播">
+           aria-label="{{ __('ui.aria_hero_carousel') }}">
     <div class="hb-track" id="{{ $hbId }}">
       @foreach($hbList as $i => $b)
         @php
@@ -70,7 +71,7 @@
           $visibleTitle = $rawTitle !== '' ? $rawTitle : ($i === 0 ? $heroTitle : '');
           $altText = $rawTitle !== '' ? $rawTitle : $heroTitle;
           $bLink = trim((string) ($b->link ?? ''));
-          $bLinkText = trim((string) ($b->link_text ?? '')) ?: '了解详情';
+          $bLinkText = trim((string) ($b->link_text ?? '')) ?: __('ui.learn_details');
           $bBlank = (int) ($b->target ?? 0) === 1;
           $href = $bLink !== '' ? (preg_match('~^(https?:|tel:|/#|/)~', $bLink) ? (str_starts_with($bLink, '/') ? url($bLink) : $bLink) : url('/' . ltrim($bLink, '/'))) : null;
         @endphp
@@ -105,7 +106,7 @@
                     <a class="btn btn-primary btn-lg" href="{{ $href }}" @if($bBlank) target="_blank" rel="noopener" @endif>
                       {{ $bLinkText }}<span class="arr">→</span>
                     </a>
-                    <a class="btn btn-ghost btn-lg" href="{{ url('/contact/') }}">联系我们</a>
+                    <a class="btn btn-ghost btn-lg" href="{{ url('/contact/') }}">{{ __('ui.contact_us') }}</a>
                   </div>
                 @endif
               </div>
@@ -118,10 +119,10 @@
       @endforeach
     </div>
     @if($hbCount > 1)
-      <div class="hb-dots" role="tablist" aria-label="轮播切换">
+      <div class="hb-dots" role="tablist" aria-label="{{ __('ui.aria_carousel_dots') }}">
         @foreach($hbList as $i => $b)
           <button type="button" class="hb-dot @if($i===0) on @endif" data-target="{{ $i }}"
-                  role="tab" aria-label="第 {{ $i + 1 }} 张"></button>
+                  role="tab" aria-label="{{ __('ui.slide_n', ['n' => $i + 1]) }}"></button>
         @endforeach
       </div>
     @endif
@@ -151,7 +152,7 @@
   {{-- ============================ C · 一体化主视觉：一张图=一个主题，图文按钮一起交叉淡入 ============================ --}}
   @php
     $cCount = $hbList->count();
-    $defaultCta = $ctaText ?? (config('copy.nav.cta') ?? '联系我们');
+    $defaultCta = $ctaText ?? (config('copy.nav.cta') ?? __('ui.contact_us'));
     // 逐幻灯解析：标题/正文/按钮各自独立，留空回退默认口径（整页唯一 H1 取第一张）
     $cSlides = $hbList->map(function ($cb, $ci) use ($heroTitle, $heroLead, $defaultCta) {
         $t = trim((string) ($cb->title ?? ''));
@@ -169,7 +170,7 @@
         ];
     })->values();
   @endphp
-  <section class="hero-int reveal in" id="top" data-autoplay="{{ $heroAutoplay ? '1' : '0' }}" aria-label="首屏">
+  <section class="hero-int reveal in" id="top" data-autoplay="{{ $heroAutoplay ? '1' : '0' }}" aria-label="{{ __('ui.aria_hero') }}">
     <div class="hi-panel">
       {{-- 背景图层叠放，交叉淡入；羽化 mask 加在容器上，避免逐张羽化抖动 --}}
       <div class="hi-bgstack" aria-hidden="true">
@@ -200,31 +201,31 @@
                 <p class="hi-lead">{{ $cs['lead'] }}</p>
                 <div class="hi-actions">
                   <a class="btn btn-primary btn-lg" href="{{ $cs['href'] }}">{{ $cs['cta'] }}<span class="arr">→</span></a>
-                  <a class="btn hi-ghost btn-lg" href="{{ url('/contact/') }}">联系我们</a>
+                  <a class="btn hi-ghost btn-lg" href="{{ url('/contact/') }}">{{ __('ui.contact_us') }}</a>
                   @if(!empty($navPhone))
-                    <a class="hi-tel" href="tel:{{ $navPhoneTel }}">致电 {{ $navPhone }}</a>
+                    <a class="hi-tel" href="tel:{{ $navPhoneTel }}">{{ __('ui.call_phone', ['phone' => $navPhone]) }}</a>
                   @endif
                 </div>
               </div>
             @endforeach
           </div>
           <ul class="hi-trust">
-            <li>@include('site._icon', ['name' => 'clock', 'size' => 16]) {{ $heroYears > 0 ? '深耕行业 ' . $heroYears . ' 年' : '多年行业经验' }}</li>
-            <li>@include('site._icon', ['name' => 'sliders', 'size' => 16]) 按需定制 · 快速响应</li>
+            <li>@include('site._icon', ['name' => 'clock', 'size' => 16]) {{ $heroYears > 0 ? __('ui.hero_badge_years', ['years' => $heroYears]) : __('ui.hero_badge_exp') }}</li>
+            <li>@include('site._icon', ['name' => 'sliders', 'size' => 16]) {{ __('ui.hero_badge_custom') }}</li>
             @if($heroWsCount > 0 || $heroCapacityTons > 0)
-              <li>@include('site._icon', ['name' => 'factory', 'size' => 16]) {{ $heroWsCount }} 个生产设施 · 年产能约 {{ $heroCapacity }} 吨</li>
+              <li>@include('site._icon', ['name' => 'factory', 'size' => 16]) {{ __('ui.hero_badge_ws', ['count' => $heroWsCount, 'capacity' => $heroCapacity]) }}</li>
             @else
-              <li>@include('site._icon', ['name' => 'shield', 'size' => 16]) 品质可靠 · 用心服务</li>
+              <li>@include('site._icon', ['name' => 'shield', 'size' => 16]) {{ __('ui.hero_badge_quality') }}</li>
             @endif
           </ul>
         </div>
       </div>
       @if($cCount > 1)
         {{-- 多张：图文一起交叉淡入（圆点手动切换；自动播放由后台 autoplay 开关控制，默认关） --}}
-        <div class="hi-dots" role="tablist" aria-label="首屏幻灯切换">
+        <div class="hi-dots" role="tablist" aria-label="{{ __('ui.aria_hero_dots') }}">
           @foreach($hbList as $ci => $cb)
             <button type="button" class="hi-dot @if($ci === 0) on @endif" data-i="{{ $ci }}"
-                    role="tab" aria-label="第 {{ $ci + 1 }} 张"></button>
+                    role="tab" aria-label="{{ __('ui.slide_n', ['n' => $ci + 1]) }}"></button>
           @endforeach
         </div>
         <script nonce="{{ $cspNonce ?? '' }}">
@@ -261,35 +262,35 @@
         <h1 class="hero-title">{{ $heroTitle }}</h1>
         <p class="hero-lead">{{ $heroLead }}</p>
         <div class="actions">
-          <a class="btn btn-primary btn-lg" href="{{ url('/') }}#s08">{{ $ctaText ?? (config('copy.nav.cta') ?? '联系我们') }}<span class="arr">→</span></a>
-          <a class="btn btn-secondary btn-lg" href="{{ url('/contact/') }}">联系我们</a>
+          <a class="btn btn-primary btn-lg" href="{{ url('/') }}#s08">{{ $ctaText ?? (config('copy.nav.cta') ?? __('ui.contact_us')) }}<span class="arr">→</span></a>
+          <a class="btn btn-secondary btn-lg" href="{{ url('/contact/') }}">{{ __('ui.contact_us') }}</a>
           @if(!empty($navPhone))
-            <a class="btn-text btn-lg" href="tel:{{ $navPhoneTel }}">致电 {{ $navPhone }}</a>
+            <a class="btn-text btn-lg" href="tel:{{ $navPhoneTel }}">{{ __('ui.call_phone', ['phone' => $navPhone]) }}</a>
           @endif
         </div>
         <ul class="hero-trust">
-          <li>@include('site._icon', ['name' => 'clock', 'size' => 16]) {{ $heroYears > 0 ? '深耕行业 ' . $heroYears . ' 年' : '多年行业经验' }}</li>
-          <li>@include('site._icon', ['name' => 'sliders', 'size' => 16]) 按需定制 · 快速响应</li>
+          <li>@include('site._icon', ['name' => 'clock', 'size' => 16]) {{ $heroYears > 0 ? __('ui.hero_badge_years', ['years' => $heroYears]) : __('ui.hero_badge_exp') }}</li>
+          <li>@include('site._icon', ['name' => 'sliders', 'size' => 16]) {{ __('ui.hero_badge_custom') }}</li>
           @if($heroWsCount > 0 || $heroCapacityTons > 0)
-            <li>@include('site._icon', ['name' => 'factory', 'size' => 16]) {{ $heroWsCount }} 个生产设施 · 年产能约 {{ $heroCapacity }} 吨</li>
+            <li>@include('site._icon', ['name' => 'factory', 'size' => 16]) {{ __('ui.hero_badge_ws', ['count' => $heroWsCount, 'capacity' => $heroCapacity]) }}</li>
           @else
-            <li>@include('site._icon', ['name' => 'shield', 'size' => 16]) 品质可靠 · 用心服务</li>
+            <li>@include('site._icon', ['name' => 'shield', 'size' => 16]) {{ __('ui.hero_badge_quality') }}</li>
           @endif
         </ul>
       </div>
       <div class="hero-visual">
         @if(!empty($heroParams) || count($lines) > 0)
         @php $pcName = $heroProduct['short_name'] ?? ($heroProduct['name'] ?? ''); @endphp
-        <div class="param-card" aria-label="标准化参数示例{{ $pcName !== '' ? '：' . $pcName : '' }}">
+        <div class="param-card" aria-label="{{ $pcName !== '' ? __('ui.pc_title_name', ['name' => $pcName]) : __('ui.pc_title') }}">
           <div class="pc-head">
-            <strong>标准化参数示例{{ $pcName !== '' ? ' · ' . $pcName : '' }}</strong>
-            <span>典型参数示例，仅供参考</span>
+            <strong>{{ $pcName !== '' ? __('ui.pc_title_dot', ['name' => $pcName]) : __('ui.pc_title') }}</strong>
+            <span>{{ __('ui.pc_sub') }}</span>
           </div>
           <dl class="pc-body">
             @forelse($heroParams ?? [] as $hp)
               <div class="pc-row"><dt>{{ $hp['label'] }}</dt><dd>{{ $hp['value'] }}</dd></div>
             @empty
-              <div class="pc-row"><dt>参数</dt><dd>详见对应产品规格表</dd></div>
+              <div class="pc-row"><dt>{{ __('ui.pc_param') }}</dt><dd>{{ __('ui.pc_param_desc') }}</dd></div>
             @endforelse
           </dl>
           <div class="pc-foot">
@@ -298,7 +299,7 @@
                 <em>{{ is_array($line) ? ($line['name'] ?? '') : $line->name }}</em>
               @endforeach
             </div>
-            <a href="{{ url('/solutions/') }}">浏览应用场景 <span class="arr">→</span></a>
+            <a href="{{ url('/solutions/') }}">{{ __('ui.browse_scenes') }} <span class="arr">→</span></a>
           </div>
         </div>
         @endif

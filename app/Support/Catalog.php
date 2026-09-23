@@ -4,6 +4,8 @@ namespace App\Support;
 
 use App\Models\Entity;
 use App\Models\EntityRelation;
+use App\Support\Localization\LocaleContext;
+use App\Support\Localization\LocaleRegistry;
 use Illuminate\Support\Facades\Schema;
 
 /**
@@ -48,17 +50,28 @@ class Catalog
         return (int) SiteContext::currentSiteId();
     }
 
+    private static function locale(): string
+    {
+        return LocaleContext::current() ?: LocaleRegistry::default();
+    }
+
+    /** memo 键：站点 + 语言（同一站点不同语言数据集不同）。 */
+    private static function memoKey(): string
+    {
+        return self::siteId().':'.self::locale();
+    }
+
     /**
-     * 当前站点的目录数据集（与 config('facts') 同构）。
-     * 无 organization Entity（空站）时返回 []，所有派生方法随之返回空。
+     * 当前站点 + 语言的目录数据集（与 config('facts') 同构）。
+     * 无 organization Entity（空站 / 当前语言无译行）时返回 []，所有派生方法随之返回空。
      */
     private static function dataset(): array
     {
-        $siteId = self::siteId();
-        if (! array_key_exists($siteId, self::$datasetsBySite)) {
-            self::$datasetsBySite[$siteId] = self::buildDataset();
+        $key = self::memoKey();
+        if (! array_key_exists($key, self::$datasetsBySite)) {
+            self::$datasetsBySite[$key] = self::buildDataset();
         }
-        return self::$datasetsBySite[$siteId];
+        return self::$datasetsBySite[$key];
     }
 
     private static function buildDataset(): array
@@ -69,8 +82,26 @@ class Catalog
             return [];
         }
 
-        // 查询经 BelongsToSite::SiteScope 自动限定当前站点。
+        $locale = self::locale();
+        $defaultLocale = LocaleRegistry::default();
+
+        // 18F：关系权威边的基础语言。默认系统语言 zh-CN；若站点无该语言实体
+        // （en-only 站点）回退到站点默认语言（site_default_locale），关系边建立
+        // 在该语言行，避免硬依赖 zh-CN 行导致 Catalog 崩溃。
+        $baseLocale = $defaultLocale;
+        $hasBaseOrg = Entity::published()->forLocale($baseLocale)
+            ->ofType(Entity::TYPE_ORGANIZATION)->exists();
+        if (! $hasBaseOrg) {
+            $siteDefaultLocale = (string) \App\Models\Setting::get('site_default_locale', $defaultLocale);
+            if ($siteDefaultLocale !== $baseLocale && Entity::published()->forLocale($siteDefaultLocale)
+                ->ofType(Entity::TYPE_ORGANIZATION)->exists()) {
+                $baseLocale = $siteDefaultLocale;
+            }
+        }
+
+        // 查询经 BelongsToSite::SiteScope 自动限定当前站点；forLocale 限定语言行。
         $organization = Entity::published()
+            ->forLocale($locale)
             ->ofType(Entity::TYPE_ORGANIZATION)
             ->orderBy('sort_order')
             ->first();
@@ -79,24 +110,42 @@ class Catalog
             return [];
         }
 
-        $meta = $organization->metadata ?? [];
-
-        // 产品 / 场景（应用服务）实体
+        // 产品 / 场景（应用服务）实体（当前语言行，用于展示）
         $productEntities = Entity::published()
+            ->forLocale($locale)
             ->ofType(Entity::TYPE_PRODUCT)
             ->orderBy('sort_order')
             ->get();
         $sceneEntities = Entity::published()
+            ->forLocale($locale)
             ->ofType(Entity::TYPE_SERVICE)
             ->orderBy('sort_order')
             ->get();
 
+        // 关系权威边始终建在默认语言（zh-CN）行之间：当前语言非默认时额外取 zh 行
+        // 匹配边，再按 translation_group 把关系映射回当前语言行。
+        if ($locale === $baseLocale) {
+            $zhOrg = $organization;
+            $zhProductEntities = $productEntities;
+            $zhSceneEntities = $sceneEntities;
+        } else {
+            $zhOrg = Entity::published()->forLocale($baseLocale)
+                ->ofType(Entity::TYPE_ORGANIZATION)->first();
+            $zhProductEntities = Entity::published()->forLocale($baseLocale)
+                ->ofType(Entity::TYPE_PRODUCT)->orderBy('sort_order')->get();
+            $zhSceneEntities = Entity::published()->forLocale($baseLocale)
+                ->ofType(Entity::TYPE_SERVICE)->orderBy('sort_order')->get();
+        }
+
+        $meta = $organization->metadata ?? [];
+
         // P-STEP 18A / #114：实体间关系（适用场景 / 组合产品 / 相关产品 / 相邻场景 /
-        // 关键参数产品）统一由权威边表 EntityRelation 单向派生；Entity.metadata 里历史
-        // 遗留的 scenes / related / combo / adjacent / key_param_product slug 数组不再
-        // 作为前台关系来源（与 /geo.json 同源，后台维护关系后前台即时一致）。产品线
-        // line / product_lines 是组织 metadata 的配置分组（非实体关系），仍读 metadata。
-        $relationMap = self::relationMap($organization, $productEntities, $sceneEntities);
+        // 关键参数产品）统一由权威边表 EntityRelation 单向派生；产品线 line /
+        // product_lines 是组织 metadata 的配置分组（非实体关系），仍读 metadata。
+        $relationMap = self::relationMap(
+            $zhOrg, $zhProductEntities, $zhSceneEntities,
+            $productEntities, $sceneEntities, $locale === $baseLocale
+        );
 
         $products = $productEntities
             ->map(function (Entity $e) use ($relationMap) {
@@ -106,6 +155,7 @@ class Catalog
                         'slug'        => $e->slug,
                         'name'        => $e->name,
                         'summary'     => $e->summary,
+                        'tagline'     => $e->summary,
                         'description' => $e->description,
                     ]
                 ));
@@ -126,6 +176,7 @@ class Catalog
                         'slug'        => $e->slug,
                         'name'        => $e->name,
                         'summary'     => $e->summary,
+                        'desc'        => $e->summary,
                         'description' => $e->description,
                     ]
                 ));
@@ -153,41 +204,35 @@ class Catalog
 
         return [
             'company'        => self::normalizeCompany(is_array($meta['company'] ?? null) ? $meta['company'] : [], $organization),
-            'brand_language' => is_array($meta['brand_language'] ?? null) ? $meta['brand_language'] : [],
+            'brand_language' => self::normalizeBrandLanguage(is_array($meta['brand_language'] ?? null) ? $meta['brand_language'] : []),
             'product_lines'  => $productLines,
             'products'       => $products,
             'scenes'         => $scenes,
             'production'     => self::normalizeProduction(is_array($meta['production'] ?? null) ? $meta['production'] : []),
             'cooperation'    => self::normalizeCooperation(is_array($meta['cooperation'] ?? null) ? $meta['cooperation'] : []),
-            'cases'          => is_array($meta['cases'] ?? null) ? $meta['cases'] : [],
+            'cases'          => self::normalizeCases(is_array($meta['cases'] ?? null) ? $meta['cases'] : []),
             'compliance'     => is_array($meta['compliance'] ?? null) ? $meta['compliance'] : [],
         ];
     }
 
     /**
-     * P-STEP 18A / #114：从权威边表 EntityRelation 单向派生 Catalog 关系读模型。
+     * P-STEP 18A / #114 + 18F：从权威边表 EntityRelation 单向派生 Catalog 关系读模型。
      *
-     * 返回按 slug 索引的关系集合（仅保留两端在当前站点均已发布、且类型匹配的边）：
-     *   - product_scenes  ：product -uses-> service（产品适用场景）
-     *   - scene_combo     ：service -uses-> product（场景组合产品；metadata.role=key_param
-     *                       的边额外给出关键参数产品及其展示文案）
-     *   - product_related ：product -related_to-> product（相关产品）
-     *   - scene_adjacent  ：service -related_to-> service（相邻场景）
+     * 关系权威边始终指向默认语言（zh-CN）行 id：$zh* 用于匹配边，$products/$scenes
+     * 为当前语言行，按 translation_group 把关系映射为当前语言 slug 输出。任一端在当前
+     * 语言无翻译行时该关系项省略（无译→不展示，不产生指向不存在页面的关系）。
      *
      * 方向性：uses 是有向边，不做对称推断；产品「适用场景」与场景「组合产品」是两条
      * 独立边，必须各自显式存在。组织 produces / offers 边不进入前台目录关系区块。
      */
-    private static function relationMap(Entity $organization, $productEntities, $sceneEntities): array
-    {
-        $published = [];
-        foreach ($productEntities as $e) {
-            $published[(int) $e->id] = [Entity::TYPE_PRODUCT, $e->slug];
-        }
-        foreach ($sceneEntities as $e) {
-            $published[(int) $e->id] = [Entity::TYPE_SERVICE, $e->slug];
-        }
-        $published[(int) $organization->id] = [Entity::TYPE_ORGANIZATION, $organization->slug];
-
+    private static function relationMap(
+        ?Entity $zhOrganization,
+        $zhProductEntities,
+        $zhSceneEntities,
+        $productEntities,
+        $sceneEntities,
+        bool $isBaseLocale
+    ): array {
         $map = [
             'product_scenes'  => [],
             'scene_combo'     => [],
@@ -196,25 +241,53 @@ class Catalog
             'scene_key_param' => [],
         ];
 
-        // 关系表尚未迁移（安装极早期）时按「无关系」降级，不抛 SQL。
-        if (! Schema::hasTable((new EntityRelation())->getTable())) {
+        if (! Schema::hasTable((new EntityRelation())->getTable()) || ! $zhOrganization) {
             return $map;
         }
 
+        // zh 行 id => [type, translation_group]
+        $zhById = [];
+        foreach ($zhProductEntities as $e) {
+            $zhById[(int) $e->id] = [Entity::TYPE_PRODUCT, $e->translation_group];
+        }
+        foreach ($zhSceneEntities as $e) {
+            $zhById[(int) $e->id] = [Entity::TYPE_SERVICE, $e->translation_group];
+        }
+        $zhById[(int) $zhOrganization->id] = [Entity::TYPE_ORGANIZATION, $zhOrganization->translation_group];
+
+        // translation_group => 当前语言 slug
+        $currentSlugByGroup = [
+            Entity::TYPE_PRODUCT => [],
+            Entity::TYPE_SERVICE => [],
+        ];
+        foreach ($productEntities as $e) {
+            $currentSlugByGroup[Entity::TYPE_PRODUCT][$e->translation_group] = $e->slug;
+        }
+        foreach ($sceneEntities as $e) {
+            $currentSlugByGroup[Entity::TYPE_SERVICE][$e->translation_group] = $e->slug;
+        }
+
         $relations = EntityRelation::query()
-            ->where('site_id', $organization->site_id)
+            ->where('site_id', $zhOrganization->site_id)
             ->orderBy('sort_order')
             ->get();
 
         foreach ($relations as $relation) {
-            $from = $published[(int) $relation->from_entity_id] ?? null;
-            $to   = $published[(int) $relation->to_entity_id] ?? null;
+            $from = $zhById[(int) $relation->from_entity_id] ?? null;
+            $to   = $zhById[(int) $relation->to_entity_id] ?? null;
             if (! $from || ! $to) {
-                continue; // 任一端未发布 / 非本站目录类型，不进入前台关系
+                continue; // 端未发布 / 非本站目录类型
             }
 
-            [$fromType, $fromSlug] = $from;
-            [$toType, $toSlug]     = $to;
+            [$fromType, $fromGroup] = $from;
+            [$toType, $toGroup]     = $to;
+
+            // 映射当前语言 slug；org 端或当前语言无译行 → 跳过该关系
+            $fromSlug = $currentSlugByGroup[$fromType][$fromGroup] ?? null;
+            $toSlug   = $currentSlugByGroup[$toType][$toGroup] ?? null;
+            if ($fromSlug === null || $toSlug === null) {
+                continue;
+            }
 
             if ($relation->relation_type === EntityRelation::TYPE_USES) {
                 if ($fromType === Entity::TYPE_PRODUCT && $toType === Entity::TYPE_SERVICE) {
@@ -223,10 +296,10 @@ class Catalog
                     $map['scene_combo'][$fromSlug][] = $toSlug;
                     $relMeta = is_array($relation->metadata) ? $relation->metadata : [];
                     if (($relMeta['role'] ?? null) === 'key_param') {
-                        $map['scene_key_param'][$fromSlug] = [
-                            'slug'    => $toSlug,
-                            'display' => (string) ($relMeta['display'] ?? ''),
-                        ];
+                        // 当前语言即关系写入(base)语言时沿用手填 display；跨语言不沿用，
+                        // 置空让下游回退当前语言字段，避免把 base 语言文案泄漏到其他语言。
+                        $display = $isBaseLocale ? trim((string) ($relMeta['display'] ?? '')) : '';
+                        $map['scene_key_param'][$fromSlug] = ['slug' => $toSlug, 'display' => $display];
                     }
                 }
             } elseif ($relation->relation_type === EntityRelation::TYPE_RELATED_TO) {
@@ -255,10 +328,12 @@ class Catalog
     private static function normalizeCompany(array $c, Entity $organization): array
     {
         $address = is_array($c['address'] ?? null) ? $c['address'] : [];
+        $isEn = self::locale() !== LocaleRegistry::default();
 
         return array_replace([
             'name'                            => $organization->name,
             'name_en'                         => '',
+            'summary'                         => '',
             'brand'                           => '',
             'brand_en'                        => '',
             'short_name'                      => '',
@@ -305,12 +380,30 @@ class Catalog
                 'street'   => '',
                 'lat'      => null,
                 'lng'      => null,
-            ], $address),
-            // 标量强制类型 / 缺省，避免下游 (int) / 字符串拼接遇到 null 报错
-            'name' => $c['name'] ?? $organization->name,
-            'business_model' => is_array($c['business_model'] ?? null) ? $c['business_model'] : [],
-            'target_customers' => is_array($c['target_customers'] ?? null) ? $c['target_customers'] : [],
-        ]);
+            ], $address, $isEn && ! empty($c['address_en']) ? ['full' => $c['address_en']] : []),
+            // 名称以当前语言实体为权威（翻译字段），不读共享 metadata 内的中文公司名
+            'name' => $organization->name,
+            // 当前语言主体摘要（en 为英文行业描述）
+            'summary' => $organization->summary ?: $organization->description,
+            'business_model' => $isEn
+                ? (is_array($c['business_model_en'] ?? null) ? $c['business_model_en']
+                    : (is_array($c['business_model'] ?? null) ? $c['business_model'] : []))
+                : (is_array($c['business_model'] ?? null) ? $c['business_model'] : []),
+            'target_customers' => $isEn
+                ? (is_array($c['target_customers_en'] ?? null) ? $c['target_customers_en']
+                    : (is_array($c['target_customers'] ?? null) ? $c['target_customers'] : []))
+                : (is_array($c['target_customers'] ?? null) ? $c['target_customers'] : []),
+        ], $isEn ? array_filter([
+            'brand' => $c['brand_en'] ?? '',
+            'industry' => $c['industry_en'] ?? '',
+            'served_stores_display' => $c['served_stores_display_en'] ?? '',
+            'founded_display' => $c['founded_display_en'] ?? '',
+            'established_production_display' => $c['established_production_display_en'] ?? '',
+            'area_display' => $c['area_display_en'] ?? '',
+            'annual_capacity_display' => $c['annual_capacity_display_en'] ?? '',
+            'total_investment_display' => $c['total_investment_display_en'] ?? '',
+            'tech_experience_display' => $c['tech_experience_display_en'] ?? '',
+        ], static fn ($v) => $v !== '') : []);
     }
 
     private static function normalizeProduct(array $p): array
@@ -360,6 +453,13 @@ class Catalog
 
     private static function normalizeScene(array $s): array
     {
+        $isEn = self::locale() !== LocaleRegistry::default();
+
+        $painPoints = is_array($s['pain_points'] ?? null) ? $s['pain_points'] : [];
+        if ($isEn && is_array($s['pain_points_en'] ?? null)) {
+            $painPoints = $s['pain_points_en'];
+        }
+
         $n = array_replace([
             'id'                 => null,
             'title_q'            => '',
@@ -377,11 +477,19 @@ class Catalog
         ], $s, [
             'slug' => $s['slug'],
             'name' => $s['name'],
-            'pain_points' => is_array($s['pain_points'] ?? null) ? $s['pain_points'] : [],
+            'pain_points' => $painPoints,
             'combo' => is_array($s['combo'] ?? null) ? $s['combo'] : [],
             'adjacent' => is_array($s['adjacent'] ?? null) ? $s['adjacent'] : [],
             'order' => (int) ($s['order'] ?? 99),
         ]);
+
+        if ($isEn) {
+            foreach (['title_q' => 'title_q_en', 'combo_reason' => 'combo_reason_en',
+                      'key_param_display' => 'key_param_display_en', 'hover_reveal' => 'hover_reveal_en'] as $k => $enK) {
+                if (! empty($n[$enK])) { $n[$k] = $n[$enK]; }
+            }
+            if (! empty($s['desc_en'])) { $n['desc'] = $s['desc_en']; }
+        }
 
         // 场景描述同产品：缺省回退实体摘要，避免最小字段场景页 SEO 描述空白
         if (trim((string) ($n['desc'] ?? '')) === '') {
@@ -391,16 +499,45 @@ class Catalog
         return $n;
     }
 
+    private static function normalizeCases(array $cases): array
+    {
+        if (self::locale() === LocaleRegistry::default()) { return $cases; }
+        return array_map(static function ($case) {
+            if (! is_array($case)) { return $case; }
+            return array_replace($case, array_filter([
+                'title' => $case['title_en'] ?? '',
+                'region_label' => $case['region_label_en'] ?? '',
+                'quote' => $case['quote_en'] ?? '',
+            ], static fn ($v) => $v !== ''));
+        }, $cases);
+    }
+
+    private static function normalizeBrandLanguage(array $bl): array
+    {
+        if (self::locale() === LocaleRegistry::default()) { return $bl; }
+        return array_replace($bl, array_filter([
+            'slogan' => $bl['slogan_en'] ?? '',
+            'mission' => $bl['mission_en'] ?? '',
+            'values' => $bl['values_en'] ?? '',
+            'vision' => $bl['vision_en'] ?? '',
+        ], static fn ($v) => $v !== ''));
+    }
+
     private static function normalizeProductLine(array $l): array
     {
+        $isEn = self::locale() !== LocaleRegistry::default();
         return array_replace([
             'id'       => null,
             'name'     => '',
+            'name_en'  => '',
             'slug'     => '',
             'desc'     => '',
+            'desc_en'  => '',
             'order'    => 99,
             'featured' => false,
         ], $l, [
+            'name' => $isEn && ! empty($l['name_en']) ? $l['name_en'] : ($l['name'] ?? ''),
+            'desc' => $isEn && ! empty($l['desc_en']) ? $l['desc_en'] : ($l['desc'] ?? ''),
             'order' => (int) ($l['order'] ?? 99),
             'featured' => (bool) ($l['featured'] ?? false),
         ]);
@@ -408,22 +545,35 @@ class Catalog
 
     private static function normalizeProduction(array $p): array
     {
-        $workshops = array_map(static function ($w) {
+        $isEn = self::locale() !== LocaleRegistry::default();
+        $workshops = array_map(static function ($w) use ($isEn) {
             $w = is_array($w) ? $w : ['name' => (string) $w];
-            return array_replace([
-                'id'        => null,
-                'name'      => '',
-                'desc'      => '',
-                'image'     => null,
-                'image_alt' => '',
+            $n = array_replace([
+                'id'           => null,
+                'name'         => '',
+                'name_en'      => '',
+                'desc'         => '',
+                'desc_en'      => '',
+                'image'        => null,
+                'image_alt'    => '',
+                'image_alt_en' => '',
             ], $w);
+            if ($isEn) {
+                if ($n['name_en'] !== '') { $n['name'] = $n['name_en']; }
+                if ($n['desc_en'] !== '') { $n['desc'] = $n['desc_en']; }
+                if ($n['image_alt_en'] !== '') { $n['image_alt'] = $n['image_alt_en']; }
+            }
+            return $n;
         }, is_array($p['workshops'] ?? null) ? $p['workshops'] : []);
 
         $certs = is_array($p['certifications'] ?? null) ? $p['certifications'] : [];
 
         return [
             'workshops'     => $workshops,
-            'sales_regions' => is_array($p['sales_regions'] ?? null) ? $p['sales_regions'] : [],
+            'sales_regions' => $isEn
+                ? (is_array($p['sales_regions_en'] ?? null) ? $p['sales_regions_en']
+                    : (is_array($p['sales_regions'] ?? null) ? $p['sales_regions'] : []))
+                : (is_array($p['sales_regions'] ?? null) ? $p['sales_regions'] : []),
             'certifications' => [
                 'sc_license'      => $certs['sc_license'] ?? null,
                 'standard_code'   => $certs['standard_code'] ?? null,
@@ -439,7 +589,9 @@ class Catalog
      */
     private static function normalizeCooperation(array $c): array
     {
-        $types = array_map(static function ($t) {
+        $isEn = self::locale() !== LocaleRegistry::default();
+
+        $types = array_map(static function ($t) use ($isEn) {
             $t = is_array($t) ? $t : ['name' => (string) $t];
             return array_replace([
                 'id'       => null,
@@ -448,17 +600,25 @@ class Catalog
                 'includes' => [],
                 'cta'      => '',
             ], $t, [
-                'includes' => is_array($t['includes'] ?? null) ? $t['includes'] : [],
+                'name'     => $isEn && ! empty($t['name_en']) ? $t['name_en'] : ($t['name'] ?? ''),
+                'fit'      => $isEn && ! empty($t['fit_en']) ? $t['fit_en'] : ($t['fit'] ?? ''),
+                'cta'      => $isEn && ! empty($t['cta_en']) ? $t['cta_en'] : ($t['cta'] ?? ''),
+                'includes' => $isEn && is_array($t['includes_en'] ?? null) && $t['includes_en'] !== []
+                    ? $t['includes_en']
+                    : (is_array($t['includes'] ?? null) ? $t['includes'] : []),
             ]);
         }, is_array($c['types'] ?? null) ? $c['types'] : []);
 
-        $process = array_map(static function ($s) {
+        $process = array_map(static function ($s) use ($isEn) {
             $s = is_array($s) ? $s : ['name' => (string) $s];
             return array_replace([
                 'step' => null,
                 'name' => '',
                 'desc' => '',
-            ], $s);
+            ], $s, [
+                'name' => $isEn && ! empty($s['name_en']) ? $s['name_en'] : ($s['name'] ?? ''),
+                'desc' => $isEn && ! empty($s['desc_en']) ? $s['desc_en'] : ($s['desc'] ?? ''),
+            ]);
         }, is_array($c['process'] ?? null) ? $c['process'] : []);
 
         if ($types === [] && $process === []) {
@@ -545,15 +705,15 @@ class Catalog
     /** @return array<string,array> slug => product */
     public static function productMap(): array
     {
-        $siteId = self::siteId();
-        if (! array_key_exists($siteId, self::$productMapBySite)) {
+        $key = self::memoKey();
+        if (! array_key_exists($key, self::$productMapBySite)) {
             $map = [];
             foreach ((self::dataset()['products'] ?? []) as $p) {
                 $map[$p['slug']] = $p;
             }
-            self::$productMapBySite[$siteId] = $map;
+            self::$productMapBySite[$key] = $map;
         }
-        return self::$productMapBySite[$siteId];
+        return self::$productMapBySite[$key];
     }
 
     /** @return array<int,array> */
@@ -620,15 +780,15 @@ class Catalog
     /** @return array<string,array> slug => scene */
     public static function sceneMap(): array
     {
-        $siteId = self::siteId();
-        if (! array_key_exists($siteId, self::$sceneMapBySite)) {
+        $key = self::memoKey();
+        if (! array_key_exists($key, self::$sceneMapBySite)) {
             $map = [];
             foreach ((self::dataset()['scenes'] ?? []) as $s) {
                 $map[$s['slug']] = $s;
             }
-            self::$sceneMapBySite[$siteId] = $map;
+            self::$sceneMapBySite[$key] = $map;
         }
-        return self::$sceneMapBySite[$siteId];
+        return self::$sceneMapBySite[$key];
     }
 
     /** 场景按 order 排序 */

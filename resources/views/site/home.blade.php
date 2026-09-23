@@ -11,17 +11,22 @@
   @empty
     @php
       $blankName = $siteSettings['site_name'] ?? config('app.name');
-      $blankDesc = trim((string) ($siteSettings['site_description'] ?? ''));
+      // 描述优先当前语言组织摘要（站点隔离 + locale-aware），其次站点描述，最后 UI 兜底，
+      // 避免单语 site_description 直接泄漏到另一语言 / 另一站点。
+      $blankCompanySummary = trim((string) (\App\Support\Catalog::company()['summary'] ?? ''));
+      $blankDesc = $blankCompanySummary !== ''
+        ? $blankCompanySummary
+        : trim((string) ($siteSettings['site_description'] ?? ''));
     @endphp
     <section class="section"><div class="wrap">
       <span class="eyebrow">{{ config('app.name') }}</span>
       <h1>{{ $blankName }}</h1>
-      <p>{{ $blankDesc !== '' ? $blankDesc : '站点已就绪。在后台创建内容与实体、完成站点设置并发布后，首页将展示你的信息。' }}</p>
+      <p>{{ $blankDesc !== '' ? $blankDesc : __('ui.blank_home_lead') }}</p>
       <div class="actions">
         @if(! empty(\App\Support\Catalog::company()))
-          <a class="btn btn-primary" href="{{ url('/contact/') }}">联系我们<span class="arr">→</span></a>
+          <a class="btn btn-primary" href="{{ url('/contact/') }}">{{ __('ui.contact_us') }}<span class="arr">→</span></a>
         @endif
-        <a class="btn" href="{{ url('/knowledge/') }}">浏览内容<span class="arr">→</span></a>
+        <a class="btn" href="{{ url('/knowledge/') }}">{{ __('ui.browse_content') }}<span class="arr">→</span></a>
       </div>
     </div></section>
   @endforelse

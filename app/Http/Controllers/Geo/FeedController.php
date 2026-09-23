@@ -51,7 +51,7 @@ class FeedController extends Controller
     {
         return response()->json($builder->build(), 200, [
             'Cache-Control' => 'public, max-age=3600',
-        ]);
+        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     }
 
     public function robots()
@@ -114,15 +114,19 @@ class FeedController extends Controller
         // PublicIndex：published + 启用栏目 + 非 noindex + 当前站点，避免 RSS 泄漏
         // noindex / 停用栏目 / 他站文章。
         $items = \App\Support\PublicIndex::contentQuery()
+            ->forLocale(\App\Support\Localization\LocaleContext::current())
             ->whereHas('category', fn ($q) => $q->whereIn('slug', ['knowledge', 'news']))
             ->with('category')
             ->orderByDesc('published_at')
             ->limit(30)
             ->get();
 
-        // RSS channel 名称取站点显示名权威源（Site.name，经 settings.site_name 镜像），
-        // 不使用产品名 config('app.name')，保证订阅器中与页头 / 页脚 / Schema 同源。
-        $siteTitle = (string) (Setting::get('site_name') ?: (\App\Support\SiteContext::currentSite()?->name ?? config('app.name')));
+        // RSS channel 名称取当前语言主体名（Catalog company，en 为英文公司名）；
+        // 空站无主体时回退 Site.name（经 settings.site_name 镜像）/ app.name。
+        $companyName = (string) (\App\Support\Catalog::company()['name'] ?? '');
+        $siteTitle = $companyName !== ''
+            ? $companyName
+            : (string) (Setting::get('site_name') ?: (\App\Support\SiteContext::currentSite()?->name ?? config('app.name')));
         $xml = ['<?xml version="1.0" encoding="UTF-8"?>'];
         $xml[] = '<rss version="2.0"><channel>';
         $xml[] = '<title>' . e($siteTitle) . '</title>';

@@ -340,4 +340,134 @@ return array (
       ),
     ),
   ),
+  'narrative_en' =>
+  array (
+    'cooperation' =>
+    array (
+      'lead' => 'Whether you are sourcing products, integrating solutions or looking for channel partnership, you can find a suitable way to work with us here. Feel free to share your needs first, and we will provide a workable plan soon.',
+    ),
+    'contact' =>
+    array (
+      'lead' => 'Fill in the form or use the contact details on the page to reach us, tell us your needs, and we will get back to you soon.',
+    ),
+    'products_index' =>
+    array (
+      'lead' => 'Our products and solutions are gathered here. Browse by line to view specifications, applicable scenarios and FAQs; contact us for custom requirements.',
+    ),
+    'solutions_index' =>
+    array (
+      'lead' => 'Product combinations and usage notes organized for typical application scenarios. Find your scenario first, then learn about the specific products and how to use them.',
+    ),
+  ),
+  'cooperation_faqs_en' =>
+  array (
+    0 => array ('q' => 'What is the cooperation process?', 'a' => 'It usually starts with requirement discussion. After confirming the solution and quotation, we sign a contract, then arrange production or stocking, delivery and after-sales support.'),
+    1 => array ('q' => 'What is the minimum order quantity?', 'a' => 'MOQ varies by product and specification. Tell us your category and expected volume, and we will quote accordingly.'),
+    2 => array ('q' => 'Can I get samples or a trial first?', 'a' => 'Yes. Once needs are clear, we can arrange samples or a trial, and move to formal cooperation after they meet expectations.'),
+    3 => array ('q' => 'Can products be customized?', 'a' => 'Yes, on-demand customization is supported. Specific specifications, packaging and delivery terms can be agreed in the contract.'),
+    4 => array ('q' => 'Can you provide regional or channel protection?', 'a' => 'Regional and channel policies are discussed based on the category and details. Feel free to share your cooperation model.'),
+    5 => array ('q' => 'How long is the delivery cycle?', 'a' => 'Delivery time depends on category, specification and order volume. We will give a clear schedule after confirming requirements.'),
+  ),
+  'about_en' =>
+  array (
+    'profile' =>
+    array (
+      'meta_desc' => 'Learn about our company overview, business scope and service capabilities.',
+      'lead' => 'A company focused on products and services, committed to quality and long-term cooperation.',
+      'paragraphs' =>
+      array (
+        0 => 'We are a company centered on products and services, continuously refining our capabilities around customer needs and making every cooperation solid.',
+        1 => 'We focus on the complete process from requirement alignment to delivery, keeping products and services stable and reliable through standardized procedures and quality control.',
+        2 => 'Our business covers a range of products and solutions, supporting different types of customers, and we welcome customization and channel cooperation as needed.',
+        3 => 'If you are interested in cooperation or have further questions, feel free to reach us through the contact details on the page.',
+      ),
+    ),
+    'history' =>
+    array (
+      'meta_desc' => 'Learn about our development history and key milestones.',
+      'lead' => 'Step by step, we keep making our products and services solid.',
+      'nodes' =>
+      array (
+      ),
+    ),
+    'culture' =>
+    array (
+      'meta_desc' => 'Learn about our mission, vision, values and way of working.',
+      'lead' => 'Professional, reliable and mutually beneficial is our basic standard.',
+      'cards' =>
+      array (
+        0 => array ('label' => 'Mission', 'main' => 'Create customer value with professional products and services', 'desc' => 'Provide reliable products and services around real customer needs, helping customers get things done.'),
+        1 => array ('label' => 'Vision', 'main' => 'Become a trusted long-term partner', 'desc' => 'Build long-term, trusting relationships with customers through stable quality and continuous service.'),
+        2 => array ('label' => 'Values', 'main' => 'Professional, reliable, mutually beneficial', 'desc' => 'Stand on professionalism, earn trust through reliability, and grow together with customers and partners.'),
+        3 => array ('label' => 'Brand slogan', 'main' => 'Serving every customer professionally and reliably', 'desc' => 'Treat every delivery as the start of long-term cooperation, serving with care and taking responsibility to the end.'),
+      ),
+    ),
+  ),
+  'factory_steps_en' =>
+  array (
+    0 => array ('title' => 'Requirement Discussion', 'text' => 'Confirm products, specifications and expected volume'),
+    1 => array ('title' => 'Solution and Quotation', 'text' => 'Provide the solution, quotation and delivery time'),
+    2 => array ('title' => 'Contract and Scheduling', 'text' => 'Sign the contract and arrange production or stocking'),
+    3 => array ('title' => 'QC and Delivery', 'text' => 'Inspect to standards, then arrange shipment and delivery'),
+    4 => array ('title' => 'After-Sales Support', 'text' => 'Track usage and provide after-sales support'),
+  ),
+  'product_faqs_en' =>
+  array (
+    'epoxy-primer-100' =>
+    array (
+      0 => array ('q' => 'What substrates is this primer used on?', 'a' => 'Mainly used on blast-cleaned steel and steel structural parts as the primer of an anti-corrosion composite coating system.'),
+      1 => array ('q' => 'Can the mix ratio be adjusted?', 'a' => 'The recommended base-to-hardener ratio is 9:1; refer to the product technical data sheet for details.'),
+      2 => array ('q' => 'How long does it take to become touch-dry?', 'a' => 'At 25 C, touch-dry takes about 30 minutes. Follow the process requirements for recoating intervals.'),
+      3 => array ('q' => 'Can you adjust the formulation to my requirements?', 'a' => 'Yes, this is custom R and D and can be adjusted to your anti-corrosion and application requirements.'),
+      4 => array ('q' => 'What is the MOQ?', 'a' => 'MOQ varies by category. Tell us your volume and we will quote for your situation.'),
+    ),
+    'polyurethane-topcoat-200' =>
+    array (
+      0 => array ('q' => 'How is this topcoat paired?', 'a' => 'We recommend pairing it with epoxy zinc-rich primer. Apply the topcoat after the primer has cured to form a composite coating.'),
+      1 => array ('q' => 'What is the mix ratio?', 'a' => 'The recommended base-to-hardener ratio is 6:1; apply after induction.'),
+      2 => array ('q' => 'How long until full cure?', 'a' => 'At 25 C, touch-dry takes about 40 minutes and full cure takes about 7 days.'),
+      3 => array ('q' => 'Can gloss and color be customized?', 'a' => 'Yes, they can be customized to your appearance and weather-resistance requirements.'),
+      4 => array ('q' => 'What is the MOQ?', 'a' => 'MOQ varies by category. Tell us your volume and we will quote for your situation.'),
+    ),
+    'structural-adhesive-a10' =>
+    array (
+      0 => array ('q' => 'What materials can it bond?', 'a' => 'Suitable for structural bonding of metals and composite materials. Keep bonding surfaces clean and dry before use.'),
+      1 => array ('q' => 'What is the mix ratio?', 'a' => 'For the two-component product, mix A:B = 1:1 and stir until the color is uniform.'),
+      2 => array ('q' => 'How long is the working time?', 'a' => 'The working time after mixing is about 30 minutes. Complete adhesive application and assembly within this window.'),
+      3 => array ('q' => 'How long until it reaches strength?', 'a' => 'At 25 C, it fully cures in about 24 hours; keep clamping during this period.'),
+      4 => array ('q' => 'What is the MOQ?', 'a' => 'MOQ varies by specification. Tell us your volume and we will quote for your situation.'),
+    ),
+    'leveling-agent-l01' =>
+    array (
+      0 => array ('q' => 'What systems is it used in?', 'a' => 'Mainly used in solvent-based coating systems to improve leveling and film formation.'),
+      1 => array ('q' => 'What is the dosage?', 'a' => 'Generally 0.1 to 0.5 percent of the total formulation; determine the exact amount through testing.'),
+      2 => array ('q' => 'When should it be added?', 'a' => 'We recommend adding it during the dispersion stage to mix fully with the base material.'),
+      3 => array ('q' => 'Can it be combined with other additives?', 'a' => 'Yes, but we recommend a compatibility test first to avoid local overdosage.'),
+      4 => array ('q' => 'What is the MOQ?', 'a' => 'MOQ varies by category. Tell us your volume and we will quote for your situation.'),
+    ),
+  ),
+  'scene_faqs_en' =>
+  array (
+    'equipment-manufacturing' =>
+    array (
+      0 => array ('q' => 'Do coating and bonding materials need to be sourced all at once?', 'a' => 'No. You can start with main-process materials such as primer, topcoat and structural adhesive, then add additives once the line is running.'),
+      1 => array ('q' => 'How do I estimate the volume?', 'a' => 'It relates to coating area, dry film thickness and output. We can help you back-calculate demand from process parameters.'),
+      2 => array ('q' => 'How is batch consistency ensured?', 'a' => 'Key parameters are fixed, the line produces to standard procedures, and each batch is tested for stable, reproducible results.'),
+      3 => array ('q' => 'What is the MOQ?', 'a' => 'Tell us the materials and volume, and we will quote for your situation.'),
+    ),
+    'construction-infrastructure' =>
+    array (
+      0 => array ('q' => 'What if on-site temperature and humidity vary a lot?', 'a' => 'The product data gives touch-dry and curing conditions; control the application window on site according to the parameters.'),
+      1 => array ('q' => 'Can one set of materials handle both sealing and anti-corrosion?', 'a' => 'Use silicone sealant for joints and epoxy primer plus polyurethane topcoat for steel; each does its own job and they work together.'),
+      2 => array ('q' => 'Is large-volume supply stable?', 'a' => 'With our own production lines and QC procedures, supply can be arranged according to project progress.'),
+      3 => array ('q' => 'What is the MOQ?', 'a' => 'Tell us the materials and volume, and we will quote for your situation.'),
+    ),
+    'automotive-parts' =>
+    array (
+      0 => array ('q' => 'What should be used for heat-exposed components?', 'a' => 'For continuously heat-exposed components, we recommend silicone high-temperature coating, cured by heating per the process.'),
+      1 => array ('q' => 'Can it match the production line cycle?', 'a' => 'The structural adhesive states its working time and curing time, so adhesive application and assembly can be scheduled accordingly.'),
+      2 => array ('q' => 'Can a line-specific formulation be created?', 'a' => 'Yes, this is custom R and D. The formulation and parameters can be locked to your standardization requirements.'),
+      3 => array ('q' => 'What is the MOQ?', 'a' => 'Tell us the materials and volume, and we will quote for your situation.'),
+    ),
+  ),
 );

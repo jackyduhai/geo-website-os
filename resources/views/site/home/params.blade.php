@@ -7,9 +7,9 @@
   <div class="wrap">
     <div class="params-layout">
       <div class="params-side reveal">
-        <span class="eyebrow accent">PARAMETERS · 参数级交付</span>
-        <h2 class="sec-h">{{ $blk->title ?: '标准化参数，清晰可核对' }}</h2>
-        <p class="sec-sub muted">{{ $blk->subtitle ?: '提供标准化规格与参数说明，便于按需核对与稳定落地。' }}</p>
+        <span class="eyebrow accent">{{ __('ui.eyebrow_parameters') }}</span>
+        <h2 class="sec-h">{{ $blk->title ?: __('ui.home_params_title') }}</h2>
+        <p class="sec-sub muted">{{ $blk->subtitle ?: __('ui.home_params_sub') }}</p>
         @if(count($diffPoints))
         <ul class="params-points">
           @foreach($diffPoints as $d)
@@ -18,15 +18,15 @@
         </ul>
         @endif
         <div class="actions" style="margin-top:24px">
-          <a class="btn btn-primary btn-lg" href="{{ url('/') }}#s08">{{ $ctaText ?? '联系我们' }}<span class="arr">→</span></a>
+          <a class="btn btn-primary btn-lg" href="{{ url('/') }}#s08">{{ $ctaText ?? __('ui.contact_us') }}<span class="arr">→</span></a>
         </div>
       </div>
       <div class="reveal">
         @include('site._param_table', [
           'rows' => $paramRows ?? [],
-          'head' => ['产品 / 规格', '参数 / 说明'],
+          'head' => [__('ui.tbl_head_product'), __('ui.tbl_head_param')],
         ])
-        <p class="tbl-note muted">以上为参考参数，具体以对应产品规格说明为准，可按实际需求调整。</p>
+        <p class="tbl-note muted">{{ __('ui.tbl_note') }}</p>
       </div>
     </div>
   </div>

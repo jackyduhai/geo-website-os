@@ -4,11 +4,11 @@
 
 @php
   $specRows = collect([
-      ['规格 / 型号', $product['net_weight'] ?? null],
-      ['包装形式', $product['packaging'] ?? null],
-      ['质保期 / 有效期', $product['shelf_life'] ?? null],
-      ['储存条件', $product['storage'] ?? null],
-      ['起订量', $product['moq'] ?? null],
+      [__('ui.spec_net'), $product['net_weight'] ?? null],
+      [__('ui.spec_packaging'), $product['packaging'] ?? null],
+      [__('ui.spec_shelf'), $product['shelf_life'] ?? null],
+      [__('ui.spec_storage'), $product['storage'] ?? null],
+      [__('ui.spec_moq'), $product['moq'] ?? null],
   ])->filter(fn ($r) => filled($r[1]))->values()->all();
   $processSteps = array_map(fn ($p) => [
       'title' => $p['step'],
@@ -28,18 +28,18 @@
       <p class="ph-lead">{{ $product['tagline'] }}</p>
       @if(!empty($product['mains']))
         <div class="prod-mains">
-          <span class="pm-k">适用范围</span>
+          <span class="pm-k">{{ __('ui.mains_label') }}</span>
           @foreach($product['mains'] as $m)<em>{{ $m }}</em>@endforeach
         </div>
       @endif
       <div class="actions" style="margin-top:26px">
-        <a class="btn btn-primary btn-lg" href="{{ url('/') }}#s08">{{ $ctaText ?? '联系我们' }}<span class="arr">→</span></a>
-        <a class="btn btn-secondary btn-lg" href="{{ url('/contact/') }}">联系我们</a>
+        <a class="btn btn-primary btn-lg" href="{{ url('/') }}#s08">{{ $ctaText ?? __('ui.bcta_secondary') }}<span class="arr">→</span></a>
+        <a class="btn btn-secondary btn-lg" href="{{ url('/contact/') }}">{{ __('ui.bcta_secondary') }}</a>
       </div>
     </div>
     @if(!empty($product['key_params']))
     <div class="prod-hero-card">
-      <span class="phc-cap">关键参数一览</span>
+      <span class="phc-cap">{{ __('ui.keycap') }}</span>
       @include('site._param_table', ['rows' => array_map(fn ($kp) => ['label' => $kp['label'], 'value' => $kp['value']], $product['key_params'] ?? [])])
     </div>
     @endif
@@ -51,8 +51,8 @@
 <section class="sec sec-tint">
   <div class="wrap">
     <div class="sec-head">
-      <span class="eyebrow">PROCESS · 使用说明</span>
-      <h2 class="sec-h">标准化使用步骤</h2>
+      <span class="eyebrow">{{ __('ui.eyebrow_usage') }}</span>
+      <h2 class="sec-h">{{ __('ui.usage_h2') }}</h2>
     </div>
     @include('site._process_steps', ['steps' => $processSteps])
   </div>
@@ -65,10 +65,10 @@
   <div class="wrap">
     <div class="sec-head row">
       <div>
-        <span class="eyebrow">SCENARIOS · 适用场景</span>
-        <h2 class="sec-h">这些应用场景都在用</h2>
+        <span class="eyebrow">{{ __('ui.eyebrow_scen') }}</span>
+        <h2 class="sec-h">{{ __('ui.scen_h2') }}</h2>
       </div>
-      <a class="btn-text" href="{{ url('/solutions/') }}">全部场景<span class="arr">→</span></a>
+      <a class="btn-text" href="{{ url('/solutions/') }}">{{ __('ui.all_scen') }}<span class="arr">→</span></a>
     </div>
     <div class="scene-links">
       @foreach($scenes as $sc)
@@ -83,7 +83,7 @@
 @if(!empty($specRows))
 <section class="sec sec-tint">
   <div class="wrap-narrow">
-    <div class="sec-head"><span class="eyebrow">SPEC · 规格与交付</span><h2 class="sec-h">规格、包装与起订</h2></div>
+    <div class="sec-head"><span class="eyebrow">{{ __('ui.eyebrow_spec') }}</span><h2 class="sec-h">{{ __('ui.spec_h2') }}</h2></div>
     @include('site._param_table', ['rows' => $specRows])
   </div>
 </section>
@@ -94,8 +94,8 @@
 <section class="sec">
   <div class="wrap">
     <div class="sec-head">
-      <span class="eyebrow">RELATED · 相关产品</span>
-      <h2 class="sec-h">常与它搭配的产品</h2>
+      <span class="eyebrow">{{ __('ui.eyebrow_related') }}</span>
+      <h2 class="sec-h">{{ __('ui.related_h2') }}</h2>
     </div>
     <div class="prod-grid">
       @foreach($related as $rp)
@@ -110,7 +110,7 @@
 @if(!empty($faqs))
 <section class="sec sec-tint">
   <div class="wrap-narrow">
-    <div class="sec-head center"><span class="eyebrow">FAQ · 常见问题</span><h2 class="sec-h">关于{{ $product['short_name'] ?? $product['name'] }}的常见问题</h2></div>
+    <div class="sec-head center"><span class="eyebrow">{{ __('ui.eyebrow_faq') }}</span><h2 class="sec-h">{{ __('ui.pf_faq_h2', ['name' => $product['short_name'] ?? $product['name']]) }}</h2></div>
     @include('site._faq_list', ['faqs' => $faqs])
   </div>
 </section>

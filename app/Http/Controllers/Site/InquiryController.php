@@ -51,14 +51,14 @@ class InquiryController extends Controller
             'phone.required'       => $ff['phone']['error'],
             'phone.regex'          => $ff['phone']['invalid'],
             'demand_type.required' => $ff['customerType']['error'],
-            'demand_type.in'       => '客户类型不在可选范围内。',
+            'demand_type.in'       => __('seo.inquiry_type_invalid'),
         ]);
 
         // 需求简述为选填；为空（含字段未提交）时用客户类型兜底，保证后台有可读内容。
         // 注意 message 为 nullable，未勾选/未填写时 $data 中可能不存在该键，必须 ?? ''，
         // 否则 Undefined array key 会导致 500（P-STEP 14 Bug Hunt）。
         if (trim((string) ($data['message'] ?? '')) === '') {
-            $data['message'] = '客户类型：' . $data['demand_type'] . '（未填写需求简述）';
+            $data['message'] = __('seo.inquiry_message_fallback', ['type' => $data['demand_type']]);
         }
 
         $attribution = array_intersect_key($data, array_flip([

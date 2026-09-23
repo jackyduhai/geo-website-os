@@ -30,7 +30,8 @@ class DemoSeeder extends Seeder
         // （Core SchemaBuilder 只消费通用扩展，不直读业务事实库）。
         $company = \App\Support\Facts::company();
         \App\Models\Site::where('slug', \App\Models\Site::DEFAULT_SLUG)->update([
-            'name'     => $company['name'] ?? 'Example Site',
+            'name'        => $company['name'] ?? 'Example Site',
+            'description' => '示例制造有限公司专注工业涂料、结构胶粘剂与功能性助剂的研发与生产，提供从配方定制、打样到稳定量产的 OEM/ODM 代工与供货服务。',
             'metadata' => json_encode([
                 'organization' => [
                     'legal_name'    => $company['name'] ?? '',

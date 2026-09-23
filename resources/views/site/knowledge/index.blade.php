@@ -7,9 +7,9 @@
 
 <section class="page-hero">
   <div class="wrap-narrow">
-    <span class="eyebrow">KNOWLEDGE · 知识中心</span>
-    <h1 class="ph-h">{{ $active ? ($channels[$active] ?? '知识中心') : '产品知识、选型指南与常见问题' }}</h1>
-    <p class="ph-lead">沉淀产品知识、选型方法与常见问题，帮助你快速了解我们的产品与服务。</p>
+    <span class="eyebrow">{{ __('ui.eyebrow_knowledge') }}</span>
+    <h1 class="ph-h">{{ $active ? ($channels[$active] ?? __('ui.eyebrow_knowledge')) : __('ui.knowledge_h1') }}</h1>
+    <p class="ph-lead">{{ __('ui.knowledge_lead') }}</p>
   </div>
 </section>
 
@@ -20,16 +20,21 @@
         @foreach($items as $c)
           <a class="kcard reveal @if($c->cover) has-cover @endif" href="{{ $c->url() }}">
             @if($c->cover)<span class="kc-cover"><x-picture :src="$c->cover->url()" :alt="$c->title" loading="lazy" decoding="async" /></span>@endif
-            <span class="kt">{{ optional($c->group)->name ?? ($c->category->name ?? '行业知识') }}</span>
+            @php
+              $ktName = $c->group
+                ? $c->group->displayName()
+                : ($c->category ? $c->category->displayName() : __('ui.industry_knowledge'));
+            @endphp
+            <span class="kt">{{ $ktName }}</span>
             <h3>{{ $c->title }}</h3>
             <p>{{ $c->summary }}</p>
-            <div class="km"><span>阅读全文<span class="arr">→</span></span><time>{{ optional($c->published_at)->format('Y-m-d') }}</time></div>
+            <div class="km"><span>{{ __('ui.read_more') }}<span class="arr">→</span></span><time>{{ optional($c->published_at)->format('Y-m-d') }}</time></div>
           </a>
         @endforeach
       </div>
       <div class="pager">{{ $items->links() }}</div>
     @else
-      <p class="empty-note">该栏目内容正在整理中，可先联系我们获取资料。</p>
+      <p class="empty-note">{{ __('ui.knowledge_empty') }}</p>
     @endif
   </div>
 </section>

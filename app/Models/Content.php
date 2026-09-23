@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use App\Support\BelongsToSite;
 use App\Support\PublicUrl;
+use App\Support\Translatable;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
@@ -23,9 +24,17 @@ use Illuminate\Support\Str;
  */
 class Content extends Model
 {
-    use SoftDeletes, BelongsToSite;
+    use SoftDeletes, BelongsToSite, Translatable;
 
     protected $guarded = [];
+
+    /** 跨语言共享列（默认语言权威行单向同步）；title/slug/summary/body/GEO 文本按语言独立。 */
+    protected static array $sharedTranslatableColumns = [
+        'type', 'status', 'published_at', 'category_id', 'group_id', 'cover_id',
+        'og_image_id', 'owner', 'reviewed_at', 'review_due', 'source_note',
+        'external_id', 'external_source', 'synced_at', 'content_hash',
+        'lock_manual', 'slot',
+    ];
 
     /**
      * 全局作用域 not_slot：叙事插槽（contents.slot 非空）是结构化页面的可运营
