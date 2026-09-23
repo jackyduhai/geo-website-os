@@ -6,7 +6,7 @@
 <section class="page-hero">
   <div class="wrap-narrow">
     <span class="eyebrow">SOLUTIONS · 应用场景</span>
-    <h1 class="ph-h">你的店属于哪一类？</h1>
+    <h1 class="ph-h">你的业务属于哪一类？</h1>
     <p class="ph-lead">{{ $lead }}</p>
   </div>
 </section>

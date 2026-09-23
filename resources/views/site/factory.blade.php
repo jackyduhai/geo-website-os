@@ -2,13 +2,28 @@
 @section('title', $seo['title'])
 @section('meta_description', $seo['description'])
 
-@php $wsIcons = ['package', 'sliders', 'gear', 'shield', 'factory']; @endphp
+@php
+  $wsIcons = ['package', 'sliders', 'gear', 'shield', 'factory'];
+  // H1 只陈述真实存在的生产事实：面积 / 车间 / 产能缺失即不写入，绝不裸输出 0
+  // （FactoryController 已用 hasProduction() 保证至少一项，否则该页 404）。
+  $factoryH1Parts = [];
+  if ((int) ($company['area_sqm'] ?? 0) > 0) {
+      $factoryH1Parts[] = '自有约 ' . number_format((int) $company['area_sqm']) . ' ㎡ 厂区';
+  }
+  if (count($workshops) > 0) {
+      $factoryH1Parts[] = count($workshops) . ' 个生产车间';
+  }
+  if ((int) ($company['annual_capacity_tons'] ?? 0) > 0) {
+      $factoryH1Parts[] = '年产能约 ' . number_format((int) $company['annual_capacity_tons']) . ' 吨';
+  }
+  $factoryH1 = implode('，', $factoryH1Parts);
+@endphp
 
 @section('content')
 <section class="page-hero">
   <div class="wrap-narrow">
     <span class="eyebrow">FACTORY · 工厂与资质</span>
-    <h1 class="ph-h">自有约 {{ number_format($company['area_sqm']) }} ㎡ 厂区，{{ count($workshops) }} 个车间，年产能约 {{ number_format($company['annual_capacity_tons']) }} 吨</h1>
+    <h1 class="ph-h">{{ $factoryH1 }}</h1>
     <p class="ph-lead">{{ $lead }}</p>
   </div>
 </section>

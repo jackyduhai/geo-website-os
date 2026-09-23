@@ -17,6 +17,8 @@
       <a class="btn btn-lg btn-primary" href="{{ url('/') }}#s08">{{ $bcPrimary }}</a>
       <a class="btn btn-lg btn-outline" href="{{ url('/cooperation/') }}">{{ $bcSecondary }}</a>
     </div>
+    @if(!empty($bcPhone))
     <div class="bcta-phone">或直接致电 <a href="tel:{{ $bcPhoneTel }}">{{ $bcPhone }}</a></div>
+    @endif
   </div>
 </section>

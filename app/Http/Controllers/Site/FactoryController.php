@@ -51,6 +51,28 @@ class FactoryController extends Controller
             ['num' => count($regions), 'unit' => '大区', 'label' => '全国销售覆盖'],
         ];
 
+        // 只展示真实非 0 的信任数据，缺失事实不渲染对应数据条（与首页 buildStats 一致）
+        $stats = array_values(array_filter($stats, static fn ($r) => (int) $r['num'] > 0));
+
+        // SEO 标题 / 描述只拼接真实存在的事实，缺失项跳过，不出现空厂区 / 年产能 0
+        $seoTitleParts = [];
+        if (! empty($company['area_display'])) { $seoTitleParts[] = $company['area_display'] . '厂区'; }
+        if (count($workshops) > 0) { $seoTitleParts[] = count($workshops) . '大车间'; }
+
+        $descParts = [($company['name'] ?? '') . '工厂与资质'];
+        if (! empty($company['area_display'])) { $descParts[] = '自有' . $company['area_display'] . '厂区'; }
+        if ($workshopNames !== '') { $descParts[] = '设' . $workshopNames . '等' . count($workshops) . '大车间'; }
+        if (! empty($company['annual_capacity_display'])) { $descParts[] = '年产能' . $company['annual_capacity_display']; }
+        if (count($regions) > 0) { $descParts[] = '覆盖全国' . count($regions) . '大销售区域'; }
+
+        $factorySeo = [
+            'title'       => '工厂与资质' . ($seoTitleParts ? '：' . implode('、', $seoTitleParts) : ''),
+            'description' => implode('，', $descParts) . '。',
+            'canonical'   => PublicUrl::url('factory/'),
+            'noindex'     => false,
+            'type'        => 'website',
+        ];
+
         // 仅当存在真实车间图时才输出 ImageObject
         $imageObjects = [];
         foreach ($workshops as $w) {
@@ -85,15 +107,7 @@ class FactoryController extends Controller
                 $schema->organization(),
                 $schema->breadcrumb($crumbs),
             ], $imageObjects))),
-            'seo' => [
-                'title'       => '工厂与资质：' . ($company['area_display'] ?? '') . '厂区、' . count($workshops) . '大车间',
-                'description' => ($company['name'] ?? '') . '自有' . ($company['area_display'] ?? '') . '厂区，设'
-                    . $workshopNames . count($workshops) . '大车间，年产能' . ($company['annual_capacity_display'] ?? '')
-                    . '，覆盖全国' . count($regions) . '大销售区域。',
-                'canonical'   => PublicUrl::url('factory/'),
-                'noindex'     => false,
-                'type'        => 'website',
-            ],
+            'seo' => $factorySeo,
         ]);
     }
 }
