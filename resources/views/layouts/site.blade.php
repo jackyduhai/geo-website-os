@@ -1400,14 +1400,22 @@ a.ft-v:hover{color:#fff;}
 </head>
 <body>
 
+@php
+  $isEnView = \App\Support\Localization\LocaleContext::current() !== \App\Support\Localization\LocaleRegistry::default();
+  $brandDisplayName = $isEnView
+      ? (trim((string)($siteSettings['geo_org_en_name'] ?? '')) !== ''
+          ? $siteSettings['geo_org_en_name']
+          : ($siteSettings['site_name'] ?? config('app.name')))
+      : ($siteSettings['site_name'] ?? config('app.name'));
+@endphp
 <header class="hd" id="siteHeader">
-  <input type="checkbox" id="nav-toggle" aria-label="{{ config('copy.nav.ariaLabels.openMenu') ?? '打开导航菜单' }}">
+  <input type="checkbox" id="nav-toggle" aria-label="{{ config('copy.nav.ariaLabels.openMenu') ?? __('ui.open_menu') }}">
   <div class="wrap hd-in">
-    <a class="logo" href="{{ url('/') }}" aria-label="{{ $siteSettings['site_name'] ?? config('app.name') }}首页">
+    <a class="logo" href="{{ \App\Support\PublicUrl::home() }}" aria-label="{{ $brandDisplayName }} {{ __('nav.home') }}">
       <img src="{{ asset(!empty($siteSettings['geo_org_logo']) ? $siteSettings['geo_org_logo'] : 'img/logo.png') }}"
-           alt="{{ $siteSettings['site_name'] ?? config('app.name') }}" height="40">
+           alt="{{ $brandDisplayName }}" height="40">
     </a>
-    <nav aria-label="{{ config('copy.nav.ariaLabels.primaryNav') ?? '主导航' }}"><ul class="nav" id="primary-nav" style="margin:0;padding:0;">
+    <nav aria-label="{{ config('copy.nav.ariaLabels.primaryNav') ?? __('ui.primary_nav') }}"><ul class="nav" id="primary-nav" style="margin:0;padding:0;">
       @foreach(($mainMenu ?? []) as $m)
         @php
           $on = false;
@@ -1437,7 +1445,7 @@ a.ft-v:hover{color:#fff;}
     <div class="hd-right">
       @php
         $navPhone = config('copy.nav.phone') ?: ($siteSettings['contact_phone'] ?? '');
-        $telBase = config('copy.nav.ariaLabels.phone') ?: '拨打合作热线';
+        $telBase = config('copy.nav.ariaLabels.phone') ?: __('ui.phone_aria');
         $telAria = is_string($telBase) && str_contains($telBase, $navPhone) ? $telBase : $telBase.' '.$navPhone;
       @endphp
       @if(!empty($navPhone))
@@ -1455,8 +1463,8 @@ a.ft-v:hover{color:#fff;}
       </button>
       @endif
       @include('site.partials.locale-switcher')
-      <a class="btn btn-sm hd-cta" href="{{ url('/') }}#s08">{{ $ctaText ?? (config('copy.nav.cta') ?? '联系我们') }}</a>
-      <label class="nav-toggle" for="nav-toggle" aria-label="菜单"><span></span><span></span><span></span></label>
+      <a class="btn btn-sm hd-cta" href="{{ \App\Support\PublicUrl::home() }}#s08">{{ $ctaText ?? (config('copy.nav.cta') ?? __('ui.contact_us')) }}</a>
+      <label class="nav-toggle" for="nav-toggle" aria-label="{{ __('ui.menu') }}"><span></span><span></span><span></span></label>
     </div>
   </div>
 </header>
@@ -1464,9 +1472,9 @@ a.ft-v:hover{color:#fff;}
 <main>
 @if(!empty($crumbs))
   <div class="wrap">
-    <nav class="crumb" aria-label="面包屑导航">
+    <nav class="crumb" aria-label="{{ __('ui.breadcrumb') }}">
       <ol>
-        <li><a href="{{ url('/') }}">{{ __('nav.home') }}</a></li>
+        <li><a href="{{ \App\Support\PublicUrl::home() }}">{{ __('nav.home') }}</a></li>
         @foreach($crumbs as $c)
           <li><span class="sep" aria-hidden="true">/</span>
             @if(!empty($c['url']) && ! $loop->last)<a href="{{ $c['url'] }}">{{ $c['name'] }}</a>
@@ -1515,7 +1523,7 @@ a.ft-v:hover{color:#fff;}
   $ftHref = function ($h) {
       if ($h === null || $h === '') return 'javascript:void(0)';
       if (preg_match('~^(tel:|mailto:|https?://)~', $h)) return $h;
-      return url('/' . ltrim($h, '/'));
+      return \App\Support\PublicUrl::url($h);
   };
 @endphp
 <footer class="ft">
@@ -1523,7 +1531,7 @@ a.ft-v:hover{color:#fff;}
     <div class="ft-grid">
       <div class="ft-brand">
         <img src="{{ asset(!empty($siteSettings['geo_org_logo']) ? $siteSettings['geo_org_logo'] : 'img/logo.png') }}"
-             alt="{{ $siteSettings['site_name'] ?? config('app.name') }}" height="40">
+             alt="{{ $brandDisplayName }}" height="40">
         <p class="ft-desc">{{ \App\Support\Copy::footerSlogan() }}</p>
         @if(!empty($ftFacts))
           <ul class="ft-facts">

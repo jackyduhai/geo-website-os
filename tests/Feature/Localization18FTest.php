@@ -226,6 +226,35 @@ class Localization18FTest extends TestCase
     }
 
     // ----------------------------------------------------------------
+    // 7) LocalizedLinks — en 页所有站内链接保持 /en（TD-51 防回归）
+    // ----------------------------------------------------------------
+
+    public function test_en_internal_links_keep_en_prefix(): void
+    {
+        $this->enableBilingual();
+        $this->makeSiteOrganization(true);
+        $this->makeCoreProduct();
+
+        foreach (['/en', '/en/products/'] as $url) {
+            $html = $this->get($url)->getContent();
+            preg_match_all('/<a\b[^>]*?href="(http:\/\/localhost[^"]*)"[^>]*>/', $html, $mm, PREG_SET_ORDER);
+            $bad = [];
+            foreach ($mm as $x) {
+                $tag = $x[0];
+                $href = $x[1];
+                if (str_contains($tag, 'ls-link')) {
+                    continue; // 语言切换器指向另一语言，合法
+                }
+                $path = (string) parse_url($href, PHP_URL_PATH);
+                if (! str_starts_with($path, '/en')) {
+                    $bad[] = $href;
+                }
+            }
+            $this->assertSame([], $bad, "en page {$url} has non-/en internal links: " . implode(', ', $bad));
+        }
+    }
+
+    // ----------------------------------------------------------------
     // 6) MultiSite × Locale — en-only Site B
     // ----------------------------------------------------------------
 

@@ -1,6 +1,17 @@
 <?php
 
 return [
+    // i18n aria / labels (P-STEP 18F)
+    'product_series'           => 'PRODUCT SERIES',
+    'open_menu'                => 'Open menu',
+    'primary_nav'              => 'Primary navigation',
+    'menu'                     => 'Menu',
+    'breadcrumb'               => 'Breadcrumb',
+    'search_or_call_prefix'    => 'or call directly',
+    'search_or_contact_prefix' => 'or ',
+    'phone_aria'               => 'Call partner hotline',
+    'subnav_aria'              => 'Section navigation',
+
     // Eyebrows
     'eyebrow_products'    => 'PRODUCTS',
     'eyebrow_solutions'   => 'SOLUTIONS',

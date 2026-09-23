@@ -96,11 +96,11 @@ return array (
     'phoneTel' => '',
     'ariaLabels' =>
     array (
-      'primaryNav' => '主导航',
-      'mobileNav' => '导航菜单',
-      'openMenu' => '打开导航菜单',
-      'closeMenu' => '关闭导航菜单',
-      'phone' => '拨打合作热线',
+      'primaryNav' => null,
+      'mobileNav' => null,
+      'openMenu' => null,
+      'closeMenu' => null,
+      'phone' => null,
     ),
   ),
   'footer' =>

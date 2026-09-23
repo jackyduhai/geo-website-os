@@ -7,7 +7,7 @@
 
 <section class="page-hero">
   <div class="wrap-narrow">
-    <span class="eyebrow">PRODUCT SERIES · 产品系列</span>
+    <span class="eyebrow">{{ __('ui.product_series') }}</span>
     <h1 class="ph-h">{{ $line['name'] }}</h1>
     <p class="ph-lead">{{ $line['desc'] ?? '' }}</p>
   </div>

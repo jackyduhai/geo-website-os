@@ -10,7 +10,7 @@
 </div>
 
 <div class="wrap" style="padding-top:26px;padding-bottom:40px">
-  <form action="{{ url('/search') }}" method="get" style="display:flex;gap:12px;max-width:600px;margin-bottom:30px">
+  <form action="{{ \App\Support\PublicUrl::url('search') }}" method="get" style="display:flex;gap:12px;max-width:600px;margin-bottom:30px">
     <input type="search" name="q" value="{{ $q }}" placeholder="{{ __('ui.search_ph') }}"
            style="flex:1;padding:13px 16px;border:1.5px solid var(--line);border-radius:var(--radius-sm);
                   font-size:15px;background:var(--surface);color:var(--ink);font-family:inherit">
@@ -38,9 +38,9 @@
       <p style="margin:0;font-size:14px">
         {{ __('ui.search_retry') }}
         @if(!empty($siteSettings['contact_phone']))
-          ，或直接致电 <strong style="color:var(--brand)">{{ $siteSettings['contact_phone'] }}</strong>
+          {{ __('ui.search_or_call_prefix') }} <strong style="color:var(--brand)">{{ $siteSettings['contact_phone'] }}</strong>
         @elseif(!empty(\App\Support\Catalog::company()))
-          ，或直接<a href="{{ url('/contact/') }}">{{ __('ui.contact_us') }}</a>
+          {{ __('ui.search_or_contact_prefix') }}<a href="{{ \App\Support\PublicUrl::url('contact/') }}">{{ __('ui.contact_us') }}</a>
         @endif
       </p>
     </div>

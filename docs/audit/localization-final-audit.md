@@ -3,8 +3,14 @@
 - 日期：2026-09-23
 - 基线起点：HEAD `59dd573`（18E，861 / 4590 / 0 / 0）
 - 收尾产物：commit + annotated tag `checkpoint-18F`
-- 最终全量回归：**871 passed / 4653 assertions / 0 failed / 0 skipped**
+- 最终全量回归（Gate Validation 后）：**872 passed / 4655 assertions / 0 failed / 0 skipped**
 - 发布冻结：`v1.0.0-rc1`（`965d63c`）HOLD；无 remote；未 push；未 Release
+
+> **Gate Validation 说明（流程异常已记录）**：本阶段实现 commit `d886d5d` 由切换设备前
+> 会话在本轮基线之外产出。用户授权对其做**完整独立验收**（≠直接认可 PASS）。首轮
+> Focused 8/40、Full 871/4653；独立 Gate 经真实链接审计 + 渲染 CJK 审计又发现
+> TD-51、TD-52，最小修复并补防回归后 **Focused 9/42、Full 872/4655/0/0**，en 页
+> 可见/属性 CJK=0。
 
 > 本阶段目标不是"加一个 English 按钮"，而是建立可维护、可索引、可被 AI 理解的
 > zh-CN + en 前端国际化体系，并把 Locale 正式纳入 Site 配置、URL、缓存键与
@@ -77,6 +83,8 @@
 | TD-48 | 站内搜索只覆盖 Content，不搜索 Entity（蓝图 §23 要求统一搜索） | 新增 `SearchResult`，SearchController 合并 contentQuery + entityQuery（仅公开落地页实体），手动分页，满足 Public Render Contract |
 | TD-49 | geo.json 默认 JSON 编码把中文转义为 `\uXXXX`、URL 斜杠转义，AI 直读不友好 | FeedController::graph 加 `JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES`；GeoGraphTest 防回归 |
 | TD-50 | 英文 sitemap 首页 loc 用 `PublicUrl::base()`（无 locale 前缀），输出中文首页根地址 | SitemapBuilder 首页 loc 改 locale-aware（默认 base()、非默认 base()/{locale}）；Localization18FTest 补两语首页断言 |
+| TD-51 | 英文页 header mega menu / footer / 首页与列表正文内部链接用 `url()` 不带 /en，点击跳回中文站 | 显式改 PublicUrl（AppServiceProvider resolveMenuHref、layouts/site、search 约 8 处）+ GeoUrlGenerator `withLocalePrefix()` 兜底（en 自动补 /en，console/后台/默认/外链/tel/mailto/锚点/已带前缀幂等）；新增 test_en_internal_links_keep_en_prefix；中英 13 页链接 bad=0 |
+| TD-52 | 英文页可见/属性 UI 中文残留：logo alt/aria 用中文 site_name、nav/checkbox/tel aria-label 经 config/copy 中文兜底、系列 eyebrow、搜索空状态、_subnav | config/copy nav.ariaLabels 中文值改 null（翻译键生效，不造第二事实源）、logo 改 `$brandDisplayName`、telBase 改 `__('ui.phone_aria')`、eyebrow/空状态/subnav 走翻译键、en/zh ui.php 补键；PageCache flush 后 en 7 页可见/属性 CJK=0 |
 | —（测试修正） | Catalog key_param_display 跨语言时连 base 语言 display 也丢失 | relationMap 新增 `$isBaseLocale`，base 语言保留手填 display |
 | —（测试修正） | manual edge 测试无 ORDER BY 误返回 en 行 id（SQLite 非确定） | 显式 `where('locale', default)`；关系下拉只列默认语言实体（+防回归） |
 
@@ -147,8 +155,8 @@
 
 | Gate 项 | 结果 |
 | --- | --- |
-| Focused（Localization18FTest 等） | PASS（Localization18FTest 8 / 40） |
-| Full Regression | **871 passed / 4653 assertions / 0 failed / 0 skipped**（497.34s） |
+| Focused（Localization18FTest 等） | PASS（Localization18FTest **9 / 42**） |
+| Full Regression | **872 passed / 4655 assertions / 0 failed / 0 skipped**（483.17s，EXIT=0） |
 | Fresh Install（空站） | PASS |
 | Demo Site | PASS |
 | 两态真实 HTTP | PASS（Blank ≠ Demo） |
@@ -159,8 +167,8 @@
 | Sitemap 两语（含首页 loc） | PASS |
 | Search locale | PASS |
 | Runtime 强污染复扫 | **0** |
-| 日志审计（清空基线后两态请求） | **0** ERROR / Exception / Warning |
-| Smoke / 临时环境清理 | 完成（serve 停止、临时 sqlite 与脚本不进 commit） |
+| 日志审计 | 产品运行时 **0** ERROR/CRITICAL/EMERGENCY；唯一 1 条 `local.ERROR` 系本轮 tinker 命令被 shell 剥离双引号的 ParseError（命令构造、非产品缺陷，无引号写法重跑成功） |
+| Smoke / 临时环境清理 | 完成（serve 8111/8112 停止、端口零监听、临时 sqlite 与仓库 smoke 缓存清零，脚本不进 commit） |
 | Git | commit + annotated tag `checkpoint-18F`，worktree clean |
 
 ---

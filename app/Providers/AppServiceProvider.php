@@ -735,7 +735,7 @@ class AppServiceProvider extends ServiceProvider
         if (preg_match('~^(tel:|mailto:)~i', $href)) {
             return ['url' => $href, 'external' => false, 'path' => '/'];
         }
-        return ['url' => url('/' . ltrim($href, '/')), 'external' => false, 'path' => '/' . ltrim($href, '/')];
+        return ['url' => \App\Support\PublicUrl::url($href), 'external' => false, 'path' => '/' . ltrim($href, '/')];
     }
 
     public static function forgetNavCache(): void

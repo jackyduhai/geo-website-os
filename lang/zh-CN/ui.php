@@ -1,6 +1,17 @@
 <?php
 
 return [
+    // i18n aria / labels（P-STEP 18F）
+    'product_series'           => '产品系列',
+    'open_menu'                => '打开导航菜单',
+    'primary_nav'              => '主导航',
+    'menu'                     => '菜单',
+    'breadcrumb'               => '面包屑导航',
+    'search_or_call_prefix'    => '，或直接致电',
+    'search_or_contact_prefix' => '，或直接',
+    'phone_aria'               => '拨打合作热线',
+    'subnav_aria'              => '栏目导航',
+
     // Eyebrows（区块眉标）
     'eyebrow_products'    => 'PRODUCTS · 产品中心',
     'eyebrow_solutions'   => 'SOLUTIONS · 应用场景',

@@ -20,6 +20,8 @@ class GeoUrlGenerator extends BaseUrlGenerator
 {
     public function to($path, $extra = [], $secure = null)
     {
+        $path = $this->withLocalePrefix($path);
+
         $wantTrailing = is_string($path)
             && $path !== '/'
             && $this->pathEndsWithSlash($path);
@@ -55,5 +57,37 @@ class GeoUrlGenerator extends BaseUrlGenerator
             return false; // 带扩展名（文件）不处理
         }
         return str_ends_with($pathOnly, '/');
+    }
+
+    /**
+     * 前台非默认语言（/en）请求时，给相对路径自动补语言前缀，使 url('/products/')
+     * 等所有功能性 / 内容链接随语言切换，无需每个 Blade 手工处理（locale 统一兜底）。
+     * 仅在 LocaleContext 已由 SetLocale 设为非默认语言时生效：console / 后台 / 默认语言
+     * 完全不动；外链、协议相对、tel/mailto、锚点、已带前缀的路径幂等不重复。
+     */
+    private function withLocalePrefix($path)
+    {
+        if (! is_string($path)) {
+            return $path;
+        }
+        $locale = Localization\LocaleContext::current();
+        if ($locale === null) {
+            return $path;
+        }
+        $prefix = Localization\LocaleRegistry::prefix($locale);
+        if ($prefix === '') {
+            return $path;
+        }
+        $candidate = ltrim($path, '/');
+        if ($candidate === '' || preg_match('~^(https?:|//|tel:|mailto:|#)~i', $candidate)) {
+            if ($candidate === '') {
+                return '/' . $prefix; // url('/') => /en
+            }
+            return $path;
+        }
+        if ($candidate === $prefix || str_starts_with($candidate, $prefix . '/')) {
+            return $path; // 已带语言前缀，幂等
+        }
+        return '/' . $prefix . '/' . $candidate;
     }
 }
