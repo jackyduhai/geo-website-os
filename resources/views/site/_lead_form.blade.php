@@ -34,7 +34,7 @@
         <label for="{{ $formId }}-name">{{ $ff['name']['label'] }}<span class="req">*</span></label>
         <input id="{{ $formId }}-name" type="text" name="name" value="{{ old('name') }}"
                placeholder="{{ $ff['name']['placeholder'] }}" maxlength="50" autocomplete="name"
-               data-required data-err="{{ $ff['name']['error'] }}">
+               data-required aria-required="true" data-err="{{ $ff['name']['error'] }}">
         <p class="lf-err" hidden></p>
       </div>
 
@@ -42,13 +42,13 @@
         <label for="{{ $formId }}-phone">{{ $ff['phone']['label'] }}<span class="req">*</span></label>
         <input id="{{ $formId }}-phone" type="tel" inputmode="tel" name="phone" value="{{ old('phone') }}"
                placeholder="{{ $ff['phone']['placeholder'] }}" maxlength="30" autocomplete="tel"
-               data-required data-phone data-err="{{ $ff['phone']['error'] }}">
+               data-required aria-required="true" data-phone data-err="{{ $ff['phone']['error'] }}">
         <p class="lf-err" hidden></p>
       </div>
 
       <div class="lf-field lf-full">
         <label for="{{ $formId }}-type">{{ $ff['customerType']['label'] }}<span class="req">*</span></label>
-        <select id="{{ $formId }}-type" name="demand_type" data-required data-err="{{ $ff['customerType']['error'] }}">
+        <select id="{{ $formId }}-type" name="demand_type" data-required aria-required="true" data-err="{{ $ff['customerType']['error'] }}">
           <option value="" disabled @selected(! old('demand_type'))>{{ $ff['customerType']['placeholder'] }}</option>
           @foreach($customerOptions as $opt)
             <option value="{{ $opt }}" @selected(old('demand_type') === $opt)>{{ $opt }}</option>

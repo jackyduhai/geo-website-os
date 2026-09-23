@@ -58,7 +58,7 @@ return [
     ],
 
     'commerce' => [
-        'label'       => '零售电商',
+        'label'       => '消费者 / 零售电商（Consumer）',
         'description' => '玫红主色 + 深橙 CTA，暖调中性白，大圆角、柔和悬浮投影，活泼有亲和力。仅视觉。',
         'swatch'      => ['#E11D48', '#C2410C', '#FAF8F6'],
         'tokens'      => [
@@ -130,6 +130,46 @@ return [
             'theme_text'         => '#212422',
             'theme_text_muted'   => '#66706B',
             'theme_radius'       => '16',
+            'theme_container'    => '1200',
+            'theme_font'         => '',
+            'theme_density'      => 'comfortable',
+            'theme_shadow'       => 'soft',
+        ],
+    ],
+
+    'finance' => [
+        'label'       => '金融保险',
+        'description' => '深海军蓝主色 + 深金 CTA，克制中性阶、中等圆角，稳重可信、留白严谨。仅视觉。',
+        'swatch'      => ['#1E3A8A', '#8A5A06', '#F7F8FA'],
+        'tokens'      => [
+            'theme_primary'      => '#1E3A8A',
+            'theme_primary_dark' => '',
+            'theme_accent'       => '#8A5A06',
+            'theme_bg'           => '#F7F8FA',
+            'theme_surface'      => '#FFFFFF',
+            'theme_text'         => '#1A2233',
+            'theme_text_muted'   => '#5C6675',
+            'theme_radius'       => '8',
+            'theme_container'    => '1200',
+            'theme_font'         => '',
+            'theme_density'      => 'comfortable',
+            'theme_shadow'       => 'flat',
+        ],
+    ],
+
+    'healthcare' => [
+        'label'       => '医疗健康',
+        'description' => '深青主色 + 深绿 CTA，洁净浅底、柔和圆角与轻投影，传递信任与专业护理。仅视觉。',
+        'swatch'      => ['#0E7490', '#047857', '#F5FAFB'],
+        'tokens'      => [
+            'theme_primary'      => '#0E7490',
+            'theme_primary_dark' => '',
+            'theme_accent'       => '#047857',
+            'theme_bg'           => '#F5FAFB',
+            'theme_surface'      => '#FFFFFF',
+            'theme_text'         => '#162833',
+            'theme_text_muted'   => '#58707E',
+            'theme_radius'       => '12',
             'theme_container'    => '1200',
             'theme_font'         => '',
             'theme_density'      => 'comfortable',

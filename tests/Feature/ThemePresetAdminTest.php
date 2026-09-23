@@ -112,4 +112,23 @@ class ThemePresetAdminTest extends TestCase
         $this->assertSame('flat', \App\Models\Setting::get('theme_shadow'));
         $this->assertSame('#1D6FA5', \App\Models\Setting::get('theme_primary'));
     }
+
+    public function test_all_blueprint_industry_presets_exist_with_valid_visual_tokens(): void
+    {
+        // 蓝图 §9 八类行业视觉预设（Consumer 由 commerce 零售电商承载）。
+        $required = ['technology', 'professional', 'industrial', 'finance',
+            'education', 'healthcare', 'commerce', 'lifestyle'];
+
+        $keys = \App\Support\Theme\ThemePresets::keys();
+        foreach ($required as $key) {
+            $this->assertContains($key, $keys, "缺少行业预设：{$key}");
+            $tokens = \App\Support\Theme\ThemePresets::tokens($key);
+            // 只允许写入视觉白名单键，不得夹带 IA / 内容字段。
+            $this->assertSame([], array_values(array_diff(array_keys($tokens), \App\Support\Theme\ThemePresets::allowedKeys())),
+                "预设 {$key} 含非视觉键");
+            // 主色（深）一律置空，交由 ThemePalette 从新主色自动派生悬停 / 浅底。
+            $this->assertSame('', $tokens['theme_primary_dark']);
+            $this->assertNotEmpty($tokens['theme_primary']);
+        }
+    }
 }

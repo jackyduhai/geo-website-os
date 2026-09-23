@@ -58,6 +58,12 @@ class GeoUpgrade extends Command
             $this->line(sprintf('  [data] %-10s = %d', $table, $n));
         }
 
+        // ---------- 4. 部署新代码后清理旧编译视图与整页缓存 ----------
+        // 视图 / CSS / 模板随发布变更，若不清缓存会持续返回旧整页快照（P-STEP 18D 实测）。
+        $this->call('view:clear');
+        \App\Support\PageCache::flush();
+        $this->line('  [ok] compiled views & full-page cache cleared');
+
         $this->info('GEO Website OS upgrade — complete (version ' . config('geo.version', '0.0.0') . ')');
 
         return self::SUCCESS;

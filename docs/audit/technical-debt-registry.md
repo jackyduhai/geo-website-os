@@ -3,7 +3,7 @@
 - **定位**：本文件是 GEO Website OS **唯一**的技术债 / 架构债 / 产品化债 / Release Gate 登记与销项台账。所有阶段（P-STEP / 17x / 18x）的 Gate 对账以本文件为准；其他审计文档（product-uat-final、settings-inventory-17f、runtime-architecture-closure、admin-control-plane-final-acceptance、admin-management-completion-design 等）只作为**来源证据**，不再各自维护债务清单。
 - **建立时基线**：HEAD `4dbc95a`（= annotated tag `checkpoint-18A`）；Regression **801 tests / 3948 assertions / 0 failed / 0 skipped**；`v1.0.0-rc1` 冻结于 `965d63c`（HOLD）；无 remote、未 push、未发布。
 - **阶段口径修正**：P-STEP 17 中 **17A–17F = 六大管理面**（Site / Entity / EntityRelation / SeoMeta / Theme·Plugin / Settings）；**17G = 六大管理面的系统级 Full Admin UAT**，不是第七个管理面。
-- **最后更新**：P-STEP 18C 收口后（tag `checkpoint-18C`；Regression **826 / 4139 / 0 / 0**）。v1.0 Required 仅剩 3 项 P0 外部工程依赖（TD-01/02/03）。
+- **最后更新**：P-STEP 18D 收口后（tag `checkpoint-18D`；Regression **857 / 4574 / 0 / 0**）。18D 新增 Design System 能力 TD-28..TD-35（登记后 CLOSED），新登记 DEFERRED TD-36..TD-38。**v1.0 Required 未闭合仍为 3 项 P0 外部工程依赖（TD-01/02/03）**——18D 属产品完整性、未新增 v1.0 阻塞项。
 
 ---
 
@@ -89,6 +89,9 @@ ACTIVE  →  FIXED  →  TESTED  →  ACCEPTED  →  CLOSED
 | **TD-18** | Theme/Plugin 上传安装 / SDK / 应用市场缺失 | 蓝图明确划出 v1.x | ACTIVE（规划中） | 蓝图定义的上传安装、SDK 规范、市场能力（按蓝图里程碑） | NO（v1.x） | Theme/Plugin(17E) |
 | **TD-19** | GEOFlow 等旧概念后台 IA 命名未清理 | 16A F2；token 前缀 `yhf_` 已在 17F 中性化 | PARTIAL | token 前缀已中性化（DONE）；后台菜单/术语重命名为 Site/Content/Entity/Relation/SEO/GEO/Theme/Plugin/Settings 体系 | NO（v1.1） | — |
 | **TD-20** | md-editor 内联上传未测；RSS 未接独立 enabled 门禁；搜索不召回 Entity 且英文召回弱 | 16A/17F | **PARTIAL：① CLOSED by 18C；②③④ DEFERRED v1.1** | ① RSS `geo_rss_enabled` 独立门禁（默认开，=0 时 /feed.xml 404），设置 64→65（18C 完成）；② md-editor 上传、③ 搜索召回 Entity、④ 英文召回 v1.1 | ① 已闭合；②③④ NO（v1.1） | #86, #114 |
+| **TD-36** | 全站无统一组件 loading / `aria-busy` 模式（当前以整页 POST 刷新为主） | 18D-07 | DEFERRED v1.1 | 建立统一 loading 组件、aria-busy 与提交/加载反馈；不影响当前整页刷新可用性 | NO（v1.1） | TD-32 |
+| **TD-37** | 产品列表系列卡在窄屏两列、每卡约 165px 偏密 | 18D-09 | DEFERRED v1.1 | 窄屏单列或密度/间距优化；当前不横向溢出、信息可读 | NO（v1.1） | TD-33 |
+| **TD-38** | example 极简主题（31 行、零设计系统）未对齐深色/响应式体系 | 18D | DEFERRED v1.1（说明项） | example 为"零引擎依赖"极简示范主题；完整设计系统在 default。评估是否补齐或在主题文档标注能力边界 | NO（v1.1） | TD-28 |
 
 ### P4 — 观察与测试限制（默认 NON-BLOCKING，记录在案）
 
@@ -126,6 +129,14 @@ ACTIVE  →  FIXED  →  TESTED  →  ACCEPTED  →  CLOSED
 | **#144** | Release Gate 单一事实源反向审计 | **P-STEP 18C** | 倒推 Fresh→Admin→Entity/Relation/SEO→Theme/Plugin/Settings→Frontend→Schema/GEO/Feed→Cache→Multi-Site→CLI，未发现新双源；组织/关系/公开 URL/SEO/站点名/feed 准入各有唯一事实源 |
 | **TD-16①** | Category slug 未按 site_id 唯一、type 枚举漂移 | **P-STEP 18C** | Category 冻结 list/product_list/page/external 常量+访问器（single=page、product=product_list 只读别名）；slug/parent Rule::unique/exists 带 where site_id、type Rule::in、external 强制 external_url；PageController/CanonicalizeSlash/SitemapBuilder/blade 统一访问器；AdminCategoryCrud +4 测试（②③④ v1.1） |
 | **TD-20①** | RSS 无独立 enabled 门禁 | **P-STEP 18C** | FeedController::rss 读 geo_rss_enabled，=0 时 404，与 sitemap/llms 同标准；DefaultSettingSeeder 默认 '1'，设置 64→65，fresh geo:install settings=65 实测；空站/Demo /feed.xml 均 200（②③④ v1.1） |
+| **TD-28** | 前台无 Light/Dark/System 深色模式 | **P-STEP 18D**（`862ff1d`） | ThemePalette darkOverrides 独立深色语义令牌 + lightenForContrast 向白提亮至 AA；SSR `<html data-color-scheme>` 防 FOUC、localStorage 记忆（gwos-color-mode）；外观切换器 light/dark/system；12 正常页 + 404/403/500/503 同源深色；新增 ThemeColorModeTest 10 用例、ThemePalette dark 测试 |
+| **TD-29** | 行业视觉预设不足（蓝图要求 8 类） | **P-STEP 18D** | 新增 finance / healthcare，commerce label 承载 Consumer，共 8 预设；预设只改视觉 token、不改 IA 不注入行业数据；契约测试断言 8 预设齐全、primary_dark 恒空、tokens 仅白名单键（6 passed/60 assertions） |
+| **TD-30** | 字号未 token 化（200+ 处散落 px） | **P-STEP 18D** | :root 建立 12 档 rem `--fs-*`；结构性标题/正文 27 处消费 token、组件辅助文字归并 82 处；缝隙 px 与 @media 收缩值按契约保留（见 design-system §4.3） |
+| **TD-31** | 组件/页面存在彩色孤立硬编码色 | **P-STEP 18D** | Global Visual Refactor：彩色 hex=0、彩色 rgba=0；仅保留语义反白 #fff、mask 技术常量 #000、阴影/遮罩中性 rgba；深色逐页验证 |
+| **TD-32** | 焦点环不统一、部分按钮缺 disabled | **P-STEP 18D** | 全局 `:focus-visible`（键盘 only）2px brand 环，覆盖链接/按钮/卡片/summary/分页；表单控件专门 :focus；补 ghost/text disabled；键盘 Tab 实测 activeElement 环 = var(--brand) |
+| **TD-33** | 移动产品详情 H1 `.ph-h` 不缩小、长型号裁切 | **P-STEP 18D** | 三层排查（缺 brace / PageCache 旧快照 / CSS 同特异性源顺序）；基础规则加 overflow-wrap:anywhere，媒体缩小块移至基础规则之后（@media600 26px）；headless 重截标题完整不裁切 |
+| **TD-34** | 必填字段仅视觉 `*`、屏幕阅读器无必填语义 | **P-STEP 18D** | _lead_form 三个必填字段（name/phone/type）补 `aria-required="true"`；label for/id 关联、autocomplete、错误/成功语义原有 |
+| **TD-35** | geo:upgrade 部署新代码后不清旧编译视图与整页缓存 | **P-STEP 18D** | GeoUpgrade 迁移验证后加 view:clear + PageCache::flush；php -l 通过、upgrade focused 6 passed/26 assertions，升级契约不破坏 |
 
 ---
 
@@ -172,12 +183,15 @@ ACTIVE  →  FIXED  →  TESTED  →  ACCEPTED  →  CLOSED
 | TD-23 PHPUnit 12 attribute 迁移 | P4 |
 | TD-24 PageCache file store 回收 | P4 |
 | TD-27 GeoflowApiTest 测试顺序隔离加固 | P4 |
+| TD-36 组件 loading / aria-busy 模式 | P3 |
+| TD-37 产品列表移动系列卡密度优化 | P3 |
+| TD-38 example 极简主题对齐 / 能力边界标注 | P3 |
 
 ### 计数（当前）
 
-- CLOSED：#86、**#114（18A+18C）**、**#143 / TD-09**、**#144**、TD-04、**TD-05（DECISION）**、**TD-07**、TD-08a / **TD-08b（TD-08 整体）**、**TD-16①**、**TD-20①**、TD-10、TD-11、TD-12、TD-13、TD-25、TD-26、P17 六管理面 + 17G
-- v1.0.0 Required 未闭合：**3**（仅 P0×3 = TD-01 / TD-02 / TD-03，均为需外部授权的发布工程项）；18C 已闭合 TD-05/07/08b/09/16①/20①，#115 由 18B 闭合
-- v1.1+ Planned：TD-06（/article/ 收敛）、TD-14、TD-15、TD-16②③④、TD-17、TD-18、TD-19、TD-20②③④、TD-23、TD-24、TD-27
+- CLOSED：#86、**#114（18A+18C）**、**#143 / TD-09**、**#144**、TD-04、**TD-05（DECISION）**、**TD-07**、TD-08a / **TD-08b（TD-08 整体）**、**TD-16①**、**TD-20①**、TD-10、TD-11、TD-12、TD-13、TD-25、TD-26、P17 六管理面 + 17G、**TD-28..TD-35（18D Design System）**
+- v1.0.0 Required 未闭合：**3**（仅 P0×3 = TD-01 / TD-02 / TD-03，均为需外部授权的发布工程项）；18D 未新增 v1.0 阻塞项
+- v1.1+ Planned：TD-06（/article/ 收敛）、TD-14、TD-15、TD-16②③④、TD-17、TD-18、TD-19、TD-20②③④、TD-23、TD-24、TD-27、**TD-36、TD-37、TD-38**
 - NON-DEBT / DEFERRED 观察项：TD-21 / TD-22 / TD-23 / TD-24 / TD-27
 
 ---
@@ -198,3 +212,4 @@ ACTIVE  →  FIXED  →  TESTED  →  ACCEPTED  →  CLOSED
 | 2026-09-22 | P-STEP 18A（`4dbc95a` / `checkpoint-18A`） | 建立唯一 Registry；汇总 16A/17F/17G/P14/蓝图散落债务为 TD-01..TD-24 + Epic #86/#114/#115；#86 与 TD-04、TD-08a 登记 CLOSED；#114 标 PARTIAL；#115 标 ACTIVE；锁定 v1.0.0 Required / v1.1 Planned 建议基线 |
 | 2026-09-22 | P-STEP 18B（`checkpoint-18B`） | #115 子项 TD-10/11/12/13 全部 CLOSED：出厂 Blank System 与 db:seed Demo Site 分离（BlankHomepageSeeder / Demo StructureSeeder）、Site.name 单一事实源、图标 registry 中性化；两态 Fresh Install + HTTP/浏览器对拍；新发现并修复 TD-25（PageCache 键不含端口致同机异端口串整页）、TD-26（SQLite getTableListing 返回 main. 限定名致空站删除保护失效），各补防回归测试；v1.0 Required 12→9 |
 | 2026-09-22 | P-STEP 18C（`checkpoint-18C`，826/4139/0/0） | Release Residual Audit：TD-05 Entity URL 体系书面冻结（DECISION）、TD-07 Organization 裁定 Site 聚合为唯一事实源（facts 降为安装期种子、前台零消费）、TD-08/08b Entity·Site 缓存失效+stale memo、TD-09/#143 声明性绝对 URL 全改派 PublicUrl（功能性 URL 显式保留 url()/asset()，sitemap loc 与首页 canonical 斜杠契约分离）、TD-16① Category slug 站点作用域+type 收敛、TD-20① RSS geo_rss_enabled 门禁（设置 64→65）全部 CLOSED；#114 v1.0 收口；#144 单一事实源反向审计无新双源；TD-06 /article/ 书面 DEFERRED v1.1；新登记 TD-27 GeoflowApiTest 测试顺序依赖（P4，CI 固定顺序绿）；fresh geo:install settings=65、空站/Demo 两态真实 HTTP 对拍；**v1.0 Required 未闭合 9→3（仅 P0 TD-01/02/03 外部发布工程）**；报告 `docs/audit/release-residual-audit-18c.md` |
+| 2026-09-23 | P-STEP 18D（`862ff1d` → 收尾提交 / `checkpoint-18D`，857/4574/0/0） | Final Product Completeness 第一阶段 Design System 2.0：新增 TD-28 Light/Dark/System 深色（独立深色令牌 + AA 提亮 + SSR 防闪 + 记忆）、TD-29 行业预设扩 8 类（finance/healthcare/Consumer，只改视觉不改 IA）、TD-30 12 档 rem 字阶 token（结构性 27 处 + 辅助 82 处归并）、TD-31 彩色硬编码清零（彩色 hex/rgba=0）、TD-32 全局 focus-visible 焦点环 + disabled、TD-33 `.ph-h` 移动缩小（CSS 源顺序根因）、TD-34 aria-required、TD-35 geo:upgrade 部署清 view/PageCache，全部 CLOSED；新登记 DEFERRED TD-36（loading）、TD-37（移动系列卡密度）、TD-38（example 极简主题对齐）；Blank System ≠ Demo Site 视觉再确认；v1.0 Required 未闭合仍为 3（TD-01/02/03），18D 未新增发布阻塞；报告 `docs/audit/design-system-final-audit.md` |

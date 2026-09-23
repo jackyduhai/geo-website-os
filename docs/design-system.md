@@ -100,6 +100,21 @@
 - 后台为信息密集型，以 12–14px 字阶为准（一级导航 14px、二级 13.5px、分组标题 12.5px 弱化），具体以 `admin.css` 为准。
 - 正文容器建议 `max-width: 72ch`（`.prose`），保证阅读行长。
 
+### 4.3 字阶 Token（`:root`，rem，单一事实）
+
+| Token | rem / px | | Token | rem / px |
+|---|---|---|---|---|
+| `--fs-display` | 3 / 48 | | `--fs-base` | 1 / 16 |
+| `--fs-h1` | 2.75 / 44 | | `--fs-sm` | .9375 / 15 |
+| `--fs-h2` | 2 / 32 | | `--fs-xs` | .875 / 14 |
+| `--fs-h3` | 1.5 / 24 | | `--fs-2xs` | .8125 / 13 |
+| `--fs-h4` | 1.1875 / 19 | | `--fs-label` | .78 / ~12.5 |
+| `--fs-lg` | 1.125 / 18 | | `--fs-button` | .9375 / 15 |
+
+- 结构性标题（H1–H4）与正文根**必须**消费 token；组件辅助文字就近取 `xs/2xs/label`。
+- px→token：12/12.5→label，13/13.5→2xs，14/14.5→xs，15/15.5→sm，16/16.5→base，17/18→lg，19/20→h4。
+- **允许保留 px**：`@media` 断点收缩值；落在 token 缝隙的组件微调；品牌标识 `.logo` 20px、大展示数字 `.wsf-n`/`.cta-phone` 34px、FAQ marker 22px；404 inline 72px。
+
 ## 5. 间距
 
 4px 基准、8 点网格（前台 `:root`）：
@@ -235,3 +250,34 @@ chip 使用 `--radius-full`、`--*-soft` 浅底 + 对应深色文字；语义与
 - 自造阴影、自造圆角档位、自造缓动曲线。
 - 用红色表达非错误信息、用主 CTA 绿表达次要操作。
 - 数据缺失时回退到写死的客户名称、电话、地址、二维码、品牌图。
+
+---
+
+## 14. Light / Dark / System（v1 能力）
+
+- 三种外观：**Light / Dark / System**（跟随 `prefers-color-scheme`）；前台必须完整覆盖 Header/Footer/Hero/Card/Form/Button/Input/Modal/Dropdown/Table/Empty/404/500/Media/Article/Product/Service。
+- 深色拥有**独立语义令牌**（不是简单反色）：中性表面/文字子集 + 品牌/辅色经对比提亮（向白 mix 至 AA ≥ 4.5）。
+- SSR 首屏即正确（`<html data-color-scheme>` + 内联防 FOUC），选择存 `localStorage`（键 `gwos-color-mode`），刷新/新页保持。
+- 后台 v1 不要求深色，但可配置默认外观与是否允许深色（`theme_color_mode` / `theme_allow_dark`）。
+- 图片 / Logo / SVG 如需区分浅深版本，应随主题提供，不得在深底丢失对比。
+
+## 15. 行业主题预设（只改视觉，不改 IA）
+
+- 提供 8 类通用视觉预设：**professional（默认）/ industrial / commerce（消费者·零售电商 Consumer）/ technology / education / lifestyle / finance / healthcare**。
+- 预设只改变颜色 / 字阶 / 圆角 / 阴影 / 视觉密度；**不得注入任何行业业务数据或 IA**（选 industrial 不会出现工厂/OEM/车间/配方/产能/报价）。
+- 行业业务内容只属于经 `db:seed` 可选装载的 Example Demo；Theme 与 Demo Content 严格解耦。
+- 预设契约：`primary_dark` 恒空、tokens 仅含白名单键、动态从 config 读取（无硬编码数量）。
+
+## 16. 焦点环、必填语义与组件状态
+
+- 全局 `:focus-visible`（仅键盘）：`outline:2px solid var(--brand); outline-offset:2px; border-radius:var(--radius-xs)`，覆盖链接/按钮/[role=button]/[tabindex]/卡片/summary/分页。
+- 表单控件用专门 `:focus`（border 辅色 + 2px ring、outline none），不在全局焦点环内。
+- 必填字段除视觉 `*` 外必须标 **`aria-required="true"`**；错误就近、成功 `role="status"`、蜜罐 `aria-hidden"`。
+- disabled 态全站一致（降透明 + not-allowed）；组件 loading/aria-busy 模式 v1.1 补齐。
+
+## 17. 部署缓存与响应式契约
+
+- **视图 / CSS / 模板随发布变更后必须清缓存**：`geo:upgrade` 在迁移与验证后执行 `view:clear` + `PageCache::flush()`，否则旧整页快照持续返回。
+- **CSS 媒体缩小规则的源顺序**：媒体查询不增加特异性；同特异性下后出现的规则胜出。媒体缩小规则必须放在对应基础规则**之后**（或提高特异性），否则基础规则压住媒体值（`.ph-h` 案例）。
+- **响应式断点不随行业预设变化**：预设只改视觉 token，布局断点（360/375/768/1280/1440）行为对所有预设一致，抽 light/dark + 默认即可，无需预设×断点全组合。
+- 任何断点禁止横向滚动；长标题/长型号需 `overflow-wrap:anywhere` 等安全换行。
