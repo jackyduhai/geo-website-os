@@ -347,6 +347,7 @@ class SeoMetaResolver
                 ->where('locale', $locale)
                 ->whereNull('content_id')
                 ->whereNull('entity_id')
+                ->whereNull('page_id')
                 ->first() ?? false;
         }
 

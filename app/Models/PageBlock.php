@@ -4,15 +4,16 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use App\Support\BelongsToSite;
+use App\Support\Blocks\BlockContract;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * 首页区块
+ * 页面区块
  *
  * sort 即前台呈现顺序，后台可拖拽调整、单独开关。
- * 这是「官网可独立运维」的体现：改首页结构不需要动代码。
+ * 这是「官网可独立运维」的体现：改页面结构不需要动代码。
  */
-class PageBlock extends Model
+class PageBlock extends Model implements BlockContract
 {
     use BelongsToSite;
     protected $guarded = [];

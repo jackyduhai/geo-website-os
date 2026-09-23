@@ -3,12 +3,15 @@
 namespace App\Http\Controllers\Site;
 
 use App\Http\Controllers\Controller;
+use App\Models\Entity;
 use App\Services\Geo\SchemaBuilder;
 use App\Support\Catalog;
 use App\Support\Localization\LocaleContext;
 use App\Support\Narrative;
 use App\Support\Pages;
 use App\Support\PublicUrl;
+use App\Support\Render\CompositionRenderer;
+use App\Support\Render\EntityRenderContext;
 
 /**
  * 应用场景（按应用行业分诊，当前站点 Catalog 站点隔离读模型驱动）
@@ -69,58 +72,19 @@ class SolutionController extends Controller
         ]);
     }
 
-    public function show(string $scene, SchemaBuilder $schema)
+    public function show(string $scene)
     {
-        $data = Catalog::scene($scene);
-        abort_if(! $data, 404);
-        // 场景导语可运营：页头与 SEO 描述共用同一覆盖（组合理由 combo_reason 仍读 facts）
-        $data['desc'] = Narrative::lead('solutions.scene.' . $scene, $data['desc'] ?? '');
+        // P-STEP 18G-2a：场景详情统一 Render Context 管线（与 Product 同管线）。
+        $entity = Entity::published()
+            ->forLocale(LocaleContext::current())
+            ->ofType(Entity::TYPE_SERVICE)
+            ->where('slug', $scene)
+            ->first();
+        abort_if($entity === null, 404);
 
-        $combo     = Catalog::sceneCombo($data);
-        $adjacent  = Catalog::adjacentScenes($data);
-        $keyProduct = ! empty($data['key_param_product']) ? Catalog::product($data['key_param_product']) : null;
-        $faqs      = Pages::faqs('scene_faqs', $scene);
+        $context = EntityRenderContext::forEntity($entity);
+        abort_if($context === null, 404);
 
-        // 上一/下一相邻场景
-        $prev = $adjacent[0] ?? null;
-        $next = $adjacent[1] ?? null;
-
-        $sceneUrl = PublicUrl::solution($scene);
-        $crumbs = [
-            ['name' => __('nav.home'), 'url' => PublicUrl::home()],
-            ['name' => __('nav.solutions'), 'url' => PublicUrl::url('solutions/')],
-            ['name' => $data['name'], 'url' => $sceneUrl],
-        ];
-
-        $schemas = [
-            $schema->organization(),
-            $schema->breadcrumb($crumbs),
-            $schema->webPage($sceneUrl, $data['name'], $data['desc'] ?? '', 'WebPage'),
-        ];
-        if (! empty($faqs)) {
-            $schemas[] = $schema->faqPageFromList($faqs, $sceneUrl);
-        }
-
-        return view('site.solutions.show', [
-            'scene'      => $data,
-            'combo'      => $combo,
-            'keyProduct' => $keyProduct,
-            'prev'       => $prev,
-            'next'       => $next,
-            'faqs'       => $faqs,
-            'crumbs'     => array_slice($crumbs, 1),
-            'schemas'    => array_values(array_filter($schemas)),
-            'seo' => [
-                'title'       => LocaleContext::current() === 'en'
-                    ? $data['name']
-                    : ($data['title_q'] ?? $data['name']),
-                'description' => LocaleContext::current() === 'en'
-                    ? $data['desc']
-                    : __('seo.solution_show_desc', ['desc' => $data['desc'], 'reason' => $data['combo_reason'] ?? '']),
-                'canonical'   => $sceneUrl,
-                'noindex'     => false,
-                'type'        => 'website',
-            ],
-        ]);
+        return app(CompositionRenderer::class)->render($context);
     }
 }

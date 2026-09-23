@@ -5,6 +5,7 @@ namespace App\Support;
 use App\Models\Content;
 use App\Models\Entity;
 use App\Models\SeoMeta;
+use App\Support\Localization\LocaleContext;
 use Illuminate\Database\Eloquent\Builder;
 
 /**
@@ -66,9 +67,18 @@ class PublicIndex
             });
     }
 
-    /** 当前站点可索引实体的 slug 集合（供按 Catalog slug 投影的 Builder 做白名单过滤）。 */
+    /**
+     * 当前站点、当前语言可索引实体的 slug 集合（供按 Catalog slug 投影的 Builder
+     * 做白名单过滤）。
+     *
+     * 必须按当前 locale 过滤：同一翻译组 zh/en 行 slug 相同，若只给某语言行加
+     * noindex，跨语言 pluck 会被另一语言行重新提供 slug，导致该语言 sitemap /
+     * llms 仍收录（与 Catalog 当前语言投影对拍一致）。
+     */
     public static function indexableEntitySlugs(): array
     {
-        return self::entityQuery()->pluck('slug')->all();
+        return self::entityQuery()
+            ->forLocale(LocaleContext::current())
+            ->pluck('slug')->all();
     }
 }

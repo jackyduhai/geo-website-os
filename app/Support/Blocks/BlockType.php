@@ -27,6 +27,7 @@ final class BlockType
         public readonly bool $perLocale,
         public readonly bool $dataSource,      // 是否需解析数据源（grid）
         public readonly bool $hasSchema,       // 是否产出结构化数据（FAQ 等）
+        public readonly bool $system,          // 系统块（Entity 直驱），不进“自由添加”
         public readonly array $defaultContent,
         public readonly string $help = '',
     ) {}
@@ -47,6 +48,7 @@ final class BlockType
             perLocale: (bool) ($cfg['per_locale'] ?? true),
             dataSource: (bool) ($cfg['data_source'] ?? false),
             hasSchema: (bool) ($cfg['schema'] ?? false),
+            system: (bool) ($cfg['system'] ?? false),
             defaultContent: $cfg['default'] ?? [],
             help: $cfg['help'] ?? '',
         );

@@ -12,6 +12,8 @@ use App\Support\Blocks\BlockRegistry;
 use App\Support\Localization\LocaleContext;
 use App\Support\Localization\LocaleRegistry;
 use App\Support\PublicUrl;
+use App\Support\Render\CompositionRenderer;
+use App\Support\Render\PageRenderContext;
 use App\Support\SiteContext;
 use App\Support\Templates\TemplateRegistry;
 use Illuminate\Http\Request;
@@ -50,7 +52,7 @@ class PageController extends Controller
 
         // 3) 组合落地页（仅单段路径；content / category 优先，避免冲突）
         if (count($segments) === 1 && $page = $this->matchPage($segments[0])) {
-            return $this->renderPage($page, $schema, $seoResolver);
+            return $this->renderPage($page);
         }
 
         abort(404);
@@ -251,53 +253,10 @@ class PageController extends Controller
             ->first();
     }
 
-    protected function renderPage(Page $page, SchemaBuilder $schema, SeoMetaResolver $seoResolver)
+    protected function renderPage(Page $page)
     {
-        $template = TemplateRegistry::get($page->template) ?: TemplateRegistry::get('landing');
-        $blocks = $page->activeBlocks()->get();
-
-        // 按模板槽位分组渲染（数据源 block 由 BlockRegistry::render 内部 resolveData）
-        $slotsHtml = [];
-        foreach ($template->slotNames() as $slotName) {
-            $html = '';
-            foreach ($blocks->where('slot', $slotName)->sortBy('sort') as $blk) {
-                $html .= BlockRegistry::render($blk, ['page' => $page, 'slot' => $slotName]);
-            }
-            $slotsHtml[$slotName] = $html;
-        }
-
-        $hasHero = $blocks->contains(fn ($b) => $b->type === 'hero');
-
-        // SEO：页面级解析（page-level SeoMeta -> Page.title -> Site），统一由 Resolver 完成
-        $seoResult = $seoResolver->resolvePage($page);
-
-        $crumbList = [
-            ['name' => __('ui.back_home'), 'url' => PublicUrl::home()],
-            ['name' => $seoResult->title, 'url' => $seoResult->canonical],
-        ];
-
-        return view('site.page', [
-            'page'      => $page,
-            'template'  => $template,
-            'slotsHtml' => $slotsHtml,
-            'hasHero'   => $hasHero,
-            'crumbs'    => $crumbList,
-            'schemas'   => [
-                $schema->organization(),
-                $schema->website(),
-                $schema->breadcrumb($crumbList),
-            ],
-            'seo' => [
-                'title'          => $seoResult->title,
-                'description'    => $seoResult->description,
-                'canonical'      => $seoResult->canonical,
-                'noindex'        => $seoResult->noindex,
-                'type'           => 'website',
-                'og_title'       => $seoResult->ogTitle,
-                'og_description' => $seoResult->ogDescription,
-                'image'          => $seoResult->ogImage,
-                'twitter_card'   => $seoResult->twitterCard,
-            ],
-        ]);
+        // P-STEP 18G-2a：组合页统一走 Composition 管线（PageRenderContext），
+        // 与 Entity Detail 同渲染器；SEO / schema / 槽位由 context 裁决。
+        return app(CompositionRenderer::class)->render(new PageRenderContext($page));
     }
 }

@@ -27,7 +27,13 @@ class TemplateRegistry
             // 合并父模板槽位（父需先声明；config 中 base 置于首位）
             $parentKey = $cfg['extends'] ?? null;
             if ($parentKey !== null && isset(self::$defs[$parentKey])) {
-                $slots = array_merge(self::$defs[$parentKey]->slots, $slots);
+                // 子模板声明的槽位顺序为准；仅把父模板「独有」槽位追加其后。
+                // 避免 array_merge(parent, child) 把父级 main 固定在首位，打乱
+                // detail 的 header → main → related、listing 的 header → main → sidebar 顺序。
+                $slots = array_merge(
+                    $slots,
+                    array_diff_key(self::$defs[$parentKey]->slots, $slots)
+                );
             }
             self::$defs[$key] = TemplateDefinition::fromConfig($key, $cfg, $defaultLayout, $slots);
         }

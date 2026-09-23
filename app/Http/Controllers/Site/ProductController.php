@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Site;
 
 use App\Http\Controllers\Controller;
+use App\Models\Entity;
 use App\Providers\AppServiceProvider;
 use App\Services\Geo\SchemaBuilder;
 use App\Support\Catalog;
@@ -10,6 +11,8 @@ use App\Support\Localization\LocaleContext;
 use App\Support\Narrative;
 use App\Support\Pages;
 use App\Support\PublicUrl;
+use App\Support\Render\CompositionRenderer;
+use App\Support\Render\EntityRenderContext;
 
 /**
  * 产品中心（当前站点 Catalog 站点隔离读模型驱动，Catalog 由 Entity 投影，Example 种子源自 config/facts）
@@ -128,7 +131,7 @@ class ProductController extends Controller
             return $this->line($param, $schema);
         }
         if (Catalog::isCoreProduct($param)) {
-            return $this->show($param, $schema);
+            return $this->show($param);
         }
         abort(404);
     }
@@ -189,61 +192,21 @@ class ProductController extends Controller
         ]);
     }
 
-    public function show(string $slug, SchemaBuilder $schema)
+    public function show(string $slug)
     {
-        $product = Catalog::product($slug);
-        abort_if(! $product || ! Catalog::isCoreProduct($slug), 404);
-        // 产品导语可运营：页头、SEO 描述、Product 结构化数据三处共用同一覆盖
-        $product['tagline'] = Narrative::lead('products.detail.' . $slug, $product['tagline'] ?? $product['summary'] ?? '');
+        // P-STEP 18G-2a：详情统一 Render Context 管线。Entity 取当前语言行，Catalog
+        // 按当前 locale 投影；非 core / 不存在由 context 与 abort 双重 404。
+        $entity = Entity::published()
+            ->forLocale(LocaleContext::current())
+            ->ofType(Entity::TYPE_PRODUCT)
+            ->where('slug', $slug)
+            ->first();
+        abort_if($entity === null, 404);
 
-        $lineSlug = $product['line'] ?? null;
-        $line     = $lineSlug !== null ? Catalog::line($lineSlug) : null;
-        $related  = Catalog::relatedProducts($product, 5);
-        $scenes   = Catalog::scenesOfProduct($product);
-        $faqs     = Pages::faqs('product_faqs', $slug);
+        $context = EntityRenderContext::forEntity($entity);
+        abort_if($context === null, 404);
 
-        $productsIndexUrl = PublicUrl::url('products/');
-        $productUrl = PublicUrl::product($slug);
-        $crumbs = [
-            ['name' => __('nav.home'), 'url' => PublicUrl::home()],
-            ['name' => __('nav.products'), 'url' => $productsIndexUrl],
-        ];
-        if ($line !== null) {
-            $crumbs[] = ['name' => $line['name'] ?? __('nav.products'), 'url' => PublicUrl::productLine($lineSlug)];
-        }
-        $crumbs[] = ['name' => $product['name'], 'url' => $productUrl];
-
-        $schemas = [
-            $schema->organization(),
-            $schema->breadcrumb($crumbs),
-            $schema->webPage($productUrl, $product['name'], $product['tagline'], 'ItemPage', $productUrl . '#product'),
-            $this->productSchema($product, $line),
-        ];
-        // HowTo：有分步 params 时输出
-        if (! empty($product['params'])) {
-            $schemas[] = $this->howTo($product);
-        }
-        if (! empty($faqs)) {
-            $schemas[] = $schema->faqPageFromList($faqs, $productUrl);
-        }
-
-        return view('site.products.show', [
-            'product' => $product,
-            'line'    => $line,
-            'related' => $related,
-            'scenes'  => $scenes,
-            'faqs'    => $faqs,
-            'crumbs'  => array_slice($crumbs, 1),
-            'subnav'  => $this->subnav($lineSlug),
-            'schemas' => array_values(array_filter($schemas)),
-            'seo' => [
-                'title'       => __('seo.product_show_title', ['name' => $product['name']]),
-                'description' => $product['tagline'],
-                'canonical'   => $productUrl,
-                'noindex'     => false,
-                'type'        => 'product',
-            ],
-        ]);
+        return app(CompositionRenderer::class)->render($context);
     }
 
     /**
@@ -286,54 +249,5 @@ class ProductController extends Controller
         }
 
         return ['items' => $items, 'active' => $active];
-    }
-
-    private function productSchema(array $product, ?array $line): array
-    {
-        $company   = Catalog::company();
-        $brandName = LocaleContext::current() === 'en'
-            ? ($company['name'] ?? '')
-            : (! empty($company['brand']) ? $company['brand'] : ($company['name'] ?? ''));
-
-        $props = [];
-        foreach (($product['key_params'] ?? []) as $kp) {
-            $props[] = ['@type' => 'PropertyValue', 'name' => $kp['label'], 'value' => $kp['value']];
-        }
-        // 禁 offers / aggregateRating / review（无真实交易与评价数据）
-        return array_filter([
-            '@context'    => 'https://schema.org',
-            '@type'       => 'Product',
-            '@id'         => PublicUrl::product($product['slug']) . '#product',
-            'name'        => $product['name'],
-            'description' => $product['tagline'],
-            'category'    => $line['name'] ?? null,
-            'brand'       => $brandName !== '' ? ['@type' => 'Brand', 'name' => $brandName] : null,
-            'manufacturer' => ['@id' => PublicUrl::base() . '/#organization'],
-            'additionalProperty' => $props,
-        ]);
-    }
-
-    private function howTo(array $product): array
-    {
-        $steps = [];
-        foreach (($product['params'] ?? []) as $i => $p) {
-            $text = $p['value'];
-            if (! empty($p['note'])) {
-                $text .= '（' . $p['note'] . '）';
-            }
-            $steps[] = [
-                '@type'           => 'HowToStep',
-                'position'        => $i + 1,
-                'name'            => $p['step'],
-                'text'            => $text,
-            ];
-        }
-        return [
-            '@context' => 'https://schema.org',
-            '@type'    => 'HowTo',
-            '@id'      => PublicUrl::product($product['slug']) . '#howto',
-            'name'     => __('seo.product_howto_name', ['name' => $product['name']]),
-            'step'     => $steps,
-        ];
     }
 }

@@ -11,6 +11,7 @@ return [
     'search_or_contact_prefix' => 'or ',
     'phone_aria'               => 'Call partner hotline',
     'subnav_aria'              => 'Section navigation',
+    'mode_aria_toggle'         => 'Toggle appearance (light / dark / follow system)',
 
     // Eyebrows
     'eyebrow_products'    => 'PRODUCTS',

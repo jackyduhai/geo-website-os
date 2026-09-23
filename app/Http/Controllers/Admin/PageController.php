@@ -172,6 +172,9 @@ class PageController extends Controller
         if (! $type || ! $template) {
             abort(404);
         }
+        if ($type->system) {
+            return back()->withErrors(['type' => '系统区块由当前 Entity 直驱，不可手动添加']);
+        }
         if (! $template->allows($validated['slot'], $validated['type'])
             || ! $type->allows($page->template, $validated['slot'])) {
             return back()->withErrors(['type' => '该模板槽位不允许此区块']);

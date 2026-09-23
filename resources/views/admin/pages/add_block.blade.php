@@ -7,7 +7,9 @@
   $currentSlot = request('slot') ?: $template->slotNames()[0];
   $allowed = [];
   foreach ($blockTypes as $tk => $td) {
-      if ($template->allows($currentSlot, $tk) && $td->allows($page->template, $currentSlot)) {
+      if (! $td->system
+          && $template->allows($currentSlot, $tk)
+          && $td->allows($page->template, $currentSlot)) {
           $allowed[$tk] = $td;
       }
   }

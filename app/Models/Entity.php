@@ -30,6 +30,9 @@ class Entity extends Model
             PageCache::flush();
         });
         static::deleted(function (self $entity): void {
+            // P-STEP 18G-2a 方案 ii：删除绑定该 Entity 的详情载体 Page（Page::deleting
+            // 级联其 block / seo），等价 DB FK ON DELETE CASCADE、覆盖全部删除路径。
+            Page::where('entity_id', $entity->id)->get()->each->delete();
             PageCache::flush();
         });
     }

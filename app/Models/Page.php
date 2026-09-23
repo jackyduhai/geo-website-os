@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Support\BelongsToSite;
 use App\Support\Translatable;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
@@ -65,6 +66,18 @@ class Page extends Model
     public function seo(): HasOne
     {
         return $this->hasOne(SeoMeta::class);
+    }
+
+    /** 详情载体所绑定的 Entity（方案 ii；仅 override Page 有值）。 */
+    public function entity(): BelongsTo
+    {
+        return $this->belongsTo(Entity::class);
+    }
+
+    /** 按绑定 Entity 查详情载体 Page。 */
+    public function scopeForEntity($query, int $entityId)
+    {
+        return $query->where('entity_id', $entityId);
     }
 
     public function scopePublished($query)

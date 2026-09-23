@@ -75,8 +75,21 @@ class BlockRegistry
         );
     }
 
+    /**
+     * Admin “Add block” 选择器数据源：在 forSlot 基础上排除 system block。
+     * 系统块（entity_*）由当前 Entity 直驱、仅存在于 Detail 固定槽，不可手动添加，
+     * 避免管理员在 override Page 中产生第二套 Entity 状态。
+     */
+    public static function selectableForSlot(string $templateKey, string $slot): array
+    {
+        return array_filter(
+            self::forSlot($templateKey, $slot),
+            static fn (BlockType $t) => ! $t->system
+        );
+    }
+
     /** 渲染单个 block 为 HTML（含数据源解析）。未注册类型返回空串。 */
-    public static function render(PageBlock $block, array $context = []): string
+    public static function render(BlockContract $block, array $context = []): string
     {
         $type = self::get($block->type);
         if ($type === null) {
@@ -93,7 +106,7 @@ class BlockRegistry
     }
 
     /** 解析数据源型 block 的卡片条目（统一为卡片数组）。 */
-    public static function resolveData(BlockType $type, PageBlock $block, array $context = []): array
+    public static function resolveData(BlockType $type, BlockContract $block, array $context = []): array
     {
         if (! $type->dataSource) {
             return [];
@@ -104,9 +117,9 @@ class BlockRegistry
         $limit = (int) ($cfg['limit'] ?? 0);
 
         $cards = match ($type->type) {
-            'product_grid' => self::productCards($source),
-            'service_grid' => self::serviceCards($source),
-            'content_grid' => self::contentCards($cfg, $source),
+            'product_grid' => self::productCards($source, $context),
+            'service_grid' => self::serviceCards($source, $context),
+            'content_grid' => self::contentCards($cfg, $source, $context),
             default => [],
         };
 
@@ -130,7 +143,7 @@ class BlockRegistry
     }
 
     /** Product 网格卡片：仅保留有公开落地页（core 等）的产品。 */
-    private static function productCards(array $source): array
+    private static function productCards(array $source, array $context = []): array
     {
         $query = Entity::published()->forLocale(self::locale())
             ->ofType(Entity::TYPE_PRODUCT)->orderBy('sort_order');
@@ -141,6 +154,19 @@ class BlockRegistry
             $query->whereIn('slug', $slugs);
         } elseif ($mode === 'picked') {
             $query->whereIn('id', array_map('intval', (array) ($source['ids'] ?? [])));
+        } elseif ($mode === 'current') {
+            // TD-63：当前栏目 / 系列由 Render Context 提供，不在 Blade 判断 id。
+            $lineSlug = (string) ($context['lineSlug'] ?? ($context['line']['slug'] ?? ''));
+            if ($lineSlug !== '') {
+                $query->whereIn('slug', array_column(Catalog::productsByLine($lineSlug), 'slug'));
+            }
+        } elseif ($mode === 'related') {
+            // TD-63：当前 Entity 的相关产品由 Render Context（Catalog 读模型）提供。
+            $catalog = is_array($context['catalog'] ?? null) ? $context['catalog'] : null;
+            if ($catalog !== null) {
+                $slugs = array_column(Catalog::relatedProducts($catalog), 'slug');
+                $query->whereIn('slug', $slugs);
+            }
         }
 
         $cards = [];
@@ -163,13 +189,23 @@ class BlockRegistry
     }
 
     /** Service（场景）网格卡片：仅保留有公开页（有场景）的服务。 */
-    private static function serviceCards(array $source): array
+    private static function serviceCards(array $source, array $context = []): array
     {
         $query = Entity::published()->forLocale(self::locale())
             ->ofType(Entity::TYPE_SERVICE)->orderBy('sort_order');
 
-        if (($source['mode'] ?? 'all') === 'picked') {
+        $mode = $source['mode'] ?? 'all';
+        if ($mode === 'picked') {
             $query->whereIn('id', array_map('intval', (array) ($source['ids'] ?? [])));
+        } elseif ($mode === 'related') {
+            // TD-63：相邻场景由 Render Context（prev / next）提供。
+            $slugs = array_values(array_filter([
+                $context['prev']['slug'] ?? null,
+                $context['next']['slug'] ?? null,
+            ]));
+            if ($slugs !== []) {
+                $query->whereIn('slug', $slugs);
+            }
         }
 
         $cards = [];
@@ -192,7 +228,7 @@ class BlockRegistry
     }
 
     /** Content 网格卡片：栏目最新或手选，当前语言、已发布（自动排除 slot 片段）。 */
-    private static function contentCards(array $cfg, array $source): array
+    private static function contentCards(array $cfg, array $source, array $context = []): array
     {
         $query = Content::published()->forLocale(self::locale())
             ->orderByDesc('published_at')->orderByDesc('id');
@@ -201,8 +237,15 @@ class BlockRegistry
         if ($categoryId > 0) {
             $query->where('category_id', $categoryId);
         }
-        if (($source['mode'] ?? 'latest') === 'picked') {
+        $mode = $source['mode'] ?? 'latest';
+        if ($mode === 'picked') {
             $query->whereIn('id', array_map('intval', (array) ($source['ids'] ?? [])));
+        } elseif ($mode === 'current') {
+            // TD-63：当前栏目由 Render Context 提供（Listing 2b）。
+            $contextCategory = (int) ($context['category_id'] ?? 0);
+            if ($contextCategory > 0) {
+                $query->where('category_id', $contextCategory);
+            }
         }
 
         $cards = [];
