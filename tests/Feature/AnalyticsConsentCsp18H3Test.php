@@ -257,4 +257,12 @@ class AnalyticsConsentCsp18H3Test extends TestCase
         $this->assertTrue($r['invalid']);
         $this->assertStringNotContainsString('javascript:', $r['html']);
     }
+
+    // ---------- H) Consent 按钮不被 CTA 委托误捕获（TD-97） ----------
+
+    public function test_click_delegation_excludes_consent_banner_buttons(): void
+    {
+        $src = file_get_contents(resource_path('views/site/partials/analytics.blade.php'));
+        $this->assertStringContainsString("closest('#geoConsentBanner')", $src);
+    }
 }

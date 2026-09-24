@@ -31,25 +31,39 @@ class AuditSnapshot
      */
     public static function changes(?array $before, ?array $after, array $allowed = []): array
     {
-        $before = self::normalizeRow($before ?? []);
-        $after = self::normalizeRow($after ?? []);
+        $rawBefore = $before ?? [];
+        $rawAfter = $after ?? [];
+        $normBefore = self::normalizeRow($rawBefore);
+        $normAfter = self::normalizeRow($rawAfter);
 
         if ($allowed !== []) {
-            $before = array_intersect_key($before, array_flip($allowed));
-            $after = array_intersect_key($after, array_flip($allowed));
+            $rawBefore = array_intersect_key($rawBefore, array_flip($allowed));
+            $rawAfter = array_intersect_key($rawAfter, array_flip($allowed));
+            $normBefore = array_intersect_key($normBefore, array_flip($allowed));
+            $normAfter = array_intersect_key($normAfter, array_flip($allowed));
         } else {
-            $before = array_diff_key($before, array_flip(self::NEVER));
-            $after = array_diff_key($after, array_flip(self::NEVER));
+            $rawBefore = array_diff_key($rawBefore, array_flip(self::NEVER));
+            $rawAfter = array_diff_key($rawAfter, array_flip(self::NEVER));
+            $normBefore = array_diff_key($normBefore, array_flip(self::NEVER));
+            $normAfter = array_diff_key($normAfter, array_flip(self::NEVER));
         }
 
-        $keys = array_unique(array_merge(array_keys($before), array_keys($after)));
+        $keys = array_unique(array_merge(
+            array_keys($rawBefore),
+            array_keys($rawAfter),
+            array_keys($normBefore),
+            array_keys($normAfter)
+        ));
+
         $diffBefore = [];
         $diffAfter = [];
 
         foreach ($keys as $key) {
-            $bv = $before[$key] ?? null;
-            $av = $after[$key] ?? null;
-            if ($bv === $av) {
+            $bv = $normBefore[$key] ?? null;
+            $av = $normAfter[$key] ?? null;
+            // 变化判定以「原始值」为准：否则纯敏感字段脱敏后 before/after 同为
+            // [REDACTED]，会被误判无变化而漏审计（TD-98）。
+            if ($bv === $av && self::rawSame($rawBefore[$key] ?? null, $rawAfter[$key] ?? null)) {
                 continue;
             }
             $diffBefore[$key] = $bv;
@@ -61,6 +75,16 @@ class AuditSnapshot
         }
 
         return ['before' => $diffBefore, 'after' => $diffAfter];
+    }
+
+    /** 原始（未脱敏）值是否相同；数组 / 对象松散比较，标量转字符串比较。 */
+    private static function rawSame($a, $b): bool
+    {
+        if (is_array($a) || is_array($b) || is_object($a) || is_object($b)) {
+            return $a == $b;
+        }
+
+        return (string) $a === (string) $b;
     }
 
     private static function normalizeRow(array $row): array

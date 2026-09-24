@@ -130,6 +130,8 @@
     document.addEventListener('click', function(e){
       var t = e.target.closest('[data-geo-event], a.btn, button.btn, a.button, a[download]');
       if(!t) return;
+      /* consent banner 的接受/拒绝按钮属于隐私控制，不计入 CTA 埋点 */
+      if(t.closest('#geoConsentBanner')) return;
       if(t.hasAttribute('data-geo-event')){
         var name = t.getAttribute('data-geo-event');
         var params = {};

@@ -248,3 +248,138 @@ Duration: 880.24s
 > **v1.0 Required 未闭合 = 3**：仅 P0 外部发布工程 TD-01（Cloud GitHub Actions 首跑）、TD-02（基于最终 HEAD 重建 RC + Manifest + SHA-256）、TD-03（Private → Public / v1.0.0）。
 >
 - 18H-3 不自动进入 18I；不移动 `v1.0.0-rc1`（`965d63c` HOLD）；不配置 remote、不 push、不 Release。
+
+---
+
+## 13. Evidence Supplement（首次 Gate HOLD 后的运行时补验）
+
+### 13.1 背景与补验环境
+
+首次 Gate 仅证明「默认全关、零第三方请求」，用户裁定 **HOLD**，要求补齐 5 组真实运行时证据。补验不改架构，仅在真实环境取证，并对补验中发现的两个真实缺陷做最小修复。
+
+- 补验 demo 库：`D:\Temp\18h3-supp\demo.sqlite`（`migrate --force` + `db:seed --force`）。
+- serve：`http://127.0.0.1:8173`。
+- 取证顺序：OFF 基线 → 启用 GA4（+ head code 样本）→ 再启用 Meta。
+
+### 13.2 C — Provider OFF / ON 动态 CSP 对拍（真实 header）
+
+**OFF（全关）：**
+
+```
+Content-Security-Policy: default-src 'self'; script-src 'nonce-c6b14303...';
+  style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: http: https:;
+  font-src 'self' data:; connect-src 'self'; object-src 'none';
+  base-uri 'self'; form-action 'self'; frame-ancestors 'self'
+```
+
+**ON（GA4）：script-src / connect-src 仅新增 Google 域：**
+
+```
+script-src 'nonce-...' https://www.googletagmanager.com;
+connect-src 'self' https://*.google-analytics.com https://*.analytics.google.com
+  https://www.googletagmanager.com https://*.google.com;
+```
+
+**ON（GA4 + Meta）：再增 facebook 域：**
+
+```
+script-src ... https://connect.facebook.net;
+connect-src ... https://www.facebook.com;
+```
+
+- 启停对拍成立：启用某 provider 才放开对应域，关闭即移除（另由 `test_csp_removes_hosts_after_disable` 固化）。
+- `script-src` 严格 nonce、**无 `unsafe-inline`、无 `strict-dynamic`**；`style-src` 保留 `'unsafe-inline'`（语义 token / consent banner 内联样式所需，低风险折中，与脚本注入无关）。
+
+### 13.3 D — seo_head_code allow / deny（真实前台 HTML）
+
+写入 7 行混合样本（合法 meta site-verification、link preconnect；非法 script、style、iframe、img onerror、link javascript:），前台 `</head>` 前实际输出：
+
+```
+<meta name="google-site-verification" content="ALLOWMETA12345"><link rel="preconnect" href="https://fonts.example.com"><link rel="evil">
+<!-- seo_head_code: legacy/invalid elements removed; only <meta>/<link> are allowed (P-STEP 18H-3) -->
+```
+
+| 样本 | 前台结果 |
+| --- | --- |
+| `<meta name="google-site-verification" ...>` | 保留 |
+| `<link rel="preconnect" href="https://...">` | 保留 |
+| `<script>alert(...)</script>` | 剔除 |
+| `<style>body{...}</style>` | 剔除 |
+| `<iframe src="https://evil...">` | 剔除 |
+| `<img src=x onerror=...>` | 剔除（事件属性 / 非白名单标签） |
+| `<link href="javascript:...">` | 危险 href 剥离（输出空 `<link rel="evil">` 并标 invalid） |
+
+- parser 层（DOMDocument + 属性白名单 + scheme 裁决），非「过滤几个危险标签」；非法部分不运行、可见标记 invalid。
+
+### 13.4 A — Consent DENY / ACCEPT 运行时对拍（真实浏览器）
+
+清 `gwos-consent` 后访问（未决定）：
+
+- banner 可见（`hidden=false`）；`GeoAnalytics.state() = {"needConsent":true,"consent":null,"initialized":false,"queued":1}`（page_view 仅内存排队）；
+- 本次加载**无任何第三方请求**、Console=0。
+
+**DENY：**
+
+- `state = {"consent":"denied","initialized":false}`；刷新后 consent=denied **记忆保持**、banner 不再出现；
+- 全程无 googletagmanager / gtag/js（G-SUPP12345）请求。
+
+**ACCEPT：**
+
+- `state = {"consent":"accepted","initialized":true,"queued":0}`；`typeof gtag === 'function'`；
+- network 实际发起 `https://www.googletagmanager.com/gtag/js?id=G-SUPP12345`（**status=ok**，脚本加载并执行，dataLayer 出现 `gtm.dom` / `gtm.load`）。
+
+### 13.5 B — 事件真实 dispatch（dataLayer 运行时条目）
+
+接受后 GA4 adapter 真实 push（节选）：
+
+```
+[{"0":"js", ...},
+ {"0":"config","1":"G-SUPP12345","2":{"language":"zh-CN"}},
+ {"0":"event","1":"page_view","2":{"event":"page_view","locale":"zh-CN","page_path":"/"}}]
+```
+
+- **form_submit**（contact 页，dispatchEvent 触发、不导航）：
+  `{"event":"form_submit","locale":"zh-CN","page_path":"/contact/","form_id":"1","form_slug":"contact"}` —— **仅 form 标识**；事先填入字段的 `SECRET_VALUE_123` **未出现在任何事件 / dataLayer**（程序核对 `SECRET leaked?: False`）。
+- **download**（构造 `.pdf` 下载链接点击）：`{"event":"download", ..., "file_name":"whitepaper.pdf"}`。
+- **英文页**：`/en` 下 config `language:"en"`、page_view `locale:"en"`、`<html lang="en">`。
+
+### 13.6 E — Audit before/after + 脱敏（audit_logs 真实读回）
+
+以管理员身份复用 `recordChange` 真实落库并读回：
+
+| 记录 | detail.changes（节选） |
+| --- | --- |
+| settings.update | before `site_name=示例制造有限公司` → after `Acme Industrial Ltd`（明文） |
+| config.update | before `meta=[array:1]` → after `[array:3]`（数组不展开） |
+| integrations.update | before/after `api_key / smtp_password / password = [REDACTED]`（见 TD-98） |
+| entities.update | before/after Entity `name`（真实 Entity id） |
+
+- 无变化（相同值）不产生记录（程序核对 `NO (correct)`）；前台用户提交不写管理员审计、不含 payload。
+
+### 13.7 Provider failure isolation
+
+- 补验窗口真实观察到 **GA `collect` endpoint（google-analytics.com）`net::ERR_ABORTED`**（当前网络不可达，网络层错误），但：页面 **HTTP 200**、Console **0**、表单 / CTA / Meta（`facebook.com/tr` PageView ok）全部正常 → 第三方上报失败与站点隔离。
+- `createScript` 明确 `s.onerror = () => resolve(false)`（provider 脚本加载失败不阻断渲染）。
+
+### 13.8 网络环境限制（如实说明）
+
+- 补验网络位于中国大陆。`gtag/js`（googletagmanager）与 `fbevents`（connect.facebook）在补验时刻**实际可达、真实加载并执行**（status=ok、dataLayer gtm.load、facebook tr PageView）；
+- GA `collect`（google-analytics）不可达（ERR_ABORTED）。错误类型区分：网络层为 `ERR_*`，CSP 层拒绝才会出现 `Refused to load/connect ... violates Content Security Policy`——本次 Console **无任何 CSP 拒绝**，证明 CSP 已放行，失败仅因网络。
+
+### 13.9 补验中发现并修复的两个真实缺陷
+
+- **TD-97（consent 按钮被 CTA 委托误捕获）**：consent 接受/拒绝按钮带 `class="btn"`，点击冒泡被 analytics 的 CTA 委托误判为 `cta_click`（拒绝后队列被重新塞入、接受后误发 `cta_text:"接受"`）。修复：click 委托在最前 `if(t.closest('#geoConsentBanner')) return;`。防回归：`test_click_delegation_excludes_consent_banner_buttons`。
+- **TD-98（纯敏感字段修改漏审计）**：脱敏在变化判定之前，导致只改 api_key/password 时 before/after 同为 `[REDACTED]`、被误判无变化而**完全不写审计**。修复：变化判定以原始值为准、再对变化值脱敏，敏感字段变更保留 before/after（均 [REDACTED]）。防回归：`test_sensitive_value_change_is_audited_redacted`。
+
+### 13.10 补验回归
+
+- **Focused**（AnalyticsConsentCsp + AuditCoverage）：**29 passed / 103 assertions / 0 failed**。
+- **Full Regression**（修复后实跑，如实填写）：
+
+```
+Tests:    1016 passed (5176 assertions)
+Duration: 474.33s
+```
+
+- 口径：Evidence Supplement 修复前全量 1014 / 5169，新增 2 个防回归（AnalyticsConsentCsp +1、AuditCoverage +1）= **1016 / 5176**。
+- **0 failed、0 skipped**；无放宽断言、无 skip。

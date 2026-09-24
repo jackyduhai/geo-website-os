@@ -294,6 +294,28 @@ class AuditCoverage18H3Test extends TestCase
         $this->assertSame('[array:2]', $c['after']['metadata']);
     }
 
+    /**
+     * TD-98：纯敏感字段从密值 A 改为密值 B，脱敏后虽同为 [REDACTED]，
+     * 仍须记录「该敏感字段发生变更」（before/after 均 [REDACTED]），不得漏审计；
+     * 且真实密值不得落库。
+     */
+    public function test_sensitive_value_change_is_audited_redacted(): void
+    {
+        $c = AuditSnapshot::changes(
+            ['api_key' => 'SECRET-A', 'password' => 'p'],
+            ['api_key' => 'SECRET-B', 'password' => 'q'],
+            ['api_key', 'password']
+        );
+
+        $this->assertNotEmpty($c);
+        $this->assertSame('[REDACTED]', $c['before']['api_key']);
+        $this->assertSame('[REDACTED]', $c['after']['api_key']);
+        $this->assertArrayHasKey('password', $c['before']);
+        $json = json_encode($c);
+        $this->assertStringNotContainsString('SECRET-A', $json);
+        $this->assertStringNotContainsString('SECRET-B', $json);
+    }
+
     // ---------- I) 前台提交不产生 payload 审计 ----------
 
     public function test_frontend_submission_does_not_write_payload_audit(): void
