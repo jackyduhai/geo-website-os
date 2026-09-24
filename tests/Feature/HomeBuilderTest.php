@@ -29,7 +29,7 @@ class HomeBuilderTest extends TestCase
         $html = $this->get('/')->assertOk()->getContent();
 
         // 迁移 000011 写入的默认能力点与车间条目应渲染
-        $this->assertStringContainsString('配方定制', $html);
+        $this->assertStringContainsString('定制研发', $html);
         $this->assertStringContainsString('原料处理车间', $html); // 迁移默认条目已中性化（P-STEP 02）
         $this->assertStringContainsString('需求对接', $html);
     }
@@ -47,7 +47,7 @@ class HomeBuilderTest extends TestCase
         // 车间区块标题消失（车间名同时出现在主体事实表，故用区块标题判定）
         $this->assertStringNotContainsString('四大车间一体协同', $html);
         // 其它区块仍在
-        $this->assertStringContainsString('配方定制', $html);
+        $this->assertStringContainsString('定制研发', $html);
     }
 
     public function test_capability_items_are_editable_and_rendered(): void

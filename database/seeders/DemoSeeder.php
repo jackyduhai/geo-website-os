@@ -31,7 +31,7 @@ class DemoSeeder extends Seeder
         $company = \App\Support\Facts::company();
         \App\Models\Site::where('slug', \App\Models\Site::DEFAULT_SLUG)->update([
             'name'        => $company['name'] ?? 'Example Site',
-            'description' => '示例制造有限公司专注工业涂料、结构胶粘剂与功能性助剂的研发与生产，提供从配方定制、打样到稳定量产的 OEM/ODM 代工与供货服务。',
+            'description' => '示例制造有限公司专注工业涂料、结构胶粘剂与功能性助剂的研发与生产，提供从选型、打样到稳定供货的产品与定制化解决方案。',
             'metadata' => json_encode([
                 'organization' => [
                     'legal_name'    => $company['name'] ?? '',
@@ -47,7 +47,7 @@ class DemoSeeder extends Seeder
                         ->map(fn ($r) => $r . '地区')->all(),
                     'knows_about'   => collect(\App\Support\Facts::productLines())
                         ->pluck('name')->take(4)->filter()->values()
-                        ->push('OEM/ODM 定制制造')->all(),
+                        ->push('定制化解决方案')->all(),
                 ],
             ], JSON_UNESCAPED_UNICODE),
         ]);

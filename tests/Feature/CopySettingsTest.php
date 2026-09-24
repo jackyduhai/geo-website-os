@@ -2,7 +2,6 @@
 
 namespace Tests\Feature;
 
-use App\Models\Inquiry;
 use App\Models\Setting;
 use App\Models\User;
 use App\Support\Copy;
@@ -47,9 +46,8 @@ class CopySettingsTest extends TestCase
         $this->assertSame(config('copy.bottomCta.overrides.factory.primaryCta'), $factory['primaryCta']);
         $this->assertSame(config('copy.bottomCta.overrides.factory.secondaryCta'), $factory['secondaryCta']);
 
-        $form = Copy::form();
-        $this->assertSame(config('copy.form.fields.customerType.options'), $form['fields']['customerType']['options']);
-        $this->assertSame(config('copy.form.submit'), $form['submit']);
+        // 表单字段已改由 Form / FormField（后台表单管理）驱动；Copy::form 仅保留中性提交话术。
+        $this->assertSame(config('copy.form.submit'), Copy::form()['submit']);
 
         // 404 标题的出厂默认内置于 Copy（config 同名段落为历史死配置）
         $this->assertSame('这个页面找不到了', Copy::error404()['title']);
@@ -87,52 +85,6 @@ class CopySettingsTest extends TestCase
         $this->assertStringNotContainsString('预约工厂参观', $html);
     }
 
-    public function test_lead_form_labels_and_custom_options_render(): void
-    {
-        Setting::set('copy_form_name_label', '您的称呼');
-        Setting::set('copy_form_type_options', "装备制造\n工业品牌方\n其他渠道");
-        PageCache::flush();
-        Copy::flush();
-
-        $html = $this->get('/contact')->assertOk()->getContent();
-        $this->assertStringContainsString('您的称呼', $html);
-
-        // 只校验客户类型下拉本身（页面其它板块可能出现客户类型名称，不能全局断言）
-        preg_match('#<select[^>]*name="demand_type".*?</select>#s', $html, $m);
-        $this->assertNotEmpty($m, '前台应渲染客户类型下拉');
-        $select = $m[0];
-        $this->assertStringContainsString('装备制造', $select);
-        $this->assertStringContainsString('工业品牌方', $select);
-        $this->assertStringNotContainsString('建筑工程', $select);
-    }
-
-    public function test_custom_customer_type_is_accepted_by_backend_validation(): void
-    {
-        // 运营新增的客户类型，后端白名单必须同步，否则前台能选、提交被拒
-        Setting::set('copy_form_type_options', "装备制造\n工业品牌方\n其他渠道");
-        Copy::flush();
-
-        $this->from('/contact')->post('/inquiry', [
-            'name'        => '李工',
-            'phone'       => '13900002222',
-            'demand_type' => '工业品牌方',
-            'message'     => '需要一批结构胶，想了解定制规格与供货。',
-        ])->assertSessionHasNoErrors()->assertRedirect();
-
-        $lead = Inquiry::firstOrFail();
-        $this->assertSame('工业品牌方', $lead->demand_type);
-    }
-
-    public function test_blank_options_fall_back_to_default_six(): void
-    {
-        Setting::set('copy_form_type_options', '');
-        Copy::flush();
-
-        $options = Copy::form()['fields']['customerType']['options'];
-        $this->assertSame(config('copy.form.fields.customerType.options'), $options);
-        $this->assertCount(6, $options);
-    }
-
     public function test_404_copy_override_renders(): void
     {
         Setting::set('copy_404_title', '页面走丢了');
@@ -154,13 +106,13 @@ class CopySettingsTest extends TestCase
 
         $this->actingAs($this->admin)->put('/admin/settings/copy', [
             'copy_bcta_title'      => '测试 CTA 标题',
-            'copy_form_type_options' => "类型A\n类型B",
+            'copy_bcta_desc'       => '测试 CTA 描述',
             'copy_form_submit'     => '', // 显式留空应回退默认
         ])->assertRedirect();
 
         $settings = Setting::allCached();
         $this->assertSame('测试 CTA 标题', $settings['copy_bcta_title']);
-        $this->assertSame("类型A\n类型B", $settings['copy_form_type_options']);
+        $this->assertSame('测试 CTA 描述', $settings['copy_bcta_desc']);
         $this->assertSame('', $settings['copy_form_submit']);
         $this->assertSame(config('copy.form.submit'), Copy::form()['submit']);
     }

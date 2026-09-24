@@ -5,6 +5,7 @@ use App\Http\Controllers\Site\AboutController;
 use App\Http\Controllers\Site\ContactController;
 use App\Http\Controllers\Site\CooperationController;
 use App\Http\Controllers\Site\FactoryController;
+use App\Http\Controllers\Site\FormSubmissionController;
 use App\Http\Controllers\Site\HomeController;
 use App\Http\Controllers\Site\InquiryController;
 use App\Http\Controllers\Site\KnowledgeController;
@@ -97,6 +98,12 @@ $registerFrontend = function (string $locale, string $nameSuffix): void {
     Route::post('/inquiry', [InquiryController::class, 'store'])
         ->middleware('throttle:6,1')->name('inquiry.store'.$nameSuffix);
 
+    // ---------- 通用表单提交（按表单 slug；限流每分钟 6 次） ----------
+    // {form:slug} 隐式绑定受 Form 站点全局作用域限制（跨站 / 缺失 404）；
+    // disabled 表单在控制器 404。en 组自动生成 /en/forms/{slug}/submit。
+    Route::post('forms/{form:slug}/submit', [FormSubmissionController::class, 'submit'])
+        ->middleware('throttle:6,1')->name('forms.submit'.$nameSuffix);
+
     // ---------- 栏目与内容（统一分发：知识文章、新闻等 DB 长文） ----------
     // plugins/ 前缀属于插件层（P-STEP 06 契约）：由插件自有路由承接，
     // 不进入统一分发器；未匹配的插件路径自然 404。
@@ -130,5 +137,20 @@ function PublicUrlLocalized(string $path): string
     $prefix = App\Support\Localization\LocaleRegistry::prefix($locale);
 
     return url(($prefix !== '' ? '/' . $prefix : '') . $path);
+}
+}
+
+/**
+ * 按当前 locale 取对应路由（zh 组无后缀，en 组后缀 .en，与注册时 nameSuffix 一致）。
+ * 供动态表单等需要 locale 正确 action 的视图使用，避免在 Blade 内判断语言或硬编码 URL。
+ */
+if (! function_exists('localized_route')) {
+function localized_route(string $base, $parameters = []): string
+{
+    $locale = App\Support\Localization\LocaleContext::current();
+    $prefix = App\Support\Localization\LocaleRegistry::prefix($locale);
+    $name = $base . ($prefix !== '' ? '.' . $prefix : '');
+
+    return route($name, $parameters);
 }
 }

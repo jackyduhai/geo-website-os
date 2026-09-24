@@ -110,11 +110,15 @@ class SystemPageSeeder extends Seeder
             ]),
         ]);
 
-        // main：咨询表单（FormReference，引用现有留言能力；完整 Form Builder 归 18H）。
+        // main：咨询表单（FormReference，引用默认 contact 表单；字段由表单配置驱动）。
+        $contactFormId = \App\Models\Form::where('slug', \App\Models\Form::DEFAULT_SLUG)->value('id');
         $this->ensureBlock($page, [
             'page' => 'contact', 'slot' => 'main', 'type' => 'form_reference',
             'sort' => 1, 'limit' => 0,
-            'content' => json_encode(['title' => '', 'subtitle' => '']),
+            'content' => json_encode(
+                ['title' => '', 'subtitle' => '', 'form_id' => $contactFormId],
+                JSON_UNESCAPED_UNICODE
+            ),
         ]);
     }
 

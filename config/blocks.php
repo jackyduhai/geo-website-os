@@ -273,8 +273,9 @@ return [
             'fields' => [
                 ['key' => 'title', 'label' => '表单上方标题（留空不显示）', 'type' => 'text'],
                 ['key' => 'subtitle', 'label' => '表单上方说明', 'type' => 'textarea'],
+                ['key' => 'form_id', 'label' => '引用的表单 ID（留空使用站点默认联系表单）', 'type' => 'number'],
             ],
-            'default' => ['title' => '', 'subtitle' => ''],
+            'default' => ['title' => '', 'subtitle' => '', 'form_id' => null],
         ],
 
         // ---------------- Entity Detail 系统块（Entity 直驱，不可手动添加） ----------------

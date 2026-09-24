@@ -7,6 +7,13 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
+/**
+ * 表单提交 / Inquiry 兼容入口回归（P-STEP 18H-2）。
+ *
+ * 旧实现：/inquiry 写死 name/phone/demand_type(制造业选项)/message 并直接写 Inquiry。
+ * 新实现：/inquiry 为兼容桥接，解析默认 contact 表单，统一走 FormSubmissionService
+ *   （动态字段校验 → FormSubmission 完整事实 → Inquiry 投影 → 事务外通知）。
+ */
 class InquiryTest extends TestCase
 {
     use RefreshDatabase;
@@ -15,13 +22,9 @@ class InquiryTest extends TestCase
     {
         parent::setUp();
         $this->seed([
-            \Database\Seeders\FactSeeder::class,
-            \Database\Seeders\StructureSeeder::class,
-            \Database\Seeders\SettingSeeder::class,
-            \Database\Seeders\ContentSeeder::class,
-            // P-STEP 14 / D.2：/contact 等固定页改读站点隔离 Catalog，需投影 Example 目录。
-            \Database\Seeders\CatalogSeeder::class,
-            // P-STEP 18G-2b：/contact 固定页身份由 SystemPageSeeder 提供。
+            \Database\Seeders\DefaultSettingSeeder::class,
+            \Database\Seeders\DefaultFormSeeder::class,
+            // P-STEP 18G-2b：/contact 固定页身份 + form_reference block。
             \Database\Seeders\SystemPageSeeder::class,
         ]);
         User::create([
@@ -32,31 +35,44 @@ class InquiryTest extends TestCase
     private function validLead(array $override = []): array
     {
         return array_merge([
-            'name'        => '张经理',
-            'phone'       => '13800001111',
-            'company'     => '某装备制造厂',
-            'demand_type' => '代工合作',
-            'monthly_use' => '每月 1 吨',
-            'message'     => '需要一批用于设备外壳防护的工业涂料，寻求代工合作。',
+            'name'    => '张经理',
+            'phone'   => '13800001111',
+            'email'   => 'zhang@example.com',
+            'message' => '需要一批用于设备外壳防护的工业涂料。',
         ], $override);
     }
 
     public function test_valid_lead_is_stored(): void
     {
-        $this->get('/contact')->assertOk();
-
         $this->post('/inquiry', $this->validLead())->assertRedirect();
 
         $lead = Inquiry::firstOrFail();
         $this->assertSame('new', $lead->status);
         $this->assertSame('张经理', $lead->name);
-        $this->assertSame('代工合作', $lead->demand_type);
+        $this->assertSame('zhang@example.com', $lead->email);
+        // 默认中性表单无 demand_type，投影回落「其他」，不再写死制造业选项。
+        $this->assertSame('其他', $lead->demand_type);
+        $this->assertNotNull($lead->submission_id);
+        $this->assertNotNull($lead->form_id);
     }
 
-    public function test_invalid_phone_is_rejected(): void
+    public function test_required_phone_is_rejected_when_missing(): void
     {
+        $payload = $this->validLead();
+        unset($payload['phone']);
+
         $this->from('/contact')
-            ->post('/inquiry', $this->validLead(['phone' => 'abc']))
+            ->post('/inquiry', $payload)
+            ->assertSessionHasErrors('phone');
+
+        $this->assertSame(0, Inquiry::count());
+    }
+
+    public function test_oversized_phone_is_rejected(): void
+    {
+        // tel 字段服务端上限 30 字符（默认 contact 表单无手机号正则，仅约束长度）。
+        $this->from('/contact')
+            ->post('/inquiry', $this->validLead(['phone' => str_repeat('1', 31)]))
             ->assertSessionHasErrors('phone');
 
         $this->assertSame(0, Inquiry::count());
@@ -65,7 +81,6 @@ class InquiryTest extends TestCase
     public function test_lead_without_optional_message_is_stored_without_error(): void
     {
         // message 为选填字段；浏览器表单未填写时该键可能完全缺失。
-        // 回归 P-STEP 14：Undefined array key "message" 曾导致 HTTP 500。
         $payload = $this->validLead();
         unset($payload['message']);
 
@@ -75,13 +90,13 @@ class InquiryTest extends TestCase
 
         $lead = Inquiry::firstOrFail();
         $this->assertSame('new', $lead->status);
-        // 缺失 message 时以客户类型兜底，保证后台有可读内容
-        $this->assertStringContainsString('代工合作', $lead->message);
+        // 缺失 message 时投影器以确定性兜底文案填充，保证后台可读、不留空。
+        $this->assertNotSame('', trim((string) $lead->message));
     }
 
     public function test_lead_with_empty_message_is_stored_without_error(): void
     {
-        // 显式提交空字符串 message 同样不得 500
+        // 显式提交空字符串 message 同样不得 500。
         $this->from('/contact')
             ->post('/inquiry', $this->validLead(['message' => '   ']))
             ->assertRedirect();
@@ -97,17 +112,19 @@ class InquiryTest extends TestCase
 
     public function test_attribution_and_device_are_stored(): void
     {
-        $payload = $this->validLead() + [
-            'landing_url'  => 'http://test.local/products/?utm_source=baidu',
-            'referer'      => 'https://www.baidu.com/s?wd=x',
-            'utm_source'   => 'baidu',
-            'utm_medium'   => 'cpc',
-            'utm_campaign' => 'autumn',
-        ];
+        $iphone = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) Mobile';
 
-        $this->withHeaders(['User-Agent' => 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) Mobile'])
+        // 1) 首次从百度点击落地（首页），带 UTM + 外部 referer，CaptureAttribution 记录 first-touch。
+        $this->withHeaders([
+            'User-Agent' => $iphone,
+            'referer'    => 'https://www.baidu.com/s?wd=x',
+        ])->get('/?utm_source=baidu&utm_medium=cpc&utm_campaign=autumn')
+          ->assertOk();
+
+        // 2) 内部跳转到联系页后提交（first-touch 保留）；设备以提交请求 UA 为准。
+        $this->withHeaders(['User-Agent' => $iphone])
             ->from('/contact')
-            ->post('/inquiry', $payload)
+            ->post('/inquiry', $this->validLead())
             ->assertRedirect();
 
         $lead = Inquiry::firstOrFail();
@@ -127,7 +144,7 @@ class InquiryTest extends TestCase
             ->assertSessionHas('attr.utm_source', 'google')
             ->assertSessionHas('attr.utm_medium', 'organic');
 
-        // 内部跳转不覆盖首个外部来源
+        // 内部跳转不覆盖首个外部来源（products 总览即使 404，中间件仍先写 session）。
         $this->get('/products/')->assertSessionHas('attr.referer', 'https://www.google.com/');
     }
 
@@ -146,7 +163,8 @@ class InquiryTest extends TestCase
 
     public function test_admin_can_mark_lead_handled(): void
     {
-        $lead = Inquiry::create($this->validLead());
+        $this->post('/inquiry', $this->validLead())->assertRedirect();
+        $lead = Inquiry::firstOrFail();
         $admin = User::firstOrFail();
 
         $this->actingAs($admin)

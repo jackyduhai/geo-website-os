@@ -206,8 +206,13 @@ class PageComposition18GTest extends TestCase
         $page = $this->makePage(['slug' => 'custom-block']);
         $block = $this->makeBlock($page, 'hero', ['title' => '旧标题']);
 
-        $this->actingAs($this->super)
-            ->get(route('admin.pages.editBlock', [$page, $block]))->assertOk();
+        $editHtml = $this->actingAs($this->super)
+            ->get(route('admin.pages.editBlock', [$page, $block]))->assertOk()->getContent();
+        // TD-86 regression: the real edit form must spoof PUT (updateBlock is PUT-only).
+        // Without it the browser POSTs and gets 405, so block content can never be saved.
+        $this->assertStringContainsString('name="_method" value="PUT"', $editHtml);
+        $this->assertStringContainsString(
+            route('admin.pages.updateBlock', [$page, $block]), $editHtml);
 
         $this->actingAs($this->super)->put(route('admin.pages.updateBlock', [$page, $block]), [
             'field' => ['title' => '全新活动标题'],

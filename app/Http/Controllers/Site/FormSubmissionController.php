@@ -3,27 +3,26 @@
 namespace App\Http\Controllers\Site;
 
 use App\Http\Controllers\Controller;
-use App\Support\Forms\FormResolver;
+use App\Models\Form;
 use App\Support\Forms\FormSubmissionService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
 /**
- * 兼容入口 POST /inquiry（P-STEP 18H-2）。
+ * 通用表单提交（P-STEP 18H-2）。
  * --------------------------------------------------
- * 仅作 Compatibility Layer：解析站点默认联系表单后统一进入 FormSubmissionService，
- * 不再拥有写死字段 / 校验 / 保存逻辑（禁止第二套实现）。无可用表单时 404。
+ * 路由 forms/{form:slug}/submit：隐式绑定受 Form 站点全局作用域限制（跨站 / 缺失
+ * 自动 404）；disabled 表单在此 404；蜜罐命中由 service 返回 null、静默成功。
+ * 成功消息取 Form.success_message，缺省回退语言包。
  */
-class InquiryController extends Controller
+class FormSubmissionController extends Controller
 {
-    public function store(
+    public function submit(
         Request $request,
-        FormResolver $resolver,
+        Form $form,
         FormSubmissionService $service,
     ): RedirectResponse {
-        $form = $resolver->defaultContact();
-
-        if (! $form) {
+        if (! $form->isEnabled()) {
             abort(404);
         }
 

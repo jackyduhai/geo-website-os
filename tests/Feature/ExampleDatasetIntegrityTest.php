@@ -176,7 +176,7 @@ class ExampleDatasetIntegrityTest extends TestCase
     {
         $options = Copy::form()['fields']['customerType']['options'];
         $this->assertCount(6, $options);
-        foreach (['装备制造', '建筑工程', '汽车零部件', '工业品牌方', '经销商', '其他'] as $opt) {
+        foreach (['企业客户', '工程客户', '品牌客户', '渠道伙伴', '个人客户', '其他'] as $opt) {
             $this->assertContains($opt, $options);
         }
     }

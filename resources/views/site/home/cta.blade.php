@@ -26,7 +26,10 @@
       </ul>
     </div>
     <div class="reveal">
-      @include('site._lead_form', ['leadFormId' => 'home-lead-form', 'leadClass' => 'standalone'])
+      @php $homeLeadForm = app(\App\Support\Forms\FormResolver::class)->defaultContact(); @endphp
+      @if($homeLeadForm)
+        @include('site.dynamic_form', ['formModel' => $homeLeadForm, 'leadFormId' => 'home-lead-form', 'leadClass' => 'standalone'])
+      @endif
     </div>
   </div>
 </section>

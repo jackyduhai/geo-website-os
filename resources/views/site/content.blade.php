@@ -103,7 +103,10 @@
     <section class="sec" style="padding:34px 0 10px">
       <h2 class="sec-h" style="font-size:22px">{{ __('ui.c_inquiry') }}</h2>
       <p style="color:var(--ink-muted);margin:0 0 18px">{{ __('ui.c_inquiry_sub') }}</p>
-      @include('site._lead_form')
+      @php $contentLeadForm = app(\App\Support\Forms\FormResolver::class)->defaultContact(); @endphp
+      @if($contentLeadForm)
+        @include('site.dynamic_form', ['formModel' => $contentLeadForm, 'leadFormId' => 'content-lead-form'])
+      @endif
     </section>
   @elseif(!empty($siteSettings['contact_phone']))
     <section class="sec" style="padding:34px 0 10px">

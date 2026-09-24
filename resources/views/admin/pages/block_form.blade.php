@@ -10,6 +10,7 @@
 <form method="post" class="card"
       action="{{ route('admin.pages.updateBlock', [$page, $block]) }}">
   @csrf
+  @method('PUT')
 
   <div class="form-grid">
     @foreach($type->fields as $f)

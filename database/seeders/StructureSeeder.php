@@ -43,7 +43,7 @@ class StructureSeeder extends Seeder
                     ['name' => '工艺与配方', 'slug' => 'process', 'sort' => 20,
                      'description' => '生产工艺、参数逻辑与配方定制过程。'],
                     ['name' => '选型与应用', 'slug' => 'business', 'sort' => 30,
-                     'description' => '选型落地、代工合作与稳定供应参考。'],
+                     'description' => '选型落地、应用案例与合作咨询参考。'],
                 ],
             ],
             [

@@ -43,6 +43,12 @@ class GeoUpgrade extends Command
         }
         $this->line('  [ok] core tables');
 
+        // ---------- 3a-2. 补出厂默认联系表单（中性 contact form，幂等） ----------
+        // 新版本引入产品化表单，migrate 只建空表；补默认 contact 表单供 contact 页
+        // FormReference 引用，不含制造业字段。
+        $this->call('db:seed', ['--class' => 'DefaultFormSeeder', '--force' => true]);
+        $this->line('  [ok] default contact form');
+
         // ---------- 3b. 重建搜索派生索引 ----------
         // 新版本引入 search_documents / search_index，migrate 只建空表，必须从现有
         // Content / Entity 全量派生一次，否则升级后搜索为空（索引非事实源，重建安全）。

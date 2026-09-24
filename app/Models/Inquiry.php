@@ -18,9 +18,17 @@ class Inquiry extends Model
         'handled_at' => 'datetime',
     ];
 
-    
+    /** 来源提交（投影关系；历史 / 兼容留言为空）。 */
+    public function submission(): BelongsTo
+    {
+        return $this->belongsTo(FormSubmission::class, 'submission_id');
+    }
 
-    public const TYPES = ['代工合作', '原料采购', '经销代理', '其他咨询'];
+    /** 来源表单。 */
+    public function form(): BelongsTo
+    {
+        return $this->belongsTo(Form::class, 'form_id');
+    }
 
     public const STATUS_LABEL = [
         'new'      => '待跟进',

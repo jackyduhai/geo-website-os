@@ -8,6 +8,7 @@ use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\EntityController;
 use App\Http\Controllers\Admin\EntityRelationController;
 use App\Http\Controllers\Admin\FactController;
+use App\Http\Controllers\Admin\FormController;
 use App\Http\Controllers\Admin\GeoController;
 use App\Http\Controllers\Admin\GroupController;
 use App\Http\Controllers\Admin\InquiryController;
@@ -174,6 +175,25 @@ Route::middleware(['admin.auth', 'admin.site'])->group(function () {
     Route::get('inquiries', [InquiryController::class, 'index'])->name('inquiries.index');
     Route::put('inquiries/{inquiry}', [InquiryController::class, 'handle'])->name('inquiries.handle');
     Route::delete('inquiries/{inquiry}', [InquiryController::class, 'destroy'])->name('inquiries.destroy');
+
+    // ---------- 表单管理（产品化表单，P-STEP 18H-2） ----------
+    // {form}/{field} 模型绑定经 BelongsToSite 全局作用域，跨站 id 自动 404；
+    // 具体 GET 路径（submissions/create）须在 {form} 占位之前声明。
+    Route::get('forms', [FormController::class, 'index'])->name('forms.index');
+    Route::get('forms/submissions', [FormController::class, 'submissions'])->name('forms.submissions');
+    Route::get('forms/create', [FormController::class, 'create'])->name('forms.create');
+    Route::post('forms', [FormController::class, 'store'])->name('forms.store');
+    Route::get('forms/{form}/edit', [FormController::class, 'edit'])->name('forms.edit');
+    Route::put('forms/{form}', [FormController::class, 'update'])->name('forms.update');
+    Route::delete('forms/{form}', [FormController::class, 'destroy'])->name('forms.destroy');
+    Route::post('forms/{form}/toggle', [FormController::class, 'toggle'])->name('forms.toggle');
+    Route::get('forms/{form}/submissions', [FormController::class, 'formSubmissions'])->name('forms.formSubmissions');
+    // 字段（逻辑字段跨 locale 结构一致）
+    Route::get('forms/{form}/fields/create', [FormController::class, 'createField'])->name('forms.fields.create');
+    Route::post('forms/{form}/fields', [FormController::class, 'storeField'])->name('forms.fields.store');
+    Route::get('forms/{form}/fields/{field}/edit', [FormController::class, 'editField'])->name('forms.fields.edit');
+    Route::put('forms/{form}/fields/{field}', [FormController::class, 'updateField'])->name('forms.fields.update');
+    Route::delete('forms/{form}/fields/{field}', [FormController::class, 'destroyField'])->name('forms.fields.destroy');
 
     Route::get('redirects', [RedirectController::class, 'index'])->name('redirects.index');
     Route::post('redirects', [RedirectController::class, 'store'])->name('redirects.store');

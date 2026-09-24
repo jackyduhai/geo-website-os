@@ -114,6 +114,12 @@ class GeoInstall extends Command
         $this->call('db:seed', ['--class' => 'BlankHomepageSeeder', '--force' => true]);
         $this->line('  [ok] blank homepage (industry-neutral)');
 
+        // ---------- 4c-2. 出厂默认联系表单（中性 contact form） ----------
+        // 必须在 SystemPageSeeder 之前：contact 页 FormReference 引用其 form_id；
+        // 行业中性（name/phone/email/message），不含制造业字段。幂等。
+        $this->call('db:seed', ['--class' => 'DefaultFormSeeder', '--force' => true]);
+        $this->line('  [ok] default contact form (industry-neutral)');
+
         // ---------- 4d. 固定系统页（is_system Page） ----------
         // 为产品总览 / 场景总览 / 知识总览 / About / 工厂 / 合作 / 联系注入页面身份、
         // SEO 与模板绑定（行业中性、published）；业务事实仍来自正式数据层，Page 不复制。

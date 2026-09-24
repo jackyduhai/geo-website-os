@@ -104,7 +104,7 @@ class ContentSeeder extends Seeder
         $body = implode("\n\n", [
             '示例制造由深耕工业材料领域十余年的团队创立，公司主体于 2014 年注册成立，2015 年主要产线投产。',
             '公司位于示例城市，厂区约 12,000 平方米，设有原料处理、配料混合、成型加工、品控包装四个生产车间，覆盖从原料预处理到成品包装的主要流程。',
-            '主营业务覆盖工业防护涂料、工业胶粘剂与功能助剂三大产品线，为装备制造企业、工程承包商、工业品牌方与渠道经销商提供配方定制研发、OEM / ODM 代工与原料供应。',
+            '主营业务覆盖工业防护涂料、工业胶粘剂与功能助剂三大产品线，为工业制造企业、工程承包商、工业品牌方与渠道伙伴提供产品选型、定制化解决方案与稳定供货。',
             '服务网络覆盖东北、华北、华东、华中、西北、西南、华南等销售区域，面向全国供货。',
         ]);
 
@@ -189,19 +189,19 @@ class ContentSeeder extends Seeder
                 'group'    => 'business',
                 'data' => [
                     'type' => 'article',
-                    'slug' => 'oem-cooperation-faq',
-                    'title' => '工业材料 OEM/ODM 代工常见问题：流程、质量与边界',
-                    'summary' => '说明工业材料 OEM/ODM 代工的合作流程、质量体系与信息边界，起订量与交付周期需结合品类由业务确认。',
-                    'body' => "## 代工模式\n\nOEM 按客户配方或指定要求生产，ODM 由厂方提供配方与工艺方案，两者都在相应资质与标准化质量体系范围内组织生产。\n\n## 合作流程\n\n需求沟通 → 配方与工艺确认 → 打样试样 → 报价与合同 → 排产 → 交付。\n\n## 常见问题\n\n详见下方问答。",
-                    'geo_conclusion' => '示例制造提供工业涂料、结构胶粘剂与功能性助剂的 OEM/ODM 代工，合作流程为需求沟通、配方工艺确认、打样试样、报价签约、排产交付，生产在标准化质量体系下开展。',
-                    'geo_explanation' => "OEM 适合已有成熟配方的品牌，ODM 适合需要研发支持的客户；公司依托多车间协同完成从复配到成型的生产，并可配合客户的质量体系与来料、出厂检验要求。",
+                    'slug' => 'customized-solutions-faq',
+                    'title' => '工业材料定制化解决方案常见问题：流程、质量与边界',
+                    'summary' => '说明工业材料定制化解决方案的合作流程、质量体系与信息边界，起订量与交付周期需结合品类由业务确认。',
+                    'body' => "## 定制合作模式\n\n客户可基于需求选择产品选型、参数定制或联合开发，所有合作在相应资质与标准化质量体系范围内组织生产。\n\n## 合作流程\n\n需求沟通 → 方案与工艺确认 → 打样试样 → 报价与合同 → 排产 → 交付。\n\n## 常见问题\n\n详见下方问答。",
+                    'geo_conclusion' => '示例制造围绕工业涂料、结构胶粘剂与功能性助剂提供产品与定制化解决方案，合作流程为需求沟通、方案工艺确认、打样试样、报价签约、排产交付，生产在标准化质量体系下开展。',
+                    'geo_explanation' => "产品选型适合需求明确的客户，参数定制与联合开发适合有特殊指标或研发需求的客户；公司依托多车间协同完成从复配到成型的生产，并可配合客户的质量体系与来料、出厂检验要求。",
                     'geo_evidence' => [
                         ['label' => '质量体系', 'value' => '按标准化质量管理体系组织生产，关键批次留样可追溯', 'source' => '企业资料（演示）'],
-                        ['label' => '车间能力', 'value' => '混合调配、加工成型与质检包装车间协同支撑代工', 'source' => '演示资料'],
+                        ['label' => '车间能力', 'value' => '混合调配、加工成型与质检包装车间协同支撑定制生产', 'source' => '演示资料'],
                     ],
                     'geo_boundary' => '起订量、交付周期、账期与价格属于一事一议内容，需结合品类、规格与订单量由业务报价，本页不公布统一数字。',
                     'geo_faq' => [
-                        ['q' => 'OEM 和 ODM 有什么区别？', 'a' => 'OEM 按客户提供的配方与要求生产；ODM 由厂方提供配方与工艺方案，客户再做选择与调整。'],
+                        ['q' => '产品选型和定制开发有什么区别？', 'a' => '产品选型是从现有成熟产品中匹配；定制开发是按客户指标调整配方或工艺，需要打样确认。'],
                         ['q' => '最小起订量是多少？', 'a' => '不同品类起订量不同，需要业务结合品类与规格确认后告知，本页不设统一数字。'],
                         ['q' => '可以先试样再决定吗？', 'a' => '可以，合作流程中包含打样试样环节，性能确认后再进入报价与排产。'],
                     ],
@@ -256,20 +256,20 @@ class ContentSeeder extends Seeder
                     ['q' => 'Can adjustments be made after the formulation is locked?', 'a' => 'Yes, adjustments require re-sampling and confirmation and an update to the standardized formulation version.'],
                 ],
             ],
-            'oem-cooperation-faq' => [
-                'slug' => 'oem-cooperation-faq',
-                'title' => 'Industrial Materials OEM and ODM Manufacturing FAQ: Process, Quality and Boundaries',
-                'summary' => 'Explains the cooperation process, quality system and information boundaries for industrial materials OEM and ODM manufacturing; MOQ and delivery time must be confirmed by the business based on category.',
-                'body' => "## Manufacturing models\n\nOEM produces to the customer formulation or specified requirements, while ODM has the manufacturer provide the formulation and process solution; both are organized within the relevant qualifications and standardized quality system.\n\n## Cooperation process\n\nRequirement discussion, formulation and process confirmation, sampling, quotation and contract, scheduling, delivery.\n\n## Common questions\n\nSee the Q and A below.",
-                'geo_conclusion' => 'Example Manufacturing provides OEM and ODM manufacturing of industrial coatings, structural adhesives and functional additives. The cooperation process is requirement discussion, formulation and process confirmation, sampling, quotation and contract, scheduling and delivery, with production under a standardized quality system.',
-                'geo_explanation' => 'OEM suits brands with mature formulations, while ODM suits customers needing R and D support; the company uses multi-workshop coordination to complete production from formulation to forming, and can align with the customer quality system and incoming and outgoing inspection requirements.',
+            'customized-solutions-faq' => [
+                'slug' => 'customized-solutions-faq',
+                'title' => 'Industrial Materials Customized Solutions FAQ: Process, Quality and Boundaries',
+                'summary' => 'Explains the cooperation process, quality system and information boundaries for industrial materials customized solutions; MOQ and delivery time must be confirmed by the business based on category.',
+                'body' => "## Custom cooperation models\n\nCustomers can choose product selection, parameter customization or joint development based on need; all cooperation is organized within the relevant qualifications and standardized quality system.\n\n## Cooperation process\n\nRequirement discussion, solution and process confirmation, sampling, quotation and contract, scheduling, delivery.\n\n## Common questions\n\nSee the Q and A below.",
+                'geo_conclusion' => 'Example Manufacturing provides products and customized solutions around industrial coatings, structural adhesives and functional additives. The cooperation process is requirement discussion, solution and process confirmation, sampling, quotation and contract, scheduling and delivery, with production under a standardized quality system.',
+                'geo_explanation' => 'Product selection suits customers with clear requirements, while parameter customization and joint development suit those needing special indicators or R and D support; the company uses multi-workshop coordination to complete production from formulation to forming, and can align with the customer quality system and incoming and outgoing inspection requirements.',
                 'geo_evidence' => [
                     ['label' => 'Quality system', 'value' => 'Production is organized under a standardized quality management system, with key batch samples retained for traceability', 'source' => 'Company materials (demo)'],
-                    ['label' => 'Workshop capability', 'value' => 'Mixing, processing and QC and packaging workshops jointly support manufacturing', 'source' => 'Demo materials'],
+                    ['label' => 'Workshop capability', 'value' => 'Mixing, processing and QC and packaging workshops jointly support customized production', 'source' => 'Demo materials'],
                 ],
                 'geo_boundary' => 'MOQ, delivery time, payment terms and price are case-by-case items, quoted by the business based on category, specification and order volume; this page does not publish uniform numbers.',
                 'geo_faq' => [
-                    ['q' => 'What is the difference between OEM and ODM?', 'a' => 'OEM produces to the formulation and requirements provided by the customer; ODM has the manufacturer provide the formulation and process solution, which the customer then selects and adjusts.'],
+                    ['q' => 'What is the difference between product selection and custom development?', 'a' => 'Product selection matches existing mature products; custom development adjusts the formulation or process to customer indicators and requires sampling.'],
                     ['q' => 'What is the minimum order quantity?', 'a' => 'MOQ varies by category and must be confirmed by the business with the category and specification; this page sets no uniform number.'],
                     ['q' => 'Can I sample before deciding?', 'a' => 'Yes, the cooperation process includes a sampling stage; after performance is confirmed, move to quotation and scheduling.'],
                 ],

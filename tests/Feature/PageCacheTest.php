@@ -196,18 +196,18 @@ class PageCacheTest extends TestCase
     {
         // testing 环境 CSRF 中间件自动放行；提交有效留言
         $this->post('/inquiry', [
-            'name'        => '缓存测试',
-            'phone'       => '13800138000',
-            'demand_type' => '经销商',
-            'message'     => 'PRG 旁路验证',
-            'website'     => '',
+            'name'    => '缓存测试',
+            'phone'   => '13800138000',
+            'email'   => 'cache@test.com',
+            'message' => 'PRG 旁路验证',
+            'website' => '',
         ])->assertRedirect();
 
         // 回跳后该会话携带 lead_success，必须旁路缓存并显示成功提示
         $back = $this->get('/');
         $this->assertSame('BYPASS', $back->headers->get('X-Page-Cache'));
         $this->assertStringContainsString('lead-ok', $back->getContent());
-        $this->assertStringContainsString((string) config('copy.form.success'), $back->getContent());
+        $this->assertStringContainsString((string) __('ui.form_success'), $back->getContent());
     }
 
     public function test_shell_placeholders_and_personalize(): void
