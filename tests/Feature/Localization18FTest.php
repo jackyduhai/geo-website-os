@@ -256,12 +256,16 @@ class Localization18FTest extends TestCase
         $en = $this->get('/en/search?q=' . urlencode('Demo'));
         $en->assertOk();
         $enc = $en->getContent();
-        $this->assertStringContainsString('Demo Product', $enc);
+        // 标题经 <mark> 搜索词高亮（18H-1）：去标签后断言标题文本连续，并确认高亮生效。
+        $this->assertStringContainsString('Demo Product', strip_tags($enc));
+        $this->assertStringContainsString('<mark>Demo</mark>', $enc);
         $this->assertStringNotContainsString('演示产品', $enc);
 
         $zh = $this->get('/search?q=' . urlencode('演示'));
         $zh->assertOk();
-        $this->assertStringContainsString('演示产品', $zh->getContent());
+        $zhc = $zh->getContent();
+        $this->assertStringContainsString('演示产品', strip_tags($zhc));
+        $this->assertStringContainsString('<mark>演示</mark>', $zhc);
     }
 
     // ----------------------------------------------------------------

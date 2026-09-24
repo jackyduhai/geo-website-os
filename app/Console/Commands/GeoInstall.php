@@ -120,6 +120,12 @@ class GeoInstall extends Command
         $this->call('db:seed', ['--class' => 'SystemPageSeeder', '--force' => true]);
         $this->line('  [ok] system pages (industry-neutral)');
 
+        // ---------- 4e. 搜索派生索引初始化 ----------
+        // 索引是派生只读模型：安装结束全量重建一次，保证 fresh install 后搜索立即可用、
+        // 与初始数据一致（空站为 0 条）。之后内容变更由增量同步 / dirty 懒重建维护。
+        $this->call('search:reindex');
+        $this->line('  [ok] search index built');
+
         // ---------- 5. 管理员初始化 ----------
         $email = trim((string) $this->option('admin-email')) ?: 'admin@example.com';
         $password = (string) $this->option('admin-password');

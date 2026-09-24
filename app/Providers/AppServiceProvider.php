@@ -62,6 +62,15 @@ class AppServiceProvider extends ServiceProvider
 
         // Bind generic URL resolver for SeoMeta canonical generation
         $this->app->bind(UrlResolverInterface::class, GenericUrlResolver::class);
+
+        // P-STEP 18H-1：搜索引擎按运行环境选择——SQLite + FTS5 可用时走 FTS5，
+        // 否则（MySQL / PostgreSQL / 未编译 FTS5）回退普通表 LIKE。上层只依赖接口，
+        // 未来替换 Meilisearch / Elasticsearch 时无需改动调用方。
+        $this->app->bind(\App\Support\Search\SearchEngineInterface::class, function ($app) {
+            $fts = $app->make(\App\Support\Search\SqliteFtsEngine::class);
+
+            return $fts->isAvailable() ? $fts : $app->make(\App\Support\Search\DatabaseLikeEngine::class);
+        });
     }
 
     public function boot(): void
@@ -91,6 +100,10 @@ class AppServiceProvider extends ServiceProvider
             $model::saved(static fn () => PageCache::flush());
             $model::deleted(static fn () => PageCache::flush());
         }
+
+        // P-STEP 18H-1：搜索索引增量同步（Content/Entity 保存即增量重算；noindex / 栏目 /
+        // 关系 / 站点 / 设置变更标记 dirty，引擎查询前懒重建），索引无需人工 reindex。
+        app(\App\Support\Search\SearchIndexSync::class)->register();
 
         // 301/302 规则增删改后，同步失效跳转执行层的永久缓存
         RedirectRule::saved(static fn () => \App\Http\Middleware\HandleRedirects::flushRules());

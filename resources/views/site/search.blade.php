@@ -26,8 +26,8 @@
     <div class="posts">
       @foreach($items as $p)
         <a class="post" href="{{ $p->url() }}">
-          <h2>{{ $p->title }}</h2>
-          @if($p->summary)<p>{{ $p->summary }}</p>@endif
+          <h2>{!! \App\Support\Search\Highlighter::mark($p->title, $terms) !!}</h2>
+          @if(trim((string) $p->snippet()) !== '')<p>{!! \App\Support\Search\Highlighter::mark($p->snippet(), $terms) !!}</p>@endif
         </a>
       @endforeach
     </div>

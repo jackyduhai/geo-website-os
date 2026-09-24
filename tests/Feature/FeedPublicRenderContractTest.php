@@ -342,7 +342,9 @@ class FeedPublicRenderContractTest extends TestCase
     {
         $html = $this->getOn('a.test', '/search?q=article')->assertOk()->getContent();
 
-        $this->assertStringContainsString('Visible Knowledge Article', $html);
+        // 标题 / 摘要经 <mark> 搜索词高亮（18H-1）：去标签后断言文本连续，并确认高亮生效。
+        $this->assertStringContainsString('Visible Knowledge Article', strip_tags($html));
+        $this->assertStringContainsString('<mark>Article</mark>', $html);
         $this->assertStringNotContainsString('Noindex Article', $html);
         $this->assertStringNotContainsString('Inactive Cat Article', $html);
     }
