@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
 use App\Models\Media;
 use App\Models\Setting;
+use App\Support\Audit\AuditSnapshot;
 use App\Support\ImageOptimizer;
 use App\Support\PageCache;
 use App\Support\Theme\ThemePresets;
@@ -24,6 +25,7 @@ class SettingController extends Controller
         'copy'    => '文案话术',
         'seo'     => 'SEO 设置',
         'geo'     => 'GEO 设置',
+        'analytics' => 'Analytics 统计',
         'sync'    => 'GEOFlow 对接',
     ];
 
@@ -70,6 +72,8 @@ class SettingController extends Controller
             ->get();
 
         $errors = [];
+        $before = [];
+        $after = [];
         foreach ($items as $item) {
             $key = $item->key;
 
@@ -79,9 +83,9 @@ class SettingController extends Controller
                 $fileKey = 'file_' . $key;
                 if ($request->hasFile($fileKey)) {
                     $path = ImageOptimizer::store($request->file($fileKey), 'settings', ImageOptimizer::MAXW_LOGO);
-                    Setting::set($key, $path);
+                    $this->applySetting($key, $path, $before, $after);
                 } elseif ($request->exists($key)) {
-                    Setting::set($key, (string) $request->input($key, ''));
+                    $this->applySetting($key, (string) $request->input($key, ''), $before, $after);
                 }
                 continue;
             }
@@ -114,11 +118,28 @@ class SettingController extends Controller
                 continue;
             }
 
-            Setting::set($key, $value);
+            $this->applySetting($key, $value, $before, $after);
         }
 
         if ($errors !== []) {
             return back()->withErrors($errors)->withInput();
+        }
+
+        // Analytics 组交叉校验：启用某 provider 时对应 ID 必填（ID 格式已在 validateValue 校验）。
+        if ($group === 'analytics') {
+            $pairs = [
+                ['analytics_ga4_enabled', 'analytics_ga4_id', 'Google Analytics 4'],
+                ['analytics_gtm_enabled', 'analytics_gtm_id', 'Google Tag Manager'],
+                ['analytics_meta_enabled', 'analytics_meta_id', 'Meta Pixel'],
+            ];
+            foreach ($pairs as [$enKey, $idKey, $plabel]) {
+                if (Setting::get($enKey) === '1' && trim((string) Setting::get($idKey, '')) === '') {
+                    $errors[$idKey] = "已启用 {$plabel}，请填写对应 ID。";
+                }
+            }
+            if ($errors !== []) {
+                return back()->withErrors($errors)->withInput();
+            }
         }
 
         // TD-12 单一事实源：基础信息里的「站点名称」只是权威 Site.name 的编辑入口，
@@ -135,7 +156,13 @@ class SettingController extends Controller
 
         Setting::flush();
         PageCache::flush();
-        AuditLog::record('settings.update', "更新站点设置：{$group}");
+
+        // TD-92：设置变更须带审计安全 before/after（经 AuditSnapshot 脱敏 / 归一化，
+        // 只保留真正变化字段）；无变化不产生日志，避免噪音。
+        $changes = AuditSnapshot::changes($before, $after);
+        if ($changes !== []) {
+            AuditLog::record('settings.update', "更新站点设置：{$group}", ['changes' => $changes], 'settings');
+        }
 
         return redirect()->route('admin.settings.index', ['group' => $group])
             ->with('success', '设置已保存。');
@@ -187,6 +214,19 @@ class SettingController extends Controller
     }
 
     /**
+     * 写入一个设置并收集其 before/after（仅值真正变化时），供审计快照使用。
+     */
+    private function applySetting(string $key, string $value, array &$before, array &$after): void
+    {
+        $old = (string) Setting::get($key, '');
+        if ($old !== $value) {
+            $before[$key] = $old;
+            $after[$key] = $value;
+        }
+        Setting::set($key, $value);
+    }
+
+    /**
      * 按字段类型 / 键做轻量服务端校验；返回中文错误信息，通过返回 null。
      * 空字符串视为「清空 / 回退默认」，一律放行。
      */
@@ -233,6 +273,16 @@ class SettingController extends Controller
 
         if ($item->key === 'theme_color_mode' && ! in_array($value, ['light', 'dark', 'system'], true)) {
             return '「默认外观模式」只能是 light（浅色）、dark（深色）或 system（跟随系统）。';
+        }
+
+        if ($item->key === 'analytics_ga4_id' && ! preg_match('/^G-[A-Za-z0-9-]+$/', $value)) {
+            return '「GA4 Measurement ID」需以 G- 开头（如 G-XXXXXXXXXX）。';
+        }
+        if ($item->key === 'analytics_gtm_id' && ! preg_match('/^GTM-[A-Za-z0-9]+$/', $value)) {
+            return '「GTM Container ID」需以 GTM- 开头（如 GTM-XXXXXX）。';
+        }
+        if ($item->key === 'analytics_meta_id' && ! ctype_digit($value)) {
+            return '「Meta Pixel ID」需为纯数字。';
         }
 
         return null;

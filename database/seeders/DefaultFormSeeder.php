@@ -5,43 +5,52 @@ namespace Database\Seeders;
 use App\Models\Form;
 use App\Models\FormField;
 use App\Models\Site;
+use App\Support\SiteContext;
 use Illuminate\Database\Seeder;
 
 /**
- * 出厂默认联系表单种子（P-STEP 18H-2，D3）。
+ * 出厂默认联系表单种子（P-STEP 18H-2，D3；18H-3 改为不覆盖）。
  * --------------------------------------------------
- * 幂等创建中性 Default Contact Form（slug=contact）：name / phone / email /
- * message，不含任何 OEM / 原料采购 / 经销代理等制造业业务字段。
+ * 作用于「当前站点」（SiteContext，CLI 下回退默认站点），幂等创建中性
+ * Default Contact Form（slug=contact）：name / phone / email / message，
+ * 不含任何 OEM / 原料采购 / 经销代理等制造业业务字段。
+ *
+ * 关键：默认 contact 表单一旦已存在即整体保留（字段 / 通知 / 启停 / 成功文案），
+ * 重复执行或 geo:upgrade 绝不覆盖站点自定义。
  *
  *  - FormField 每 locale 一行（zh-CN / en），结构列一致、展示列翻译；
  *  - 通知默认关闭（notification_enabled=false），无收件人；
- *  - success_message 留空，前台回退语言包。
- *
- * 是否在公开前台显示由现有公开 / 站点门禁决定，不因创建 Form 自动生成公开页面。
+ *  - 是否在公开前台显示由现有公开 / 站点门禁决定，不因创建 Form 自动生成公开页面。
  */
 class DefaultFormSeeder extends Seeder
 {
     public function run(): void
     {
-        $site = Site::where('slug', Site::DEFAULT_SLUG)->first();
+        $site = SiteContext::currentSite() ?: Site::default();
         if (! $site) {
             return;
         }
 
-        $form = Form::updateOrCreate(
-            ['site_id' => $site->id, 'slug' => Form::DEFAULT_SLUG],
-            [
-                'name'                   => '联系表单 / Contact Form',
-                'title'                  => null,
-                'success_message'        => null,
-                'status'                 => Form::STATUS_ENABLED,
-                'consent_required'       => false,
-                'honeypot_enabled'       => true,
-                'notification_enabled'   => false,
-                'notification_channels'  => 'email',
-                'notification_recipients' => null,
-            ]
-        );
+        // 已存在默认 contact 表单：保留站点全部自定义，不覆盖。
+        $existing = Form::where('site_id', $site->id)
+            ->where('slug', Form::DEFAULT_SLUG)->first();
+        if ($existing) {
+            return;
+        }
+
+        $form = Form::create([
+            'site_id'                => $site->id,
+            'slug'                   => Form::DEFAULT_SLUG,
+            'name'                   => '联系表单 / Contact Form',
+            'title'                  => null,
+            'success_message'        => null,
+            'status'                 => Form::STATUS_ENABLED,
+            'consent_required'       => false,
+            'honeypot_enabled'       => true,
+            'notification_enabled'   => false,
+            'notification_channels'  => 'email',
+            'notification_recipients' => null,
+        ]);
 
         $definitions = [
             'zh-CN' => [
@@ -69,20 +78,20 @@ class DefaultFormSeeder extends Seeder
         foreach ($definitions as $locale => $fields) {
             $sort = 0;
             foreach ($fields as $f) {
-                FormField::updateOrCreate(
-                    ['form_id' => $form->id, 'name' => $f['name'], 'locale' => $locale],
-                    [
-                        'site_id'     => $site->id,
-                        'type'        => $f['type'],
-                        'label'       => $f['label'],
-                        'placeholder' => $f['placeholder'],
-                        'help_text'   => null,
-                        'required'    => $f['required'],
-                        'validation'  => null,
-                        'options'     => null,
-                        'sort_order'  => $sort,
-                    ]
-                );
+                FormField::create([
+                    'form_id'     => $form->id,
+                    'site_id'     => $site->id,
+                    'name'        => $f['name'],
+                    'type'        => $f['type'],
+                    'required'    => $f['required'],
+                    'label'       => $f['label'],
+                    'placeholder' => $f['placeholder'],
+                    'help_text'   => null,
+                    'validation'  => null,
+                    'options'     => null,
+                    'sort_order'  => $sort,
+                    'locale'      => $locale,
+                ]);
                 $sort++;
             }
         }

@@ -16,7 +16,8 @@
   <div class="lead-ok" role="status">{{ session('lead_success') }}</div>
 @else
   <form class="lead-form dynamic-form {{ $formClass }}" id="{{ $formId }}" method="post"
-        action="{{ localized_route('forms.submit', $formModel->slug) }}" novalidate>
+        action="{{ localized_route('forms.submit', $formModel->slug) }}"
+        data-form-id="{{ $formModel->id }}" data-form-slug="{{ $formModel->slug }}" novalidate>
     @csrf
 
     @if($formModel->honeypot_enabled)

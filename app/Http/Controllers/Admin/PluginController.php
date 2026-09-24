@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\AuditLog;
 use App\Models\Setting;
 use App\Models\Site;
 use App\Support\Http\SubRequest;
@@ -72,6 +73,8 @@ class PluginController extends Controller
                 ->with('error', '插件启用失败，启用态未改变。');
         }
 
+        AuditLog::record('plugin.enable', "启用插件：{$slug}", [], 'Setting');
+
         PageCache::flush();
 
         return redirect()->route('admin.plugins.index')
@@ -91,6 +94,7 @@ class PluginController extends Controller
         }
 
         PluginManager::disable($slug);
+        AuditLog::record('plugin.disable', "停用插件：{$slug}", [], 'Setting');
         PageCache::flush();
 
         return redirect()->route('admin.plugins.index')

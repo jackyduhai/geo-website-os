@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\AuditLog;
 use App\Models\Content;
 use App\Models\Entity;
 use App\Models\Media;
@@ -195,6 +196,9 @@ class SeoMetaController extends Controller
             $this->throwFriendlyConstraint($scope);
         }
 
+        AuditLog::record('seo_meta.store', "创建 SEO 覆盖：{$locale}".($seo->title ? "（{$seo->title}）" : ''),
+            [], 'SeoMeta', $seo->id);
+
         SeoMetaResolver::resetRequestMemo();
 
         return redirect()->route('admin.seo-metas.edit', $seo)
@@ -232,6 +236,8 @@ class SeoMetaController extends Controller
         $scope = $seoMeta->isSiteLevel() ? 'site'
             : ($seoMeta->isContentLevel() ? 'content'
             : ($seoMeta->isPageLevel() ? 'page' : 'entity'));
+        $auditAllowed = ['title', 'description', 'canonical', 'noindex', 'nofollow', 'og_title', 'og_description'];
+        $auditBefore = $seoMeta->only($auditAllowed);
         [, , , , , $data] = $this->validateData($request, $seoMeta);
 
         $this->fillSeo(
@@ -245,6 +251,9 @@ class SeoMetaController extends Controller
             $this->throwFriendlyConstraint($scope);
         }
 
+        AuditLog::recordChange('seo_meta.update', 'SeoMeta', $seoMeta->id,
+            "更新 SEO 覆盖：{$seoMeta->locale}", $auditBefore, $seoMeta->only($auditAllowed), $auditAllowed);
+
         SeoMetaResolver::resetRequestMemo();
 
         return redirect()->route('admin.seo-metas.edit', $seoMeta)
@@ -256,6 +265,8 @@ class SeoMetaController extends Controller
         $scope = $seoMeta->isSiteLevel() ? 'site'
             : ($seoMeta->isContentLevel() ? 'content'
             : ($seoMeta->isPageLevel() ? 'page' : 'entity'));
+        AuditLog::record('seo_meta.destroy', "删除 SEO 覆盖：{$seoMeta->locale}".($seoMeta->title ? "（{$seoMeta->title}）" : ''),
+            [], 'SeoMeta', $seoMeta->id);
         $seoMeta->delete();
         SeoMetaResolver::resetRequestMemo();
 

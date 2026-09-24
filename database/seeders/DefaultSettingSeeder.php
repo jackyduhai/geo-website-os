@@ -117,6 +117,15 @@ class DefaultSettingSeeder extends Seeder
             ['copy_404_secondary',          '', 'copy', '404 · 次按钮', 'text', '留空恢复默认', 330],
             ['copy_footer_slogan',          '', 'copy', '页脚 · 品牌标语', 'text', 'logo 下方一句话；留空恢复默认', 400],
 
+            // ---------- Analytics / 统计转化（默认全部关闭、第三方 ID 留空；Site-scoped） ----------
+            ['analytics_ga4_enabled', '0', 'analytics', '启用 Google Analytics 4', 'bool', '默认关闭；开启需填写 Measurement ID，且访客同意后才加载', 10],
+            ['analytics_ga4_id',      '', 'analytics', 'GA4 Measurement ID', 'text', '格式 G-XXXXXX；启用 GA4 时必填', 20],
+            ['analytics_gtm_enabled', '0', 'analytics', '启用 Google Tag Manager', 'bool', '默认关闭；开启需填写 Container ID', 30],
+            ['analytics_gtm_id',      '', 'analytics', 'GTM Container ID', 'text', '格式 GTM-XXXXXX；启用 GTM 时必填；容器代码自动带 CSP nonce', 40],
+            ['analytics_meta_enabled','0', 'analytics', '启用 Meta Pixel', 'bool', '默认关闭；开启需填写 Pixel ID', 50],
+            ['analytics_meta_id',     '', 'analytics', 'Meta Pixel ID', 'text', '纯数字；启用 Meta Pixel 时必填', 60],
+            ['analytics_consent_required', '1', 'analytics', '统计需访客同意', 'bool', '开启后未同意前不加载任何第三方统计脚本、不发第三方请求（Basic Consent Mode）', 70],
+
             // ---------- 外部对接（接收推送完整可用；主动拉取未实现，相关键已 RETIRE） ----------
             ['sync_geoflow_enabled',  '0', 'sync', '启用外部内容推送接收', 'bool', '关闭时接口仍返回但拒绝写入', 10],
             ['sync_geoflow_token',    '',  'sync', '接口 Token', 'text', '后台生成与轮换，仅创建时明文展示一次', 20],
@@ -125,10 +134,25 @@ class DefaultSettingSeeder extends Seeder
 
         foreach ($rows as $r) {
             [$key, $value, $group, $label, $type, $hint, $sort] = $r;
-            Setting::updateOrCreate(
-                ['key' => $key],
-                compact('value', 'group', 'label', 'type', 'hint') + ['sort' => $sort]
-            );
+
+            $existing = Setting::where('key', $key)->first();
+            if ($existing) {
+                // 已存在：仅刷新字段元信息（分组 / 标签 / 类型 / 提示 / 排序），
+                // 绝不覆盖站点已自定义的 value（geo:upgrade 在用户数据上运行，P-STEP 18H-3）。
+                $existing->fill(
+                    compact('group', 'label', 'type', 'hint') + ['sort' => $sort]
+                )->save();
+            } else {
+                Setting::create([
+                    'key'   => $key,
+                    'value' => $value,
+                    'group' => $group,
+                    'label' => $label,
+                    'type'  => $type,
+                    'hint'  => $hint,
+                    'sort'  => $sort,
+                ]);
+            }
         }
 
         Setting::flush();

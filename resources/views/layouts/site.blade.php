@@ -1394,9 +1394,16 @@ a.ft-v:hover{color:#fff;}
 
 {!! app(\App\Services\Geo\SchemaBuilder::class)->render($schemas ?? []) !!}
 
-@if(!empty($siteSettings['seo_head_code']))
-{!! $siteSettings['seo_head_code'] !!}
+@php
+  $gwosHeadCode = app(\App\Support\Head\HeadCodeSanitizer::class)->sanitize($siteSettings['seo_head_code'] ?? '');
+@endphp
+@if($gwosHeadCode['html'] !== '')
+{!! $gwosHeadCode['html'] !!}
 @endif
+@if($gwosHeadCode['invalid'])
+<!-- seo_head_code: legacy/invalid elements removed; only <meta>/<link> are allowed (P-STEP 18H-3) -->
+@endif
+@include('site.partials.analytics')
 </head>
 <body>
 
@@ -1759,5 +1766,6 @@ a.ft-v:hover{color:#fff;}
   else { rev.forEach(function(el){ el.classList.add('in'); }); }
 })();
 </script>
+@include('site.partials.consent-banner')
 </body>
 </html>

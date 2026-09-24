@@ -60,7 +60,8 @@ class SecurityHeaders
     }
 
     /**
-     * 组装 CSP。前台脚本走 nonce 白名单；后台因内联事件保留 unsafe-inline。
+     * 组装 CSP。后台脚本保留 unsafe-inline；前台脚本走 nonce，并按「已启用」analytics
+     * provider 受控动态放开域名（默认全部关闭则不放开任何第三方域，保持最小权限）。
      */
     private function csp(Request $request, string $nonce): string
     {
@@ -70,7 +71,7 @@ class SecurityHeaders
             ? "script-src 'self' 'unsafe-inline'"
             : "script-src 'nonce-".$nonce."'";
 
-        return implode('; ', [
+        $directives = [
             "default-src 'self'",
             $script,
             "style-src 'self' 'unsafe-inline'",
@@ -82,6 +83,31 @@ class SecurityHeaders
             "base-uri 'self'",
             "form-action 'self'",
             "frame-ancestors 'self'",
-        ]);
+        ];
+
+        // 前台：受控动态 CSP —— 仅启用 provider 的域名进入 script/connect/frame 白名单。
+        // （CSP 是「允许」而非「加载」：未获 consent 时脚本不注入，即使白名单内也不会请求。）
+        if (! $isAdmin) {
+            $analytics = app(\App\Support\Analytics\AnalyticsConfig::class);
+
+            $scriptHosts = $analytics->cspHosts('script');
+            if ($scriptHosts !== []) {
+                $directives[1] = $script.' '.implode(' ', $scriptHosts);
+            }
+
+            $connectHosts = $analytics->cspHosts('connect');
+            if ($connectHosts !== []) {
+                $directives[5] = "connect-src 'self' ".implode(' ', $connectHosts);
+            }
+
+            $frameHosts = $analytics->cspHosts('frame');
+            if ($frameHosts !== []) {
+                // frame-src 置于 frame-ancestors 之前
+                array_splice($directives, count($directives) - 1, 0,
+                    ["frame-src 'self' ".implode(' ', $frameHosts)]);
+            }
+        }
+
+        return implode('; ', $directives);
     }
 }

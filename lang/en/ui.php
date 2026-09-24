@@ -298,4 +298,11 @@ return [
     'blank_home_lead' => 'Your site is ready. Create content and entities, finish the site settings and publish — your homepage will then show your information.',
     'browse_content' => 'Browse Content',
 
+    // Analytics Consent (P-STEP 18H-3)
+    'consent_title'  => 'Analytics & Cookie Consent',
+    'consent_text'   => 'We use third-party analytics tools (such as Google Analytics and Meta Pixel) to understand how the site is used and improve our content and services. These tools store cookies and collect information on your device. You can accept or decline; if you decline, no third-party analytics scripts will be loaded and no third-party analytics requests will be sent.',
+    'consent_accept' => 'Accept',
+    'consent_deny'   => 'Decline',
+    'consent_aria'   => 'Cookie / analytics consent choices',
+
 ];

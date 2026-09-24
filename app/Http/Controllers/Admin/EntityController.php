@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\AuditLog;
 use App\Models\Entity;
 use App\Models\EntityRelation;
 use App\Models\Media;
@@ -119,6 +120,9 @@ class EntityController extends Controller
                 'description' => $data['description'] ?? null,
             ]);
 
+            AuditLog::record('entity.translation_store', "新增实体翻译：{$transLocale}",
+                ['translation_group' => (string) $request->input('translation_group')], 'Entity', $anchor->id);
+
             $this->resetReadModels();
 
             return redirect()->route('admin.entities.edit', [
@@ -149,6 +153,8 @@ class EntityController extends Controller
         $this->applyPublication($entity);
         $entity->save();
 
+        AuditLog::record('entity.store', "创建实体：{$entity->name}（{$type}）", [], 'Entity', $entity->id);
+
         $this->resetReadModels();
 
         return redirect()->route('admin.entities.edit', $entity)
@@ -178,6 +184,8 @@ class EntityController extends Controller
         $transLocale = $this->resolveTransLocale($request);
         $type = $entity->type; // 类型创建后不可修改
         $data = $this->validateData($request, $entity, $type);
+        $auditAllowed = ['name', 'slug', 'summary', 'description', 'status', 'sort_order'];
+        $auditBefore = $entity->only($auditAllowed);
 
         // 翻译字段每行都更新
         $entity->fill([
@@ -198,6 +206,10 @@ class EntityController extends Controller
         }
 
         $entity->save();
+
+        AuditLog::recordChange('entity.update', 'Entity', $entity->id,
+            "更新实体：{$entity->name}", $auditBefore, $entity->only($auditAllowed), $auditAllowed);
+
         $this->resetReadModels();
 
         $anchor = $entity->locale === LocaleRegistry::default()
@@ -213,6 +225,7 @@ class EntityController extends Controller
     public function destroy(Entity $entity): RedirectResponse
     {
         $type = $entity->type;
+        AuditLog::record('entity.destroy', "删除实体：{$entity->name}", [], 'Entity', $entity->id);
         // entity_relations 两端外键为 ON DELETE CASCADE，关联关系随实体自动清除。
         $entity->delete();
         $this->resetReadModels();
@@ -226,6 +239,7 @@ class EntityController extends Controller
         $entity->status = Entity::STATUS_PUBLISHED;
         $this->applyPublication($entity);
         $entity->save();
+        AuditLog::record('entity.publish', "发布实体：{$entity->name}", [], 'Entity', $entity->id);
         $this->resetReadModels();
 
         return redirect()->back()->with('success', '实体已发布。');
@@ -236,6 +250,7 @@ class EntityController extends Controller
         $entity->status = Entity::STATUS_DRAFT;
         $entity->published_at = null;
         $entity->save();
+        AuditLog::record('entity.unpublish', "下架实体：{$entity->name}", [], 'Entity', $entity->id);
         $this->resetReadModels();
 
         return redirect()->back()->with('success', '实体已下架为草稿。');

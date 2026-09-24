@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\AuditLog;
 use App\Models\Form;
 use App\Models\FormField;
 use App\Models\FormSubmission;
@@ -51,6 +52,8 @@ class FormController extends Controller
     {
         $form = Form::create($this->validateForm($request));
 
+        AuditLog::record('form.store', "创建表单：{$form->name}", [], 'Form', $form->id);
+
         return redirect()->route('admin.forms.edit', $form)
             ->with('success', '表单已创建，可在下方添加字段。');
     }
@@ -62,7 +65,15 @@ class FormController extends Controller
 
     public function update(Request $request, Form $form)
     {
+        $auditAllowed = ['name', 'slug', 'title', 'status', 'consent_required', 'honeypot_enabled',
+            'notification_enabled', 'notification_channels', 'notification_recipients'];
+        $auditBefore = $form->only($auditAllowed);
+
         $form->update($this->validateForm($request));
+
+        AuditLog::recordChange('form.update', 'Form', $form->id,
+            "更新表单设置：{$form->name}", $auditBefore, $form->only($auditAllowed), $auditAllowed);
+
         PageCache::flush();
 
         return back()->with('success', '表单设置已保存。');
@@ -74,6 +85,7 @@ class FormController extends Controller
             return back()->with('error', '默认联系表单不可删除（可停用或清空字段）。');
         }
 
+        AuditLog::record('form.destroy', "删除表单：{$form->name}", [], 'Form', $form->id);
         $form->fields()->delete();
         $form->delete();
         PageCache::flush();
@@ -83,9 +95,12 @@ class FormController extends Controller
 
     public function toggle(Form $form)
     {
+        $willEnable = ! $form->isEnabled();
         $form->update([
-            'status' => $form->isEnabled() ? Form::STATUS_DISABLED : Form::STATUS_ENABLED,
+            'status' => $willEnable ? Form::STATUS_ENABLED : Form::STATUS_DISABLED,
         ]);
+        AuditLog::record('form.toggle', ($willEnable ? '启用表单：' : '停用表单：').$form->name,
+            [], 'Form', $form->id);
         PageCache::flush();
 
         return back();
@@ -132,6 +147,9 @@ class FormController extends Controller
             ]);
         }
 
+        AuditLog::record('form_field.store', "添加字段：{$struct['name']}（{$struct['type']}）",
+            [], 'Form', $form->id);
+
         PageCache::flush();
 
         return redirect()->route('admin.forms.edit', $form)->with('success', '字段已添加。');
@@ -173,6 +191,8 @@ class FormController extends Controller
             ]);
         }
 
+        AuditLog::record('form_field.update', "更新字段：{$field->name}", [], 'Form', $form->id);
+
         PageCache::flush();
 
         return redirect()->route('admin.forms.edit', $form)->with('success', '字段已保存。');
@@ -180,6 +200,7 @@ class FormController extends Controller
 
     public function destroyField(Form $form, FormField $field)
     {
+        AuditLog::record('form_field.destroy', "删除字段：{$field->name}", [], 'Form', $form->id);
         $form->fields()->where('name', $field->name)->delete();
         PageCache::flush();
 

@@ -2,6 +2,10 @@
 
 namespace App\Console\Commands;
 
+use App\Models\Site;
+use App\Support\SiteContext;
+use Database\Seeders\DefaultFormSeeder;
+use Database\Seeders\DefaultSettingSeeder;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -43,11 +47,16 @@ class GeoUpgrade extends Command
         }
         $this->line('  [ok] core tables');
 
-        // ---------- 3a-2. 补出厂默认联系表单（中性 contact form，幂等） ----------
-        // 新版本引入产品化表单，migrate 只建空表；补默认 contact 表单供 contact 页
-        // FormReference 引用，不含制造业字段。
-        $this->call('db:seed', ['--class' => 'DefaultFormSeeder', '--force' => true]);
-        $this->line('  [ok] default contact form');
+        // ---------- 3a. 为每个站点补出厂默认设置 + 中性联系表单（幂等、不覆盖自定义） ----------
+        // 新版本引入 analytics 设置组与产品化表单，migrate 只建空表；遍历所有站点，
+        // 在各站上下文内幂等补齐缺失行；已自定义的设置 value 与 contact 表单一律保留。
+        foreach (Site::all() as $upgradeSite) {
+            SiteContext::withSite($upgradeSite, static function (): void {
+                (new DefaultFormSeeder())->run();
+                (new DefaultSettingSeeder())->run();
+            });
+        }
+        $this->line('  [ok] default settings & contact form for all sites');
 
         // ---------- 3b. 重建搜索派生索引 ----------
         // 新版本引入 search_documents / search_index，migrate 只建空表，必须从现有

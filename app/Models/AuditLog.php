@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use App\Support\BelongsToSite;
+use App\Support\Audit\AuditSnapshot;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
@@ -41,5 +42,28 @@ class AuditLog extends Model
             'target_id'   => $targetId,
             'ip'          => request()->ip(),
         ]);
+    }
+
+    /**
+     * 记录「资源变化」审计（P-STEP 18H-3 / TD-92）：before/after 经 AuditSnapshot
+     * 做白名单 / 脱敏 / 归一化，仅保留真正变化字段；无变化不产生日志（避免噪音）。
+     *
+     * @param array $allowed 允许进入审计的字段白名单
+     */
+    public static function recordChange(
+        string $action,
+        string $targetType,
+        int $targetId,
+        string $summary,
+        ?array $before,
+        ?array $after,
+        array $allowed = []
+    ): void {
+        $changes = AuditSnapshot::changes($before, $after, $allowed);
+        if ($changes === []) {
+            return;
+        }
+
+        static::record($action, $summary, ['changes' => $changes], $targetType, $targetId);
     }
 }

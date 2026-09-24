@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\AuditLog;
 use App\Models\Setting;
 use App\Models\Site;
 use App\Support\Http\SubRequest;
@@ -51,6 +52,8 @@ class ThemeController extends Controller
             return redirect()->route('admin.themes.index')
                 ->with('error', '主题激活失败：主题清单无效或已缺失，激活态未改变。');
         }
+
+        AuditLog::record('theme.activate', "切换主题：{$name}", [], 'Setting');
 
         return redirect()->route('admin.themes.index')
             ->with('success', "已为当前站点切换主题：{$name}。");

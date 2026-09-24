@@ -298,4 +298,11 @@ return [
     'blank_home_lead' => '站点已就绪。在后台创建内容与实体、完成站点设置并发布后，首页将展示你的信息。',
     'browse_content' => '浏览内容',
 
+    // Analytics Consent（P-STEP 18H-3）
+    'consent_title'  => '统计与 Cookie 同意',
+    'consent_text'   => '我们使用第三方统计工具（如 Google Analytics、Meta Pixel）了解网站使用情况，以改进内容与服务。这些工具会在你的设备上存储 Cookie 并收集信息。你可以接受或拒绝；拒绝后不会加载任何第三方统计脚本，也不会发送第三方统计请求。',
+    'consent_accept' => '接受',
+    'consent_deny'   => '拒绝',
+    'consent_aria'   => 'Cookie / 统计同意选择',
+
 ];

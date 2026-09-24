@@ -215,7 +215,7 @@ Route::middleware(['admin.auth', 'admin.site'])->group(function () {
 
     // ---------- 站点设置 ----------
     Route::get('settings/{group?}', [SettingController::class, 'index'])
-        ->where('group', 'general|theme|contact|copy|seo|geo|sync')->name('settings.index');
+        ->where('group', 'general|theme|contact|copy|seo|geo|analytics|sync')->name('settings.index');
     Route::put('settings/{group}', [SettingController::class, 'update'])->name('settings.update');
     Route::post('settings/theme/preset', [SettingController::class, 'applyPreset'])
         ->name('settings.preset');

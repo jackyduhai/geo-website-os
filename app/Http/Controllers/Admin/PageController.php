@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\AuditLog;
 use App\Models\Page;
 use App\Models\PageBlock;
 use App\Support\Blocks\BlockRegistry;
@@ -83,6 +84,9 @@ class PageController extends Controller
             }
         }
 
+        AuditLog::record('page.store', "创建页面：".($page->title ?: $page->slug ?: '#'.$page->id)."（{$page->template}）",
+            [], 'Page', $page->id);
+
         return redirect()->route('admin.pages.composer', $page)
             ->with('success', '页面已创建，请组合内容区块');
     }
@@ -99,6 +103,9 @@ class PageController extends Controller
 
     public function update(Request $request, Page $page): RedirectResponse
     {
+        $auditAllowed = ['template', 'title', 'slug', 'status'];
+        $auditBefore = $page->only($auditAllowed);
+
         $validated = $request->validate([
             'template' => ['required', 'string', 'max:40'],
             'title'    => ['nullable', 'string', 'max:160'],
@@ -120,6 +127,10 @@ class PageController extends Controller
             'status'   => $validated['status'] ?? $page->status,
         ])->save();
 
+        AuditLog::recordChange('page.update', 'Page', $page->id,
+            "更新页面设置：".($page->title ?: $page->slug ?: '#'.$page->id),
+            $auditBefore, $page->only($auditAllowed), $auditAllowed);
+
         PageCache::forgetPage($page);
 
         return back()->with('success', '页面设置已保存');
@@ -127,6 +138,8 @@ class PageController extends Controller
 
     public function destroy(Page $page): RedirectResponse
     {
+        AuditLog::record('page.destroy', "删除页面：".($page->title ?: $page->slug ?: '#'.$page->id),
+            [], 'Page', $page->id);
         $page->delete();
 
         return redirect()->route('admin.pages.index')->with('success', '页面已删除');
@@ -136,6 +149,9 @@ class PageController extends Controller
     {
         $page->status = $action === 'publish' ? Page::STATUS_PUBLISHED : Page::STATUS_DRAFT;
         $page->save();
+        AuditLog::record($action === 'publish' ? 'page.publish' : 'page.unpublish',
+            ($action === 'publish' ? '发布页面：' : '下架页面：').($page->title ?: $page->slug ?: '#'.$page->id),
+            [], 'Page', $page->id);
         PageCache::forgetPage($page);
 
         return back()->with('success', $action === 'publish' ? '页面已发布' : '页面已下架');
@@ -196,6 +212,9 @@ class PageController extends Controller
         $block->content = json_encode($type->defaultContent, JSON_UNESCAPED_UNICODE);
         $block->save();
 
+        AuditLog::record('block.store', "添加区块：{$block->type}（槽位 {$block->slot}）",
+            [], 'PageBlock', $block->id);
+
         return redirect()->route('admin.pages.editBlock', [$page, $block]);
     }
 
@@ -215,11 +234,18 @@ class PageController extends Controller
             abort(404);
         }
 
+        $auditBefore = ['content' => (string) $block->content];
+
         $block->content = json_encode(
             $this->extractConfig($request, $type),
             JSON_UNESCAPED_UNICODE
         );
         $block->save();
+
+        AuditLog::recordChange('block.update', 'PageBlock', $block->id,
+            "更新区块内容：{$block->type}", $auditBefore,
+            ['content' => (string) $block->content], ['content']);
+
         PageCache::forgetPage($page);
 
         return redirect()->route('admin.pages.composer', $page)->with('success', '区块已保存');
@@ -228,6 +254,7 @@ class PageController extends Controller
     public function destroyBlock(Page $page, PageBlock $block): RedirectResponse
     {
         $this->assertBelongs($page, $block);
+        AuditLog::record('block.destroy', "删除区块：{$block->type}", [], 'PageBlock', $block->id);
         $block->delete();
         PageCache::forgetPage($page);
 
@@ -251,6 +278,7 @@ class PageController extends Controller
             $b->sort = $tmp;
             $a->save();
             $b->save();
+            AuditLog::record('block.move', "移动区块：{$block->type}（{$dir}）", [], 'PageBlock', $block->id);
         }
 
         PageCache::forgetPage($page);
@@ -263,6 +291,8 @@ class PageController extends Controller
         $this->assertBelongs($page, $block);
         $block->is_active = ! $block->is_active;
         $block->save();
+        AuditLog::record('block.toggle',
+            ($block->is_active ? '显示区块：' : '隐藏区块：').$block->type, [], 'PageBlock', $block->id);
         PageCache::forgetPage($page);
 
         return back();
@@ -289,6 +319,8 @@ class PageController extends Controller
             $copy->title = $block->title.'（副本）';
         }
         $copy->save();
+
+        AuditLog::record('block.duplicate', "复制区块：{$block->type}", [], 'PageBlock', $copy->id);
 
         PageCache::forgetPage($page);
 
