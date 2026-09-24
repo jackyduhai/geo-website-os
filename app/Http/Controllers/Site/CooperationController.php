@@ -3,17 +3,22 @@
 namespace App\Http\Controllers\Site;
 
 use App\Http\Controllers\Controller;
+use App\Models\Page;
 use App\Services\Geo\SchemaBuilder;
 use App\Support\Catalog;
 use App\Support\Localization\LocaleContext;
 use App\Support\Narrative;
 use App\Support\Pages;
 use App\Support\PublicUrl;
+use App\Support\Render\CompositionRenderer;
+use App\Support\Render\SystemPageRenderContext;
 
 /**
- * 合作方式：多种合作模式 + 合作流程 + FAQ（结构化数据来自 Catalog / facts）。
- * 结构化数据来自 config/facts（facts.yaml），FAQ 为 config/pages 终稿；
- * 起订量 / 交付周期未核定前对应字段隐藏，不输出占位符。
+ * 合作方式（is_system Page + sys_cooperation）：多种合作模式 + 合作流程 + FAQ。
+ *
+ * P-STEP 18G-2b：合作页统一 SystemPageRenderContext（system_key 'cooperation'），
+ * 主体 sys_cooperation；结构化数据来自 Catalog / Pages，起订量 / 交付周期未核定前
+ * 对应字段隐藏，不输出占位符。SEO 经 resolver（page-level SeoMeta → 页面默认 → 站点）。
  */
 class CooperationController extends Controller
 {
@@ -34,11 +39,6 @@ class CooperationController extends Controller
         $typeCnt     = count($coop['types'] ?? []);
         $stepCnt     = count($coop['process'] ?? []);
 
-        $crumbs = [
-            ['name' => __('nav.home'), 'url' => PublicUrl::home()],
-            ['name' => __('nav.cooperation'), 'url' => $url],
-        ];
-
         // 合作流程 → HowTo（步数由 process 数据驱动）
         $howTo = null;
         if (! empty($coop['process'])) {
@@ -58,37 +58,33 @@ class CooperationController extends Controller
             ];
         }
 
-        return view('site.cooperation', [
+        $coopTitle = __('seo.cooperation_title') . ($typeNames !== ''
+            ? (LocaleContext::current() === 'en' ? ': ' : '：') . $typeNames
+            : '');
+        $coopDesc = __('seo.cooperation_desc', [
+            'name' => $company['name'] ?? '',
+            'types' => $typeNames,
+            'count' => $typeCnt,
+            'steps' => $stepCnt,
+        ]);
+
+        $coopPageSchema = $schema->webPage($url, __('seo.cooperation_title'), $coopDesc, 'WebPage');
+        $faqPage = $schema->faqPageFromList($faqs, $url);
+
+        // P-STEP 18G-2b：合作页走统一 Composition 管线（SystemPageRenderContext）。
+        $resource = [
             'coop'    => $coop,
             'faqs'    => $faqs,
             'lead'    => $lead,
-            'crumbs'  => array_slice($crumbs, 1),
-            'schemas' => array_values(array_filter([
-                $schema->organization(),
-                $schema->breadcrumb($crumbs),
-                $schema->webPage($url, __('seo.cooperation_title'), __('seo.cooperation_desc', [
-                    'name' => $company['name'] ?? '',
-                    'types' => $typeNames,
-                    'count' => $typeCnt,
-                    'steps' => $stepCnt,
-                ]), 'WebPage'),
-                $howTo,
-                $schema->faqPageFromList($faqs, $url),
-            ])),
-            'seo' => [
-                'title'       => __('seo.cooperation_title') . ($typeNames !== ''
-                    ? (LocaleContext::current() === 'en' ? ': ' : '：') . $typeNames
-                    : ''),
-                'description' => __('seo.cooperation_desc', [
-                    'name' => $company['name'] ?? '',
-                    'types' => $typeNames,
-                    'count' => $typeCnt,
-                    'steps' => $stepCnt,
-                ]),
-                'canonical'   => $url,
-                'noindex'     => false,
-                'type'        => 'website',
+            'schemas' => array_values(array_filter([$coopPageSchema, $howTo, $faqPage])),
+            'seo_default' => [
+                'title'       => $coopTitle,
+                'description' => $coopDesc,
             ],
-        ]);
+        ];
+
+        return app(CompositionRenderer::class)->render(
+            new SystemPageRenderContext(SystemPageRenderContext::resolve('cooperation'), 'cooperation', $resource)
+        );
     }
 }

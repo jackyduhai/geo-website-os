@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Site;
 
 use App\Http\Controllers\Controller;
 use App\Models\Entity;
+use App\Models\Page;
 use App\Providers\AppServiceProvider;
 use App\Services\Geo\SchemaBuilder;
 use App\Support\Catalog;
@@ -13,6 +14,8 @@ use App\Support\Pages;
 use App\Support\PublicUrl;
 use App\Support\Render\CompositionRenderer;
 use App\Support\Render\EntityRenderContext;
+use App\Support\Render\ListingRenderContext;
+use App\Support\Render\SystemPageRenderContext;
 
 /**
  * 产品中心（当前站点 Catalog 站点隔离读模型驱动，Catalog 由 Entity 投影，Example 种子源自 config/facts）
@@ -92,30 +95,39 @@ class ProductController extends Controller
             }, $lines[0]['products'], array_keys($lines[0]['products'])));
         }
 
-        return view('site.products.index', [
+        $collectionPage = $schema->webPage(
+            $productsIndexUrl,
+            __('seo.products_index_title'),
+            __('seo.products_index_desc', ['brand' => $brandName, 'lines' => $lineNames]),
+            'CollectionPage',
+            $productsIndexUrl . '#itemlist'
+        );
+        $indexDesc = $flatMode
+            ? (trim($brandName) !== ''
+                ? __('seo.products_index_flat_with_brand', ['brand' => $brandName])
+                : __('seo.products_index_flat'))
+            : __('seo.products_index_desc', ['brand' => $brandName, 'lines' => $lineNames]);
+
+        // P-STEP 18G-2b：产品总览走统一 Composition 管线（SystemPageRenderContext）。
+        // 主体 sys_products 由本 resource 直驱；SEO 经 resolver（page-level SeoMeta
+        // → 页面类型默认 → 站点），控制器不再手工拼 SEO。
+        $resource = [
+            'lines' => $lines,
+            'lead' => $lead,
             'flatMode' => $flatMode,
-            'lines'   => $lines,
-            'lead'    => $lead,
-            'crumbs'  => array_slice($crumbs, 1),
-            'subnav'  => $this->subnav(),
-            'schemas' => array_values(array_filter([
-                $schema->organization(),
-                $schema->breadcrumb($crumbs),
-                $schema->webPage($productsIndexUrl, __('seo.products_index_title'), __('seo.products_index_desc', ['brand' => $brandName, 'lines' => $lineNames]), 'CollectionPage', $productsIndexUrl . '#itemlist'),
-                $itemList,
-            ])),
-            'seo' => [
-                'title'       => __('seo.products_index_title'),
-                'description' => $flatMode
-                    ? (trim($brandName) !== ''
-                        ? __('seo.products_index_flat_with_brand', ['brand' => $brandName])
-                        : __('seo.products_index_flat'))
-                    : __('seo.products_index_desc', ['brand' => $brandName, 'lines' => $lineNames]),
-                'canonical'   => $productsIndexUrl,
-                'noindex'     => false,
-                'type'        => 'website',
+            'subnav' => $this->subnav(),
+            'schemas' => array_values(array_filter([$collectionPage, $itemList])),
+            'seo_default' => [
+                'title' => __('seo.products_index_title'),
+                'description' => $indexDesc,
             ],
-        ]);
+        ];
+
+        $page = SystemPageRenderContext::resolve('products');
+
+        return app(CompositionRenderer::class)->render(
+            new SystemPageRenderContext($page, 'products', $resource)
+        );
     }
 
     /**
@@ -171,25 +183,26 @@ class ProductController extends Controller
             }, $products, array_keys($products))),
         ];
 
-        return view('site.products.line', [
-            'line'     => $data,
-            'products' => $products,
-            'crumbs'   => array_slice($crumbs, 1),
-            'subnav'   => $this->subnav($line),
-            'schemas'  => array_values(array_filter([
-                $schema->organization(),
-                $schema->breadcrumb($crumbs),
-                $schema->webPage($lineUrl, $data['name'], $data['desc'] ?? '', 'CollectionPage', $lineUrl . '#itemlist'),
-                $itemList,
-            ])),
-            'seo' => [
+        // P-STEP 18G-2b：单系列页走动态 Listing Composition（sys_products 单系列模式）。
+        $collectionPage = $schema->webPage($lineUrl, $data['name'], $data['desc'] ?? '', 'CollectionPage', $lineUrl . '#itemlist');
+
+        $resource = [
+            'singleLine'   => $data,
+            'lineProducts' => $products,
+            'subnav'       => $this->subnav($line),
+            'canonical'    => $lineUrl,
+            'crumbs'       => $crumbs,
+            'system_block' => 'sys_products',
+            'schemas'      => array_values(array_filter([$collectionPage, $itemList])),
+            'seo_default'  => [
                 'title'       => __('seo.product_line_title', ['name' => $data['name']]),
                 'description' => $data['desc'] ?? '',
-                'canonical'   => $lineUrl,
-                'noindex'     => false,
-                'type'        => 'website',
             ],
-        ]);
+        ];
+
+        return app(CompositionRenderer::class)->render(
+            new ListingRenderContext('product_line', $resource)
+        );
     }
 
     public function show(string $slug)

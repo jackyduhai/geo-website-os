@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Site;
 
 use App\Http\Controllers\Controller;
 use App\Models\Entity;
+use App\Models\Page;
 use App\Services\Geo\SchemaBuilder;
 use App\Support\Catalog;
 use App\Support\Localization\LocaleContext;
@@ -12,6 +13,7 @@ use App\Support\Pages;
 use App\Support\PublicUrl;
 use App\Support\Render\CompositionRenderer;
 use App\Support\Render\EntityRenderContext;
+use App\Support\Render\SystemPageRenderContext;
 
 /**
  * 应用场景（按应用行业分诊，当前站点 Catalog 站点隔离读模型驱动）
@@ -52,24 +54,29 @@ class SolutionController extends Controller
             }, $scenes, array_keys($scenes))),
         ];
 
-        return view('site.solutions.index', [
-            'scenes'  => $scenes,
-            'lead'    => $lead,
-            'crumbs'  => array_slice($crumbs, 1),
-            'schemas' => array_values(array_filter([
-                $schema->organization(),
-                $schema->breadcrumb($crumbs),
-                $schema->webPage($solutionsIndexUrl, __('seo.solutions_index_title', ['count' => $sceneCnt]), __('seo.solutions_index_desc', ['names' => $sceneNames, 'count' => $sceneCnt]), 'CollectionPage', $solutionsIndexUrl . '#itemlist'),
-                $itemList,
-            ])),
-            'seo' => [
-                'title'       => __('seo.solutions_index_title', ['count' => $sceneCnt]),
+        $collectionPage = $schema->webPage(
+            $solutionsIndexUrl,
+            __('seo.solutions_index_title', ['count' => $sceneCnt]),
+            __('seo.solutions_index_desc', ['names' => $sceneNames, 'count' => $sceneCnt]),
+            'CollectionPage',
+            $solutionsIndexUrl . '#itemlist'
+        );
+
+        // P-STEP 18G-2b：场景总览走统一 Composition 管线（SystemPageRenderContext）。
+        $resource = [
+            'scenes' => $scenes,
+            'lead' => $lead,
+            'subnav' => null,
+            'schemas' => array_values(array_filter([$collectionPage, $itemList])),
+            'seo_default' => [
+                'title' => __('seo.solutions_index_title', ['count' => $sceneCnt]),
                 'description' => __('seo.solutions_index_desc', ['names' => $sceneNames, 'count' => $sceneCnt]),
-                'canonical'   => PublicUrl::url('solutions/'),
-                'noindex'     => false,
-                'type'        => 'website',
             ],
-        ]);
+        ];
+
+        return app(CompositionRenderer::class)->render(
+            new SystemPageRenderContext(SystemPageRenderContext::resolve('solutions'), 'solutions', $resource)
+        );
     }
 
     public function show(string $scene)

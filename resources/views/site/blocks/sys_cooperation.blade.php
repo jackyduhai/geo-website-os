@@ -1,8 +1,5 @@
-@extends('layouts.site')
-@section('title', $seo['title'])
-@section('meta_description', $seo['description'])
-
-@section('content')
+{{-- 系统块 sys_cooperation：合作方式主体（page-hero + 合作方式 + 流程 + FAQ）。
+     数据由 CooperationController@show 从 Catalog / Pages 准备，经 SystemPageRenderContext 注入。 --}}
 <section class="page-hero">
   <div class="wrap-narrow">
     <span class="eyebrow">{{ __('ui.eyebrow_cooperation') }}</span>
@@ -57,4 +54,3 @@
 @endif
 
 @include('site._bottom_cta')
-@endsection

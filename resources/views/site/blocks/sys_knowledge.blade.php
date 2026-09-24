@@ -1,10 +1,6 @@
-@extends('layouts.site')
-@section('title', $seo['title'])
-@section('meta_description', $seo['description'])
-
-@section('content')
-@include('site._subnav', ['subnav' => $subnav])
-
+{{-- 系统块 sys_knowledge：知识总览主体（page-hero + 文章网格 + pager）。
+     数据由 KnowledgeController@index / channel 从 Catalog / Pages 准备，经
+     SystemPageRenderContext 注入；频道 subnav 由 composed 布局统一渲染。 --}}
 <section class="page-hero">
   <div class="wrap-narrow">
     <span class="eyebrow">{{ __('ui.eyebrow_knowledge') }}</span>
@@ -40,4 +36,3 @@
 </section>
 
 @include('site._bottom_cta')
-@endsection

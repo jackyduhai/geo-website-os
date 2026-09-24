@@ -3,14 +3,22 @@
 namespace App\Http\Controllers\Site;
 
 use App\Http\Controllers\Controller;
+use App\Models\Page;
 use App\Services\Geo\SchemaBuilder;
 use App\Support\Catalog;
+use App\Support\Localization\LocaleContext;
 use App\Support\Narrative;
 use App\Support\Pages;
 use App\Support\PublicUrl;
+use App\Support\Render\CompositionRenderer;
+use App\Support\Render\SystemPageRenderContext;
 
 /**
- * 关于我们：企业简介 / 发展历程 / 企业文化（三子页，config facts + pages 成稿）
+ * 关于我们：企业简介 / 发展历程 / 企业文化（三子页，is_system Page + sys_about）。
+ *
+ * P-STEP 18G-2b：三子页统一 SystemPageRenderContext（system_key = profile /
+ * history / culture），主体 sys_about 按 aboutPage 分支；业务事实来自 Catalog /
+ * Pages，不复制进 Page；SEO 经 resolver（page-level SeoMeta → 页面默认 → 站点）。
  */
 class AboutController extends Controller
 {
@@ -51,13 +59,7 @@ class AboutController extends Controller
             'culture' => __('seo.about_culture_title'),
         ];
 
-        $crumbs = [
-            ['name' => __('nav.home'), 'url' => PublicUrl::home()],
-            ['name' => __('nav.about'), 'url' => PublicUrl::url('about/profile/')],
-            ['name' => $titles[$page], 'url' => PublicUrl::url('about/' . $page . '/')],
-        ];
-
-        // 关于类 SubNav：与顶部导航「关于我们」下拉同源（固定四项 + 后台挂接的自定义二级项）
+        // 关于类 SubNav：与顶部导航「关于我们」下拉同源（固定项 + 后台挂接的自定义二级项）
         $cur = trim(request()->path(), '/');
         $aboutItems = [];
         foreach (\App\Providers\AppServiceProvider::mergedMenuChildren('about') as $ch) {
@@ -75,32 +77,37 @@ class AboutController extends Controller
         }
         $subnav = ['items' => $aboutItems, 'active' => $page];
 
-        return view('site.about.' . $page, [
-            'company' => $company,
-            'brand'   => $brand,
-            'copy'    => $copy,
+        $pageUrl = PublicUrl::url('about/' . $page . '/');
+        $aboutPageSchema = $schema->webPage(
+            $pageUrl,
+            $titles[$page],
+            $copy['meta_desc'] ?? '',
+            'AboutPage'
+        );
+        $desc = $copy['meta_desc']
+            ?? __('seo.about_desc_fallback', ['name' => $company['name'] ?? '']);
+
+        $resource = [
+            'company'   => $company,
+            'brand'     => $brand,
+            'copy'      => $copy,
             'workshops' => Catalog::workshops(),
-            'regions'  => Catalog::salesRegions(),
-            'crumbs'  => array_slice($crumbs, 1),
-            'subnav'  => $subnav,
-            'pageKey' => $page,
-            'lead'    => $lead,
-            'bodyHtml' => $bodyHtml,
-            'nodes'   => $nodes,
-            'schemas' => array_values(array_filter([
-                $schema->organization(),
-                $schema->breadcrumb($crumbs),
-                $schema->webPage(PublicUrl::url('about/' . $page . '/'), $titles[$page], $copy['meta_desc'] ?? '', 'AboutPage'),
-            ])),
-            'seo' => [
+            'regions'   => Catalog::salesRegions(),
+            'lead'      => $lead,
+            'bodyHtml'  => $bodyHtml,
+            'nodes'     => $nodes,
+            'subnav'    => $subnav,
+            'pageKey'   => $page,
+            'schemas'   => array_values(array_filter([$aboutPageSchema])),
+            'seo_default' => [
                 'title'       => $titles[$page] . '｜' . ($company['name'] ?? ''),
-                'description' => $copy['meta_desc']
-                    ?? __('seo.about_desc_fallback', ['name' => $company['name'] ?? '']),
-                'canonical'   => PublicUrl::url('about/' . $page . '/'),
-                'noindex'     => false,
-                'type'        => 'website',
+                'description' => $desc,
             ],
-        ]);
+        ];
+
+        return app(CompositionRenderer::class)->render(
+            new SystemPageRenderContext(SystemPageRenderContext::resolve($page), $page, $resource)
+        );
     }
 
     /**

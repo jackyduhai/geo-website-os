@@ -114,6 +114,12 @@ class GeoInstall extends Command
         $this->call('db:seed', ['--class' => 'BlankHomepageSeeder', '--force' => true]);
         $this->line('  [ok] blank homepage (industry-neutral)');
 
+        // ---------- 4d. 固定系统页（is_system Page） ----------
+        // 为产品总览 / 场景总览 / 知识总览 / About / 工厂 / 合作 / 联系注入页面身份、
+        // SEO 与模板绑定（行业中性、published）；业务事实仍来自正式数据层，Page 不复制。
+        $this->call('db:seed', ['--class' => 'SystemPageSeeder', '--force' => true]);
+        $this->line('  [ok] system pages (industry-neutral)');
+
         // ---------- 5. 管理员初始化 ----------
         $email = trim((string) $this->option('admin-email')) ?: 'admin@example.com';
         $password = (string) $this->option('admin-password');

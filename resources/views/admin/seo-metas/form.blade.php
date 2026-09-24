@@ -7,31 +7,61 @@
   $rb = old('robots_text', isset($seo->robots) && is_array($seo->robots) ? implode(', ', $seo->robots) : '');
   $meta = old('metadata_text', isset($seo->metadata) && is_array($seo->metadata) && $seo->metadata
       ? json_encode($seo->metadata, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) : '');
+
+  // 语言切换参数（统一走 create，由控制器按 locale 分流到已有覆盖的 edit）。
+  $switchBase = ['scope' => $scope];
+  if ($scope === 'content') { $switchBase['content_id'] = $selectedContent; }
+  if ($scope === 'entity')  { $switchBase['entity_id'] = $selectedEntity; }
+  if ($scope === 'page')    { $switchBase['page_id'] = $selectedPage; }
+
+  $objLabel = ['content' => '内容', 'entity' => '实体', 'page' => '页面'];
 @endphp
 
-{{-- ============ 第一步：content / entity 作用域先选绑定对象 ============ --}}
+{{-- ============ 语言切换 Tabs（create / edit 均显示） ============ --}}
+<div class="card">
+  <div class="card-head"><h2>选择要维护的前台语言</h2></div>
+  <div class="tabs">
+    @foreach($supportedLocales as $l)
+      @php $active = $l === $locale; @endphp
+      <a class="tab @if($active) active @endif"
+         href="{{ route('admin.seo-metas.create', $switchBase + ['locale' => $l]) }}">
+        {{ $l === 'zh-CN' ? '中文（zh-CN）' : 'English（en）' }}
+      </a>
+    @endforeach
+  </div>
+  <div class="hint small">同一对象的中文与英文 SEO 分别维护、互不影响；当前正在编辑 <strong>{{ $locale }}</strong>。</div>
+</div>
+
+{{-- ============ 第一步：非 site 作用域先选绑定对象 ============ --}}
 @if($mode==='create' && $scope!=='site' && $target===null)
-  <div class="card narrow-md">
-    <div class="card-head"><h2>选择要覆盖 SEO 的{{ $scope==='content' ? '内容' : '实体' }}</h2></div>
+  <div class="card narrow-md mt-2">
+    <div class="card-head"><h2>选择要覆盖 SEO 的{{ $objLabel[$scope] ?? '对象' }}</h2></div>
     <form method="get" action="{{ route('admin.seo-metas.create') }}">
       <input type="hidden" name="scope" value="{{ $scope }}">
+      <input type="hidden" name="locale" value="{{ $locale }}">
       <div class="form-grid">
         <div class="form-row">
-          <label class="req">{{ $scope==='content' ? '内容' : '实体' }}</label>
+          <label class="req">{{ $objLabel[$scope] ?? '对象' }}</label>
           @if($scope==='content')
             <select name="content_id" class="select" required size="12">
               @foreach($contents as $c)
                 <option value="{{ $c->id }}">[{{ $c->type }}] {{ $c->title ?: '(无标题)' }} · {{ $c->slug }} · {{ $c->status }}</option>
               @endforeach
             </select>
-          @else
+          @elseif($scope==='entity')
             <select name="entity_id" class="select" required size="12">
               @foreach($entities as $e)
                 <option value="{{ $e->id }}">[{{ $entityTypeLabels[$e->type] ?? $e->type }}] {{ $e->name }} · {{ $e->slug }} · {{ $e->status }}</option>
               @endforeach
             </select>
+          @else
+            <select name="page_id" class="select" required size="12">
+              @foreach($pages as $p)
+                <option value="{{ $p->id }}">{{ $p->title ?: '(无标题)' }} · {{ $p->template }} · {{ $p->slug ?: '(landing)' }}</option>
+              @endforeach
+            </select>
           @endif
-          <div class="hint small">仅列出当前站点的对象；每个对象至多一条 SEO 覆盖，已有覆盖的对象会直接打开编辑。</div>
+          <div class="hint small">仅列出当前站点、当前语言（{{ $locale }}）的对象；同一对象同一语言至多一条覆盖，已有覆盖会直接打开编辑。</div>
         </div>
       </div>
       <div class="form-actions">
@@ -50,23 +80,28 @@
   @csrf
   @if($mode==='edit') @method('PUT') @endif
   <input type="hidden" name="scope" value="{{ $scope }}">
+  <input type="hidden" name="locale" value="{{ $locale }}">
   @if($scope==='content')<input type="hidden" name="content_id" value="{{ $selectedContent }}">@endif
   @if($scope==='entity')<input type="hidden" name="entity_id" value="{{ $selectedEntity }}">@endif
+  @if($scope==='page')<input type="hidden" name="page_id" value="{{ $selectedPage }}">@endif
 
   {{-- 作用域与绑定对象 --}}
-  <div class="card">
+  <div class="card mt-2">
     <div class="card-head">
       <h2>
         {{ $scopeLabels[$scope] }} SEO 覆盖
         @if($scope==='site')
-          <span class="badge info ml-1">整站默认 · 每站一条</span>
+          <span class="badge info ml-1">整站默认 · 每站每语言一条</span>
         @elseif($scope==='content')
           <span class="badge published ml-1">内容</span>
+        @elseif($scope==='page')
+          <span class="badge published ml-1">页面</span>
         @else
           <span class="badge published ml-1">实体</span>
         @endif
+        <span class="badge archived ml-1">{{ $locale }}</span>
       </h2>
-      @if($mode==='edit')<span class="small">绑定对象创建后不可更改。</span>@endif
+      @if($mode==='edit')<span class="small">绑定对象与语言创建后不可更改。</span>@endif
     </div>
     <div class="small">
       @if($scope==='site')
@@ -75,6 +110,10 @@
         绑定内容：<strong>{{ $target?->title }}</strong>
         <span class="badge archived ml-1">{{ $target?->type }}</span>
         <span class="mono">{{ $target?->slug }}</span>
+      @elseif($scope==='page')
+        绑定页面：<strong>{{ $target?->title }}</strong>
+        <span class="badge archived ml-1">{{ $target?->template }}</span>
+        <span class="mono">{{ $target?->slug ?: '(landing)' }}</span>
       @else
         绑定实体：<strong>{{ $target?->name }}</strong>
         <span class="badge archived ml-1">{{ $entityTypeLabels[$target?->type] ?? $target?->type }}</span>
@@ -84,16 +123,17 @@
     @error('scope')<div class="field-err">{{ $message }}</div>@enderror
     @error('content_id')<div class="field-err">{{ $message }}</div>@enderror
     @error('entity_id')<div class="field-err">{{ $message }}</div>@enderror
+    @error('page_id')<div class="field-err">{{ $message }}</div>@enderror
   </div>
 
   {{-- 当前解析结果（直接来自 SeoMetaResolver，后台不自算 fallback） --}}
   @if($resolved)
   <div class="card mt-2">
     <div class="card-head">
-      <h2>当前解析结果（前台 / Schema / GEO 实际输出）</h2>
-      <span class="head-actions"><span class="badge ok">由 SeoMetaResolver 实时解析</span></span>
+      <h2>当前解析结果（{{ $locale }} 前台 / Schema / GEO 实际输出）</h2>
+      <span class="head-actions"><span class="badge ok">由 SeoMetaResolver 在 {{ $locale }} 上下文实时解析</span></span>
     </div>
-    <x-admin-tip type="info" text="这是访客与搜索引擎最终看到的值，按 5.6-C 冻结的分资源继承链解析。下方表单中留空的字段会继续沿用继承链；保存后本卡片即时更新。后台不在此重复实现兜底逻辑。"/>
+    <x-admin-tip type="info" text="这是访客与搜索引擎最终看到的值。留空的字段继续沿用继承链；保存后本卡片即时更新。后台不在此重复实现兜底逻辑。"/>
     <table class="tbl mt-1">
       <tr><th class="w-150">Title</th><td>{{ $resolved->title }}</td></tr>
       <tr><th>Description</th><td>{{ $resolved->description ?: '（空）' }}</td></tr>
@@ -119,25 +159,25 @@
     <div class="form-grid">
       <div class="form-row">
         <label>SEO 标题 Title
-          <x-admin-tip text="留空则继承：{{ $scope==='content' ? '内容标题 → 站点标题 → 系统' : ($scope==='entity' ? '实体名称 → 站点标题 → 系统' : '站点名称 → 系统') }}。建议 60 字以内。"/></label>
+          <x-admin-tip text="留空则继承：{{ $scope==='content' ? '内容标题 → 站点标题 → 系统' : ($scope==='entity' ? '实体名称 → 站点标题 → 系统' : ($scope==='page' ? '页面标题 → 站点标题 → 系统' : '站点名称 → 系统')) }}。建议 60 字以内。"/></label>
         <input type="text" name="title" class="select" maxlength="255" value="{{ old('title',$seo->title) }}">
         @error('title')<div class="field-err">{{ $message }}</div>@enderror
       </div>
       <div class="form-row">
         <label>描述 Description
-          <x-admin-tip text="留空则继承：{{ $scope==='content' ? '内容摘要 → 站点描述 → 系统' : ($scope==='entity' ? '实体摘要 → 实体正文 → 站点描述 → 系统' : '站点描述 → 系统') }}。建议 140–160 字。"/></label>
+          <x-admin-tip text="留空则继承：{{ $scope==='content' ? '内容摘要 → 站点描述 → 系统' : ($scope==='entity' ? '实体摘要 → 实体正文 → 站点描述 → 系统' : ($scope==='page' ? '页面摘要 → 站点描述 → 系统' : '站点描述 → 系统')) }}。建议 140–160 字。"/></label>
         <textarea name="description" rows="3" class="textarea" maxlength="2000">{{ old('description',$seo->description) }}</textarea>
         @error('description')<div class="field-err">{{ $message }}</div>@enderror
       </div>
       <div class="form-row">
         <label>关键词 Keywords
           <x-admin-tip text="多个关键词用英文逗号分隔；留空表示不输出（不影响 title / description 继承）。"/></label>
-        <input type="text" name="keywords_text" class="select" value="{{ $kw }}" placeholder="例如：工业涂料, 结构胶, OEM">
+        <input type="text" name="keywords_text" class="select" value="{{ $kw }}" placeholder="例如：product, service, OEM">
         @error('keywords_text')<div class="field-err">{{ $message }}</div>@enderror
       </div>
       <div class="form-row">
         <label>规范链接 Canonical
-          <x-admin-tip text="留空 = 自动生成（HTTPS、无查询参数、遵循斜杠契约），即下方灰色自动值；填写完整 URL 则以自定义为最高优先。host 绝对化统一在后续阶段处理。"/></label>
+          <x-admin-tip text="留空 = 自动生成（遵循语言前缀与斜杠契约），即下方灰色自动值；填写完整 URL 则以自定义为最高优先。"/></label>
         <input type="text" name="canonical" class="select mono" value="{{ old('canonical',$seo->canonical) }}" placeholder="留空自动生成">
         @if($resolved)
           <div class="hint small">自动 / 当前值：<span class="mono">{{ $resolved->canonical }}</span></div>

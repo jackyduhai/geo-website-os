@@ -98,7 +98,7 @@ Route::middleware(['admin.auth', 'admin.site'])->group(function () {
     Route::put('seo-metas/{seoMeta}', [SeoMetaController::class, 'update'])->name('seo-metas.update');
     Route::delete('seo-metas/{seoMeta}', [SeoMetaController::class, 'destroy'])->name('seo-metas.destroy');
     Route::get('seo-metas/{scope?}', [SeoMetaController::class, 'index'])
-        ->where('scope', 'site|content|entity|all')->name('seo-metas.index');
+        ->where('scope', 'site|content|entity|page|all')->name('seo-metas.index');
 
     // ---------- 页面文案（结构化页面叙事插槽：hero 导语 / 企业简介正文） ----------
     Route::get('narrative', [NarrativeController::class, 'index'])->name('narrative.index');
@@ -143,6 +143,7 @@ Route::middleware(['admin.auth', 'admin.site'])->group(function () {
     Route::post('pages/{page}/publish/{action}', [PageController::class, 'publish'])
         ->where('action', 'publish|unpublish')->name('pages.publish');
     Route::get('pages/{page}/composer', [PageController::class, 'composer'])->name('pages.composer');
+    Route::get('pages/{page}/preview', [PageController::class, 'preview'])->name('pages.preview');
     Route::get('pages/{page}/blocks/add', [PageController::class, 'addBlock'])->name('pages.addBlock');
     Route::post('pages/{page}/blocks', [PageController::class, 'storeBlock'])->name('pages.storeBlock');
     Route::get('pages/{page}/blocks/{block}/edit', [PageController::class, 'editBlock'])->name('pages.editBlock');
@@ -151,6 +152,7 @@ Route::middleware(['admin.auth', 'admin.site'])->group(function () {
     Route::post('pages/{page}/blocks/{block}/move/{dir}', [PageController::class, 'moveBlock'])
         ->where('dir', 'up|down')->name('pages.moveBlock');
     Route::post('pages/{page}/blocks/{block}/toggle', [PageController::class, 'toggleBlock'])->name('pages.toggleBlock');
+    Route::post('pages/{page}/blocks/{block}/duplicate', [PageController::class, 'duplicateBlock'])->name('pages.duplicateBlock');
 
     // ---------- 媒体库 ----------
     Route::get('media', [MediaController::class, 'index'])->name('media.index');

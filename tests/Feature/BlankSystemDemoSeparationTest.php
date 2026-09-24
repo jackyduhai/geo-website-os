@@ -12,6 +12,7 @@ use App\Support\SiteContext;
 use Database\Seeders\BlankHomepageSeeder;
 use Database\Seeders\DefaultSettingSeeder;
 use Database\Seeders\DemoSeeder;
+use Database\Seeders\SystemPageSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -57,6 +58,7 @@ class BlankSystemDemoSeparationTest extends TestCase
     {
         $this->seed(DefaultSettingSeeder::class);
         $this->seed(BlankHomepageSeeder::class);
+        $this->seed(SystemPageSeeder::class); // 固定系统页（与真实 geo:install 对齐）
         Catalog::flush();
         PageCache::flush();
         Setting::flush();

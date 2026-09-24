@@ -196,9 +196,16 @@ class SeoHeadComposer
         $locales = array_values(array_unique($locales));
 
         $basePath = trim((string) preg_replace('#^en(/|$)#', '', (string) request()->path()), '/');
-        $make = static function (string $locale) use ($basePath) {
-            $segments = trim(LocaleRegistry::prefix($locale) . '/' . $basePath, '/');
-            return $segments === '' ? url('/') : url($segments);
+
+        // hreflang 必须为「每个目标 locale」生成其自身绝对 URL，不能用 url() helper：
+        // GeoUrlGenerator::withLocalePrefix 会按当前请求 locale 统一给路径加前缀
+        // （英文上下文里 url('/') 会被改写成 /en），导致 zh-CN 对等链接错误指向
+        // /en。这里直接用请求根（scheme+host+port，不含 locale）+ 目标 locale 前缀
+        // 显式拼接，绕过 UrlGenerator 的当前语言兜底。
+        $root = rtrim((string) request()->root(), '/');
+        $make = static function (string $locale) use ($basePath, $root) {
+            $path = trim(LocaleRegistry::prefix($locale) . '/' . $basePath, '/');
+            return $path === '' ? $root . '/' : $root . '/' . $path;
         };
 
         $alternates = [];

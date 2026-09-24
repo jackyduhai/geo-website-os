@@ -29,10 +29,11 @@ class Page extends Model
     protected $guarded = [];
 
     /** 跨语言共享列（结构 / 状态）；title / slug 按语言独立。 */
-    protected static array $sharedTranslatableColumns = ['template', 'is_home', 'status'];
+    protected static array $sharedTranslatableColumns = ['template', 'is_home', 'is_system', 'system_key', 'status'];
 
     protected $casts = [
         'is_home' => 'boolean',
+        'is_system' => 'boolean',
     ];
 
     public const STATUS_DRAFT = 'draft';

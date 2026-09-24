@@ -14,6 +14,11 @@ class DatabaseSeeder extends Seeder
         // （geo:install）不调用本 Seeder；仅演示/开发/测试环境显式装载。
         $this->call(DemoSeeder::class);
 
+        // 固定系统页（Core，与 Demo 无关，P-STEP 18G-2b）：产品 / 场景 / 知识总览、
+        // About、工厂、合作、联系的页面身份 / SEO / 模板绑定。geo:install 独立注入；
+        // DatabaseSeeder 模拟「install + Demo」完整站点，同样需要（幂等）。
+        $this->call(SystemPageSeeder::class);
+
         // 管理员账号：首次登录后请立即修改密码
         $user = User::updateOrCreate(
             ['email' => 'admin@example.com'],

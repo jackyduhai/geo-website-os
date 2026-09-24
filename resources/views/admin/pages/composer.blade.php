@@ -4,6 +4,8 @@
 
 @section('page-actions')
   <a class="btn btn-sm" href="{{ route('admin.pages.index') }}">← 返回列表</a>
+  <a class="btn btn-sm" target="_blank"
+     href="{{ route('admin.pages.preview', $page) }}">预览 ↗</a>
   @if($page->status === 'published')
     <a class="btn btn-sm" target="_blank"
        href="{{ \App\Support\PublicUrl::url('/'.ltrim((string) $page->slug, '/')) }}">查看前台 ↗</a>
@@ -90,6 +92,11 @@
                   action="{{ route('admin.pages.toggleBlock', [$page, $block]) }}">
               @csrf
               <button class="btn btn-sm">{{ $block->is_active ? '隐藏' : '显示' }}</button>
+            </form>
+            <form class="form-inline" method="post"
+                  action="{{ route('admin.pages.duplicateBlock', [$page, $block]) }}">
+              @csrf
+              <button class="btn btn-sm">复制</button>
             </form>
             <form class="form-inline" method="post"
                   action="{{ route('admin.pages.destroyBlock', [$page, $block]) }}"

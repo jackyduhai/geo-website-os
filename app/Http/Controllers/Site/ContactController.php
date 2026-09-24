@@ -3,16 +3,24 @@
 namespace App\Http\Controllers\Site;
 
 use App\Http\Controllers\Controller;
+use App\Models\Page;
 use App\Services\Geo\SchemaBuilder;
 use App\Support\Catalog;
 use App\Support\Localization\LocaleContext;
 use App\Support\Narrative;
 use App\Support\Pages;
 use App\Support\PublicUrl;
+use App\Support\Render\CompositionRenderer;
+use App\Support\Render\SystemPageRenderContext;
 
 /**
- * 联系我们：左侧公司信息 / 右侧统一咨询表单（移动端表单提前）。
- * LocalBusiness：经纬度未核定前整段省略 geo，不估算坐标。本页不输出 BottomCTA。
+ * 联系我们（is_system Page + 可组合 block）。
+ *
+ * P-STEP 18G-2b：联系页统一 SystemPageRenderContext（system_key 'contact'），
+ * 但主体为可编辑普通 block——header rich_text + main contact_info / form_reference
+ * （由 SystemPageSeeder 注入、管理员可增删改，Scenario A）；LocalBusiness 经纬度
+ * 未核定前整段省略 geo，不估算坐标。SEO 经 resolver（page-level SeoMeta → 页面默认
+ * → 站点）。
  */
 class ContactController extends Controller
 {
@@ -25,10 +33,11 @@ class ContactController extends Controller
         }
         $lead = Narrative::lead('contact.lead', Pages::narrative('contact'));
 
+        $contactUrl = PublicUrl::url('contact/');
         $localBusiness = array_filter([
             '@context'    => 'https://schema.org',
             '@type'       => 'LocalBusiness',
-            '@id'         => PublicUrl::url('contact/') . '#business',
+            '@id'         => $contactUrl . '#business',
             'name'        => $company['name'],
             'url'         => PublicUrl::home(),
             'telephone'   => $company['phone'] ?? null,
@@ -41,11 +50,6 @@ class ContactController extends Controller
             ],
             'areaServed' => Catalog::salesRegions(),
         ]);
-
-        $crumbs = [
-            ['name' => __('nav.home'), 'url' => PublicUrl::home()],
-            ['name' => __('nav.contact'), 'url' => PublicUrl::url('contact/')],
-        ];
 
         $isEn = LocaleContext::current() === 'en';
         $contactBits = [];
@@ -61,23 +65,27 @@ class ContactController extends Controller
             'bits' => $contactBits ? implode($isEn ? ' ' : '，', $contactBits) . ($isEn ? ' ' : '。') : '',
         ]);
 
-        return view('site.contact', [
+        $contactPageSchema = $schema->webPage(
+            $contactUrl,
+            __('seo.contact_title'),
+            $contactDesc,
+            'ContactPage',
+            $contactUrl . '#business'
+        );
+
+        // P-STEP 18G-2b：联系页走统一 Composition 管线；blocks 由 Page 持久化。
+        $resource = [
             'company' => $company,
             'lead'    => $lead,
-            'crumbs'  => array_slice($crumbs, 1),
-            'schemas' => array_values(array_filter([
-                $schema->organization(),
-                $schema->breadcrumb($crumbs),
-                $schema->webPage(PublicUrl::url('contact/'), __('seo.contact_title'), $contactDesc, 'ContactPage', PublicUrl::url('contact/') . '#business'),
-                $localBusiness,
-            ])),
-            'seo' => [
+            'schemas' => array_values(array_filter([$contactPageSchema, $localBusiness])),
+            'seo_default' => [
                 'title'       => __('seo.contact_title'),
                 'description' => $contactDesc,
-                'canonical'   => PublicUrl::url('contact/'),
-                'noindex'     => false,
-                'type'        => 'website',
             ],
-        ]);
+        ];
+
+        return app(CompositionRenderer::class)->render(
+            new SystemPageRenderContext(SystemPageRenderContext::resolve('contact'), 'contact', $resource)
+        );
     }
 }

@@ -346,6 +346,89 @@ return [
             'help' => '系统块：详情页底部统一 CTA（相关 / FAQ / 相邻之后），复用 _bottom_cta，不可手动添加。',
         ],
 
+        // ---------------- 固定系统页主体系统块（is_system Page，不可手动添加） ----------------
+        // 强结构、数据驱动主体由对应 Site 控制器从 Catalog / Pages / siteSettings 准备后
+        // 经 SystemPageRenderContext 注入；block 自身不查库、不存业务事实、不可手动添加。
+        // 页头（page-hero）一并由系统块按真实事实渲染，换品牌 / 行业数据即自动变化。
+
+        'sys_solutions' => [
+            'label' => '场景总览主体（系统）',
+            'category' => 'system',
+            'icon' => 'grid',
+            'system' => true,
+            'per_locale' => true,
+            'data_source' => false,
+            'allowed' => ['listing/main'],
+            'fields' => [],
+            'default' => [],
+            'help' => '系统块：应用场景总览场景网格，数据来自 Catalog，不可手动添加。',
+        ],
+
+        'sys_products' => [
+            'label' => '产品总览主体（系统）',
+            'category' => 'system',
+            'icon' => 'package',
+            'system' => true,
+            'per_locale' => true,
+            'data_source' => false,
+            'allowed' => ['listing/main'],
+            'fields' => [],
+            'default' => [],
+            'help' => '系统块：产品总览按系列分组 + 系列锚点，数据来自 Catalog，不可手动添加。',
+        ],
+
+        'sys_knowledge' => [
+            'label' => '知识总览主体（系统）',
+            'category' => 'system',
+            'icon' => 'doc',
+            'system' => true,
+            'per_locale' => true,
+            'data_source' => false,
+            'allowed' => ['listing/main'],
+            'fields' => [],
+            'default' => [],
+            'help' => '系统块：知识总览频道导航 + 最新文章，数据来自 Catalog / Pages，不可手动添加。',
+        ],
+
+        'sys_about' => [
+            'label' => '关于我们主体（系统）',
+            'category' => 'system',
+            'icon' => 'doc',
+            'system' => true,
+            'per_locale' => true,
+            'data_source' => false,
+            'allowed' => ['detail/main'],
+            'fields' => [],
+            'default' => [],
+            'help' => '系统块：关于我们 profile / history / culture 三页主体，按系统页 key 渲染，不可手动添加。',
+        ],
+
+        'sys_factory' => [
+            'label' => '工厂实力主体（系统）',
+            'category' => 'system',
+            'icon' => 'factory',
+            'system' => true,
+            'per_locale' => true,
+            'data_source' => false,
+            'allowed' => ['detail/main'],
+            'fields' => [],
+            'default' => [],
+            'help' => '系统块：工厂实力数据条 / 车间 / 流程 / 资质 / 覆盖，数据来自 Catalog，不可手动添加。',
+        ],
+
+        'sys_cooperation' => [
+            'label' => '合作方式主体（系统）',
+            'category' => 'system',
+            'icon' => 'check',
+            'system' => true,
+            'per_locale' => true,
+            'data_source' => false,
+            'allowed' => ['detail/main'],
+            'fields' => [],
+            'default' => [],
+            'help' => '系统块：合作方式 / 流程 / FAQ，数据来自 Catalog / Pages，不可手动添加。',
+        ],
+
     ],
 
 ];

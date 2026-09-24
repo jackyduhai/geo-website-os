@@ -6,19 +6,26 @@ use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\Content;
 use App\Models\Group;
+use App\Models\Page;
 use App\Services\Geo\SchemaBuilder;
 use App\Services\Seo\SeoMetaResolver;
 use App\Support\Localization\LocaleContext;
 use App\Support\PublicUrl;
+use App\Support\Render\CompositionRenderer;
+use App\Support\Render\ListingRenderContext;
+use App\Support\Render\SystemPageRenderContext;
 use Illuminate\Http\Request;
-use Illuminate\Support\Collection;
 
 /**
  * 知识中心：全部 + 各子栏目。
  *
- * 子栏目不再写死，统一由 groups 表（category=knowledge、is_active、按 sort）数据驱动：
- * 后台「结构管理 → 内容分组」启用/停用/新建/改名后，前台子栏目、导航、sitemap、llms.txt
- * 同步变化，无需改代码。文章 URL 保持扁平 /knowledge/{slug}；数字分页，每页 12 篇。
+ * 子栏目不写死，统一由 groups 表（category=knowledge、is_active、按 sort）数据驱动：
+ * 后台「结构管理 → 内容分组」启用 / 停用 / 新建 / 改名后，前台子栏目、导航、
+ * sitemap、llms.txt 同步变化，无需改代码。文章 URL 保持扁平 /knowledge/{slug}；
+ * 数字分页，每页 12 篇。
+ *
+ * P-STEP 18G-2b：总览为固定系统页（SystemPageRenderContext 'knowledge'），
+ * 频道为动态 Listing（ListingRenderContext），主体统一 sys_knowledge。
  */
 class KnowledgeController extends Controller
 {
@@ -40,7 +47,7 @@ class KnowledgeController extends Controller
     {
         $group = Group::knowledgeChannels()->firstWhere('slug', $channel);
         // 不是启用栏目时，可能是扁平的知识文章 /knowledge/{slug}：转交统一分发器，
-        // 由其按内容/栏目判定，仍找不到才 404（路由正则已放宽，不能在此直接 404）。
+        // 由其按内容 / 栏目判定，仍找不到才 404（路由正则已放宽，不能在此直接 404）。
         if (! $group) {
             return $page->dispatch($request, 'knowledge/' . $channel, $schema, $seoResolver);
         }
@@ -87,24 +94,34 @@ class KnowledgeController extends Controller
             ? PublicUrl::url('knowledge/' . $active . '/')
             : PublicUrl::url('knowledge/');
 
-        return view('site.knowledge.index', [
+        $collectionPage = $schema->webPage($canonical, $title, __('seo.knowledge_desc'), 'CollectionPage');
+
+        $common = [
             'items'      => $items,
             'channels'   => $channelMap,
             'active'     => $active,
-            'crumbs'     => array_slice($crumbs, 1),
             'subnav'     => ['items' => $subItems, 'active' => $active],
-            'schemas'    => array_values(array_filter([
-                $schema->organization(),
-                $schema->breadcrumb($crumbs),
-                $schema->webPage($canonical, $title, __('seo.knowledge_desc'), 'CollectionPage'),
-            ])),
-            'seo' => [
+            'schemas'    => array_values(array_filter([$collectionPage])),
+            'seo_default' => [
                 'title'       => $title,
                 'description' => __('seo.knowledge_desc'),
-                'canonical'   => $canonical,
-                'noindex'     => false,
-                'type'        => 'website',
             ],
-        ]);
+        ];
+
+        // 总览：固定系统页（is_system Page，installer 注入；缺失 fallback 默认页）。
+        if ($active === null) {
+            return app(CompositionRenderer::class)->render(
+                new SystemPageRenderContext(SystemPageRenderContext::resolve('knowledge'), 'knowledge', $common)
+            );
+        }
+
+        // 频道：动态 Listing（数据驱动，无固定 Page）。
+        return app(CompositionRenderer::class)->render(
+            new ListingRenderContext('knowledge_channel', $common + [
+                'canonical'    => $canonical,
+                'crumbs'       => $crumbs,
+                'system_block' => 'sys_knowledge',
+            ])
+        );
     }
 }

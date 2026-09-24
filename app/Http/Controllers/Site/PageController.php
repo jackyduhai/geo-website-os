@@ -220,6 +220,14 @@ class PageController extends Controller
         }
         $items = $query->orderByDesc('published_at')->paginate(12)->withQueryString();
 
+        // TD-61 收口：栏目页 SEO 统一走 resolver（resolveListing），不再手工拼；
+        // title / desc 取栏目显式 SEO 字段，缺省由 resolver 回退站点身份。
+        $listingSeo = $seoResolver->resolveListing(
+            $category->seo_title ?: $category->name,
+            $category->seo_desc ?: ($category->description ?: null),
+            $category->url()
+        );
+
         return view('site.category', [
             'category' => $category,
             'children' => $children,
@@ -232,11 +240,11 @@ class PageController extends Controller
                 $schema->breadcrumb($crumbs),
             ],
             'seo' => [
-                'title'       => $category->seo_title ?: $category->name,
-                'description' => $category->seo_desc ?: $category->description,
-                'canonical'   => $category->url(),
-                'noindex'     => false,
-                'type'        => 'website',
+                'title'       => $listingSeo->title,
+                'description' => $listingSeo->description,
+                'canonical'   => $listingSeo->canonical,
+                'noindex'     => $listingSeo->noindex,
+                'type'        => $listingSeo->ogType,
             ],
         ]);
     }

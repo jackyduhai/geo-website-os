@@ -9,6 +9,8 @@ use App\Support\Blocks\BlockRegistry;
 use App\Support\Blocks\BlockType;
 use App\Support\Localization\LocaleRegistry;
 use App\Support\PageCache;
+use App\Support\Render\CompositionRenderer;
+use App\Support\Render\PageRenderContext;
 use App\Support\SiteContext;
 use App\Support\Templates\TemplateRegistry;
 use Illuminate\Http\RedirectResponse;
@@ -264,6 +266,43 @@ class PageController extends Controller
         PageCache::forgetPage($page);
 
         return back();
+    }
+
+    /**
+     * 复制区块（TD-58）：在同一槽位末尾生成一份内容相同的副本，便于快速复用。
+     * 不复制 id；标题标注「（副本）」；显隐状态沿用原区块。
+     */
+    public function duplicateBlock(Page $page, PageBlock $block): RedirectResponse
+    {
+        $this->assertBelongs($page, $block);
+
+        $maxSort = (int) PageBlock::where('page_id', $page->id)
+            ->where('slot', $block->slot)->max('sort');
+
+        $copy = $block->replicate();
+        $copy->site_id = $page->site_id;
+        $copy->page_id = $page->id;
+        $copy->slot = $block->slot;
+        $copy->sort = $maxSort + 1;
+        $copy->is_active = $block->is_active;
+        if ($block->title) {
+            $copy->title = $block->title.'（副本）';
+        }
+        $copy->save();
+
+        PageCache::forgetPage($page);
+
+        return redirect()->route('admin.pages.editBlock', [$page, $copy])
+            ->with('success', '区块已复制，可继续编辑副本');
+    }
+
+    /**
+     * 页面预览（TD-58）：在登录态下直接走前台 Composition 管线渲染该页面，
+     * 草稿 / 未发布也可查看（不经过 published 门禁）；不产生公开 URL、不写缓存。
+     */
+    public function preview(Page $page)
+    {
+        return app(CompositionRenderer::class)->render(new PageRenderContext($page));
     }
 
     // ---------------------------------------------------------------

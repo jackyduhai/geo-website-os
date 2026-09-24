@@ -15,6 +15,7 @@ class SeoMeta extends Model
         'content_id',
         'entity_id',
         'page_id',
+        'locale',
         'title',
         'description',
         'keywords',

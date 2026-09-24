@@ -1,8 +1,6 @@
-@extends('layouts.site')
-@section('title', $seo['title'])
-@section('meta_description', $seo['description'])
-
-@section('content')
+{{-- 系统块 sys_solutions：应用场景总览主体（page-hero + 场景网格 + 底部 CTA）。
+     数据由 SolutionController@index 从 Catalog / Narrative 准备，经
+     SystemPageRenderContext 注入。 --}}
 <section class="page-hero">
   <div class="wrap-narrow">
     <span class="eyebrow">{{ __('ui.eyebrow_solutions') }}</span>
@@ -22,4 +20,3 @@
 </section>
 
 @include('site._bottom_cta')
-@endsection

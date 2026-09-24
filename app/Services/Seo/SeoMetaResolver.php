@@ -302,7 +302,8 @@ class SeoMetaResolver
     public function resolvePage(Page $page): SeoResult
     {
         $site = SiteContext::currentSite();
-        $seoMeta = $this->pageSeoMeta($page->site_id, $page->id);
+        // 未保存（fallback）Page 无 id，不可能有 page-level SeoMeta，直接走站点 fallback。
+        $seoMeta = $page->exists ? $this->pageSeoMeta($page->site_id, $page->id) : null;
         $fallback = $this->siteFallback($site);
 
         $title = $seoMeta?->title
@@ -331,6 +332,38 @@ class SeoMetaResolver
             nofollow: $seoMeta?->nofollow ?? false,
             robots: $seoMeta?->robots ?? [],
             schemaType: $seoMeta?->schema_type ?? null
+        );
+    }
+
+    /**
+     * Resolve SEO for a dynamic Listing（P-STEP 18G-2b）。
+     * --------------------------------------------------
+     * 动态聚合页（产品系列 / 知识频道）无持久化 Page / Entity，其页面身份数据
+     * （title / desc / canonical）由控制器从系列 / 频道事实提供；SEO 仍由本 resolver
+     * 统一构造（站点 fallback / OG / canonical 同一逻辑），不另造第二套 SEO。
+     */
+    public function resolveListing(string $title, ?string $description, string $canonical): SeoResult
+    {
+        $site = SiteContext::currentSite();
+        $fallback = $this->siteFallback($site);
+
+        $finalTitle = trim($title) !== '' ? $title : $fallback['title'];
+        $finalDesc = trim((string) $description) !== '' ? $description : $fallback['description'];
+
+        return new SeoResult(
+            title: $finalTitle,
+            description: $finalDesc,
+            keywords: [],
+            canonical: $canonical,
+            ogTitle: $finalTitle,
+            ogDescription: $finalDesc,
+            ogImage: $fallback['ogImage'],
+            ogType: 'website',
+            twitterCard: 'summary_large_image',
+            noindex: false,
+            nofollow: false,
+            robots: [],
+            schemaType: null
         );
     }
 

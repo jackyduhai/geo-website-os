@@ -1,11 +1,9 @@
-@extends('layouts.site')
-@section('title', $seo['title'])
-@section('meta_description', $seo['description'])
-
+{{-- 系统块 sys_factory：工厂实力主体（page-hero + 数据条 + 车间 + 流程 + 资质 + 覆盖）。
+     数据由 FactoryController@show 从 Catalog / Pages 准备，经 SystemPageRenderContext 注入；
+     hasProduction 门禁在控制器（不可见即 404）。 --}}
 @php
   $wsIcons = ['package', 'sliders', 'gear', 'shield', 'factory'];
-  // H1 只陈述真实存在的生产事实：面积 / 车间 / 产能缺失即不写入，绝不裸输出 0
-  // （FactoryController 已用 hasProduction() 保证至少一项，否则该页 404）。
+  // H1 只陈述真实存在的生产事实：面积 / 车间 / 产能缺失即不写入，绝不裸输出 0。
   $factoryH1Parts = [];
   if ((int) ($company['area_sqm'] ?? 0) > 0) {
       $factoryH1Parts[] = __('ui.fh_area', ['num' => number_format((int) $company['area_sqm'])]);
@@ -19,7 +17,6 @@
   $factoryH1 = implode(\App\Support\Localization\LocaleContext::current() === \App\Support\Localization\LocaleRegistry::default() ? '，' : ', ', $factoryH1Parts);
 @endphp
 
-@section('content')
 <section class="page-hero">
   <div class="wrap-narrow">
     <span class="eyebrow">{{ __('ui.eyebrow_factory') }}</span>
@@ -105,4 +102,3 @@
 </section>
 
 @include('site._bottom_cta', ['variant' => 'factory'])
-@endsection

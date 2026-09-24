@@ -3,30 +3,37 @@
 namespace App\Http\Controllers\Site;
 
 use App\Http\Controllers\Controller;
+use App\Models\Page;
 use App\Services\Geo\SchemaBuilder;
 use App\Support\Catalog;
 use App\Support\Localization\LocaleContext;
 use App\Support\Narrative;
 use App\Support\Pages;
 use App\Support\PublicUrl;
+use App\Support\Render\CompositionRenderer;
+use App\Support\Render\SystemPageRenderContext;
 
 /**
- * 工厂与资质（独立一级页面，config/facts 驱动）
- * 硬规则：资质编号 / 执行标准号缺失时，资质区块整体隐藏；车间无实拍图时不渲染图片，
- * 不使用渲染图占位；销售区域用纯文字（无合规地图前不放地图）。
+ * 工厂与资质（is_system Page + sys_factory）。
+ *
+ * P-STEP 18G-2b：工厂页统一 SystemPageRenderContext（system_key 'factory'），
+ * 主体 sys_factory；硬规则保留——资质编号 / 执行标准号缺失时资质区块整体隐藏；
+ * 车间无实拍图时不渲染图片（用统一线性图标）；销售区域纯文字。
+ *
+ * 可见性门禁：只有公司名、无任何生产实质（车间 / 面积 / 产能均空）的最小站点，
+ * /factory/ 必须 404（Catalog::hasProduction），不渲染全 0 空壳，也不被 sitemap /
+ * llms 收录为会 404 的 URL。
  */
 class FactoryController extends Controller
 {
     public function show(SchemaBuilder $schema)
     {
-        $company    = Catalog::company();
+        $company = Catalog::company();
         // 配置契约降级（P-STEP 04）：无业务数据时该业务页不渲染（404），不抛错
         if (empty($company)) {
             abort(404);
         }
-        // P-STEP 17G / Public Render Contract：只有公司名、无任何生产实质（车间 /
-        // 厂区面积 / 年产能均空）的最小站点，/factory/ 必须 404，不渲染全 0 空壳，
-        // 也不得被 sitemap / llms 收录为会 404 的 URL。
+        // P-STEP 17G / Public Render Contract：无生产实质的最小站点 /factory/ 404。
         if (! Catalog::hasProduction()) {
             abort(404);
         }
@@ -85,14 +92,9 @@ class FactoryController extends Controller
         }
         if (count($regions) > 0) { $descParts[] = __('seo.factory_desc_regions', ['count' => count($regions)]); }
 
-        $factorySeo = [
-            'title'       => __('seo.factory_title') . ($seoTitleParts
-                ? ($isEn ? ': ' : '：') . implode($isEn ? ', ' : '、', $seoTitleParts) : ''),
-            'description' => implode($isEn ? ', ' : '，', $descParts) . ($isEn ? '.' : '。'),
-            'canonical'   => PublicUrl::url('factory/'),
-            'noindex'     => false,
-            'type'        => 'website',
-        ];
+        $factoryTitle = __('seo.factory_title') . ($seoTitleParts
+            ? ($isEn ? ': ' : '：') . implode($isEn ? ', ' : '、', $seoTitleParts) : '');
+        $factoryDesc = implode($isEn ? ', ' : '，', $descParts) . ($isEn ? '.' : '。');
 
         // 仅当存在真实车间图时才输出 ImageObject
         $imageObjects = [];
@@ -109,12 +111,11 @@ class FactoryController extends Controller
             }
         }
 
-        $crumbs = [
-            ['name' => __('nav.home'), 'url' => PublicUrl::home()],
-            ['name' => __('nav.factory'), 'url' => PublicUrl::url('factory/')],
-        ];
+        $factoryUrl = PublicUrl::url('factory/');
+        $factoryPageSchema = $schema->webPage($factoryUrl, $factoryTitle, $factoryDesc, 'WebPage');
 
-        return view('site.factory', [
+        // P-STEP 18G-2b：工厂页走统一 Composition 管线（SystemPageRenderContext）。
+        $resource = [
             'company'    => $company,
             'workshops'  => $workshops,
             'regions'    => $regions,
@@ -123,13 +124,15 @@ class FactoryController extends Controller
             'lead'       => $lead,
             'certsReady' => $certsReady,
             'certs'      => Catalog::certifications(),
-            'crumbs'     => array_slice($crumbs, 1),
-            'schemas'    => array_values(array_filter(array_merge([
-                $schema->organization(),
-                $schema->breadcrumb($crumbs),
-                $schema->webPage(PublicUrl::url('factory/'), $factorySeo['title'], $factorySeo['description'], 'WebPage'),
-            ], $imageObjects))),
-            'seo' => $factorySeo,
-        ]);
+            'schemas'    => array_values(array_filter(array_merge([$factoryPageSchema], $imageObjects))),
+            'seo_default' => [
+                'title'       => $factoryTitle,
+                'description' => $factoryDesc,
+            ],
+        ];
+
+        return app(CompositionRenderer::class)->render(
+            new SystemPageRenderContext(SystemPageRenderContext::resolve('factory'), 'factory', $resource)
+        );
     }
 }

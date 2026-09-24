@@ -43,7 +43,11 @@ class PublicUrl
     public static function base(): string
     {
         if (! app()->runningInConsole()) {
-            return rtrim(url('/'), '/');
+            // 纯 origin（scheme + host），不能用 url('/')：在 /en locale 路由下
+            // url('/') 会被语言前缀污染（返回 .../en），叠加 localePrefix 后产生
+            // /en/en/ 重复 canonical。request()->root() 只含 host（+子目录 baseUrl），
+            // 不含 locale / path，是干净的请求源。
+            return rtrim(request()->root(), '/');
         }
 
         $site = SiteContext::currentSite();

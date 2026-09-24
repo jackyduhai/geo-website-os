@@ -240,7 +240,7 @@ class AdminSeoMetaCrudTest extends TestCase
             ->get(route('admin.seo-metas.create', ['scope' => 'site']))
             ->assertOk()
             ->assertSee('当前解析结果')
-            ->assertSee('由 SeoMetaResolver 实时解析');
+            ->assertSee('由 SeoMetaResolver');
     }
 
     public function test_store_site_level_override_persists_all_fields(): void

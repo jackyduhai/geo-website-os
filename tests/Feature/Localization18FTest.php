@@ -155,6 +155,45 @@ class Localization18FTest extends TestCase
     }
 
     // ----------------------------------------------------------------
+    // 2b) Hreflang — 每个 locale 的对等链接指向其自身 URL（不被当前请求
+    //     locale 污染；英文页 zh-CN 不得错误带 /en 前缀）
+    // ----------------------------------------------------------------
+
+    public function test_hreflang_alternates_point_to_each_locale_own_url(): void
+    {
+        $this->enableBilingual();
+        $this->makeSiteOrganization(true);
+        $this->makeCoreProduct();
+
+        // 首页：中文与英文视图输出的 hreflang 集合必须完全一致、各自正确。
+        // zh-CN / x-default 指向根（带尾斜杠），en 指向 /en（无尾斜杠）。
+        $expectHome = [
+            'zh-CN' => 'http://localhost/',
+            'en' => 'http://localhost/en',
+            'x-default' => 'http://localhost/',
+        ];
+        foreach (['/', '/en'] as $url) {
+            preg_match_all(
+                '/<link rel="alternate" hreflang="([^"]+)" href="([^"]+)"\/?>/',
+                $this->get($url)->getContent(), $mm, PREG_SET_ORDER);
+            $map = [];
+            foreach ($mm as $x) { $map[$x[1]] = $x[2]; }
+            $this->assertSame($expectHome, $map, "home {$url} hreflang mismatch");
+        }
+
+        // 英文产品详情：zh-CN / x-default 必须指向「中文详情」（无 /en），
+        // en 指向英文详情。
+        preg_match_all(
+            '/<link rel="alternate" hreflang="([^"]+)" href="([^"]+)"\/?>/',
+            $this->get('/en/products/demo-product')->getContent(), $dm, PREG_SET_ORDER);
+        $dmap = [];
+        foreach ($dm as $x) { $dmap[$x[1]] = $x[2]; }
+        $this->assertSame('http://localhost/products/demo-product', $dmap['zh-CN']);
+        $this->assertSame('http://localhost/en/products/demo-product', $dmap['en']);
+        $this->assertSame('http://localhost/products/demo-product', $dmap['x-default']);
+    }
+
+    // ----------------------------------------------------------------
     // 3) LocalizedSchema — inLanguage
     // ----------------------------------------------------------------
 
