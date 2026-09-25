@@ -45,8 +45,9 @@ class SitemapBuilder
 
         // 首页 loc 冻结为「无尾斜杠」形态：默认语言为根地址 PublicUrl::base()，
         // 非默认语言为 base()/{locale}（如 /en，与 /en 路由 200、/en/ 301 的契约一致）。
-        // 声明性 feed 绝对地址统一经 PublicUrl 裁决规范 host（TD-09）。注意首页 canonical
-        // 仍是带尾斜杠的 PublicUrl::home()，二者契约不同。
+        // 声明性 feed 绝对地址统一经 PublicUrl 裁决规范 host（TD-09）。首页 canonical
+        // 经 PublicUrl::home() 输出同一形态（默认根 /、前缀语言 /en 无尾斜杠；TD-105 后
+        // canonical 与 sitemap loc 契约统一）。
         $homePrefix = LocaleRegistry::prefix(LocaleContext::current());
         $add(PublicUrl::base() . ($homePrefix !== '' ? '/' . $homePrefix : ''), 'daily', '1.0');
 

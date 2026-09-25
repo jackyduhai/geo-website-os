@@ -24,15 +24,34 @@ class SetLocale
 {
     public function handle(Request $request, Closure $next, ?string $locale = null): Response
     {
-        $locale = $locale ?: LocaleRegistry::default();
+        $routeLocale = $locale ?: LocaleRegistry::default();
 
-        if (! LocaleRegistry::supports($locale)) {
-            $locale = LocaleRegistry::default();
+        if (! LocaleRegistry::supports($routeLocale)) {
+            $routeLocale = LocaleRegistry::default();
         }
 
+        $siteLocales = self::siteSupportedLocales();
+        $locale = $routeLocale;
+
         // 当前站点是否提供该语言（Site Configuration）。
-        if (! in_array($locale, self::siteSupportedLocales(), true)) {
-            abort(404);
+        if (! in_array($locale, $siteLocales, true)) {
+            // 仅「根级默认位置」（路由请求的是系统默认语言 zh-CN、但站点默认语言并非
+            // zh-CN，如 en-only 站点）回退站点默认语言：站点根 / 与根级发现文件
+            // sitemap.xml / llms.txt 必须在约定的无前缀默认位置可访问（TD-107 / TD-109）。
+            // 显式请求非默认语言（/en/*，routeLocale=en）不被站点提供时仍严格 404；
+            // 其余业务路径（/products 等）同样 404，不做语言回退。
+            if ($routeLocale === LocaleRegistry::default()
+                && $this->isRootDefaultResource($request)) {
+                $siteDefault = self::siteDefaultLocale();
+                if (LocaleRegistry::supports($siteDefault)
+                    && in_array($siteDefault, $siteLocales, true)) {
+                    $locale = $siteDefault;
+                } else {
+                    abort(404);
+                }
+            } else {
+                abort(404);
+            }
         }
 
         app()->setLocale($locale);
@@ -43,6 +62,32 @@ class SetLocale
         } finally {
             LocaleContext::clear();
         }
+    }
+
+    /**
+     * 是否为「根级默认位置资源」：站点根 / 或根级发现文件（sitemap.xml / llms.txt）。
+     * 这些资源在约定的无语言前缀默认位置必须可访问，按站点默认语言解析。
+     */
+    private function isRootDefaultResource(Request $request): bool
+    {
+        $path = ltrim($request->path(), '/');
+
+        if ($path === '') {
+            return true; // 站点根 /
+        }
+
+        return in_array($path, ['sitemap.xml', 'llms.txt'], true);
+    }
+
+    /**
+     * 当前站点默认语言（Setting site_default_locale）。
+     * 未配置 / 非法时回退官方默认语言。
+     */
+    private static function siteDefaultLocale(): string
+    {
+        $default = (string) Setting::get('site_default_locale', LocaleRegistry::default());
+
+        return LocaleRegistry::supports($default) ? $default : LocaleRegistry::default();
     }
 
     /**

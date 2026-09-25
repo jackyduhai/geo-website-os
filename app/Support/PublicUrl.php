@@ -69,10 +69,36 @@ class PublicUrl
         return $prefix !== '' ? '/' . $prefix : '';
     }
 
-    /** 首页（带尾斜杠，与首页 canonical 冻结契约一致）。 */
+    /**
+     * 当前语言首页的规范公开 URL（与 CanonicalizeSlash / sitemap 冻结契约一致）。
+     * 默认语言为站点根「/」；带前缀语言首页无尾斜杠（en → /en，/en/ 301→/en）。
+     */
     public static function home(): string
     {
-        return self::base() . self::localePrefix() . '/';
+        $prefix = self::localePrefix();
+
+        return $prefix === ''
+            ? self::base() . '/'
+            : self::base() . $prefix;
+    }
+
+    /**
+     * 站点级 WebSite 实体的全局锚点 @id（跨语言共享，不带 locale 前缀）。
+     * 所有语言页面的 WebPage.isPartOf 都引用此锚点，保证指向图谱中真实存在的 WebSite 节点。
+     */
+    public static function websiteAnchor(): string
+    {
+        return self::base() . '/#website';
+    }
+
+    /**
+     * 站点级 Organization 实体的全局锚点 @id（跨语言共享，不带 locale 前缀）。
+     * GEO site.organization 锚点与主体节点 same_as 都引用此锚点，与 SchemaBuilder 的
+     * Organization @id 完全一致，不形成第二个组织事实。
+     */
+    public static function organizationAnchor(): string
+    {
+        return self::base() . '/#organization';
     }
 
     /**

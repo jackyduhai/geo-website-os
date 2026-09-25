@@ -7,6 +7,7 @@ use App\Models\Setting;
 use App\Services\Geo\GeoGraphBuilder;
 use App\Services\Geo\LlmsBuilder;
 use App\Services\Geo\SitemapBuilder;
+use App\Support\Localization\LocaleRegistry;
 use App\Support\PublicUrl;
 
 /**
@@ -83,9 +84,12 @@ class FeedController extends Controller
         }
 
         $lines[] = '# ---------- Sitemap ----------';
-        // sitemap 被站点显式关闭时，robots 不再指向一个会 404 的地址。
+        // sitemap 被站点显式关闭时，robots 不再指向会 404 的地址；否则列出该站点
+        // 各启用语言的 sitemap（默认语言根位置、前缀语言 /en/sitemap.xml，TD-109）。
         if (Setting::get('geo_sitemap_enabled', '1') !== '0') {
-            $lines[] = 'Sitemap: ' . PublicUrl::url('sitemap.xml');
+            foreach ($this->siteSitemapLocations() as $sitemapLocation) {
+                $lines[] = 'Sitemap: ' . $sitemapLocation;
+            }
         }
         $lines[] = '';
 
@@ -100,6 +104,32 @@ class FeedController extends Controller
             'Content-Type'  => 'text/plain; charset=UTF-8',
             'Cache-Control' => 'public, max-age=3600',
         ]);
+    }
+
+    /**
+     * 当前站点各启用语言的 sitemap 绝对地址（默认语言根 sitemap.xml、前缀语言
+     * {prefix}/sitemap.xml）。不依赖当前 LocaleContext，供语言无关的 robots.txt 使用。
+     *
+     * @return array<int,string>
+     */
+    private function siteSitemapLocations(): array
+    {
+        $locales = (array) Setting::get('site_supported_locales', ['zh-CN']);
+        $locations = [];
+
+        foreach ($locales as $loc) {
+            $loc = is_string($loc) ? trim($loc) : '';
+            if ($loc === '' || ! LocaleRegistry::supports($loc)) {
+                continue;
+            }
+
+            $prefix = LocaleRegistry::prefix($loc);
+            $locations[] = PublicUrl::base().($prefix !== '' ? '/'.$prefix : '').'/sitemap.xml';
+        }
+
+        $locations = array_values(array_unique($locations));
+
+        return $locations !== [] ? $locations : [PublicUrl::url('sitemap.xml')];
     }
 
     public function rss()

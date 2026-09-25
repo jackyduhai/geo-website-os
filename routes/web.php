@@ -37,11 +37,6 @@ $registerFrontend = function (string $locale, string $nameSuffix): void {
     Route::get('/feed.xml',    [FeedController::class, 'rss'])->name('geo.rss'.$nameSuffix);
     Route::get('/geo.json',    [FeedController::class, 'graph'])->name('geo.graph'.$nameSuffix);
 
-    // robots.txt 全站唯一（仅默认语言注册）
-    if ($locale === 'zh-CN') {
-        Route::get('/robots.txt', [FeedController::class, 'robots'])->name('geo.robots');
-    }
-
     // ---------- 搜索 ----------
     Route::get('/search', [SearchController::class, 'index'])->name('search'.$nameSuffix);
 
@@ -115,6 +110,11 @@ $registerFrontend = function (string $locale, string $nameSuffix): void {
 // 注册顺序很重要：en 组（prefix en）必须先于 zh 组注册，否则 zh 组的 catch-all
 // `/{path}` 会抢先匹配 /en/* 请求。en 显式路由 / en catch-all(en/{path}) 先命中；
 // 非 en 请求再落到 zh 组显式路由 / zh catch-all。
+
+// robots.txt 协议规定根级、语言无关：在 locale 组之外注册（不经过 SetLocale），
+// 任何站点语言配置（含 en-only 站点）下 /robots.txt 都可访问（TD-109）。站点由全局
+// ResolveSite 按 host 解析，robots 内容不随语言变化，并列出该站各语言 sitemap。
+Route::get('/robots.txt', [FeedController::class, 'robots'])->name('geo.robots');
 
 // ---------- English（前缀 en） ----------
 Route::prefix('en')->middleware('locale:en')->group(function () use ($registerFrontend): void {

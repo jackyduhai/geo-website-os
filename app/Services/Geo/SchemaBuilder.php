@@ -235,7 +235,7 @@ class SchemaBuilder
             '@type'           => 'WebSite',
             '@id'             => $this->baseUrl() . '/#website',
             'name'            => $this->siteName(),
-            'url'             => $this->baseUrl() . $this->localePrefix() . '/',
+            'url'             => PublicUrl::home(),
             'inLanguage'      => $this->locale(),
             'publisher'       => ['@id' => $this->baseUrl() . '/#organization'],
             'potentialAction' => [
@@ -475,7 +475,7 @@ class SchemaBuilder
             'description' => $desc,
             'url'         => $url,
             'inLanguage'  => $this->locale(),
-            'isPartOf'    => ['@id' => PublicUrl::home() . '#website'],
+            'isPartOf'    => ['@id' => PublicUrl::websiteAnchor()],
         ]);
 
         if ($mainId !== null && $mainId !== '') {

@@ -338,9 +338,24 @@ class Localization18FTest extends TestCase
         Catalog::flush();
         PageCache::flush();
 
-        // B zh routes 404 (language not provided).
-        $this->get('http://acme.test/')->assertNotFound();
-        $this->get('http://acme.test/sitemap.xml')->assertNotFound();
+        // B root default resources follow site_default_locale (en) and return 200
+        // with B's English identity (TD-107 root / renders the site default language;
+        // TD-109 root sitemap.xml) — they no longer 404 just because zh-CN is absent.
+        $bRoot = $this->get('http://acme.test/');
+        $bRoot->assertOk();
+        $brc = $bRoot->getContent();
+        $this->assertStringContainsString('<html lang="en"', $brc);
+        $this->assertStringContainsString('Acme Global', $brc);
+        $this->assertStringNotContainsString('演示产品', $brc);
+
+        $bRootSm = $this->get('http://acme.test/sitemap.xml');
+        $bRootSm->assertOk();
+        $brsc = $bRootSm->getContent();
+        $this->assertStringContainsString('acme.test/en', $brsc);
+        $this->assertStringNotContainsString('demo-product', $brsc);
+
+        // Explicit non-root zh-CN routes still 404 on an en-only site (language not provided).
+        $this->get('http://acme.test/knowledge/')->assertNotFound();
 
         // B en routes 200 with B identity.
         $bHome = $this->get('http://acme.test/en');

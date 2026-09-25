@@ -58,7 +58,7 @@ class GeoGraphBuilder
                 // 代表主体的 organization 实体节点通过 same_as 指回此锚点，不再形成
                 // 与 Schema 互不相干的第二个组织对象。
                 'organization' => [
-                    '@id'  => PublicUrl::home() . '#organization',
+                    '@id'  => PublicUrl::organizationAnchor(),
                     'name' => $this->siteOrgName(),
                     'url'  => PublicUrl::home(),
                 ],
@@ -150,7 +150,7 @@ class GeoGraphBuilder
         $metadata = is_array($e->metadata) ? $e->metadata : [];
         if ($e->type === Entity::TYPE_ORGANIZATION
             && ! empty($metadata['is_site_organization'])) {
-            $node['same_as'] = [PublicUrl::home() . '#organization'];
+            $node['same_as'] = [PublicUrl::organizationAnchor()];
         }
 
         return $node;
