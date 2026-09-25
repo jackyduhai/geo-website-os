@@ -1,0 +1,25 @@
+{
+    "id": "manufacturing-pro",
+    "name": "Manufacturing OS Pro",
+    "version": "1.0.0",
+    "industry": ["manufacturing"],
+    "locales": ["zh-CN", "en"],
+    "theme": "default",
+    "requires": {
+        "components": [
+            "hero",
+            "rich_text",
+            "feature_grid",
+            "stats",
+            "product_grid",
+            "logo_cloud",
+            "faq",
+            "cta",
+            "contact_info",
+            "form_reference"
+        ]
+    },
+    "pages": ["home", "products", "contact", "about"],
+    "author": "GEO Website OS",
+    "license": "MIT"
+}

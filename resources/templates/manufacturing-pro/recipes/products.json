@@ -1,0 +1,26 @@
+{
+    "key": "products",
+    "target": { "type": "system", "key": "products" },
+    "template": "listing",
+    "blocks": [
+        {
+            "slot": "sidebar",
+            "type": "form_reference",
+            "content": {
+                "title": { "zh-CN": "需要选型建议？", "en": "Need Help Choosing?" },
+                "subtitle": { "zh-CN": "告诉我们您的需求，获取专业方案与报价。", "en": "Tell us your needs for expert advice and a quote." }
+            }
+        },
+        {
+            "slot": "sidebar",
+            "type": "rich_text",
+            "content": {
+                "title": { "zh-CN": "批量与定制", "en": "Bulk & Custom Orders" },
+                "body": {
+                    "zh-CN": "- 支持批量订单与定制规格\n- 全流程品质追溯\n- 稳定交付保障",
+                    "en": "- Bulk orders and custom specifications\n- End-to-end quality traceability\n- Reliable delivery"
+                }
+            }
+        }
+    ]
+}

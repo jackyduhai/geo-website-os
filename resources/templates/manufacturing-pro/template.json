@@ -1,0 +1,32 @@
+{
+    "definitions": {
+        "mfg-home": {
+            "label": "Manufacturing Home",
+            "extends": "base",
+            "slots": {
+                "main": [
+                    "hero",
+                    "rich_text",
+                    "image",
+                    "media_text",
+                    "feature_grid",
+                    "stats",
+                    "product_grid",
+                    "logo_cloud",
+                    "faq",
+                    "testimonial",
+                    "cta",
+                    "contact_info",
+                    "form_reference"
+                ]
+            }
+        },
+        "mfg-landing": {
+            "label": "Manufacturing Landing",
+            "extends": "base",
+            "slots": {
+                "main": "*"
+            }
+        }
+    }
+}

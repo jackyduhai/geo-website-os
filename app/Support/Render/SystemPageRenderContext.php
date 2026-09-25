@@ -261,6 +261,16 @@ class SystemPageRenderContext implements RenderContext
                 ->orderBy('sort')
                 ->get()
                 ->all(),
+            // Listing 系统页（产品 / 服务 / 知识总览）的 sidebar 为可组合槽，
+            // 读 Page 持久化区块（选型表单 / 批量说明，由模板配方写入）。
+            'sidebar' => in_array($this->systemKey, ['products', 'solutions', 'knowledge'], true)
+                ? $this->page->blocks()
+                    ->where('slot', 'sidebar')
+                    ->where('is_active', true)
+                    ->orderBy('sort')
+                    ->get()
+                    ->all()
+                : [],
             default => [],
         };
     }

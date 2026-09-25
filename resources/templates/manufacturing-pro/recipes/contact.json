@@ -1,0 +1,19 @@
+{
+    "key": "contact",
+    "target": { "type": "system", "key": "contact" },
+    "template": "contact",
+    "blocks": [
+        {
+            "slot": "main",
+            "type": "rich_text",
+            "sort": 2,
+            "content": {
+                "title": { "zh-CN": "我们的服务承诺", "en": "Our Commitment" },
+                "body": {
+                    "zh-CN": "- 工作日 24 小时内回复\n- 提供专业方案与报价\n- 全程一对一跟进",
+                    "en": "- Reply within 24 business hours\n- Professional solutions and quotes\n- Dedicated one-to-one support"
+                }
+            }
+        }
+    ]
+}

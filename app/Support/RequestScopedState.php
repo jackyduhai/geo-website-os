@@ -8,6 +8,7 @@ use App\Models\Setting;
 use App\Models\Scopes\SiteScope;
 use App\Services\Seo\SeoMetaResolver;
 use App\Support\Plugins\PluginManager;
+use App\Support\Templates\TemplatePackageManager;
 use App\Support\Theme\ThemeManager;
 
 /**
@@ -66,6 +67,7 @@ class RequestScopedState
         // —— 主题 / 插件激活态（register 不可逆，仅清记忆，重放交由 reapply）——
         ThemeManager::resetRequestMemo();
         PluginManager::resetRequestMemo();
+        TemplatePackageManager::resetRequestMemo();
 
         foreach (self::$resetCallbacks as $callback) {
             $callback();
@@ -83,5 +85,6 @@ class RequestScopedState
         // register() 均幂等、可重入，且内部对环境未就绪做了安全兜底。
         ThemeManager::register();
         PluginManager::register();
+        TemplatePackageManager::register();
     }
 }

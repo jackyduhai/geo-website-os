@@ -1,0 +1,70 @@
+{
+    "key": "about",
+    "target": {
+        "type": "page",
+        "slug": "about-company",
+        "title": { "zh-CN": "关于我们", "en": "About Us" }
+    },
+    "template": "landing",
+    "blocks": [
+        {
+            "slot": "main",
+            "type": "hero",
+            "content": {
+                "eyebrow": { "zh-CN": "关于我们", "en": "About Us" },
+                "title": { "zh-CN": "专注制造 · 持续创造价值", "en": "Focused on Manufacturing, Built on Value" },
+                "subtitle": { "zh-CN": "以专业能力与稳定品质，与客户长期共同成长。", "en": "Growing together with our clients through expertise and consistent quality." },
+                "buttons": [
+                    { "label": { "zh-CN": "联系我们", "en": "Contact Us" }, "url": "/contact/", "style": "primary" }
+                ]
+            }
+        },
+        {
+            "slot": "main",
+            "type": "rich_text",
+            "content": {
+                "title": { "zh-CN": "公司简介", "en": "Who We Are" },
+                "body": {
+                    "zh-CN": "我们是一家专注于产品研发、生产与交付的制造企业，拥有成熟的生产基地与专业团队。\n\n多年来，我们坚持以客户需求为中心，持续优化工艺与品质管理，为不同行业的客户提供稳定可靠的产品与定制化解决方案。",
+                    "en": "We are a manufacturing company focused on product R&D, production and delivery, with a mature production base and a professional team.\n\nOver the years, we have stayed customer-focused, continuously improving our processes and quality management to provide clients across industries with reliable products and tailored solutions."
+                }
+            }
+        },
+        {
+            "slot": "main",
+            "type": "stats",
+            "content": {
+                "title": { "zh-CN": "实力一览", "en": "By the Numbers" },
+                "items": [
+                    { "value": "10+", "label": { "zh-CN": "年行业经验", "en": "Years of Experience" } },
+                    { "value": "5000+", "unit": { "zh-CN": "㎡", "en": "m²" }, "label": { "zh-CN": "生产基地", "en": "Production Base" } },
+                    { "value": "200+", "label": { "zh-CN": "服务客户", "en": "Clients Served" } }
+                ]
+            }
+        },
+        {
+            "slot": "main",
+            "type": "feature_grid",
+            "content": {
+                "title": { "zh-CN": "我们的优势", "en": "Our Strengths" },
+                "columns": 3,
+                "items": [
+                    { "icon": "shield", "title": { "zh-CN": "品质可靠", "en": "Reliable Quality" }, "text": { "zh-CN": "严格的品质管理与全流程追溯。", "en": "Strict quality management and full traceability." } },
+                    { "icon": "truck", "title": { "zh-CN": "交付稳定", "en": "Stable Delivery" }, "text": { "zh-CN": "成熟产能保障，按时按量交付。", "en": "Proven capacity ensures on-time, in-full delivery." } },
+                    { "icon": "check", "title": { "zh-CN": "服务专业", "en": "Professional Service" }, "text": { "zh-CN": "专业团队提供持续技术支持。", "en": "A dedicated team provides ongoing technical support." } }
+                ]
+            }
+        },
+        {
+            "slot": "main",
+            "type": "cta",
+            "content": {
+                "title": { "zh-CN": "想了解更多？", "en": "Want to Learn More?" },
+                "subtitle": { "zh-CN": "欢迎与我们联系，获取更多企业与产品信息。", "en": "Get in touch for more information about our company and products." },
+                "buttons": [
+                    { "label": { "zh-CN": "立即联系", "en": "Get in Touch" }, "url": "/contact/", "style": "primary" }
+                ]
+            }
+        }
+    ]
+}

@@ -1,0 +1,85 @@
+{
+    "key": "homepage",
+    "target": { "type": "home" },
+    "template": "home",
+    "blocks": [
+        {
+            "slot": "main",
+            "type": "hero",
+            "content": {
+                "eyebrow": { "zh-CN": "制造实力 · 品质交付", "en": "Manufacturing Strength · Quality Delivery" },
+                "title": { "zh-CN": "值得信赖的制造合作伙伴", "en": "Your Trusted Manufacturing Partner" },
+                "subtitle": { "zh-CN": "从研发到量产，提供稳定、可靠、可追溯的产品与服务。", "en": "From R&D to mass production — stable, reliable, traceable products and services." },
+                "buttons": [
+                    { "label": { "zh-CN": "获取方案", "en": "Get a Solution" }, "url": "/contact/", "style": "primary" },
+                    { "label": { "zh-CN": "浏览产品", "en": "Explore Products" }, "url": "/products/", "style": "secondary" }
+                ]
+            }
+        },
+        {
+            "slot": "main",
+            "type": "stats",
+            "content": {
+                "title": { "zh-CN": "实力一览", "en": "By the Numbers" },
+                "items": [
+                    { "value": "10+", "label": { "zh-CN": "年行业经验", "en": "Years of Experience" } },
+                    { "value": "5000+", "unit": { "zh-CN": "㎡", "en": "m²" }, "label": { "zh-CN": "生产基地", "en": "Production Base" } },
+                    { "value": "98%", "label": { "zh-CN": "客户满意度", "en": "Client Satisfaction" } }
+                ]
+            }
+        },
+        {
+            "slot": "main",
+            "type": "feature_grid",
+            "content": {
+                "title": { "zh-CN": "为什么选择我们", "en": "Why Choose Us" },
+                "columns": 3,
+                "items": [
+                    { "icon": "shield", "title": { "zh-CN": "研发能力", "en": "R&D Capability" }, "text": { "zh-CN": "专业团队持续迭代，快速响应定制需求。", "en": "A dedicated team iterates continuously and responds fast to custom needs." } },
+                    { "icon": "truck", "title": { "zh-CN": "稳定交付", "en": "Reliable Delivery" }, "text": { "zh-CN": "成熟供应链与产能保障，按时按量交付。", "en": "A mature supply chain and capacity ensure on-time, in-full delivery." } },
+                    { "icon": "check", "title": { "zh-CN": "品质管控", "en": "Quality Control" }, "text": { "zh-CN": "全流程检测与追溯，品质稳定可控。", "en": "End-to-end inspection and traceability keep quality stable." } }
+                ]
+            }
+        },
+        {
+            "slot": "main",
+            "type": "product_grid",
+            "content": {
+                "title": { "zh-CN": "产品体系", "en": "Our Products" },
+                "subtitle": { "zh-CN": "覆盖多场景的完整产品矩阵", "en": "A complete product portfolio for every scenario" },
+                "source": { "mode": "all" },
+                "limit": 6
+            }
+        },
+        {
+            "slot": "main",
+            "type": "logo_cloud",
+            "content": {
+                "title": { "zh-CN": "合作客户", "en": "Trusted By" },
+                "items": []
+            }
+        },
+        {
+            "slot": "main",
+            "type": "faq",
+            "content": {
+                "title": { "zh-CN": "常见问题", "en": "Frequently Asked Questions" },
+                "items": [
+                    { "q": { "zh-CN": "是否支持定制？", "en": "Do you offer customization?" }, "a": { "zh-CN": "支持。可根据您的需求提供定制方案，欢迎联系沟通。", "en": "Yes. We provide tailored solutions based on your needs — feel free to contact us." } },
+                    { "q": { "zh-CN": "交付周期一般多久？", "en": "What is the typical lead time?" }, "a": { "zh-CN": "具体周期取决于订单规模与规格，确认需求后我们会提供明确排期。", "en": "Lead time depends on order size and specifications; we provide a clear schedule once requirements are confirmed." } }
+                ]
+            }
+        },
+        {
+            "slot": "main",
+            "type": "cta",
+            "content": {
+                "title": { "zh-CN": "准备好开始合作了吗？", "en": "Ready to Start?" },
+                "subtitle": { "zh-CN": "告诉我们您的需求，团队将尽快与您联系。", "en": "Tell us your needs — our team will get back to you soon." },
+                "buttons": [
+                    { "label": { "zh-CN": "立即咨询", "en": "Contact Us" }, "url": "/contact/", "style": "primary" }
+                ]
+            }
+        }
+    ]
+}
