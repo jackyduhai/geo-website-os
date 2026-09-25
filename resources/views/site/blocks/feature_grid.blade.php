@@ -20,8 +20,8 @@
         @foreach($fgItems as $it)
           <div class="card" style="padding:26px">
             <span class="feat-ic">@include('site._icon', ['name' => $it['icon'] ?? 'default'])</span>
-            <h3 style="margin:14px 0 8px;font-size:17px">{{ $it['title'] ?? '' }}</h3>
-            <p style="margin:0;color:var(--ink-muted);font-size:14px;line-height:1.7">{{ $it['text'] ?? '' }}</p>
+            <h3 style="margin:14px 0 8px;font-size:var(--fs-h4)">{{ $it['title'] ?? '' }}</h3>
+            <p style="margin:0;color:var(--ink-muted);font-size:var(--fs-xs);line-height:1.7">{{ $it['text'] ?? '' }}</p>
           </div>
         @endforeach
       </div>

@@ -10,7 +10,7 @@
   <section class="sec @if($caTint) sec-tint @endif">
     <div class="wrap">
       <div class="cta-band" style="text-align:center">
-        @if($caTitle)<h2 style="font-size:28px;margin:0 0 10px">{{ $caTitle }}</h2>@endif
+        @if($caTitle)<h2 style="font-size:var(--fs-h2);margin:0 0 10px">{{ $caTitle }}</h2>@endif
         @if($caSub)<p style="max-width:640px;margin:0 auto 22px">{{ $caSub }}</p>@endif
         @if(! empty($caButtons))
           <div class="cta-row" style="justify-content:center">

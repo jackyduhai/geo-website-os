@@ -13,7 +13,7 @@
         </div>
       @endif
       @if($rtBody)
-        <div class="prose" style="font-size:16px;line-height:1.9">
+        <div class="prose" style="font-size:var(--fs-base);line-height:1.9">
           {!! \Illuminate\Support\Str::markdown($rtBody) !!}
         </div>
       @endif

@@ -17,12 +17,12 @@
       <div class="grid g3 reveal" style="gap:28px">
         @foreach($tmRows as $t)
           <figure class="card" style="padding:28px;margin:0">
-            <span style="font-size:36px;line-height:1;color:var(--brand);font-weight:700" aria-hidden="true">&ldquo;</span>
-            <blockquote style="margin:8px 0 16px;font-size:15px;line-height:1.8">{{ $t['quote'] }}</blockquote>
+            <span style="font-size:var(--fs-h2);line-height:1;color:var(--brand);font-weight:700" aria-hidden="true">&ldquo;</span>
+            <blockquote style="margin:8px 0 16px;font-size:var(--fs-sm);line-height:1.8">{{ $t['quote'] }}</blockquote>
             <figcaption>
-              <strong style="font-size:14.5px">{{ $t['name'] }}</strong>
+              <strong style="font-size:var(--fs-sm)">{{ $t['name'] }}</strong>
               @if($t['role'] !== '' || $t['company'] !== '')
-                <span style="display:block;font-size:12.5px;color:var(--ink-muted);margin-top:2px">
+                <span style="display:block;font-size:var(--fs-label);color:var(--ink-muted);margin-top:2px">
                   {{ $t['role'] }}@if($t['role'] !== '' && $t['company'] !== '') · @endif{{ $t['company'] }}
                 </span>
               @endif

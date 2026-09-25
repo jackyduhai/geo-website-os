@@ -31,10 +31,10 @@
             </div>
             <div style="padding:18px 20px 20px">
               @if(! empty($card['date']))
-                <span style="font-size:12px;color:var(--ink-muted)">{{ $card['date']->format('Y-m-d') }}</span>
+                <span style="font-size:var(--fs-label);color:var(--ink-muted)">{{ $card['date']->format('Y-m-d') }}</span>
               @endif
-              <h3 style="font-size:16px;margin:4px 0 8px">{{ $card['name'] }}</h3>
-              <p style="margin:0;font-size:13.5px;color:var(--ink-muted);line-height:1.7;
+              <h3 style="font-size:var(--fs-base);margin:4px 0 8px">{{ $card['name'] }}</h3>
+              <p style="margin:0;font-size:var(--fs-xs);color:var(--ink-muted);line-height:1.7;
                  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">{{ $card['summary'] }}</p>
             </div>
           </a>

@@ -31,8 +31,8 @@
               @endif
             </div>
             <div style="padding:18px 20px 20px">
-              <h3 style="font-size:16px;margin:0 0 8px">{{ $card['name'] }}</h3>
-              <p style="margin:0;font-size:13.5px;color:var(--ink-muted);line-height:1.7;
+              <h3 style="font-size:var(--fs-base);margin:0 0 8px">{{ $card['name'] }}</h3>
+              <p style="margin:0;font-size:var(--fs-xs);color:var(--ink-muted);line-height:1.7;
                  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">{{ $card['summary'] }}</p>
             </div>
           </a>

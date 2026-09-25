@@ -10,7 +10,7 @@
     <div class="wrap" style="max-width:960px">
       <figure class="block-figure" style="margin:0">
         <x-picture :src="$imgMedia->url()" :alt="$imgAlt" loading="lazy" />
-        @if($imgCap)<figcaption style="margin-top:10px;font-size:13.5px;color:var(--ink-muted)">{{ $imgCap }}</figcaption>@endif
+        @if($imgCap)<figcaption style="margin-top:10px;font-size:var(--fs-xs);color:var(--ink-muted)">{{ $imgCap }}</figcaption>@endif
       </figure>
     </div>
   </section>

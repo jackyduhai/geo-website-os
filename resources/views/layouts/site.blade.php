@@ -267,6 +267,10 @@ nav[role=navigation]{margin-top:8px}
 /* 幽灵按钮：仅用于深色 CTA 反白区 */
 .btn-ghost{background:var(--inverse-hover);color:var(--on-inverse);border-color:var(--inverse-line-strong);}
 .btn-ghost:hover{background:var(--inverse-hover-strong);color:var(--on-inverse);}
+/* 鎻忚竟鎸夐挳锛氶€忔槑搴?+ 涓€ф弿杈癸紙缃簬鍥剧墖 / 鏈夎壊鑳屾櫙涓婏紝涓庢鎸夐挳瀹為潰鍖哄垎锛?*/
+.btn-outline{background:transparent;color:var(--ink);border-color:var(--line);}
+.btn-outline:hover{background:var(--surface-2);border-color:var(--brand);color:var(--brand-dark);transform:translateY(-1px);}
+.btn-outline:active{transform:translateY(0);}
 /* 文字按钮：区块“查看全部 / 阅读全文”，hover 转红下划线（品牌强调） */
 .btn-text{padding:6px 2px;color:var(--brand);font-weight:600;gap:6px;background:transparent;}
 .btn-text:hover{color:var(--brand-dark);gap:10px;}
@@ -496,6 +500,12 @@ a.card:focus-visible, summary:focus-visible, .page-link:focus-visible, .pcard .g
 .hero-text h1{font-size:var(--fs-h1);line-height:1.16;margin:0 0 16px;letter-spacing:-.02em;max-width:820px;font-weight:700}
 .hero-text .sub{font-size:var(--fs-lg);font-weight:600;color:var(--brand-dark);margin:0 0 14px}
 .hero-text p{font-size:var(--fs-lg);color:var(--ink-muted);max-width:760px;margin:0 0 28px;line-height:var(--lh-body)}
+/* Hero 灞呬腑锛氭枃瀛楀眳涓€侀檺鍒惰瀹斤紝鐢ㄤ簬鏃犲浘 / 鑳屾櫙鍘嬪瓧鐨勫眳涓灞?*/
+.hero-center{background:radial-gradient(1000px 460px at 50% -10%,var(--brand-soft) 0%,transparent 62%),var(--bg);}
+.hero-center .wrap{padding-top:84px;padding-bottom:76px;text-align:center;}
+.hero-center h1{font-size:var(--fs-h1);line-height:var(--lh-heading);letter-spacing:var(--ls-snug);margin:0 auto 16px;max-width:18ch;font-weight:700;}
+.hero-center p{font-size:var(--fs-lg);color:var(--ink-muted);max-width:60ch;margin:0 auto 28px;line-height:var(--lh-body);}
+.hero-center .hero-actions{justify-content:center;}
 
 /* ---------- 信任数据：浅色大数字行（不再红铺底） ---------- */
 .stats{background:var(--surface);border-bottom:1px solid var(--line-soft);}
@@ -514,6 +524,8 @@ a.card:focus-visible, summary:focus-visible, .page-link:focus-visible, .pcard .g
 main{padding-bottom:0;}
 .sec{padding:var(--sec-y) 0;}
 .sec-tint{background:var(--surface-2);}
+.sec-wide>.wrap{max-width:1320px;}
+.sec-compact{padding-top:var(--sp-7);padding-bottom:var(--sp-7);}
 .sec-head{margin-bottom:40px;max-width:760px;}
 .sec-head.row{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;max-width:none;flex-wrap:wrap;}
 .sec-head.center{margin-left:auto;margin-right:auto;text-align:center;}
@@ -534,6 +546,13 @@ main{padding-bottom:0;}
 .card{background:var(--surface);border:1px solid var(--line-soft);border-radius:var(--radius);padding:28px;}
 a.card{transition:transform var(--motion-base),box-shadow var(--motion-base),border-color var(--motion-base);}
 a.card:hover{border-color:var(--line);box-shadow:var(--shadow-hover);transform:translateY(-3px);}
+/* Card 瑙嗚鍙樹綋锛堟í鍚戜慨楗般€佷笉澶嶅埗 DOM锛涚敤閫斾粛鐢?block 鍐冲畾锛涙繁鑹茬敱 token 鑷姩鎵挎帴锛?*/
+.card-border{border-color:var(--line);}
+.card-shadow{border-color:transparent;box-shadow:var(--shadow-sm);}
+a.card-shadow:hover{box-shadow:var(--shadow-hover);}
+.card-glass{background:color-mix(in srgb,var(--surface) 70%,transparent);border-color:color-mix(in srgb,var(--line) 55%,transparent);backdrop-filter:blur(14px) saturate(1.25);-webkit-backdrop-filter:blur(14px) saturate(1.25);}
+.card-minimal{background:transparent;border-color:transparent;box-shadow:none;}
+a.card-minimal:hover{background:var(--surface-2);transform:translateY(-3px);}
 
 /* 产品卡 */
 .pcard{position:relative;display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--line-soft);

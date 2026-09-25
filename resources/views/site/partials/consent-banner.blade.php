@@ -13,7 +13,7 @@
   box-shadow:0 -10px 32px rgba(0,0,0,.14);}
 .geo-consent[hidden]{display:none;}
 .geo-consent__in{max-width:1200px;margin:0 auto;display:flex;gap:16px;align-items:center;flex-wrap:wrap;}
-.geo-consent__text{flex:1 1 320px;font-size:14px;line-height:1.6;color:var(--text-secondary);}
+.geo-consent__text{flex:1 1 320px;font-size:var(--fs-xs);line-height:1.6;color:var(--text-secondary);}
 .geo-consent__title{font-weight:600;color:var(--text-primary);margin-bottom:2px;}
 .geo-consent__actions{display:flex;gap:10px;flex:0 0 auto;}
 @media (max-width:560px){ .geo-consent__actions{width:100%;} .geo-consent__actions .btn{flex:1;} }

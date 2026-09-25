@@ -20,7 +20,7 @@
       <div class="reveal">
         @if($mtTitle)<h2 class="sec-h">{{ $mtTitle }}</h2>@endif
         @if($mtBody)
-          <div class="prose" style="font-size:16px;line-height:1.9">{!! \Illuminate\Support\Str::markdown($mtBody) !!}</div>
+          <div class="prose" style="font-size:var(--fs-base);line-height:1.9">{!! \Illuminate\Support\Str::markdown($mtBody) !!}</div>
         @endif
         @if($mtBtnLabel !== '' && $mtBtnUrl !== '')
           <div class="actions" style="margin-top:24px">
