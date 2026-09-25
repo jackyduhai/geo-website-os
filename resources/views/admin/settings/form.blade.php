@@ -69,7 +69,11 @@
             开启
           </label>
         @elseif($s->type==='select')
-          @php($selectOptions = $s->key==='theme_color_mode' ? ['light'=>'浅色（默认）','dark'=>'深色','system'=>'跟随系统'] : [])
+          @php($selectOptions = match($s->key){
+            'theme_color_mode' => ['light'=>'浅色（默认）','dark'=>'深色','system'=>'跟随系统'],
+            'theme_typography' => ['standard'=>'标准（默认）','compact'=>'紧凑（信息密集）','editorial'=>'编辑感（大留白）'],
+            default => [],
+          })
           <select name="{{ $s->key }}">
             @foreach($selectOptions as $ov => $ol)
               <option value="{{ $ov }}" @selected(old($s->key, $s->value)===$ov)>{{ $ol }}</option>

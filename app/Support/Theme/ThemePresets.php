@@ -61,7 +61,7 @@ class ThemePresets
             'theme_primary', 'theme_primary_dark', 'theme_accent',
             'theme_bg', 'theme_surface', 'theme_text', 'theme_text_muted',
             'theme_radius', 'theme_container', 'theme_font',
-            'theme_density', 'theme_shadow',
+            'theme_density', 'theme_shadow', 'theme_typography',
         ];
     }
 }

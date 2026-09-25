@@ -60,6 +60,7 @@ class DefaultSettingSeeder extends Seeder
             ['theme_container',    '', 'theme', '内容区最大宽度（px）', 'number', '留空使用系统默认（1200）；范围 800–2400', 90],
             ['theme_density',      '', 'theme', '排版密度', 'text', '留空使用系统默认（comfortable）；可选 comfortable（宽松）/ compact（紧凑）；行业预设会自动设置', 92],
             ['theme_shadow',       '', 'theme', '阴影质感', 'text', '留空使用系统默认（flat）；可选 flat（去盒子化）/ soft（柔和投影）；行业预设会自动设置', 94],
+            ['theme_typography',   'standard', 'theme', '排版气质（Typography Profile）', 'select', 'standard 标准 / compact 紧凑（信息密集，工业·企业）/ editorial 编辑感（大留白，SaaS·品牌）；切换后字号 scale 与行高整体变化', 93],
             ['theme_color_mode',   'light', 'theme', '默认外观模式', 'select', '前台默认外观：light 浅色 / dark 深色 / system 跟随访客系统；访客仍可用右上角按钮自行切换并记忆', 95],
             ['theme_allow_dark',   '1', 'theme', '允许深色模式', 'bool', '开启后前台支持浅色 / 深色切换；关闭则强制浅色且不显示外观切换按钮', 96],
             ['theme_font',         '',     'theme', '自定义字体', 'text', '留空使用激活主题或系统字体栈', 100],

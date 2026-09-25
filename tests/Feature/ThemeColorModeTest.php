@@ -161,7 +161,7 @@ class ThemeColorModeTest extends TestCase
 
         // 新站出厂即带七组完整默认设置，外观键存在且为中性默认，后台可直接保存覆盖。
         \App\Support\SiteContext::withSite($siteB, function (): void {
-            $this->assertSame(15, Setting::where('group', 'theme')->count());
+            $this->assertSame(16, Setting::where('group', 'theme')->count());
             $this->assertSame('light', Setting::get('theme_color_mode'));
             $this->assertSame('1', Setting::get('theme_allow_dark'));
         });

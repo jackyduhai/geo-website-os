@@ -37,7 +37,7 @@ class SettingsGovernanceTest extends TestCase
     /** 各组保留键数量（与 DefaultSettingSeeder 一致，合计 72）。 */
     private const GROUP_COUNTS = [
         'general' => 7,
-        'theme'   => 15,
+        'theme'   => 16,
         'contact' => 7,
         'seo'     => 6,
         'geo'     => 6,

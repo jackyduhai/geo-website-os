@@ -185,9 +185,19 @@ class ThemePalette
         $rLg = $radius + 2;
         $rXl = min(18, $radius + 6);
 
-        $fontStack = $font !== ''
-            ? $font
-            : '-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei","Helvetica Neue",Arial,sans-serif';
+        // ---- P-STEP 18L-1：Typography profile（排版气质：字号 scale / 行高，随主题切换）----
+        $typoProfile = strtolower((string) $get('theme_typography', 'standard'));
+        if (! in_array($typoProfile, ['standard', 'compact', 'editorial'], true)) {
+            $typoProfile = 'standard';
+        }
+        $fs = self::typographyScale($typoProfile);
+        $lhHeading = ['standard' => '1.25', 'compact' => '1.2', 'editorial' => '1.12'][$typoProfile];
+        $lhBody    = ['standard' => '1.75', 'compact' => '1.55', 'editorial' => '1.8'][$typoProfile];
+
+        $fontStackDefault = '-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei","Helvetica Neue",Arial,sans-serif';
+        $fontStack = $font !== '' ? $font : $fontStackDefault;
+        // 英文（拉丁）优先字体栈：系统字体优先，不下载 web font（Inter 安装则用，否则 SF Pro / Segoe UI / Roboto 回退）。
+        $fontStackEn = 'Inter,"SF Pro Text","Segoe UI",Roboto,Helvetica,Arial,sans-serif';
 
         return [
             // 品牌（文字 / 实心用加深达标版，--*-bright 为深底点缀用原始种子）
@@ -253,7 +263,48 @@ class ThemePalette
             // 布局
             '--container'    => $container . 'px',
             '--font'         => $fontStack,
+            '--font-en'      => $fontStackEn,
             '--sec-y'        => $sectionY,
+            // P-STEP 18L-1 Typography：字号随 profile（rem）
+            '--fs-display' => $fs['display'] . 'rem',
+            '--fs-h1'      => $fs['h1'] . 'rem',
+            '--fs-h2'      => $fs['h2'] . 'rem',
+            '--fs-h3'      => $fs['h3'] . 'rem',
+            '--fs-h4'      => $fs['h4'] . 'rem',
+            '--fs-lg'      => $fs['lg'] . 'rem',
+            '--fs-base'    => $fs['base'] . 'rem',
+            '--fs-sm'      => $fs['sm'] . 'rem',
+            '--fs-xs'      => $fs['xs'] . 'rem',
+            '--fs-2xs'     => $fs['2xs'] . 'rem',
+            '--fs-label'   => $fs['label'] . 'rem',
+            '--fs-button'  => $fs['button'] . 'rem',
+            // 行高（固定档位 + 随 profile 的 heading/body）
+            '--lh-tight'   => '1.1',
+            '--lh-snug'    => '1.25',
+            '--lh-normal'  => '1.5',
+            '--lh-relaxed' => '1.7',
+            '--lh-heading' => $lhHeading,
+            '--lh-body'    => $lhBody,
+            // 字重
+            '--fw-normal'   => '400',
+            '--fw-medium'   => '500',
+            '--fw-semibold' => '600',
+            '--fw-bold'     => '700',
+            // 字距
+            '--ls-tight'  => '-.02em',
+            '--ls-snug'   => '-.01em',
+            '--ls-normal' => '0',
+            '--ls-wide'   => '.02em',
+            '--ls-caps'   => '.08em',
+            // P-STEP 18L-1 Inverse：反白文字 / 边框 / ghost hover（深色面白字，不随深色模式覆盖）
+            '--surface-inverse'      => self::DEEP,
+            '--on-inverse'           => '#FFFFFF',
+            '--on-inverse-soft'      => 'rgba(255,255,255,.9)',
+            '--on-inverse-faint'     => 'rgba(255,255,255,.62)',
+            '--inverse-line'         => 'rgba(255,255,255,.15)',
+            '--inverse-line-strong'  => 'rgba(255,255,255,.4)',
+            '--inverse-hover'        => 'rgba(255,255,255,.10)',
+            '--inverse-hover-strong' => 'rgba(255,255,255,.20)',
             // 间距（4 点基准 / 8 点网格，固定档位）
             '--sp-1' => '4px', '--sp-2' => '8px', '--sp-3' => '12px', '--sp-4' => '16px',
             '--sp-5' => '24px', '--sp-6' => '32px', '--sp-7' => '48px', '--sp-8' => '64px', '--sp-9' => '96px',
@@ -267,6 +318,34 @@ class ThemePalette
             '--shadow-hover'   => $shadowHover,
             '--shadow-overlay' => $shadowOverlay,
         ];
+    }
+
+    /**
+     * P-STEP 18L-1：按 typography profile 返回字号 scale（rem，纯函数）。
+     *
+     * @return array<string,float> display/h1/h2/h3/h4/lg/base/sm/xs/2xs/label/button
+     */
+    public static function typographyScale(string $profile): array
+    {
+        $scales = [
+            'standard' => [
+                'display' => 3.0, 'h1' => 2.75, 'h2' => 2.0, 'h3' => 1.5, 'h4' => 1.1875,
+                'lg' => 1.125, 'base' => 1.0, 'sm' => 0.9375, 'xs' => 0.875,
+                '2xs' => 0.8125, 'label' => 0.78, 'button' => 0.9375,
+            ],
+            'compact' => [
+                'display' => 2.5, 'h1' => 2.25, 'h2' => 1.75, 'h3' => 1.375, 'h4' => 1.125,
+                'lg' => 1.0625, 'base' => 0.9375, 'sm' => 0.875, 'xs' => 0.8125,
+                '2xs' => 0.75, 'label' => 0.72, 'button' => 0.875,
+            ],
+            'editorial' => [
+                'display' => 3.25, 'h1' => 3.0, 'h2' => 2.125, 'h3' => 1.625, 'h4' => 1.25,
+                'lg' => 1.1875, 'base' => 1.0625, 'sm' => 1.0, 'xs' => 0.9375,
+                '2xs' => 0.875, 'label' => 0.82, 'button' => 1.0,
+            ],
+        ];
+
+        return $scales[$profile] ?? $scales['standard'];
     }
 
     /**
