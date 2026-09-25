@@ -26,7 +26,7 @@ class ThemePalette
     /** 出厂中性默认种子（与 DefaultSettingSeeder 的 theme 组保持一致）。 */
     public const DEFAULTS = [
         'brand'        => '#2563EB',
-        'accent'       => '#0E9F6E',
+        'accent'       => '#64748B', // 蓝灰小面积点缀（P-STEP 18K：出厂不再默认独立绿色）
         'bg'           => '#F8FAFC',
         'surface'      => '#FFFFFF',
         'ink'          => '#1F2937',
@@ -108,11 +108,26 @@ class ThemePalette
         $accentSoft = self::mix($accentRaw, '#FFFFFF', 0.90);
         $onAccent   = self::onColor($accent);
 
-        // ---- CTA 簇：核心实心按钮，白字 AA；在达标辅色上略加深出悬停层级 ----
-        $cta     = self::mix($accent, '#000000', 0.06);
-        $ctaDark = self::mix($accent, '#000000', 0.18);
-        $ctaSoft = self::mix($accentRaw, '#FFFFFF', 0.90);
-        $onCta   = '#FFFFFF';
+        // ---- Action 簇：默认与品牌同色系（Brand-led + Action-aligned，P-STEP 18K）----
+        // 主行动不再默认使用独立色相（历史为绿色 CTA），而是品牌色的同色系派生，
+        // 保证「换品牌 = 主行动一起换」；Accent 退为小面积点缀（tag / 数据 / 装饰）。
+        $action       = $brand;
+        $actionDark   = $brandDark;
+        $actionActive = $brandActive;
+        $actionSoft   = $brandSoft;
+        $onAction     = $onBrand;
+
+        // ---- CTA 簇：核心实心按钮默认走品牌同色系，白字 AA ----
+        // mix 黑 4% 给出同色系略深面，再保证实心按钮「白字 AA」：
+        // 亮种子（如琥珀）加深到白底 AA 后仍处白/黑字临界，需继续向黑到白字达标，
+        // 正常深色品牌 deepenForContrast 原样返回、不受影响。
+        $cta     = self::deepenForContrast(self::mix($brand, '#000000', 0.04), self::AA_RATIO);
+        $ctaDark = self::mix($cta, '#000000', 0.12);
+        $ctaSoft = $brandSoft;
+        $onCta   = self::onColor($cta);
+
+        // ---- 语义成功色：固定积极绿（与 error 固定红对称），不随品牌 / accent 改变 ----
+        $success = self::deepenForContrast(self::hexToRgb('#16A34A'), self::AA_RATIO);
 
         // ---- 干净中性阶（约 70% 界面） ----
         $surface2 = self::mix($surface, $ink, 0.045);
@@ -132,7 +147,7 @@ class ThemePalette
         $heroMid  = self::mix($brandRaw, self::DEEP, 0.72);
         $heroDeep = self::mix($brandRaw, self::DEEP, 0.84);
         $heroBack = self::mix($brandRaw, self::DEEP, 0.90);
-        $heroGlowColor = self::rgba($accentRaw, 0.16);
+        $heroGlowColor = self::rgba($accentRaw, 0.10);
         $heroKicker    = self::mix($brandRaw, '#FFFFFF', 0.72);
         $heroGradient = sprintf(
             'radial-gradient(120%% 140%% at 18%% 12%%,%s,%s 60%%),'
@@ -190,7 +205,13 @@ class ThemePalette
             '--accent-on'     => self::hex($onAccent),
             '--accent-ring'   => self::rgba($accentRaw, 0.20),
             '--accent-bright' => self::hex($accentRaw),
-            // CTA（辅色同色系派生，白字 AA）
+            // Action（品牌同色系主行动，P-STEP 18K）
+            '--action'        => self::hex($action),
+            '--action-dark'   => self::hex($actionDark),
+            '--action-active' => self::hex($actionActive),
+            '--action-soft'   => self::hex($actionSoft),
+            '--action-on'     => self::hex($onAction),
+            // CTA（默认映射到品牌同色系，白字 AA）
             '--cta'          => self::hex($cta),
             '--cta-dark'     => self::hex($ctaDark),
             '--cta-soft'     => self::hex($ctaSoft),
@@ -212,7 +233,7 @@ class ThemePalette
             '--footer-dim'   => self::hex($footerDim),
             // 语义色（错误固定红，不随品牌；info/success 用加深达标版）
             '--info'         => self::hex($brand),
-            '--success'      => self::hex($accent),
+            '--success'      => self::hex($success),
             '--warning'      => '#E6A23C',
             '--error'        => '#DC2626',
             // 首屏 / 遮罩
@@ -268,7 +289,7 @@ class ThemePalette
      *
      * 只返回与浅色不同的令牌：中性阶换成深色 elevated 体系；品牌 / 辅色 / 语义色在深底上
      * 提亮到与深色底互为 WCAG AA（链接 / 文字 / 图标可读）；浅底（*-soft）改半透明、focus
-     * ring 加亮；实心 CTA 面不覆盖（沿用与白字 AA 的派生绿，白字在深底页面的饱和色块上依旧
+     * ring 加亮；实心 CTA 面不覆盖（沿用浅色品牌同色系派生面，白字在深底页面的饱和色块上依旧
      * 达标）。首屏 Hero 本就是深色品牌渐变，深色下天然协调，故不在此反转。纯函数，恒定输出。
      *
      * @param  array<string,mixed>  $settings  Setting::allCached() 形态（key => value）
@@ -295,6 +316,7 @@ class ThemePalette
         $dAccent = self::lightenForContrast($accentRaw, $deep, self::AA_RATIO);
         $dError  = self::lightenForContrast(self::hexToRgb('#DC2626'), $deep, self::AA_RATIO);
         $dWarn   = self::lightenForContrast(self::hexToRgb('#E6A23C'), $deep, self::AA_RATIO);
+        $dSuccess = self::lightenForContrast(self::hexToRgb('#16A34A'), $deep, self::AA_RATIO);
 
         return [
             // 深色中性阶（蓝灰 elevated 体系：bg 最深，surface 逐级抬升）
@@ -320,6 +342,12 @@ class ThemePalette
             '--brand-on'     => '#0B1220',
             '--brand-ring'   => self::rgba($dBrand, 0.45),
             '--brand-bright' => self::hex(self::mix($dBrand, '#FFFFFF', 0.18)),
+            // Action（深色下同样品牌同色系，P-STEP 18K）
+            '--action'        => self::hex($dBrand),
+            '--action-dark'   => self::hex(self::mix($dBrand, '#FFFFFF', 0.14)),
+            '--action-active' => self::hex(self::mix($dBrand, '#000000', 0.10)),
+            '--action-soft'   => self::rgba($dBrand, 0.16),
+            '--action-on'     => '#0B1220',
             // 辅色（深底提亮）
             '--accent'        => self::hex($dAccent),
             '--accent-dark'   => self::hex(self::mix($dAccent, '#FFFFFF', 0.14)),
@@ -327,11 +355,11 @@ class ThemePalette
             '--accent-on'     => '#0B1220',
             '--accent-ring'   => self::rgba($dAccent, 0.45),
             '--accent-bright' => self::hex(self::mix($dAccent, '#FFFFFF', 0.18)),
-            // CTA：实心面 / 白字沿用浅色派生（不覆盖），仅浅底转半透明
-            '--cta-soft'     => self::rgba($dAccent, 0.16),
-            // 语义色（深底提亮，保证错误 / 警告文字可读；红仍是错误语义）
+            // CTA：实心面 / 白字沿用浅色品牌同色系派生（不覆盖），浅底转品牌半透明
+            '--cta-soft'     => self::rgba($dBrand, 0.16),
+            // 语义色（深底提亮；成功固定绿、错误固定红，不随品牌 / accent）
             '--info'         => self::hex($dBrand),
-            '--success'      => self::hex($dAccent),
+            '--success'      => self::hex($dSuccess),
             '--warning'      => self::hex($dWarn),
             '--error'        => self::hex($dError),
             // 首屏信任点缀随提亮色

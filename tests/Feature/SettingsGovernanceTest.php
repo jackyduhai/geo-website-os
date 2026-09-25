@@ -253,6 +253,57 @@ class SettingsGovernanceTest extends TestCase
             ->assertSee('示例制造')->assertDontSee('B 专属站点');
     }
 
+    public function test_json_locales_persist_as_array_without_double_encoding(): void
+    {
+        // TD-112：json 设置若 Controller 提前 encode 会双重编码，且 applySetting 强转数组触发 500。
+        $this->actingAs($this->super)
+            ->put('/admin/settings/general', ['site_supported_locales' => ['zh-CN', 'en']])
+            ->assertRedirect();
+
+        Setting::flush();
+        $locales = Setting::get('site_supported_locales');
+        $this->assertIsArray($locales);
+        $this->assertSame(['zh-CN', 'en'], $locales);
+
+        // 默认语言始终保留：伪造提交不含默认语言也会被补回，非法语言码被剔除。
+        $this->actingAs($this->super)
+            ->put('/admin/settings/general', ['site_supported_locales' => ['en', 'fr-FR']])
+            ->assertRedirect();
+        Setting::flush();
+        $locales2 = Setting::get('site_supported_locales');
+        $this->assertContains('zh-CN', $locales2);
+        $this->assertNotContains('fr-FR', $locales2);
+
+        // 英文前台真实可访问。
+        $this->get('/en')->assertOk();
+    }
+
+    public function test_color_placeholder_stays_empty_and_clear_checkbox_falls_back(): void
+    {
+        // TD-113：type=color 无法清空，占位灰若被保存会写成显式黑色；clear_color 回退默认。
+        // 原始为空 + 提交占位灰 → 保持空（不被写成显式色）。
+        $this->actingAs($this->super)
+            ->put('/admin/settings/theme', ['theme_accent' => '#E5E7EB'])
+            ->assertRedirect();
+        Setting::flush();
+        $this->assertSame('', Setting::get('theme_accent'));
+
+        // 显式自定义色正常保存。
+        $this->actingAs($this->super)
+            ->put('/admin/settings/theme', ['theme_accent' => '#123456'])
+            ->assertRedirect();
+        Setting::flush();
+        $this->assertSame('#123456', Setting::get('theme_accent'));
+
+        // 勾选回退默认（即使同时提交了旧色）→ 清空。
+        $this->actingAs($this->super)
+            ->put('/admin/settings/theme', [
+                'theme_accent' => '#123456', 'clear_color' => ['theme_accent'],
+            ])->assertRedirect();
+        Setting::flush();
+        $this->assertSame('', Setting::get('theme_accent'));
+    }
+
     public function test_guest_is_redirected_to_login(): void
     {
         $this->get('/admin/settings/general')->assertRedirect(route('admin.login'));

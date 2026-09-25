@@ -19,12 +19,12 @@ return [
 
     'professional' => [
         'label'       => '专业商务（默认）',
-        'description' => '中性蓝品牌色 + 稳重绿 CTA，冷灰中性阶，舒展留白，通用 SaaS 基线。',
-        'swatch'      => ['#2563EB', '#0E9F6E', '#F8FAFC'],
+        'description' => '品牌蓝主色 + 同色系主行动，蓝灰小面积点缀，冷灰中性阶，舒展留白，通用 SaaS 基线。',
+        'swatch'      => ['#2563EB', '#64748B', '#F8FAFC'],
         'tokens'      => [
             'theme_primary'      => '#2563EB',
             'theme_primary_dark' => '',
-            'theme_accent'       => '#0E9F6E',
+            'theme_accent'       => '#64748B',
             'theme_bg'           => '#F8FAFC',
             'theme_surface'      => '#FFFFFF',
             'theme_text'         => '#1F2937',
@@ -39,12 +39,12 @@ return [
 
     'industrial' => [
         'label'       => '工业制造',
-        'description' => '钢蓝主色 + 深琥珀 CTA，紧凑版面、小圆角、平直描边，硬朗克制。仅视觉。',
-        'swatch'      => ['#1D6FA5', '#B45309', '#F5F7F9'],
+        'description' => '钢蓝主色 + 同色系主行动，琥珀小面积点缀，紧凑版面、小圆角、平直描边，硬朗克制。仅视觉。',
+        'swatch'      => ['#1D6FA5', '#D97706', '#F5F7F9'],
         'tokens'      => [
             'theme_primary'      => '#1D6FA5',
             'theme_primary_dark' => '',
-            'theme_accent'       => '#B45309',
+            'theme_accent'       => '#D97706',
             'theme_bg'           => '#F5F7F9',
             'theme_surface'      => '#FFFFFF',
             'theme_text'         => '#1F2937',
@@ -59,12 +59,12 @@ return [
 
     'commerce' => [
         'label'       => '消费者 / 零售电商（Consumer）',
-        'description' => '玫红主色 + 深橙 CTA，暖调中性白，大圆角、柔和悬浮投影，活泼有亲和力。仅视觉。',
-        'swatch'      => ['#E11D48', '#C2410C', '#FAF8F6'],
+        'description' => '玫红主色 + 同色系主行动，暖黄小面积点缀，暖调中性白，大圆角、柔和悬浮投影，活泼有亲和力。仅视觉。',
+        'swatch'      => ['#E11D48', '#F59E0B', '#FAF8F6'],
         'tokens'      => [
             'theme_primary'      => '#E11D48',
             'theme_primary_dark' => '',
-            'theme_accent'       => '#C2410C',
+            'theme_accent'       => '#F59E0B',
             'theme_bg'           => '#FAF8F6',
             'theme_surface'      => '#FFFFFF',
             'theme_text'         => '#29201F',
@@ -79,12 +79,12 @@ return [
 
     'technology' => [
         'label'       => '科技软件',
-        'description' => '靛蓝主色 + 深青 CTA，冷色中性阶，清晰利落，适合数字产品与技术服务。仅视觉。',
-        'swatch'      => ['#4F46E5', '#0E7490', '#F7F8FC'],
+        'description' => '靛蓝主色 + 同色系主行动，青色小面积点缀，冷色中性阶，清晰利落，适合数字产品与技术服务。仅视觉。',
+        'swatch'      => ['#4F46E5', '#0891B2', '#F7F8FC'],
         'tokens'      => [
             'theme_primary'      => '#4F46E5',
             'theme_primary_dark' => '',
-            'theme_accent'       => '#0E7490',
+            'theme_accent'       => '#0891B2',
             'theme_bg'           => '#F7F8FC',
             'theme_surface'      => '#FFFFFF',
             'theme_text'         => '#182132',
@@ -99,12 +99,12 @@ return [
 
     'education' => [
         'label'       => '教育培训',
-        'description' => '紫罗兰主色 + 绿色 CTA，柔和浅底、大圆角与轻柔投影，亲切可信赖。仅视觉。',
-        'swatch'      => ['#7C3AED', '#059669', '#FAF9FC'],
+        'description' => '紫罗兰主色 + 同色系主行动，青色小面积点缀，柔和浅底、大圆角与轻柔投影，亲切可信赖。仅视觉。',
+        'swatch'      => ['#7C3AED', '#06B6D4', '#FAF9FC'],
         'tokens'      => [
             'theme_primary'      => '#7C3AED',
             'theme_primary_dark' => '',
-            'theme_accent'       => '#059669',
+            'theme_accent'       => '#06B6D4',
             'theme_bg'           => '#FAF9FC',
             'theme_surface'      => '#FFFFFF',
             'theme_text'         => '#232029',
@@ -119,12 +119,12 @@ return [
 
     'lifestyle' => [
         'label'       => '生活服务',
-        'description' => '青碧主色 + 玫红 CTA，温润中性白，最大圆角与柔和质感，轻松现代。仅视觉。',
-        'swatch'      => ['#0D9488', '#BE185D', '#FAFAF8'],
+        'description' => '青碧主色 + 同色系主行动，暖橙小面积点缀，温润中性白，最大圆角与柔和质感，轻松现代。仅视觉。',
+        'swatch'      => ['#0D9488', '#F97316', '#FAFAF8'],
         'tokens'      => [
             'theme_primary'      => '#0D9488',
             'theme_primary_dark' => '',
-            'theme_accent'       => '#BE185D',
+            'theme_accent'       => '#F97316',
             'theme_bg'           => '#FAFAF8',
             'theme_surface'      => '#FFFFFF',
             'theme_text'         => '#212422',
@@ -139,12 +139,12 @@ return [
 
     'finance' => [
         'label'       => '金融保险',
-        'description' => '深海军蓝主色 + 深金 CTA，克制中性阶、中等圆角，稳重可信、留白严谨。仅视觉。',
-        'swatch'      => ['#1E3A8A', '#8A5A06', '#F7F8FA'],
+        'description' => '深海军蓝主色 + 同色系主行动，青绿小面积点缀，克制中性阶、中等圆角，稳重可信、留白严谨。仅视觉。',
+        'swatch'      => ['#1E3A8A', '#0D9488', '#F7F8FA'],
         'tokens'      => [
             'theme_primary'      => '#1E3A8A',
             'theme_primary_dark' => '',
-            'theme_accent'       => '#8A5A06',
+            'theme_accent'       => '#0D9488',
             'theme_bg'           => '#F7F8FA',
             'theme_surface'      => '#FFFFFF',
             'theme_text'         => '#1A2233',
@@ -159,12 +159,12 @@ return [
 
     'healthcare' => [
         'label'       => '医疗健康',
-        'description' => '深青主色 + 深绿 CTA，洁净浅底、柔和圆角与轻投影，传递信任与专业护理。仅视觉。',
-        'swatch'      => ['#0E7490', '#047857', '#F5FAFB'],
+        'description' => '深青主色 + 同色系主行动，柔和青绿小面积点缀，洁净浅底、柔和圆角与轻投影，传递信任与专业护理。仅视觉。',
+        'swatch'      => ['#0E7490', '#14B8A6', '#F5FAFB'],
         'tokens'      => [
             'theme_primary'      => '#0E7490',
             'theme_primary_dark' => '',
-            'theme_accent'       => '#047857',
+            'theme_accent'       => '#14B8A6',
             'theme_bg'           => '#F5FAFB',
             'theme_surface'      => '#FFFFFF',
             'theme_text'         => '#162833',

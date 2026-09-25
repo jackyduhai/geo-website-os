@@ -48,10 +48,10 @@ class DefaultSettingSeeder extends Seeder
             // ---------- 主题（外观种子出厂留空：站点显式 > 激活主题 tokens > ThemePalette DEFAULTS） ----------
             // 关键：出厂不得把默认色 / 圆角等显式写入站点设置，否则它们会被当成「站点显式定制」，
             // 永远压过激活主题（行业预设 / example）的视觉种子。留空后：用户后台改的值最高，
-            // 激活主题种子次之，ThemePalette DEFAULTS（品牌蓝 / 辅助绿 / 圆角 10）兜底。
+            // 激活主题种子次之，ThemePalette DEFAULTS（品牌蓝 / 蓝灰点缀 / 圆角 10）兜底。
             ['theme_primary',      '', 'theme', '品牌主色（Brand Seed）', 'color', '留空使用激活主题或系统默认；填写后一个基色自动派生悬停 / 浅底 / 反白 / 首屏渐变，并保证对比度达标', 10],
             ['theme_primary_dark', '', 'theme', '主色（深 · 高级）', 'color', '留空则按品牌主色自动派生；仅在需要覆盖悬停色时填写', 20],
-            ['theme_accent',       '', 'theme', '辅色 / CTA 种子色', 'color', '留空使用激活主题或系统默认；用于事实块、标签与主按钮，CTA 由其自动派生', 30],
+            ['theme_accent',       '', 'theme', '辅色（Accent 点缀）', 'color', '留空使用激活主题或系统默认；仅用于标签 / 数据强调等小面积点缀，不承担按钮与链接，CTA 由品牌色派生', 30],
             ['theme_bg',           '', 'theme', '页面底色', 'color', '留空使用激活主题或系统默认', 40],
             ['theme_surface',      '', 'theme', '卡片底色', 'color', '留空使用激活主题或系统默认', 50],
             ['theme_text',         '', 'theme', '正文色', 'color', '留空使用激活主题或系统默认', 60],

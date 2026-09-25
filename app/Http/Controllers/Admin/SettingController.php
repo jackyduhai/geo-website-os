@@ -83,9 +83,9 @@ class SettingController extends Controller
                 $fileKey = 'file_' . $key;
                 if ($request->hasFile($fileKey)) {
                     $path = ImageOptimizer::store($request->file($fileKey), 'settings', ImageOptimizer::MAXW_LOGO);
-                    $this->applySetting($key, $path, $before, $after);
+                    $this->applySetting($key, $path, $item->type, $before, $after);
                 } elseif ($request->exists($key)) {
-                    $this->applySetting($key, (string) $request->input($key, ''), $before, $after);
+                    $this->applySetting($key, (string) $request->input($key, ''), $item->type, $before, $after);
                 }
                 continue;
             }
@@ -107,18 +107,30 @@ class SettingController extends Controller
                         \App\Support\Localization\LocaleRegistry::supported()
                     ));
                 }
-                $value = json_encode($decoded, JSON_UNESCAPED_UNICODE);
+                // 保持数组：Setting.value 统一 json cast，由其一次性编码，避免 Controller
+                // 提前 json_encode 再经 cast 造成双重编码（与 DefaultSettingSeeder 传数组一致）。
+                $value = $decoded;
+            } elseif ($item->type === 'color') {
+                $clearKeys = (array) $request->input('clear_color', []);
+                if (in_array($key, $clearKeys, true)) {
+                    $value = ''; // 显式回退默认
+                } else {
+                    $submitted = (string) $request->input($key, '');
+                    $wasEmpty = trim((string) $item->value) === '';
+                    // 原始为空且未改动占位灰 → 保持空，避免占位色被写成显式色。
+                    $value = ($wasEmpty && strcasecmp($submitted, '#E5E7EB') === 0) ? '' : $submitted;
+                }
             } else {
                 $value = (string) $request->input($key, '');
             }
 
             // 字段级校验（空值一律允许，表示清空并回退默认）。
-            if ($message = $this->validateValue($item, $value)) {
+            if (is_string($value) && ($message = $this->validateValue($item, $value))) {
                 $errors[$key] = $message;
                 continue;
             }
 
-            $this->applySetting($key, $value, $before, $after);
+            $this->applySetting($key, $value, $item->type, $before, $after);
         }
 
         if ($errors !== []) {
@@ -216,12 +228,20 @@ class SettingController extends Controller
     /**
      * 写入一个设置并收集其 before/after（仅值真正变化时），供审计快照使用。
      */
-    private function applySetting(string $key, string $value, array &$before, array &$after): void
+    private function applySetting(string $key, mixed $value, string $type, array &$before, array &$after): void
     {
-        $old = (string) Setting::get($key, '');
-        if ($old !== $value) {
-            $before[$key] = $old;
-            $after[$key] = $value;
+        $rawOld = Setting::get($key);
+        if ($type === 'json') {
+            // json 字段全程为数组；用规范化 JSON 字符串比较，避免强转数组报错。
+            $oldNorm = json_encode(is_array($rawOld) ? $rawOld : [], JSON_UNESCAPED_UNICODE);
+            $newNorm = json_encode(is_array($value) ? $value : [], JSON_UNESCAPED_UNICODE);
+        } else {
+            $oldNorm = (string) $rawOld;
+            $newNorm = (string) $value;
+        }
+        if ($oldNorm !== $newNorm) {
+            $before[$key] = $oldNorm;
+            $after[$key] = $newNorm;
         }
         Setting::set($key, $value);
     }

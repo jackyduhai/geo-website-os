@@ -106,7 +106,13 @@
   --accent-on: {{ $themeTokens['--accent-on'] }};
   --accent-ring: {{ $themeTokens['--accent-ring'] }};
   --accent-bright: {{ $themeTokens['--accent-bright'] }};  /* 原始明亮种子，仅供深色反白区点缀 */
-  /* 主行动色（与辅色同色系派生，唯一主 CTA 色；红仅用于错误态） */
+  /* Action 主行动色（品牌同色系派生：主 CTA / 实心按钮；红仅用于错误态，P-STEP 18K） */
+  --action: {{ $themeTokens['--action'] }};
+  --action-dark: {{ $themeTokens['--action-dark'] }};
+  --action-active: {{ $themeTokens['--action-active'] }};
+  --action-soft: {{ $themeTokens['--action-soft'] }};
+  --action-on: {{ $themeTokens['--action-on'] }};
+  /* CTA（映射到品牌同色系，唯一主 CTA 色） */
   --cta: {{ $themeTokens['--cta'] }};
   --cta-dark: {{ $themeTokens['--cta-dark'] }};
   --cta-soft: {{ $themeTokens['--cta-soft'] }};
@@ -126,7 +132,7 @@
   --footer-bg: {{ $themeTokens['--footer-bg'] }};
   --footer-ink: {{ $themeTokens['--footer-ink'] }};
   --footer-dim: {{ $themeTokens['--footer-dim'] }};
-  /* 语义色（info 随品牌、success 随辅色；warning/error 固定，不随品牌变化） */
+  /* 语义色（info 随品牌；success 固定积极绿、warning/error 固定，均不随品牌 / accent 变化） */
   --info: {{ $themeTokens['--info'] }};
   --success: {{ $themeTokens['--success'] }};
   --warning: {{ $themeTokens['--warning'] }};

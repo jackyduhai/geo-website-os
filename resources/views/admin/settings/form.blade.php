@@ -80,7 +80,19 @@
         @elseif($s->type==='number')
           <input type="number" name="{{ $s->key }}" value="{{ old($s->key, $s->value) }}">
         @elseif($s->type==='color')
-          <input type="color" name="{{ $s->key }}" value="{{ old($s->key, $s->value) }}" class="color-input">
+          @php($colorVal = old($s->key, $s->value))
+          <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+            <input type="color" name="{{ $s->key }}" value="{{ $colorVal ?: '#E5E7EB' }}" class="color-input">
+            @unless($colorVal)
+              <span class="small muted">当前为系统默认（灰色仅为占位，不改动则保持默认）</span>
+            @endunless
+            @if($colorVal)
+              <label class="checkline">
+                <input type="checkbox" name="clear_color[]" value="{{ $s->key }}">
+                回退默认（清除自定义颜色）
+              </label>
+            @endif
+          </div>
         @elseif($s->type==='image')
           @php($imgSize = match($s->key){ 'seo_og_image' => '社交分享图建议 1200×630（1.91:1）', 'geo_org_logo' => 'Logo 建议 512×512 以上方形 PNG', 'contact_wechat_qr' => '微信二维码建议正方形 600×600 以上 PNG', default => '建议使用清晰的 jpg/png/webp' })
           <input type="text" name="{{ $s->key }}" value="{{ old($s->key, $s->value) }}" list="media-paths" placeholder="路径或 URL，可从列表选择或直接上传">

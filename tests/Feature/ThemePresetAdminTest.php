@@ -54,7 +54,7 @@ class ThemePresetAdminTest extends TestCase
 
         // 预设视觉令牌落库；主色（深）置空，交由 ThemePalette 从新主色自动派生。
         $this->assertSame('#4F46E5', \App\Models\Setting::get('theme_primary'));
-        $this->assertSame('#0E7490', \App\Models\Setting::get('theme_accent'));
+        $this->assertSame('#0891B2', \App\Models\Setting::get('theme_accent'));
         $this->assertSame('', \App\Models\Setting::get('theme_primary_dark'));
         $this->assertSame('10', \App\Models\Setting::get('theme_radius'));
 
