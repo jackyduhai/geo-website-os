@@ -17,7 +17,7 @@
           </div>
         </div>
       @endif
-      <div class="grid g3 reveal" style="gap:28px">
+      <div class="grid g3 reveal" style="gap:var(--sp-7)">
         @foreach($pgCards as $card)
           <a href="{{ $card['url'] }}" class="card" style="display:flex;flex-direction:column;overflow:hidden;padding:0">
             <div style="aspect-ratio:4/3;background:var(--tint);position:relative">
@@ -30,8 +30,8 @@
                 </span>
               @endif
             </div>
-            <div style="padding:18px 20px 20px">
-              <h3 style="font-size:var(--fs-base);margin:0 0 8px">{{ $card['name'] }}</h3>
+            <div style="padding:var(--sp-5) var(--sp-5) var(--sp-5)">
+              <h3 style="font-size:var(--fs-base);margin:0 0 var(--sp-2)">{{ $card['name'] }}</h3>
               <p style="margin:0;font-size:var(--fs-xs);color:var(--ink-muted);line-height:1.7;
                  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">{{ $card['summary'] }}</p>
             </div>

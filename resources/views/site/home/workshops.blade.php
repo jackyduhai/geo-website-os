@@ -6,7 +6,7 @@
 @endphp
 @if(count($ws))
 <section class="sec sec-tint ws-heavy" id="s05">
-  <div class="wrap-wide grid ws-layout" style="gap:56px;align-items:center;grid-template-columns:0.92fr 1.08fr">
+  <div class="wrap-wide grid ws-layout" style="gap:var(--sp-14);align-items:center;grid-template-columns:0.92fr 1.08fr">
     <div class="reveal">
       <span class="eyebrow">{{ __('ui.eyebrow_capability') }}</span>
       <h2 class="sec-h">{{ $blk->title ?: __('ui.home_workshops_title', ['count' => count($ws)]) }}</h2>
@@ -21,12 +21,12 @@
         @endforeach
       </div>
       @endif
-      <div class="actions" style="margin-top:26px">
+      <div class="actions" style="margin-top:var(--sp-7)">
         <a class="btn-text" href="{{ url('/factory/') }}">{{ __('ui.home_workshops_btn1') }}<span class="arr">→</span></a>
         <a class="btn-text" href="{{ url('/') }}#s08">{{ __('ui.home_workshops_btn2') }}<span class="arr">→</span></a>
       </div>
     </div>
-    <div class="grid g2 reveal ws-grid" style="gap:20px">
+    <div class="grid g2 reveal ws-grid" style="gap:var(--sp-5)">
       @foreach($ws as $i => $w)
         <div class="wscard">
           <span class="feat-ic">@include('site._feat_media', ['image' => $w['image'] ?? null, 'icon' => $w['icon'] ?? ($wsIcons[$i] ?? 'factory'), 'size' => 28, 'alt' => $w['title'] ?? ''])</span>

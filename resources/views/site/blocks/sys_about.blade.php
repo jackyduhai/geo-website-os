@@ -14,7 +14,7 @@
     <div class="wrap about-layout">
       <div class="about-prose prose">
         {!! $bodyHtml !!}
-        <div class="actions" style="margin-top:28px">
+        <div class="actions" style="margin-top:var(--sp-7)">
           <a class="btn btn-primary" href="{{ url('/') }}#s08">{{ $ctaText ?? __('ui.contact_us') }}<span class="arr">→</span></a>
           @if(\App\Support\Catalog::hasProduction())
           <a class="btn btn-secondary" href="{{ url('/factory/') }}">{{ __('ui.view_factory') }}</a>
@@ -87,7 +87,7 @@
   <section class="sec">
     <div class="wrap-narrow center-txt">
       <p class="prose">{{ __('ui.culture_prose') }}</p>
-      <div class="actions" style="justify-content:center;margin-top:20px">
+      <div class="actions" style="justify-content:center;margin-top:var(--sp-5)">
         <a class="btn btn-primary btn-lg" href="{{ url('/factory/') }}">{{ __('ui.view_factory') }}<span class="arr">→</span></a>
       </div>
     </div>

@@ -12,7 +12,7 @@
   <section class="sec">
     <div class="wrap">
       @if($lcTitle)<div class="sec-head center"><h2 class="sec-h">{{ $lcTitle }}</h2></div>@endif
-      <div class="logo-cloud" style="display:flex;flex-wrap:wrap;gap:36px;align-items:center;justify-content:center">
+      <div class="logo-cloud" style="display:flex;flex-wrap:wrap;gap:var(--sp-9);align-items:center;justify-content:center">
         @foreach($lcLogos as $lg)
           <img src="{{ $lg['media']->url() }}" alt="{{ $lg['name'] }}" loading="lazy"
                style="height:40px;width:auto;object-fit:contain;filter:grayscale(1);opacity:.85">

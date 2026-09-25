@@ -97,7 +97,7 @@
     <div class="region-tags">
       @foreach($regions as $r)<em>{{ $r }}</em>@endforeach
     </div>
-    <p class="prose" style="margin-top:24px">{{ __('ui.factory_address') }}{{ $company['address']['full'] }}</p>
+    <p class="prose" style="margin-top:var(--sp-6)">{{ __('ui.factory_address') }}{{ $company['address']['full'] }}</p>
   </div>
 </section>
 

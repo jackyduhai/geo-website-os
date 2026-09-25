@@ -16,11 +16,11 @@
           @if($fgSub)<p class="sec-sub">{{ $fgSub }}</p>@endif
         </div>
       @endif
-      <div class="grid reveal" style="grid-template-columns:repeat({{ $fgCols }},1fr);gap:28px">
+      <div class="grid reveal" style="grid-template-columns:repeat({{ $fgCols }},1fr);gap:var(--sp-7)">
         @foreach($fgItems as $it)
-          <div class="card" style="padding:26px">
+          <div class="card" style="padding:var(--sp-7)">
             <span class="feat-ic">@include('site._icon', ['name' => $it['icon'] ?? 'default'])</span>
-            <h3 style="margin:14px 0 8px;font-size:var(--fs-h4)">{{ $it['title'] ?? '' }}</h3>
+            <h3 style="margin:var(--sp-4) 0 var(--sp-2);font-size:var(--fs-h4)">{{ $it['title'] ?? '' }}</h3>
             <p style="margin:0;color:var(--ink-muted);font-size:var(--fs-xs);line-height:1.7">{{ $it['text'] ?? '' }}</p>
           </div>
         @endforeach

@@ -49,23 +49,100 @@
 
 <script nonce="{{ $cspNonce ?? '' }}">
 (function(){
+  var GEN_ERR = @json(__('ui.form_error'));
+
+  function fieldBox(input){ return input.closest('.lf-field'); }
+  function clearFeedback(form){
+    form.querySelectorAll('.lf-field.has-error').forEach(function(b){ b.classList.remove('has-error'); });
+    form.querySelectorAll('.lf-err.is-inline').forEach(function(e){ e.remove(); });
+    var box = form.querySelector('.lead-form-err'); if(box) box.remove();
+    form.removeAttribute('aria-busy');
+  }
+  function clientValidate(form){
+    var first = null;
+    form.querySelectorAll('[required]').forEach(function(el){
+      var bad = false, name = el.name;
+      if(el.type === 'checkbox' || el.type === 'radio'){
+        bad = !form.querySelector('[name="' + CSS.escape(name) + '"]:checked');
+      } else {
+        bad = (el.value || '').trim() === '';
+      }
+      fieldBox(el).classList.toggle('has-error', bad);
+      if(bad && !first) first = el;
+    });
+    return first;
+  }
+  function setBusy(form, busy){
+    form.setAttribute('aria-busy', busy ? 'true' : 'false');
+    var btn = form.querySelector('button[type=submit]');
+    if(!btn) return;
+    if(busy){ btn.classList.add('is-loading'); btn.disabled = true; }
+    else { btn.classList.remove('is-loading'); btn.disabled = false; }
+  }
+  function showFieldErrors(form, errors){
+    Object.keys(errors).forEach(function(name){
+      var base = name.split('.')[0];
+      var input = form.querySelector('[name="' + base + '"], [name="' + base + '[]"]');
+      if(!input) return;
+      var box = fieldBox(input);
+      box.classList.add('has-error');
+      if(box.querySelector('.lf-err.is-inline')) return;
+      var p = document.createElement('p');
+      p.className = 'lf-err is-inline';
+      p.textContent = errors[name][0] || name;
+      var help = box.querySelector('.lf-help');
+      if(help) help.insertAdjacentElement('afterend', p); else box.appendChild(p);
+    });
+  }
+  function showSuccess(form, message){
+    var ok = document.createElement('div');
+    ok.className = 'lead-ok';
+    ok.setAttribute('role', 'status');
+    ok.tabIndex = -1;
+    ok.textContent = message;
+    form.parentNode.replaceChild(ok, form);
+    ok.focus();
+  }
+  function showFormError(form){
+    if(form.querySelector('.lead-form-err')) return;
+    var box = document.createElement('div');
+    box.className = 'lead-form-err';
+    box.setAttribute('role', 'alert');
+    box.textContent = GEN_ERR;
+    form.parentNode.insertBefore(box, form);
+  }
   function wire(form){
-    if(!form || form.__wired) return; form.__wired = true;
+    if(!form || form.__wired) return;
+    form.__wired = true;
     form.addEventListener('submit', function(e){
-      var first = null;
-      form.querySelectorAll('[required]').forEach(function(el){
-        var bad = false, name = el.name;
-        if(el.type === 'checkbox' || el.type === 'radio'){
-          bad = !form.querySelector('[name="' + CSS.escape(name) + '"]:checked');
-        } else {
-          bad = (el.value || '').trim() === '';
-        }
-        el.classList.toggle('invalid', bad);
-        if(bad && !first) first = el;
-      });
+      clearFeedback(form);
+      var first = clientValidate(form);
       if(first){ e.preventDefault(); first.focus(); return; }
-      var btn = form.querySelector('button[type=submit]');
-      if(btn){ btn.disabled = true; btn.textContent = @json(__('ui.form_submitting')); }
+      if(!window.fetch || !window.FormData) return; /* 无 fetch：原生整页提交兜底 */
+      e.preventDefault();
+      setBusy(form, true);
+      fetch(form.action, {
+        method: 'POST',
+        body: new FormData(form),
+        credentials: 'same-origin',
+        headers: {'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json'}
+      }).then(function(res){
+        var ct = res.headers.get('content-type') || '';
+        if(res.ok && ct.indexOf('application/json') !== -1){
+          return res.json().then(function(j){ showSuccess(form, j.message || ''); });
+        }
+        if(res.status === 422){
+          return res.json().then(function(j){
+            showFieldErrors(form, j.errors || {});
+            var b = form.querySelector('.lf-field.has-error');
+            if(b){ var i = b.querySelector('input,select,textarea'); if(i) i.focus(); }
+            setBusy(form, false);
+          });
+        }
+        throw new Error('HTTP ' + res.status);
+      }).catch(function(){
+        if(document.body.contains(form)){ setBusy(form, false); showFormError(form); }
+      });
     });
   }
   document.querySelectorAll('form.dynamic-form').forEach(wire);

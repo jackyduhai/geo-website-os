@@ -32,7 +32,7 @@
 @endif
 
 @if(($groups ?? false) && $groups->isNotEmpty())
-  <div class="wrap" style="margin-top:8px">
+  <div class="wrap" style="margin-top:var(--sp-2)">
     <a class="tag {{ !request('group') ? 'tag-a' : '' }}" href="{{ $category->url() }}">{{ __('ui.cat_all') }}</a>
     @foreach($groups as $g)
       <a class="tag {{ (int)request('group') === $g->id ? 'tag-a' : '' }}"
@@ -71,10 +71,10 @@
           @endforeach
         </div>
       @endif
-      <div style="margin-top:28px">{{ $items->links('pagination::bootstrap-5') }}</div>
+      <div style="margin-top:var(--sp-7)">{{ $items->links('pagination::bootstrap-5') }}</div>
     @else
-      <div class="card" style="text-align:center;padding:48px 20px;color:var(--ink-muted)">
-        <p style="margin:0 0 14px">{{ __('ui.cat_empty') }}</p>
+      <div class="card" style="text-align:center;padding:var(--sp-12) var(--sp-5);color:var(--ink-muted)">
+        <p style="margin:0 0 var(--sp-4)">{{ __('ui.cat_empty') }}</p>
         @if(!empty($siteSettings['contact_phone']))
           <p style="margin:0">{{ __('ui.cat_hotline') }}<strong style="color:var(--brand)">{{ $siteSettings['contact_phone'] }}</strong></p>
         @endif

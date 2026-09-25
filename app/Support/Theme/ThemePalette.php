@@ -305,13 +305,21 @@ class ThemePalette
             '--inverse-line-strong'  => 'rgba(255,255,255,.4)',
             '--inverse-hover'        => 'rgba(255,255,255,.10)',
             '--inverse-hover-strong' => 'rgba(255,255,255,.20)',
-            // 间距（4 点基准 / 8 点网格，固定档位）
+            // 间距（4 点基准：sp-N = N×4px，覆盖 4–96px）
             '--sp-1' => '4px', '--sp-2' => '8px', '--sp-3' => '12px', '--sp-4' => '16px',
-            '--sp-5' => '24px', '--sp-6' => '32px', '--sp-7' => '48px', '--sp-8' => '64px', '--sp-9' => '96px',
+            '--sp-5' => '20px', '--sp-6' => '24px', '--sp-7' => '28px', '--sp-8' => '32px',
+            '--sp-9' => '36px', '--sp-10' => '40px', '--sp-11' => '44px', '--sp-12' => '48px',
+            '--sp-13' => '52px', '--sp-14' => '56px', '--sp-15' => '60px', '--sp-16' => '64px',
+            '--sp-18' => '72px', '--sp-20' => '80px', '--sp-22' => '88px', '--sp-24' => '96px',
             // 动效
             '--motion-fast'  => '.1s cubic-bezier(.2,0,.2,1)',
             '--motion-base'  => '.16s cubic-bezier(.2,0,.2,1)',
             '--motion-slow'  => '.24s cubic-bezier(.2,0,.2,1)',
+            // 位移（语义化动效距离）
+            '--lift-press' => '-1px',  // 按钮按压
+            '--lift-card' => '-2px',   // 可点卡片轻抬
+            '--nudge' => '3px',        // 箭头推进
+            '--rise' => '10px',        // 入场初位移
             // 阴影
             '--shadow-sm'      => $shadowSm,
             '--shadow'         => 'none',

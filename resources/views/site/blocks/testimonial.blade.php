@@ -14,15 +14,15 @@
   <section class="sec sec-tint">
     <div class="wrap">
       @if($tmTitle)<div class="sec-head center"><h2 class="sec-h">{{ $tmTitle }}</h2></div>@endif
-      <div class="grid g3 reveal" style="gap:28px">
+      <div class="grid g3 reveal" style="gap:var(--sp-7)">
         @foreach($tmRows as $t)
-          <figure class="card" style="padding:28px;margin:0">
+          <figure class="card" style="padding:var(--sp-7);margin:0">
             <span style="font-size:var(--fs-h2);line-height:1;color:var(--brand);font-weight:700" aria-hidden="true">&ldquo;</span>
-            <blockquote style="margin:8px 0 16px;font-size:var(--fs-sm);line-height:1.8">{{ $t['quote'] }}</blockquote>
+            <blockquote style="margin:var(--sp-2) 0 var(--sp-4);font-size:var(--fs-sm);line-height:1.8">{{ $t['quote'] }}</blockquote>
             <figcaption>
               <strong style="font-size:var(--fs-sm)">{{ $t['name'] }}</strong>
               @if($t['role'] !== '' || $t['company'] !== '')
-                <span style="display:block;font-size:var(--fs-label);color:var(--ink-muted);margin-top:2px">
+                <span style="display:block;font-size:var(--fs-label);color:var(--ink-muted);margin-top:var(--sp-1)">
                   {{ $t['role'] }}@if($t['role'] !== '' && $t['company'] !== '') · @endif{{ $t['company'] }}
                 </span>
               @endif

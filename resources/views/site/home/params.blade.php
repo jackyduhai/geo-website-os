@@ -17,7 +17,7 @@
           @endforeach
         </ul>
         @endif
-        <div class="actions" style="margin-top:24px">
+        <div class="actions" style="margin-top:var(--sp-6)">
           <a class="btn btn-primary btn-lg" href="{{ url('/') }}#s08">{{ $ctaText ?? __('ui.contact_us') }}<span class="arr">→</span></a>
         </div>
       </div>

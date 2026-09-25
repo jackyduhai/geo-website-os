@@ -33,7 +33,7 @@
   <section class="sec">
     <div class="wrap">
       @if(! empty($c['title']))<div class="sec-head"><h2 class="sec-h">{{ $c['title'] }}</h2></div>@endif
-      <dl class="contact-facts" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:22px 40px;margin:0">
+      <dl class="contact-facts" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:var(--sp-6) var(--sp-10);margin:0">
         @if($sp && $ciPhone)
           <div><dt>{{ __('ui.dt_hotline') }}</dt><dd><a href="tel:{{ $ciPhoneTel }}">{{ $ciPhone }}</a></dd></div>
         @endif
@@ -68,7 +68,7 @@
         @endif
       </dl>
       @if($ss && $ciQr)
-        <div class="contact-wechat" style="margin-top:28px">
+        <div class="contact-wechat" style="margin-top:var(--sp-7)">
           <img src="{{ asset($ciQr) }}" alt="{{ __('ui.qr_alt') }}" width="132" height="132" loading="lazy">
           <div><strong>{{ __('ui.qr_title') }}</strong><span>{{ __('ui.qr_desc') }}</span></div>
         </div>

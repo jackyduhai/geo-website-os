@@ -11,7 +11,7 @@
 @endphp
 @if($mtTitle !== '' || $mtBody !== '' || $mtMedia)
   <section class="sec">
-    <div class="wrap grid g2 @if($mtReverse) media-text-reverse @endif" style="gap:48px;align-items:center">
+    <div class="wrap grid g2 @if($mtReverse) media-text-reverse @endif" style="gap:var(--sp-12);align-items:center">
       @if($mtMedia)
         <div class="reveal">
           <x-picture :src="$mtMedia->url()" :alt="$mtAlt ?: $mtTitle" loading="lazy" />
@@ -23,7 +23,7 @@
           <div class="prose" style="font-size:var(--fs-base);line-height:1.9">{!! \Illuminate\Support\Str::markdown($mtBody) !!}</div>
         @endif
         @if($mtBtnLabel !== '' && $mtBtnUrl !== '')
-          <div class="actions" style="margin-top:24px">
+          <div class="actions" style="margin-top:var(--sp-6)">
             <a class="btn btn-primary" href="{{ $mtBtnUrl }}">{{ $mtBtnLabel }}<span class="arr">→</span></a>
           </div>
         @endif

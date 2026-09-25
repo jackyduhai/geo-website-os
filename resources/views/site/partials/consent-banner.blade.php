@@ -8,14 +8,14 @@
 @php($geoConsent = app(\App\Support\Analytics\AnalyticsConfig::class))
 @if($geoConsent->hasAnyProvider() && $geoConsent->consentRequired())
 <style>
-.geo-consent{position:fixed;left:0;right:0;bottom:0;z-index:1000;padding:16px;
+.geo-consent{position:fixed;left:0;right:0;bottom:0;z-index:1000;padding:var(--sp-4);
   background:var(--surface-elevated);border-top:1px solid var(--border);
   box-shadow:0 -10px 32px rgba(0,0,0,.14);}
 .geo-consent[hidden]{display:none;}
-.geo-consent__in{max-width:1200px;margin:0 auto;display:flex;gap:16px;align-items:center;flex-wrap:wrap;}
+.geo-consent__in{max-width:1200px;margin:0 auto;display:flex;gap:var(--sp-4);align-items:center;flex-wrap:wrap;}
 .geo-consent__text{flex:1 1 320px;font-size:var(--fs-xs);line-height:1.6;color:var(--text-secondary);}
-.geo-consent__title{font-weight:600;color:var(--text-primary);margin-bottom:2px;}
-.geo-consent__actions{display:flex;gap:10px;flex:0 0 auto;}
+.geo-consent__title{font-weight:600;color:var(--text-primary);margin-bottom:var(--sp-1);}
+.geo-consent__actions{display:flex;gap:var(--sp-3);flex:0 0 auto;}
 @media (max-width:560px){ .geo-consent__actions{width:100%;} .geo-consent__actions .btn{flex:1;} }
 </style>
 <div id="geoConsentBanner" class="geo-consent" role="dialog" aria-modal="false"

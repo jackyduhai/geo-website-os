@@ -6,7 +6,7 @@
 @endphp
 <nav aria-label="{{ __('ui.breadcrumb') }}" style="font-size:var(--fs-xs)">
   <div class="wrap">
-    <ol style="list-style:none;display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:16px 0;padding:0;color:var(--ink-muted)">
+    <ol style="list-style:none;display:flex;flex-wrap:wrap;gap:var(--sp-2);align-items:center;margin:var(--sp-4) 0;padding:0;color:var(--ink-muted)">
       <li><a href="{{ \App\Support\PublicUrl::home() }}" style="color:var(--ink-muted)">{{ __('ui.back_home') }}</a></li>
       @if($bcShowCurrent && $bcCurrent)
         <li aria-hidden="true">/</li>

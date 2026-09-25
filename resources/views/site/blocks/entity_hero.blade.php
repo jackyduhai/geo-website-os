@@ -26,7 +26,7 @@
             @foreach($product['mains'] as $m)<em>{{ $m }}</em>@endforeach
           </div>
         @endif
-        <div class="actions" style="margin-top:26px">
+        <div class="actions" style="margin-top:var(--sp-7)">
           <a class="btn btn-primary btn-lg" href="{{ url('/') }}#s08">{{ $ctaText ?? __('ui.bcta_secondary') }}<span class="arr">→</span></a>
           <a class="btn btn-secondary btn-lg" href="{{ url('/contact/') }}">{{ __('ui.bcta_secondary') }}</a>
         </div>

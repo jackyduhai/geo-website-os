@@ -16,7 +16,7 @@
           </div>
         </div>
       @endif
-      <div class="grid g3 reveal" style="gap:28px">
+      <div class="grid g3 reveal" style="gap:var(--sp-7)">
         @foreach($cgCards as $card)
           <a href="{{ $card['url'] }}" class="card" style="display:flex;flex-direction:column;overflow:hidden;padding:0">
             <div style="aspect-ratio:4/3;background:var(--tint);position:relative">
@@ -29,11 +29,11 @@
                 </span>
               @endif
             </div>
-            <div style="padding:18px 20px 20px">
+            <div style="padding:var(--sp-5) var(--sp-5) var(--sp-5)">
               @if(! empty($card['date']))
                 <span style="font-size:var(--fs-label);color:var(--ink-muted)">{{ $card['date']->format('Y-m-d') }}</span>
               @endif
-              <h3 style="font-size:var(--fs-base);margin:4px 0 8px">{{ $card['name'] }}</h3>
+              <h3 style="font-size:var(--fs-base);margin:var(--sp-1) 0 var(--sp-2)">{{ $card['name'] }}</h3>
               <p style="margin:0;font-size:var(--fs-xs);color:var(--ink-muted);line-height:1.7;
                  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">{{ $card['summary'] }}</p>
             </div>

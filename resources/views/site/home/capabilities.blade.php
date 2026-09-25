@@ -2,12 +2,12 @@
 @php($capItems = $capabilityItems ?? [])
 @if(count($capItems))
 <section class="sec">
-  <div class="wrap grid g2 ws-layout" style="gap:56px;align-items:center">
+  <div class="wrap grid g2 ws-layout" style="gap:var(--sp-14);align-items:center">
     <div class="reveal">
       <span class="eyebrow">{{ __('ui.eyebrow_who') }}</span>
       <h2 class="sec-h">{{ $blk->title ?: __('ui.home_cap_title') }}</h2>
       <p class="sec-sub">{{ \App\Support\Catalog::company()['summary'] ?? '' }}</p>
-      <div class="actions" style="margin-top:30px">
+      <div class="actions" style="margin-top:var(--sp-8)">
         @if(\App\Support\Catalog::hasProduction())
         <a class="btn" href="{{ url('/factory/') }}">{{ __('ui.home_cap_btn1') }}<span class="arr">→</span></a>
         @endif

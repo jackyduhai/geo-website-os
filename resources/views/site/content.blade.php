@@ -41,7 +41,7 @@
 
   {{-- 解释 --}}
   @if($content->geo_explanation)
-    <section class="sec" style="padding:24px 0 6px">
+    <section class="sec" style="padding:var(--sp-6) 0 var(--sp-2)">
       <h2 class="sec-h" style="font-size:var(--fs-h3)">{{ __('ui.c_explain') }}</h2>
       <div class="prose" style="font-size:var(--fs-base);line-height:1.9">{!! nl2br(e($content->geo_explanation)) !!}</div>
     </section>
@@ -49,7 +49,7 @@
 
   {{-- 正文 --}}
   @if($content->body)
-    <section class="sec" style="padding:24px 0 6px">
+    <section class="sec" style="padding:var(--sp-6) 0 var(--sp-2)">
       <div class="prose" style="font-size:var(--fs-base);line-height:1.9">
         {!! $content->bodyHtml() !!}
       </div>
@@ -58,14 +58,14 @@
 
   {{-- 证据链 --}}
   @if($evidence)
-    <section class="sec" style="padding:28px 0 6px">
+    <section class="sec" style="padding:var(--sp-7) 0 var(--sp-2)">
       <h2 class="sec-h" style="font-size:var(--fs-h3)">{{ __('ui.c_evidence') }}</h2>
       <p class="sec-sub">{{ __('ui.c_evidence_sub') }}</p>
-      <div class="grid g2" style="margin-top:16px">
+      <div class="grid g2" style="margin-top:var(--sp-4)">
         @foreach($evidence as $e)
           <div class="card">
-            <div style="font-size:var(--fs-2xs);color:var(--ink-muted);margin-bottom:5px">{{ $e['label'] ?? '' }}</div>
-            <div style="font-size:var(--fs-base);font-weight:700;margin-bottom:7px">{{ $e['value'] ?? '' }}</div>
+            <div style="font-size:var(--fs-2xs);color:var(--ink-muted);margin-bottom:var(--sp-1)">{{ $e['label'] ?? '' }}</div>
+            <div style="font-size:var(--fs-base);font-weight:700;margin-bottom:var(--sp-2)">{{ $e['value'] ?? '' }}</div>
             @if(!empty($e['source']))
               <div style="font-size:var(--fs-label);color:var(--ink-muted)">{{ __('ui.c_source') }}{{ $e['source'] }}</div>
             @endif
@@ -77,17 +77,17 @@
 
   {{-- 边界 --}}
   @if($content->geo_boundary)
-    <section class="sec" style="padding:28px 0 6px">
+    <section class="sec" style="padding:var(--sp-7) 0 var(--sp-2)">
       <h2 class="sec-h" style="font-size:var(--fs-h3)">{{ __('ui.c_boundary') }}</h2>
-      <div class="card" style="font-size:var(--fs-sm);line-height:1.85;margin-top:14px">{!! nl2br(e($content->geo_boundary)) !!}</div>
+      <div class="card" style="font-size:var(--fs-sm);line-height:1.85;margin-top:var(--sp-4)">{!! nl2br(e($content->geo_boundary)) !!}</div>
     </section>
   @endif
 
   {{-- FAQ --}}
   @if($faqs)
-    <section class="sec" style="padding:28px 0 6px">
+    <section class="sec" style="padding:var(--sp-7) 0 var(--sp-2)">
       <h2 class="sec-h" style="font-size:var(--fs-h3)">{{ __('ui.c_faq') }}</h2>
-      <div style="margin-top:16px">
+      <div style="margin-top:var(--sp-4)">
         @foreach($faqs as $f)
           <details class="faq">
             <summary>{{ $f['q'] }}</summary>
@@ -100,16 +100,16 @@
 
   {{-- 转化入口：联系页直接放留言表单，其余页面放 CTA 色带 --}}
   @if(optional($content->category)->slug === 'contact')
-    <section class="sec" style="padding:34px 0 10px">
+    <section class="sec" style="padding:var(--sp-9) 0 var(--sp-3)">
       <h2 class="sec-h" style="font-size:var(--fs-h3)">{{ __('ui.c_inquiry') }}</h2>
-      <p style="color:var(--ink-muted);margin:0 0 18px">{{ __('ui.c_inquiry_sub') }}</p>
+      <p style="color:var(--ink-muted);margin:0 0 var(--sp-5)">{{ __('ui.c_inquiry_sub') }}</p>
       @php $contentLeadForm = app(\App\Support\Forms\FormResolver::class)->defaultContact(); @endphp
       @if($contentLeadForm)
         @include('site.dynamic_form', ['formModel' => $contentLeadForm, 'leadFormId' => 'content-lead-form'])
       @endif
     </section>
   @elseif(!empty($siteSettings['contact_phone']))
-    <section class="sec" style="padding:34px 0 10px">
+    <section class="sec" style="padding:var(--sp-9) 0 var(--sp-3)">
       <div class="cta-band" style="text-align:center">
         <h2 style="font-size:var(--fs-h3)">{{ __('ui.c_cta_h2') }}</h2>
         <p style="margin-left:auto;margin-right:auto">{{ __('ui.c_cta_sub') }}</p>
@@ -123,9 +123,9 @@
 
   {{-- 相关内容 --}}
   @if(($related ?? false) && $related->isNotEmpty())
-    <section class="sec" style="padding:16px 0 0">
+    <section class="sec" style="padding:var(--sp-4) 0 0">
       <h2 class="sec-h" style="font-size:var(--fs-h3)">{{ __('ui.c_related') }}</h2>
-      <div class="posts" style="margin-top:14px">
+      <div class="posts" style="margin-top:var(--sp-4)">
         @foreach($related as $p)
           <a class="post" href="{{ $p->url() }}">
             <h3>{{ $p->title }}</h3>
