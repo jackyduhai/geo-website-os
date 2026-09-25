@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Page;
 use App\Models\PageBlock;
 use App\Models\Setting;
 use App\Models\Site;
@@ -21,7 +22,8 @@ use Tests\TestCase;
  *
  * 出厂状态（geo:install）必须是行业中立的空站：历史 data migration 播种的垂直
  * 首页装修由 BlankHomepageSeeder 清空，首页回落到行业中立欢迎屏，空 Catalog 下
- * 产品 / 场景 / 工厂 / 合作 / 关于 / 联系一律 404，Feed 不携带任何行业身份。
+ * 产品 / 场景 / 工厂 / 合作 / 关于一律 404（/contact/ 经 TD-100 仍可访问、安全降级），
+ * Feed 不携带任何行业身份。
  *
  * 工业材料制造的完整演示身份只在显式 db:seed（DemoSeeder）后出现，且属于通用
  * 虚构 Example（示例制造有限公司），绝不携带任何真实客户身份。
@@ -68,7 +70,9 @@ class BlankSystemDemoSeparationTest extends TestCase
     {
         $this->seedBlank();
 
-        $this->assertSame(0, PageBlock::where('page', 'home')->count());
+        // 出厂 blank 的 is_home Page 不预置任何 composition 区块（由管理员零代码添加）。
+        $homeIds = Page::where('is_home', true)->pluck('id');
+        $this->assertSame(0, PageBlock::where('page', 'page')->whereIn('page_id', $homeIds)->count());
     }
 
     public function test_blank_home_renders_neutral_welcome_without_industry_identity(): void
@@ -89,9 +93,12 @@ class BlankSystemDemoSeparationTest extends TestCase
     {
         $this->seedBlank();
 
-        foreach (['/products', '/solutions', '/factory', '/cooperation', '/about/profile', '/contact'] as $url) {
+        foreach (['/products', '/solutions', '/factory', '/cooperation', '/about/profile'] as $url) {
             $this->get($url)->assertNotFound();
         }
+
+        // TD-100：blank 站 /contact/ 仍可访问（无公司事实时安全降级，表单由默认 Form 驱动）。
+        $this->get('/contact')->assertOk();
 
         // 空 Catalog 下请求一个 Demo 产品 slug 也必须 404，而不是渲染残留。
         $this->get('/products/epoxy-primer-100')->assertNotFound();
@@ -124,8 +131,9 @@ class BlankSystemDemoSeparationTest extends TestCase
         PageCache::flush();
         Setting::flush();
 
-        // Demo StructureSeeder 重建完整 16 个首页装修区块。
-        $this->assertSame(16, PageBlock::where('page', 'home')->count());
+        // Demo StructureSeeder 为中英文 is_home Page 各重建 9 个 composition 区块（共 18）。
+        $homeIds = Page::where('is_home', true)->pluck('id');
+        $this->assertSame(18, PageBlock::where('page', 'page')->whereIn('page_id', $homeIds)->count());
 
         $this->get('/')->assertOk()->assertSee('示例制造');
         $this->get('/products')->assertOk();

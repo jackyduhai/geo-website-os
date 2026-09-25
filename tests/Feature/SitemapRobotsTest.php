@@ -125,9 +125,11 @@ class SitemapRobotsTest extends TestCase
         $this->seed(\Database\Seeders\CatalogSeeder::class);
 
         // 先在 A 站上下文收集本站目录的规范路径，供后续双向断言。
+        // TD-102：/contact/ 是每站都有的官网基础页（TD-100 后空站也 200、sitemap 无条件收录），
+        // 不属于 A 站专有目录，故不列入“跨站泄漏”排除清单；B 站应收录其“本站” /contact/。
         $catalogPaths = [
             '/products/', '/solutions/', '/factory/', '/cooperation/',
-            '/about/profile/', '/about/history/', '/about/culture/', '/contact/',
+            '/about/profile/', '/about/history/', '/about/culture/',
         ];
         foreach (\App\Support\Catalog::productLines() as $line) {
             $catalogPaths[] = '/products/' . $line['slug'] . '/';
@@ -176,11 +178,13 @@ class SitemapRobotsTest extends TestCase
         $locsB = $mB[1];
 
         $this->assertContains('https://b.example.com', $locsB);
+        // TD-102：B 站收录自己的 /contact/ 基础页（host=b.example.com、200），不是 A 站泄漏
+        $this->assertContains('https://b.example.com/contact/', $locsB);
         // B 站每条 loc 的 host 必须严格是 b.example.com（不得回落到 example.com）
         foreach ($locsB as $loc) {
             $this->assertSame('b.example.com', parse_url($loc, PHP_URL_HOST), "B sitemap leaked host in: $loc");
         }
-        // B 站 sitemap 绝不含 A 站任何目录路径（产品 / 场景 / 体系 / 工厂 / 合作 / 关于 / 联系）
+        // B 站 sitemap 绝不含 A 站任何目录路径（产品 / 场景 / 体系 / 工厂 / 合作 / 关于）
         foreach ($catalogPaths as $path) {
             $this->assertStringNotContainsString($path, $xmlB, "B sitemap leaked A catalog path: $path");
         }

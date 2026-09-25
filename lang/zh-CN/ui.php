@@ -295,6 +295,7 @@ return [
     'param_diff_2_text' => '写清配比、温度与时间，不只供料，更说明怎么用。',
     'param_diff_3_title' => '多产品线一站配齐',
     'param_diff_3_text' => '防护涂料、工业胶粘剂与功能助剂协同配套，减少多头对接。',
+    'blank_home_eyebrow' => 'WELCOME · 欢迎访问',
     'blank_home_lead' => '站点已就绪。在后台创建内容与实体、完成站点设置并发布后，首页将展示你的信息。',
     'browse_content' => '浏览内容',
 

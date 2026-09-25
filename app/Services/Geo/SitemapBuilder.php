@@ -112,13 +112,16 @@ class SitemapBuilder
             );
         }
 
-        // 关于我们三子页 + 联系（仅当本站存在目录 / 公司数据，否则这些页面 404）
+        // 关于我们三子页（仅当本站存在目录 / 公司数据，否则这些页面 404）
         if ($hasCatalog) {
             $add(PublicUrl::url('about/profile/'), 'yearly', '0.5');
             $add(PublicUrl::url('about/history/'), 'yearly', '0.5');
             $add(PublicUrl::url('about/culture/'), 'yearly', '0.5');
-            $add(PublicUrl::url('contact/'), 'yearly', '0.6');
         }
+
+        // TD-100：联系页是官网基础页，无公司事实时 ContactController 也安全降级、
+        // 始终返回 200，故 sitemap 无条件收录 /contact/（不随 $hasCatalog）。
+        $add(PublicUrl::url('contact/'), 'yearly', '0.6');
 
         // 后台可运营的自定义栏目（如新闻 /news/）：仅启用的列表 / 产品列表型栏目页收录。
         // 单页型（type=page）直接渲染其下文章，规范地址是文章 URL；外链型（external）跳转

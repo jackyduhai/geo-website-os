@@ -45,21 +45,24 @@ class DefaultSettingSeeder extends Seeder
             ['police_number',    '',       'general', '公安备案号', 'text', '选填，页脚展示', 60],
             ['nav_cta_text',     '',       'general', '主 CTA 按钮文案', 'text', '顶部导航与首屏主按钮文字，留空用默认', 70],
 
-            // ---------- 主题（Design System 中性默认：品牌蓝 #2563EB / 辅助绿 #0E9F6E） ----------
-            ['theme_primary',      '#2563EB', 'theme', '品牌主色（Brand Seed）', 'color', '一个基色自动派生悬停 / 浅底 / 反白 / 首屏渐变，并保证文字对比度达标', 10],
-            ['theme_primary_dark', '',       'theme', '主色（深 · 高级）', 'color', '留空则按品牌主色自动派生；仅在需要覆盖悬停色时填写', 20],
-            ['theme_accent',       '#0E9F6E', 'theme', '辅色 / CTA 种子色', 'color', '用于事实块、标签与主按钮，CTA 由其自动派生', 30],
-            ['theme_bg',           '#F8FAFC', 'theme', '页面底色', 'color', '', 40],
-            ['theme_surface',      '#FFFFFF', 'theme', '卡片底色', 'color', '', 50],
-            ['theme_text',         '#1F2937', 'theme', '正文色', 'color', '', 60],
-            ['theme_text_muted',   '#6B7280', 'theme', '次要文字色', 'color', '', 70],
-            ['theme_radius',       '10',   'theme', '圆角（px）', 'number', '卡片与按钮圆角，0–48', 80],
-            ['theme_container',    '1200', 'theme', '内容区最大宽度（px）', 'number', '800–2400', 90],
-            ['theme_density',      'comfortable', 'theme', '排版密度', 'text', '可选 comfortable（宽松，默认）/ compact（紧凑）；行业预设会自动设置', 92],
-            ['theme_shadow',       'flat', 'theme', '阴影质感', 'text', '可选 flat（去盒子化、默认无阴影）/ soft（柔和投影）；行业预设会自动设置', 94],
+            // ---------- 主题（外观种子出厂留空：站点显式 > 激活主题 tokens > ThemePalette DEFAULTS） ----------
+            // 关键：出厂不得把默认色 / 圆角等显式写入站点设置，否则它们会被当成「站点显式定制」，
+            // 永远压过激活主题（行业预设 / example）的视觉种子。留空后：用户后台改的值最高，
+            // 激活主题种子次之，ThemePalette DEFAULTS（品牌蓝 / 辅助绿 / 圆角 10）兜底。
+            ['theme_primary',      '', 'theme', '品牌主色（Brand Seed）', 'color', '留空使用激活主题或系统默认；填写后一个基色自动派生悬停 / 浅底 / 反白 / 首屏渐变，并保证对比度达标', 10],
+            ['theme_primary_dark', '', 'theme', '主色（深 · 高级）', 'color', '留空则按品牌主色自动派生；仅在需要覆盖悬停色时填写', 20],
+            ['theme_accent',       '', 'theme', '辅色 / CTA 种子色', 'color', '留空使用激活主题或系统默认；用于事实块、标签与主按钮，CTA 由其自动派生', 30],
+            ['theme_bg',           '', 'theme', '页面底色', 'color', '留空使用激活主题或系统默认', 40],
+            ['theme_surface',      '', 'theme', '卡片底色', 'color', '留空使用激活主题或系统默认', 50],
+            ['theme_text',         '', 'theme', '正文色', 'color', '留空使用激活主题或系统默认', 60],
+            ['theme_text_muted',   '', 'theme', '次要文字色', 'color', '留空使用激活主题或系统默认', 70],
+            ['theme_radius',       '', 'theme', '圆角（px）', 'number', '留空使用激活主题或系统默认（10）；卡片与按钮圆角，0–48', 80],
+            ['theme_container',    '', 'theme', '内容区最大宽度（px）', 'number', '留空使用系统默认（1200）；范围 800–2400', 90],
+            ['theme_density',      '', 'theme', '排版密度', 'text', '留空使用系统默认（comfortable）；可选 comfortable（宽松）/ compact（紧凑）；行业预设会自动设置', 92],
+            ['theme_shadow',       '', 'theme', '阴影质感', 'text', '留空使用系统默认（flat）；可选 flat（去盒子化）/ soft（柔和投影）；行业预设会自动设置', 94],
             ['theme_color_mode',   'light', 'theme', '默认外观模式', 'select', '前台默认外观：light 浅色 / dark 深色 / system 跟随访客系统；访客仍可用右上角按钮自行切换并记忆', 95],
             ['theme_allow_dark',   '1', 'theme', '允许深色模式', 'bool', '开启后前台支持浅色 / 深色切换；关闭则强制浅色且不显示外观切换按钮', 96],
-            ['theme_font',         '',     'theme', '自定义字体', 'text', '留空使用系统字体栈', 100],
+            ['theme_font',         '',     'theme', '自定义字体', 'text', '留空使用激活主题或系统字体栈', 100],
             ['theme_custom_css',   '',     'theme', '自定义 CSS', 'textarea', '追加到全站样式末尾；仅在确认可信时填写', 110],
 
             // ---------- 联系方式（默认留空，前台按空值整块隐藏） ----------
@@ -72,7 +75,7 @@ class DefaultSettingSeeder extends Seeder
             ['contact_wechat_qr', '', 'contact', '微信二维码', 'image', '留空则不展示二维码', 55],
 
             // ---------- SEO ----------
-            ['seo_title_suffix', $appName, 'seo', '标题后缀', 'text', '页面标题追加，用 - 连接', 10],
+            ['seo_title_suffix', '',       'seo', '标题后缀', 'text', '页面标题尾部品牌词，用 - 连接；留空使用站点名称（Site.name），换品牌自动跟随；显式填写则覆盖', 10],
             ['seo_default_desc', '',       'seo', '默认描述', 'textarea', '页面未单独设置描述时使用', 20],
             ['seo_default_en_desc', '',    'seo', '默认描述（English）', 'textarea', '英文页面未单独设置描述时使用', 25],
             ['seo_og_image',     '',       'seo', '默认分享图', 'image', '社交分享默认图，建议 1200×630', 30],
@@ -80,7 +83,7 @@ class DefaultSettingSeeder extends Seeder
             ['seo_head_code',    '',       'seo', '自定义 head 代码', 'textarea', '高级项：原样输出到前台 </head> 前（统计 / 验证代码），内容须自行确保可信', 50],
 
             // ---------- GEO ----------
-            ['geo_org_name',       $appName, 'geo', 'Organization 名称', 'text', 'JSON-LD 使用', 10],
+            ['geo_org_name',       '',       'geo', 'Organization 名称', 'text', 'JSON-LD 使用；留空则使用站点名称（Site.name），换品牌自动跟随；显式填写则覆盖', 10],
             ['geo_org_en_name',    '',       'geo', 'Organization 英文名', 'text', '留空则不输出 alternateName', 20],
             ['geo_org_logo',       '',       'geo', 'Organization Logo', 'image', '建议 512×512 以上方形 PNG', 30],
             ['geo_llms_enabled',   '1',      'geo', '生成 llms.txt', 'bool', '关闭后 /llms.txt 返回 404', 40],

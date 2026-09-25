@@ -143,12 +143,13 @@ class PageCacheTest extends TestCase
     }
     public function test_utm_does_not_duplicate_cache_and_is_personalized(): void
     {
-        $a = $this->get('/?utm_source=baidu');
+        // 首页 composition 不内嵌表单（CTA 引导到联系页），缓存个性化以 /contact/ 表单为载体
+        $a = $this->get('/contact/?utm_source=baidu');
         $this->assertSame('MISS', $a->headers->get('X-Page-Cache'));
 
         // 同一测试内新会话：清掉 cookie，使归因/令牌按新访客处理
         $this->defaultCookies = [];
-        $b = $this->get('/?utm_source=sogou');
+        $b = $this->get('/contact/?utm_source=sogou');
         $this->assertSame('HIT', $b->headers->get('X-Page-Cache'));
         $this->assertStringContainsString('value="sogou"', $b->getContent());
         $this->assertStringNotContainsString('value="baidu"', $b->getContent());
@@ -156,7 +157,7 @@ class PageCacheTest extends TestCase
 
     public function test_csrf_token_is_not_pinned_by_cache(): void
     {
-        $a = $this->get('/');
+        $a = $this->get('/contact/');
         $tokenA = $this->tokenFrom($a->getContent());
         $this->assertNotEmpty($tokenA);
 
@@ -166,7 +167,7 @@ class PageCacheTest extends TestCase
         $session->flush();
         $session->regenerateToken();
 
-        $b = $this->get('/');
+        $b = $this->get('/contact/');
         $this->assertSame('HIT', $b->headers->get('X-Page-Cache'));
         $tokenB = $this->tokenFrom($b->getContent());
 
@@ -194,17 +195,17 @@ class PageCacheTest extends TestCase
 
     public function test_prg_success_page_bypasses_cache(): void
     {
-        // testing 环境 CSRF 中间件自动放行；提交有效留言
-        $this->post('/inquiry', [
+        // testing 环境 CSRF 中间件自动放行；从联系页提交（from 决定 PRG 回跳 /contact/）
+        $this->from('/contact/')->post('/inquiry', [
             'name'    => '缓存测试',
             'phone'   => '13800138000',
             'email'   => 'cache@test.com',
             'message' => 'PRG 旁路验证',
             'website' => '',
-        ])->assertRedirect();
+        ])->assertRedirect('/contact/');
 
         // 回跳后该会话携带 lead_success，必须旁路缓存并显示成功提示
-        $back = $this->get('/');
+        $back = $this->get('/contact/');
         $this->assertSame('BYPASS', $back->headers->get('X-Page-Cache'));
         $this->assertStringContainsString('lead-ok', $back->getContent());
         $this->assertStringContainsString((string) __('ui.form_success'), $back->getContent());

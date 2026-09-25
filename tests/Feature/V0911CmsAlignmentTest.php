@@ -236,16 +236,20 @@ class V0911CmsAlignmentTest extends TestCase
         $this->assertStringNotContainsString('/knowledge/noindex-article', $sitemap2);
     }
 
-    public function test_home_renders_public_facts_and_no_legacy_sections(): void
+    public function test_home_renders_stats_and_no_legacy_sections(): void
     {
         $html = $this->get('/')->assertOk()->getContent();
 
-        // 主体事实区块由事实库驱动，应出现已公开的关键事实标签
-        $this->assertStringContainsString('成立时间', $html);
+        // 首页信任数字由 stats block 驱动（年行业深耕等统计），替代旧“成立时间”事实标签。
+        $this->assertStringContainsString('年行业深耕', $html);
+        $this->assertStringNotContainsString('成立时间', $html);
 
-        // 旧 problems/differentiators 区块已从注册表移除
-        $types = array_keys((array) config('home_blocks.types'));
-        $this->assertNotContains('problems', $types);
-        $this->assertNotContains('differentiators', $types);
+        // 旧 problems/differentiators 区块既不在新 Block Registry，也不在旧首页注册表。
+        $newTypes = array_keys((array) config('blocks.types'));
+        $this->assertNotContains('problems', $newTypes);
+        $this->assertNotContains('differentiators', $newTypes);
+        $legacyTypes = array_keys((array) config('home_blocks.types'));
+        $this->assertNotContains('problems', $legacyTypes);
+        $this->assertNotContains('differentiators', $legacyTypes);
     }
 }

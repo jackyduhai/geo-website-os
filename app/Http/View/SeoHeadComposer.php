@@ -55,7 +55,12 @@ class SeoHeadComposer
         }
         // 仅当后缀非空时才拼接 " - "，避免站点名/后缀缺失时标题尾部出现悬挂分隔符
         // （例如 fresh install 未配置 site_name 时内页标题渲染成 "文章标题 - "）。（P-STEP 14）
-        $titleParts = array_filter([$title !== '' ? $title : null, $suffix !== '' ? $suffix : null]);
+        // 去重：首页 title 通常已回退 Site.name，而 suffix 留空时也回退站点名，
+        // 不去重会渲染成 "站名 - 站名"；内页 title 与品牌 suffix 不同则正常拼接。
+        $titleParts = array_values(array_unique(array_filter([
+            $title !== '' ? $title : null,
+            $suffix !== '' ? $suffix : null,
+        ])));
         $titleFull = $seo['title_full'] ?? implode(' - ', $titleParts);
 
         // ---- description：Controller → Resolver（非空才接管）→ 遗留设置 ----

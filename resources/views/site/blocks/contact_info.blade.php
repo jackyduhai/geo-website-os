@@ -23,8 +23,11 @@
   $sa = array_key_exists('show_address', $c) ? ! empty($c['show_address']) : true;
   $ss = array_key_exists('show_social', $c) ? ! empty($c['show_social']) : true;
 
+  $ciHasAddress = ! empty($ciCompany['address']['full']) || $ciHours
+      || ! empty($ciCompany['founded_display']);
   $ciHasFacts = ($sp && ($ciPhone || $ciMobile)) || ($se && $ciEmail)
-      || $sa || ($ss && $ciQr);
+      || ($sa && $ciHasAddress) || ($ss && $ciQr)
+      || ! empty($ciCompany['name']) || ! empty($ciTarget) || ! empty($ciRegions);
 @endphp
 @if($ciHasFacts)
   <section class="sec">
@@ -40,7 +43,9 @@
         @if($se && $ciEmail)
           <div><dt>{{ __('ui.dt_email') }}</dt><dd><a href="mailto:{{ $ciEmail }}">{{ $ciEmail }}</a></dd></div>
         @endif
-        <div><dt>{{ __('ui.dt_company_full') }}</dt><dd>{{ $ciCompany['name'] }}</dd></div>
+        @if(! empty($ciCompany['name']))
+          <div><dt>{{ __('ui.dt_company_full') }}</dt><dd>{{ $ciCompany['name'] }}</dd></div>
+        @endif
         @if($sa && ! empty($ciCompany['address']['full']))
           <div>
             <dt>{{ __('ui.dt_address') }}</dt>

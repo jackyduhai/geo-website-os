@@ -94,7 +94,7 @@ return [
                 ['key' => 'items', 'label' => '特性条目', 'type' => 'items', 'item_fields' => [
                     ['key' => 'icon', 'label' => '图标', 'type' => 'select', 'options' => [
                         'sparkle', 'shield', 'sliders', 'package', 'gear', 'check', 'award',
-                        'clock', 'users', 'truck', 'leaf', 'flask', 'chart', 'star', 'doc', 'default',
+                        'clock', 'users', 'truck', 'leaf', 'flask', 'beaker', 'chart', 'star', 'doc', 'default',
                     ]],
                     ['key' => 'title', 'label' => '标题', 'type' => 'text'],
                     ['key' => 'text', 'label' => '说明', 'type' => 'text'],

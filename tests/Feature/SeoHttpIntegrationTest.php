@@ -268,13 +268,20 @@ class SeoHttpIntegrationTest extends TestCase
 
     public function test_core_controllers_do_not_reimplement_seo_resolution(): void
     {
+        // Home 已进入 Composition：控制器只解析 HomeRenderContext 并交 CompositionRenderer，
+        // 不允许在控制器内自行拼 SEO（不得回读旧 Setting 链路）。
         $home = file_get_contents(app_path('Http/Controllers/Site/HomeController.php'));
-        // Home 的 SEO Resolution 唯一入口是 SeoMetaResolver::resolveSite
-        $this->assertStringContainsString('SeoMetaResolver', $home);
-        $this->assertStringContainsString('resolveSite(', $home);
-        // 不得回读旧 Setting 链路参与 SEO
+        $this->assertStringContainsString('HomeRenderContext', $home);
+        $this->assertStringContainsString('CompositionRenderer', $home);
+        $this->assertStringNotContainsString('SeoMetaResolver', $home);
         $this->assertStringNotContainsString("Setting::get('site_name'", $home);
         $this->assertStringNotContainsString("Setting::get('seo_default_desc'", $home);
+
+        // SEO Resolution 唯一入口 SeoMetaResolver 位于首页渲染上下文（PageRenderContext，
+        // HomeRenderContext 继承其 seo()），控制器与渲染层不得各起一套。
+        $homeCtx = file_get_contents(app_path('Support/Render/PageRenderContext.php'));
+        $this->assertStringContainsString('SeoMetaResolver', $homeCtx);
+        $this->assertStringContainsString('resolvePage(', $homeCtx);
 
         $page = file_get_contents(app_path('Http/Controllers/Site/PageController.php'));
         // Content 的 SEO Resolution 唯一入口是 SeoMetaResolver::resolveContent

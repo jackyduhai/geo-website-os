@@ -1,5 +1,11 @@
 {
     "name": "Example Theme",
     "version": "1.0.0",
-    "description": "Minimal example theme demonstrating the theme contract: overrides layouts/site and site/home only, consumes normalized $seo and view data, no engine internals."
+    "description": "Token-based example theme: ships visual seed tokens (brand/accent/radius/shadow) consumed by ThemePalette. It no longer overrides whole Blade views, so the Design System and page composition remain intact.",
+    "tokens": {
+        "theme_primary": "#7C3AED",
+        "theme_accent": "#F59E0B",
+        "theme_radius": "16",
+        "theme_shadow": "soft"
+    }
 }

@@ -411,20 +411,25 @@ class FeedPublicRenderContractTest extends TestCase
 
         // 目录类业务页：空站一律 404（不是 500）
         foreach (['/products/', '/solutions/', '/factory/', '/cooperation/',
-                      '/about/profile/', '/contact/'] as $p) {
+                      '/about/profile/'] as $p) {
             $this->getOn('b.test', $p)->assertNotFound("空站 {$p} 必须 404");
         }
+
+        // TD-100：联系页是官网基础页，空站仍可访问（安全降级）。
+        $this->getOn('b.test', '/contact/')->assertOk();
 
         $geo = $this->geo('b.test');
         $this->assertSame([], $geo['entities']);
         $this->assertSame([], $geo['contents']);
         $this->assertSame([], $geo['relations']);
 
+        // sitemap 不收录空站不存在的目录页，但始终收录可访问的 /contact/（TD-100）。
         $sitemap = $this->getOn('b.test', '/sitemap.xml')->getContent();
         foreach (['/products/', '/solutions/', '/factory/', '/cooperation/',
-                      '/about/', '/contact/'] as $forbidden) {
+                      '/about/'] as $forbidden) {
             $this->assertStringNotContainsString($forbidden, $sitemap);
         }
+        $this->assertStringContainsString('/contact/', $sitemap);
 
         $llms = $this->getOn('b.test', '/llms.txt')->assertOk()->getContent();
         foreach (['/products/', '/factory/', '/cooperation/'] as $forbidden) {

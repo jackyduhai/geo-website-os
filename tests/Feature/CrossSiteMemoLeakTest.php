@@ -62,16 +62,20 @@ class CrossSiteMemoLeakTest extends TestCase
             fn () => \App\Support\Theme\ThemeManager::activate('example')
         );
 
-        // 连续 A -> B -> A -> B：视图查找器必须随每次请求的站点重放，
-        // 不得把上一请求 / boot 阶段（default）的主题路径残留给下一站点。
+        // 连续 A -> B -> A -> B：激活主题（含视觉 token）必须随每次请求的站点解析，
+        // 不得把上一请求 / boot 阶段（default）的主题残留给下一站点。
         $this->get('http://a-theme.test/')->assertOk()
-            ->assertDontSee('data-theme="example-home"', false);
+            ->assertDontSee('data-theme="example"', false)
+            ->assertSee('data-theme="default"', false);
         $this->get('http://b-theme.test/')->assertOk()
-            ->assertSee('data-theme="example-home"', false);
+            ->assertSee('data-theme="example"', false)
+            ->assertSee('--brand: #7C3AED', false);
         $this->get('http://a-theme.test/')->assertOk()
-            ->assertDontSee('data-theme="example-home"', false);
+            ->assertDontSee('data-theme="example"', false)
+            ->assertSee('data-theme="default"', false);
         $this->get('http://b-theme.test/')->assertOk()
-            ->assertSee('data-theme="example-home"', false);
+            ->assertSee('data-theme="example"', false)
+            ->assertSee('--brand: #7C3AED', false);
     }
 
     public function test_state_recovers_after_a_404_between_sites(): void

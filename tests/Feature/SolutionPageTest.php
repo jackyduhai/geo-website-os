@@ -92,20 +92,13 @@ class SolutionPageTest extends TestCase
         $this->get('/scenarios/equipment-manufacturing')->assertRedirect('/solutions/equipment-manufacturing/');
     }
 
-    public function test_home_contains_scene_and_param_sections(): void
+    public function test_admin_home_entry_redirects_to_page_composer(): void
     {
-        $res = $this->get('/')->assertOk();
-        $res->assertSee('scene-card', false);
-        $res->assertSee('param-table', false);
-        $this->assertStringContainsString('var(--cta)', $res->content());
-    }
-
-    public function test_admin_block_editor_lists_home_block_types(): void
-    {
+        // P-STEP 18I / TD-70：旧「首页整体装修」入口重定向到 is_home Page 的 composer。
         $admin = User::firstOrFail();
-        $res = $this->actingAs($admin)->get(route('admin.blocks.index'))->assertOk();
-        foreach (['scenes', 'params', 'cooperation', 'faqs', 'cases'] as $type) {
-            $res->assertSee($type);
-        }
+        $home = \App\Models\Page::where('is_home', true)
+            ->where('locale', 'zh-CN')->firstOrFail();
+        $this->actingAs($admin)->get(route('admin.blocks.index'))
+            ->assertRedirect(route('admin.pages.composer', $home));
     }
 }

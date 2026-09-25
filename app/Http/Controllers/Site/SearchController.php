@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Site;
 
 use App\Http\Controllers\Controller;
 use App\Support\Localization\LocaleContext;
-use App\Support\Localization\LocaleRegistry;
 use App\Support\PublicUrl;
 use App\Support\Search\CjkTokenizer;
 use App\Support\Search\SearchEngineInterface;
@@ -29,7 +28,6 @@ class SearchController extends Controller
     {
         $q = trim((string) $request->get('q', ''));
         $locale = LocaleContext::current();
-        $isEn = $locale !== LocaleRegistry::default();
         $page = max(1, (int) $request->get('page', 1));
 
         $results = $engine->search(new SearchQuery(
@@ -47,13 +45,13 @@ class SearchController extends Controller
             'q'       => $q,
             'items'   => $items,
             'terms'   => CjkTokenizer::highlightTerms($q),
-            'crumbs'  => [['name' => $isEn ? 'Search' : '搜索', 'url' => PublicUrl::url('search')]],
+            'crumbs'  => [['name' => __('ui.search_h1'), 'url' => PublicUrl::url('search')]],
             'schemas' => [],
             'seo' => [
                 'title'       => $q !== ''
-                    ? ($isEn ? "Search: {$q}" : "搜索：{$q}")
-                    : ($isEn ? 'Search' : '站内搜索'),
-                'description' => $isEn ? 'Site content search' : '站内内容检索',
+                    ? __('seo.search_title_q', ['q' => $q])
+                    : __('seo.search_title'),
+                'description' => __('seo.search_desc'),
                 'canonical'   => PublicUrl::url('search'),
                 'noindex'     => true,   // 搜索结果页不进索引
                 'type'        => 'website',

@@ -295,6 +295,7 @@ return [
     'param_diff_2_text' => 'We document ratios, temperatures and timing — not just supplying materials, but explaining how to use them.',
     'param_diff_3_title' => 'Multiple Product Lines In One Place',
     'param_diff_3_text' => 'Protective coatings, industrial adhesives and functional additives work together, reducing the number of contacts.',
+    'blank_home_eyebrow' => 'WELCOME',
     'blank_home_lead' => 'Your site is ready. Create content and entities, finish the site settings and publish — your homepage will then show your information.',
     'browse_content' => 'Browse Content',
 

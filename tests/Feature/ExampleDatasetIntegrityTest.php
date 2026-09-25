@@ -211,14 +211,24 @@ class ExampleDatasetIntegrityTest extends TestCase
         $this->get('/solutions/equipment-manufacturing/')->assertOk()->assertSee('环氧富锌底漆');
     }
 
-    public function test_home_renders_all_workshops_and_scenes(): void
+    public function test_home_renders_scenes_while_workshops_live_on_factory_page(): void
     {
         $home = $this->get('/')->assertOk()->getContent();
-        foreach (['原料处理车间', '配料混合车间', '成型加工车间', '品控包装车间'] as $ws) {
-            $this->assertStringContainsString($ws, $home);
-        }
+
+        // 首页 service_grid 展示三大应用场景（服务）。
         foreach (['装备制造', '建筑工程', '汽车零部件'] as $scene) {
             $this->assertStringContainsString($scene, $home);
+        }
+
+        // 车间（生产能力）归属工厂页 /factory；首页作为通用门面不展示，避免垂直 IA 假设。
+        foreach (['原料处理车间', '配料混合车间', '成型加工车间', '品控包装车间'] as $ws) {
+            $this->assertStringNotContainsString($ws, $home);
+        }
+
+        // 车间内容仍完整存在于工厂页（内容不丢失）。
+        $factory = $this->get('/factory/')->assertOk()->getContent();
+        foreach (['原料处理车间', '配料混合车间', '成型加工车间', '品控包装车间'] as $ws) {
+            $this->assertStringContainsString($ws, $factory);
         }
     }
 

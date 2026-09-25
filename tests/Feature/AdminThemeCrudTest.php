@@ -125,17 +125,24 @@ class AdminThemeCrudTest extends TestCase
             ->assertRedirect(route('admin.themes.index'))
             ->assertSessionHas('success');
 
-        // 前台首页立即由 example 主题覆盖视图渲染（标记来自 example/site/home.blade.php）
-        $this->get('http://localhost/')->assertOk()->assertSee('data-theme="example-home"', false);
+        // 前台首页立即应用 example 主题 token：html 标记 + 品牌色变量变为紫色。
+        $home = $this->get('http://localhost/')->assertOk();
+        $home->assertSee('data-theme="example"', false);
+        $home->assertSee('--brand: #7C3AED', false);
     }
 
     public function test_switch_back_to_default_restores_base_frontend(): void
     {
         $this->actingAs($this->super)->post(route('admin.themes.activate', 'example'))->assertRedirect();
-        $this->get('http://localhost/')->assertOk()->assertSee('data-theme="example-home"', false);
+        $exampleHome = $this->get('http://localhost/')->assertOk();
+        $exampleHome->assertSee('data-theme="example"', false);
+        $exampleHome->assertSee('--brand: #7C3AED', false);
 
         $this->actingAs($this->super)->post(route('admin.themes.activate', 'default'))->assertRedirect();
-        $this->get('http://localhost/')->assertOk()->assertDontSee('data-theme="example-home"', false);
+        $defaultHome = $this->get('http://localhost/')->assertOk();
+        $defaultHome->assertDontSee('data-theme="example"', false);
+        $defaultHome->assertSee('data-theme="default"', false);
+        $defaultHome->assertSee('--brand: #2563EB', false);
     }
 
     public function test_activate_unknown_theme_aborts_404_without_half_state(): void
@@ -145,25 +152,26 @@ class AdminThemeCrudTest extends TestCase
             ->assertNotFound();
 
         // 激活态保持 default：前台不出现 example 标记，设置中无 theme_active=example
-        $this->get('http://localhost/')->assertOk()->assertDontSee('data-theme="example-home"', false);
+        $this->get('http://localhost/')->assertOk()->assertDontSee('data-theme="example"', false);
         $this->assertDatabaseMissing('settings', ['key' => 'theme_active', 'site_id' => $this->default->id]);
     }
 
     public function test_preview_renders_theme_without_changing_active_theme(): void
     {
         // 当前激活为 default
-        $this->get('http://localhost/')->assertOk()->assertDontSee('data-theme="example-home"', false);
+        $this->get('http://localhost/')->assertOk()->assertDontSee('data-theme="example"', false);
 
-        // 预览 example：返回 example 渲染的首页，并带 noindex
+        // 预览 example：返回应用 example token 的首页（紫色品牌色），并带 noindex
         $preview = $this->actingAs($this->super)
             ->get(route('admin.themes.preview', 'example'))
             ->assertOk()
-            ->assertSee('data-theme="example-home"', false);
+            ->assertSee('data-theme="example"', false)
+            ->assertSee('--brand: #7C3AED', false);
         $preview->assertHeader('X-Robots-Tag', 'noindex, nofollow');
         $preview->assertHeader('X-Theme-Preview', 'example');
 
         // 激活态未被预览改变：随后前台首页仍是 default
-        $this->get('http://localhost/')->assertOk()->assertDontSee('data-theme="example-home"', false);
+        $this->get('http://localhost/')->assertOk()->assertDontSee('data-theme="example"', false);
         $this->assertDatabaseMissing('settings', ['key' => 'theme_active', 'site_id' => $this->default->id]);
     }
 
@@ -209,12 +217,16 @@ class AdminThemeCrudTest extends TestCase
 
         // A 站保持 default（未激活任何主题）
         $this->actingAs($this->super)->get('http://localhost/')->assertOk()
-            ->assertDontSee('data-theme="example-home"', false);
+            ->assertDontSee('data-theme="example"', false);
 
-        // A → B → A → B 往复，主题严格按 Host 隔离
+        // A → B → A → B 往复，主题 token 严格按 Host 隔离
         for ($i = 0; $i < 3; $i++) {
-            $this->get('https://b.test/')->assertOk()->assertSee('data-theme="example-home"', false);
-            $this->get('http://localhost/')->assertOk()->assertDontSee('data-theme="example-home"', false);
+            $bHome = $this->get('https://b.test/')->assertOk();
+            $bHome->assertSee('data-theme="example"', false);
+            $bHome->assertSee('--brand: #7C3AED', false);
+            $aHome = $this->get('http://localhost/')->assertOk();
+            $aHome->assertDontSee('data-theme="example"', false);
+            $aHome->assertSee('--brand: #2563EB', false);
         }
 
         // 两站设置互不污染：B=example，A 无 theme_active 记录

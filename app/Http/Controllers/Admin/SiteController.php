@@ -72,9 +72,13 @@ class SiteController extends Controller
 
             
             // P-STEP 18D：新站出厂即播种产品级默认设置（七组完整字段，含外观模式），否则后台设置页无行可遍历、外观 / SEO 开关无法保存（update 按行 upsert）。settings 属附属配置（CONFIG_TABLES），不计删除保护。
-            SiteContext::withSite($site, function (): void {
+            SiteContext::withSite($site, function () use ($site): void {
                 (new \Database\Seeders\DefaultSettingSeeder())->run();
                 (new \Database\Seeders\DefaultFormSeeder())->run();
+                // P-STEP 18I / TD-99：新站同样注入可编辑首页与系统页身份，否则首页仅
+                // 渲染未保存兜底欢迎屏、后台无 Page 可组合（违反零代码建站契约）。
+                (new \Database\Seeders\BlankHomepageSeeder($site))->run();
+                (new \Database\Seeders\SystemPageSeeder($site))->run();
             });
 
             return $site;

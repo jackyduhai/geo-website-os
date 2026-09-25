@@ -8,7 +8,7 @@
   $allowDark = ! in_array($allowDarkRaw, ['0', 0, false], true);
   $ssrMode = in_array($colorMode, ['light', 'dark'], true) ? $colorMode : '';
 @endphp
-<html lang="{{ \App\Support\Localization\LocaleContext::current() }}"@if($allowDark && $ssrMode !== '') data-color-scheme="{{ $ssrMode }}"@endif>
+<html lang="{{ \App\Support\Localization\LocaleContext::current() }}" data-theme="{{ \App\Support\Theme\ThemeManager::active() }}"@if($allowDark && $ssrMode !== '') data-color-scheme="{{ $ssrMode }}"@endif>
 <head>
 <meta charset="utf-8">
 <meta name="color-scheme" content="{{ $allowDark ? 'light dark' : 'light' }}">
@@ -88,7 +88,7 @@
   /* P-STEP 18D：:root 只消费 ThemePalette 从外观种子（品牌主色 / 辅色 / 中性 /
      圆角 / 宽度 / 密度 / 质感）派生的语义令牌，本样式表不再出现孤立品牌 Hex；
      改一个品牌基色，悬停 / 按下 / 浅底 / 反白 / 首屏深色渐变即整体协调。 */
-  $themeTokens = $themeTokens ?? \App\Support\Theme\ThemePalette::resolve($siteSettings ?? []);
+  $themeTokens = $themeTokens ?? \App\Support\Theme\ThemePalette::resolve($siteSettings ?? [], \App\Support\Theme\ThemeManager::activeTokens());
 @endphp
 :root{
   /* 品牌主色簇（主色为种子，悬停 / 按下 / 浅底 / 反白文字自动派生） */
@@ -366,28 +366,6 @@ a.card:focus-visible, summary:focus-visible, .page-link:focus-visible, .pcard .g
   .hb-dots{bottom:14px}
 }
 
-/* ===== 首页中部横幅（装修区块 mid_banner，读 Banner·首页中部；单张通栏全宽，无两侧留白） ===== */
-.midbanner{padding:0}
-.mb-track{display:grid;grid-template-columns:1fr}
-.mb-track.is-multi{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;gap:20px;scrollbar-width:none;-ms-overflow-style:none;
-  padding:0 24px 4px;max-width:1320px;margin:0 auto}
-.mb-track.is-multi::-webkit-scrollbar{display:none}
-.mb-item{margin:0;position:relative;overflow:hidden;background:var(--surface-2)}
-.is-multi .mb-item{flex:0 0 82%;scroll-snap-align:start;border-radius:var(--radius-lg)}
-.mb-item img{display:block;width:100%;aspect-ratio:4/1;object-fit:cover}
-.mb-item a{display:block;line-height:0}
-.mb-cap{position:absolute;inset:auto 0 0 0;line-height:1.5;color:#fff;text-align:left;
-  background:linear-gradient(180deg,rgba(var(--scrim),0) 0%,rgba(var(--scrim),.62) 100%);}
-/* 压字内容对齐到 1200 内容栅格，与全站文字左缘对齐 */
-.mb-cap-in{max-width:1200px;margin:0 auto;padding:30px 24px}
-.mb-cap strong{display:block;font-size:clamp(18px,2vw,24px);font-weight:700;line-height:1.4}
-.mb-cap span{display:block;font-size:var(--fs-xs);opacity:.92;margin-top:4px}
-@media(max-width:768px){
-  /* 宽幅图在更“方”的手机框里 cover 时优先保住右侧产品，左侧留白优先裁掉（压字为独立 HTML 不受影响） */
-  .mb-item img{aspect-ratio:16/9;object-position:right center}
-  .is-multi .mb-item{flex-basis:88%}
-  .mb-cap-in{padding:20px 16px}
-}
 
 /* 分栏 Hero（新版首屏：左价值主张 / 右产品视觉，去红铺底） */
 .hero-split{background:var(--bg);border-bottom:1px solid var(--line-soft);}

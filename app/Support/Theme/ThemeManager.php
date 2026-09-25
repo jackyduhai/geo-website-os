@@ -85,6 +85,36 @@ class ThemeManager
         return array_key_exists($name, self::all());
     }
 
+    /**
+     * 激活主题自带的视觉种子（P-STEP 18I / 18G：主题只提供视觉 token，不再整页覆盖视图）。
+     *
+     * 读取激活主题 theme.json 的 `tokens`（键同 theme_* 种子），并按
+     * {@see ThemePresets::allowedKeys()} 白名单过滤，主题无法注入非外观设置。
+     * default 主题或无 tokens → []。主题 token 是**默认视觉层**，站点后台显式外观
+     * 设置（Custom Brand / Preset 写入的 theme_*）在 ThemePalette 中覆盖之。
+     *
+     * @return array<string,string>
+     */
+    public static function activeTokens(): array
+    {
+        $active = self::active();
+        if ($active === self::DEFAULT_THEME) {
+            return [];
+        }
+
+        $manifestPath = self::basePath() . '/' . $active . '/theme.json';
+        if (! is_file($manifestPath)) {
+            return [];
+        }
+
+        $manifest = json_decode((string) file_get_contents($manifestPath), true);
+        $tokens = is_array($manifest) ? (array) ($manifest['tokens'] ?? []) : [];
+
+        $allowed = array_flip(ThemePresets::allowedKeys());
+
+        return array_map('strval', array_intersect_key($tokens, $allowed));
+    }
+
     /** 把激活主题的视图目录置于查找器最前（幂等、可重入；default = 纯基础视图） */
     public static function register(): void
     {

@@ -114,6 +114,29 @@ class SeoHeadComposerTest extends TestCase
         $this->assertStringContainsString('<title>某内页标题 - 我的站点</title>', $html);
     }
 
+    public function test_blank_suffix_follows_site_name_without_homepage_duplication(): void
+    {
+        // 出厂 seo_title_suffix 留空：suffix 回退 site_name（镜像 Site.name），换品牌自动跟随。
+        // 首页 title 已等于站点名时去重，不得渲染成 "站名 - 站名"。
+        $site = Site::where('slug', Site::DEFAULT_SLUG)->firstOrFail();
+        $site->update(['name' => 'Aurora Living']);
+        \App\Models\Setting::flush();
+
+        $home = $this->renderHead();
+        $this->assertStringContainsString('<title>Aurora Living</title>', $home);
+        $this->assertStringNotContainsString('Aurora Living - Aurora Living', $home);
+
+        // 内页 title 与品牌 suffix 不同，正常拼接品牌名
+        $inner = $this->renderHead(['seo' => ['title' => '某产品详情']]);
+        $this->assertStringContainsString('<title>某产品详情 - Aurora Living</title>', $inner);
+
+        // 显式 suffix 覆盖，优先于站点名
+        \App\Models\Setting::set('seo_title_suffix', '自定义品牌后缀');
+        \App\Models\Setting::flush();
+        $custom = $this->renderHead(['seo' => ['title' => '某产品详情']]);
+        $this->assertStringContainsString('<title>某产品详情 - 自定义品牌后缀</title>', $custom);
+    }
+
     public function test_legacy_settings_only_apply_after_site_resolution(): void
     {
         // Site.description / Site.logo 为空时，兜底才落到遗留设置

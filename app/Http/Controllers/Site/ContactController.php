@@ -26,15 +26,14 @@ class ContactController extends Controller
 {
     public function show(SchemaBuilder $schema)
     {
-        $company = Catalog::company();
-        // 配置契约降级（P-STEP 04）：无业务数据时该业务页不渲染（404），不抛错
-        if (empty($company)) {
-            abort(404);
-        }
+        // P-STEP 18I / TD-100：联系页已 Composition 化（contact_info 取 Site settings、
+        // form_reference 取默认表单），不再依赖 company fact 才可访问。company 仅用于
+        // LocalBusiness schema 与完整联系事实，缺失时这些段落省略、页面仍渲染（零代码建站）。
+        $company = Catalog::company() ?: [];
         $lead = Narrative::lead('contact.lead', Pages::narrative('contact'));
 
         $contactUrl = PublicUrl::url('contact/');
-        $localBusiness = array_filter([
+        $localBusiness = empty($company) ? [] : array_filter([
             '@context'    => 'https://schema.org',
             '@type'       => 'LocalBusiness',
             '@id'         => $contactUrl . '#business',
@@ -61,7 +60,7 @@ class ContactController extends Controller
             $contactBits[] = __('seo.contact_address', ['address' => $company['address']['full']]);
         }
         $contactDesc = __('seo.contact_desc', [
-            'name' => $company['name'],
+            'name' => $company['name'] ?? '',
             'bits' => $contactBits ? implode($isEn ? ' ' : '，', $contactBits) . ($isEn ? ' ' : '。') : '',
         ]);
 

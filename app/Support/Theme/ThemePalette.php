@@ -51,11 +51,20 @@ class ThemePalette
      * @param  array<string,mixed>  $settings  Setting::allCached() 形态（key => value）
      * @return array<string,string> 键为 CSS 变量名（含 -- 前缀），值为不含分号的 CSS 值
      */
-    public static function resolve(array $settings): array
+    public static function resolve(array $settings, array $themeTokens = []): array
     {
-        $get = static fn (string $key, $default) => isset($settings[$key]) && trim((string) $settings[$key]) !== ''
-            ? trim((string) $settings[$key])
-            : $default;
+        // 视觉种子三层：站点后台显式设置（$settings，Custom Brand / Preset）最高，
+        // 激活主题自带种子（$themeTokens）为默认层，DEFAULTS 兜底。
+        // 站点显式值中的空字符串视为“未设置”，回落主题种子而非直接跳 DEFAULTS。
+        $get = static function (string $key, $default) use ($settings, $themeTokens) {
+            if (isset($settings[$key]) && trim((string) $settings[$key]) !== '') {
+                return trim((string) $settings[$key]);
+            }
+            if (array_key_exists($key, $themeTokens) && trim((string) $themeTokens[$key]) !== '') {
+                return trim((string) $themeTokens[$key]);
+            }
+            return $default;
+        };
 
         // 原始种子色（明亮、保留品牌识别），仅用于装饰层（浅底 / 光晕 / 渐变 / 深底点缀）。
         $brandRaw  = self::hexToRgb((string) $get('theme_primary', self::DEFAULTS['brand']));
@@ -265,11 +274,17 @@ class ThemePalette
      * @param  array<string,mixed>  $settings  Setting::allCached() 形态（key => value）
      * @return array<string,string> 键为 CSS 变量名（含 -- 前缀），值为不含分号的 CSS 值
      */
-    public static function darkOverrides(array $settings): array
+    public static function darkOverrides(array $settings, array $themeTokens = []): array
     {
-        $get = static fn (string $key, $default) => isset($settings[$key]) && trim((string) $settings[$key]) !== ''
-            ? trim((string) $settings[$key])
-            : $default;
+        $get = static function (string $key, $default) use ($settings, $themeTokens) {
+            if (isset($settings[$key]) && trim((string) $settings[$key]) !== '') {
+                return trim((string) $settings[$key]);
+            }
+            if (array_key_exists($key, $themeTokens) && trim((string) $themeTokens[$key]) !== '') {
+                return trim((string) $themeTokens[$key]);
+            }
+            return $default;
+        };
 
         $brandRaw  = self::hexToRgb((string) $get('theme_primary', self::DEFAULTS['brand']));
         $accentRaw = self::hexToRgb((string) $get('theme_accent', self::DEFAULTS['accent']));

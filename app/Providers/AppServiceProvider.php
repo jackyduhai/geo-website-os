@@ -123,11 +123,11 @@ class AppServiceProvider extends ServiceProvider
         ], function ($view) {
             $settings = Setting::allCached();
             $view->with('siteSettings', $settings);
-            // P-STEP 18D：从少量外观种子（品牌主色 / 辅色 / 中性 / 圆角 / 密度 / 质感）
-            // 派生整套语义化设计令牌，:root 唯一消费；改一个品牌基色即全站协调，无孤立 Hex。
-            $view->with('themeTokens', ThemePalette::resolve($settings));
+            // P-STEP 18G：外观三层回落——站点显式外观 > 激活主题 tokens > ThemePalette DEFAULTS。
+            $seedTokens = \App\Support\Theme\ThemeManager::activeTokens();
+            $view->with('themeTokens', ThemePalette::resolve($settings, $seedTokens));
             // P-STEP 18D Light/Dark：深色外观仅覆盖的语义令牌子集（中性阶 / 深底提亮品牌色）。
-            $view->with('darkTokens', ThemePalette::darkOverrides($settings));
+            $view->with('darkTokens', ThemePalette::darkOverrides($settings, $seedTokens));
             $view->with('navTree', static::navTree());
             $view->with('mainMenu', static::mainMenu());
             $view->with('footerMenu', static::footerMenu());

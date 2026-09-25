@@ -54,16 +54,17 @@ class ThemeArchitectureTest extends TestCase
         $this->assertStringContainsString('<link rel="canonical" href="', $html);
     }
 
-    public function test_example_theme_overrides_home_and_layout(): void
+    public function test_example_theme_applies_visual_tokens(): void
     {
         $this->assertTrue(ThemeManager::activate('example'));
         ThemeManager::resetRequestMemo();
 
         $html = $this->get('/')->assertOk()->getContent();
 
-        // 主题覆盖生效：example 布局与首页渲染
+        // P-STEP 18G：example 是 token 主题——html 标记 + 品牌色 / 圆角由 tokens 提供
         $this->assertStringContainsString('data-theme="example"', $html);
-        $this->assertStringContainsString('data-theme="example-home"', $html);
+        $this->assertStringContainsString('--brand: #7C3AED', $html);
+        $this->assertStringContainsString('--radius: 16px', $html);
 
         // 主题契约：SEO head 仍由引擎（SeoHeadComposer → Resolver）供给，
         // 主题只透传，canonical / robots / og 与 default 主题一致。
@@ -102,15 +103,20 @@ class ThemeArchitectureTest extends TestCase
         $this->assertStringNotContainsString('data-theme="example"', $homeBack);
     }
 
-    public function test_theme_views_have_no_engine_leakage(): void
+    public function test_example_theme_is_token_only_without_views_or_engine_leakage(): void
     {
-        // 静态扫描：示例主题视图不得引用 Facts / 引擎 Service / 内部缓存 / DB 门面
+        // P-STEP 18G：example 已改为 token 主题，不再整页覆盖视图（views 目录不存在）。
+        $this->assertDirectoryDoesNotExist(resource_path('themes/example/views'));
+
+        // theme.json 只描述清单与 tokens，不得引用引擎内部 Service / 门面。
+        $manifest = (string) file_get_contents(resource_path('themes/example/theme.json'));
         $forbidden = ['Facts::', 'SchemaBuilder', 'SeoMetaResolver', 'DB::', 'Cache::', 'Setting::get(', 'PageCache::'];
-        foreach (glob(resource_path('themes/example/views/**/*.blade.php')) ?: [] as $file) {
-            $src = file_get_contents($file);
-            foreach ($forbidden as $needle) {
-                $this->assertStringNotContainsString($needle, $src, basename($file) . " 引用了引擎内部: {$needle}");
-            }
+        foreach ($forbidden as $needle) {
+            $this->assertStringNotContainsString($needle, $manifest, "theme.json 引用了引擎内部: {$needle}");
         }
+
+        $decoded = json_decode($manifest, true);
+        $this->assertIsArray($decoded);
+        $this->assertArrayHasKey('tokens', $decoded);
     }
 }

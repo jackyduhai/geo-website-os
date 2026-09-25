@@ -14,7 +14,8 @@ use Tests\TestCase;
  *
  * 旧 Facts 是全局配置，空站也能渲染产品 / 场景 / 工厂 / 合作 / 关于 / 联系；
  * Catalog 是当前站点 Entity 的投影读模型。本测试锁定：
- *   - 空目录站（无 organization Entity）所有目录型前台页面 404，仅首页 / 知识中心可达；
+ *   - 空目录站（无 organization Entity）目录型业务页（产品 / 场景 / 工厂 / 合作 /
+ *     关于）404，首页 / 知识中心 / 联系页（TD-100）仍可达；
  *   - 空目录站主导航 / 页脚 / 首页不出现任何他站目录链接或目录名称；
  *   - 完整目录站正常渲染自己的产品 / 场景 / 详情；
  *   - products.show 同一路由承载系列（目录型 / 带斜杠）与核心产品详情（详情型 / 无斜杠），
@@ -47,9 +48,12 @@ class CatalogRuntimeIsolationTest extends TestCase
     {
         $this->makeEmptySiteB();
 
-        foreach (['/products/', '/solutions/', '/factory/', '/cooperation/', '/about/profile/', '/contact/'] as $path) {
+        foreach (['/products/', '/solutions/', '/factory/', '/cooperation/', '/about/profile/'] as $path) {
             $this->get('https://b.example.com' . $path)->assertNotFound();
         }
+
+        // TD-100：联系页是官网基础页，空站仍可访问（表单 / 公司事实安全降级）。
+        $this->get('https://b.example.com/contact/')->assertOk();
 
         // 空目录站首页与知识中心（Content 域）仍然可达
         $this->get('https://b.example.com/')->assertOk();

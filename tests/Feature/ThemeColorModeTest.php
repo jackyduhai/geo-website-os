@@ -71,7 +71,7 @@ class ThemeColorModeTest extends TestCase
         // 浏览器与 SSR 均被告知支持浅色 + 深色。
         $home->assertSee('<meta name="color-scheme" content="light dark">', false);
         // 默认 light：首帧 SSR 即浅色，不依赖 JS。
-        $home->assertSee('<html lang="zh-CN" data-color-scheme="light">', false);
+        $home->assertSee('<html lang="zh-CN" data-theme="default" data-color-scheme="light">', false);
         // 首帧防闪脚本（localStorage > 站点默认 > 系统）。
         $home->assertSee('gwos-color-mode', false);
         $home->assertSee("var def = 'light';", false);
@@ -91,7 +91,7 @@ class ThemeColorModeTest extends TestCase
         $this->assertSame('dark', Setting::get('theme_color_mode'));
 
         $home = $this->get('http://localhost/')->assertOk();
-        $home->assertSee('<html lang="zh-CN" data-color-scheme="dark">', false);
+        $home->assertSee('<html lang="zh-CN" data-theme="default" data-color-scheme="dark">', false);
     }
 
     public function test_system_default_has_no_hard_ssr_mode_and_script_defaults_system(): void
@@ -100,7 +100,7 @@ class ThemeColorModeTest extends TestCase
 
         $home = $this->get('http://localhost/')->assertOk();
         // system 不在服务端写死 light/dark，交由引导脚本按系统偏好解析。
-        $home->assertSee('<html lang="zh-CN">', false);
+        $home->assertSee('<html lang="zh-CN" data-theme="default">', false);
         $home->assertSee("var def = 'system';", false);
         // 仍然提供深色样式与切换器。
         $home->assertSee(':root[data-color-scheme="dark"]', false);
@@ -115,7 +115,7 @@ class ThemeColorModeTest extends TestCase
 
         $home = $this->get('http://localhost/')->assertOk();
         // SSR 不预置深色（<html> 无 data-color-scheme），引导脚本被短路为 light。
-        $home->assertSee('<html lang="zh-CN">', false);
+        $home->assertSee('<html lang="zh-CN" data-theme="default">', false);
         $home->assertSee('<meta name="color-scheme" content="light">', false);
         // 关闭深色后 head 只输出强制浅色的极简引导，不含 localStorage / 深色逻辑。
         $home->assertSee("document.documentElement.setAttribute('data-color-scheme','light');document.documentElement.dataset.colorModePref='light'", false);
@@ -147,12 +147,12 @@ class ThemeColorModeTest extends TestCase
 
         // B 站前台 SSR 深色。
         $this->get('http://b.test/')->assertOk()
-            ->assertSee('<html lang="zh-CN" data-color-scheme="dark">', false);
+            ->assertSee('<html lang="zh-CN" data-theme="default" data-color-scheme="dark">', false);
 
         // A（默认站）仍是 SSR 浅色，未被串站污染。
         $a = $this->get('http://localhost/')->assertOk();
-        $a->assertSee('<html lang="zh-CN" data-color-scheme="light">', false);
-        $a->assertDontSee('<html lang="zh-CN" data-color-scheme="dark">', false);
+        $a->assertSee('<html lang="zh-CN" data-theme="default" data-color-scheme="light">', false);
+        $a->assertDontSee('<html lang="zh-CN" data-theme="default" data-color-scheme="dark">', false);
     }
 
     public function test_new_site_is_provisioned_with_full_default_settings(): void

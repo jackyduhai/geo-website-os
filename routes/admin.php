@@ -128,9 +128,8 @@ Route::middleware(['admin.auth', 'admin.site'])->group(function () {
     Route::delete('menus/override/{key}', [MenuController::class, 'resetOverride'])->name('menus.override.reset')
         ->where('key', '[a-z0-9\-]+');
 
-    // ---------- 展示：首页装修（首屏/中部横幅在此就地维护，不再单设 Banner 模块） ----------
+    // ---------- 首页装修（P-STEP 18I / TD-70）：旧入口重定向到 is_home Page 的 composer ----------
     Route::get('blocks', [BlockController::class, 'index'])->name('blocks.index');
-    Route::put('blocks/{block}', [BlockController::class, 'update'])->name('blocks.update');
 
     // ---------- 组合页面（模板 + 区块，P-STEP 18G） ----------
     // Page 是页面实例（不存业务事实）；Block 在模板槽位内组合，结构化 JSON 存储。

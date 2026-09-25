@@ -16,6 +16,12 @@
 @endunless
 
 @foreach($template->slotNames() as $slotName)
-  {!! $slotsHtml[$slotName] ?? '' !!}
+  @php $slotHtml = $slotsHtml[$slotName] ?? ''; @endphp
+  {{-- home 模板 main 槽无区块：渲染中性欢迎屏（出厂 blank 首页兜底，添加区块后自动替换） --}}
+  @if($slotHtml === '' && $template->key === 'home' && $slotName === 'main')
+    @include('site.home._welcome')
+  @else
+    {!! $slotHtml !!}
+  @endif
 @endforeach
 @endsection

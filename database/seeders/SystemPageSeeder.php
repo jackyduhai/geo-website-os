@@ -27,9 +27,17 @@ use Illuminate\Support\Facades\App;
  */
 class SystemPageSeeder extends Seeder
 {
+    /**
+     * @param  Site|null  $target  目标站点；缺省回退默认站点（geo:install 调用兼容）。
+     *                            Admin 建站（SiteController::store）显式传入新站。
+     */
+    public function __construct(private ?Site $target = null)
+    {
+    }
+
     public function run(): void
     {
-        $site = Site::where('slug', Site::DEFAULT_SLUG)->first();
+        $site = $this->target ?? Site::where('slug', Site::DEFAULT_SLUG)->first();
         if (! $site) {
             return;
         }
