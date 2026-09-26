@@ -197,6 +197,7 @@ return [
     'c_cta_h2' => 'Have a product or cooperation need? Contact us.',
     'c_cta_sub' => 'Tell us your needs and we will get back to you.',
     'c_related' => 'Related Content',
+    'c_related_entities' => 'Related Entities',
     'cat_view_line' => 'View Line',
     'cat_all' => 'All',
     'cat_view_product' => 'View Product',

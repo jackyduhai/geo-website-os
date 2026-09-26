@@ -197,6 +197,7 @@ return [
     'c_cta_h2' => '有产品或合作需求？欢迎联系我们。',
     'c_cta_sub' => '告诉我们你的需求，我们会尽快与你沟通对接。',
     'c_related' => '相关内容',
+    'c_related_entities' => '相关实体',
     'cat_view_line' => '查看系列',
     'cat_all' => '全部',
     'cat_view_product' => '查看产品',

@@ -128,7 +128,7 @@
       @if($content->tags->isNotEmpty())
         <div class="tags" style="display:flex;flex-wrap:wrap;gap:var(--sp-2)">
           @foreach($content->tags as $tg)
-            <span class="tag" style="... ">#{{ $tg->name }}</span>
+            <span class="tag">#{{ $tg->name }}</span>
           @endforeach
         </div>
       @endif
