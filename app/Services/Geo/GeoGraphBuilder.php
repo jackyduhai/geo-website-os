@@ -190,7 +190,7 @@ class GeoGraphBuilder
             ->get();
         $currentByGroup = $current->keyBy('translation_group');
 
-        return $relations
+        $edges = $relations
             ->map(function (EntityRelation $r) use ($zh, $currentByGroup, $locale, $defaultLocale) {
                 $fromZh = $zh->get($r->from_entity_id);
                 $toZh   = $zh->get($r->to_entity_id);
@@ -218,6 +218,30 @@ class GeoGraphBuilder
             ->filter()
             ->values()
             ->all();
+
+        // 18R-2c：Content ↔ Entity 边（content/article/{slug} → entity/{type}/{slug}）。
+        $contentEdges = [];
+        $ceRows = \App\Models\ContentEntity::where('site_id', $siteId)->get();
+        if ($ceRows->isNotEmpty()) {
+            $entById = Entity::whereIn('id', $ceRows->pluck('entity_id'))->get()->keyBy('id');
+            $pubContents = PublicIndex::contentQuery()
+                ->forLocale($locale)
+                ->whereIn('id', $ceRows->pluck('content_id'))->get()->keyBy('id');
+            foreach ($ceRows as $ce) {
+                $content = $pubContents->get($ce->content_id);
+                $entity = $entById->get($ce->entity_id);
+                if (! $content || ! $entity) {
+                    continue;
+                }
+                $contentEdges[] = [
+                    'from'          => 'content/' . $content->type . '/' . $content->slug,
+                    'to'            => 'entity/' . $entity->type . '/' . $entity->slug,
+                    'relation_type' => 'content_' . $ce->relation_type,
+                ];
+            }
+        }
+
+        return array_merge($edges, $contentEdges);
     }
 
     /**

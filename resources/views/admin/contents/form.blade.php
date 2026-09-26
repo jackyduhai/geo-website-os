@@ -214,6 +214,62 @@
           @endforeach
         </select></div>
     </div>
+
+    {{-- 18R-2c：标签（站点级多选）+ 内容-实体关联 --}}
+    <h2 class="mt-2">标签与实体关联</h2>
+    <div class="form-grid">
+      <div class="form-row"><label>标签（多选）</label>
+        <select name="tag_ids[]" multiple form="contentForm" size="6">
+          @foreach($tags as $tg)
+            <option value="{{ $tg->id }}" @selected(in_array($tg->id, old('tag_ids', $selectedTagIds)))>{{ $tg->name }}</option>
+          @endforeach
+        </select>
+        <div class="hint">站点级标签；同一条目各语言共享同一标签。</div>
+      </div>
+    </div>
+    <div class="form-row"><label>关联实体（Product / Industry / Scenario）</label>
+      <table class="table">
+        <thead><tr><th>实体</th><th>关系</th><th>移除</th></tr></thead>
+        <tbody id="entityLinks">
+          @foreach(old('entity_links', $selectedLinks) as $i => $l)
+            <tr>
+              <td>
+                <select name="entity_links[{{ $i }}][entity_id]" form="contentForm">
+                  <option value="">— 选择 —</option>
+                  @foreach($entityOptions as $en)
+                    <option value="{{ $en->id }}" @selected((string)($l['entity_id']??'')==(string)$en->id)>
+                      [{{ $en->type }}] {{ $en->name }}
+                    </option>
+                  @endforeach
+                </select>
+              </td>
+              <td>
+                <select name="entity_links[{{ $i }}][relation_type]" form="contentForm">
+                  <option value="about" @selected(($l['relation_type']??'')==='about')>about（核心产品/行业/场景）</option>
+                  <option value="mention" @selected(($l['relation_type']??'')==='mention')>mention（顺带提及）</option>
+                </select>
+              </td>
+              <td><button type="button" class="btn btn-sm" onclick="this.closest('tr').remove()">删</button></td>
+            </tr>
+          @endforeach
+        </tbody>
+      </table>
+      <button type="button" class="btn btn-sm"
+        onclick="addEntityLink()">+ 添加关联</button>
+      <script>
+        function addEntityLink(){
+          var tb=document.getElementById('entityLinks');
+          var i=tb.children.length;
+          var tr=document.createElement('tr');
+          tr.innerHTML='<td><select name="entity_links['+i+'][entity_id]" form="contentForm"><option value="">— 选择 —</option>'
+            +'@foreach($entityOptions as $en)<option value="{{ $en->id }}">[{{ $en->type }}] {{ $en->name }}</option>@endforeach'
+            +'</select></td>'
+            +'<td><select name="entity_links['+i+'][relation_type]" form="contentForm"><option value="about">about</option><option value="mention">mention</option></select></td>'
+            +'<td><button type="button" class="btn btn-sm" onclick="this.closest(\'tr\').remove()">删</button></td>';
+          tb.appendChild(tr);
+        }
+      </script>
+    </div>
 @endif
 
 @if($isDefault)

@@ -178,7 +178,10 @@ class SearchIndexBuilder
             'path'          => $c->path(),
             'title'         => mb_substr((string) $c->title, 0, 200),
             'summary'       => (string) ($c->summary ?? ''),
-            'body'          => self::plainText((string) ($c->body ?? '')),
+            // 18R-2c：标签名 + 关联实体名并入可搜索文本，实现按 tag/实体名聚合（复用既有 FTS）。
+            'body'          => self::plainText((string) ($c->body ?? '') . "\n"
+                . $c->tags->pluck('name')->implode(' ') . "\n"
+                . $c->entityLinks->load('entity')->pluck('entity.name')->filter()->implode(' ')),
             'published_at'  => $c->published_at?->format('Y-m-d H:i:s'),
             'created_at'    => now(),
             'updated_at'    => now(),

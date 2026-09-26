@@ -93,6 +93,27 @@ class Content extends Model
         return $this->hasMany(ContentRevision::class)->latest();
     }
 
+    /** 标签（多对多，站点隔离；扁平标签，非层级栏目）。 */
+    public function tags(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    {
+        return $this->belongsToMany(Tag::class, 'content_tag');
+    }
+
+    /** Content ↔ Entity 类型化关系行。 */
+    public function entityLinks(): HasMany
+    {
+        return $this->hasMany(ContentEntity::class);
+    }
+
+    /** 关联的实体（加载用，按 relation_type 过滤：about 核心，mention 顺带）。 */
+    public function relatedEntities(string $type = null): \Illuminate\Database\Eloquent\Collection
+    {
+        $q = Entity::whereIn('id', $this->entityLinks()
+            ->when($type, fn ($w) => $w->where('relation_type', $type))
+            ->pluck('entity_id'));
+        return $q->get();
+    }
+
     // ---------- 作用域 ----------
 
     public function scopePublished($query)

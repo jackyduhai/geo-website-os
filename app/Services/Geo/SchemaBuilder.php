@@ -287,6 +287,28 @@ class SchemaBuilder
             $data['abstract'] = $c->summary;
         }
 
+        // 18R-2c：Content ↔ Entity 关系 → about（核心 Product/Industry/Scenario）+ mentions（顺带）。
+        $about = [];
+        $mentions = [];
+        foreach ($c->entityLinks()->with('entity')->get() as $link) {
+            $to = $link->entity;
+            if ($to === null) {
+                continue;
+            }
+            $node = ['@type' => \App\Support\Entities\EntityCapabilityRegistry::schemaType($to->type) ?? 'Thing', 'name' => $to->name];
+            if ($link->relation_type === \App\Models\ContentEntity::RELATION_ABOUT) {
+                $about[] = $node;
+            } else {
+                $mentions[] = $node;
+            }
+        }
+        if ($about !== []) {
+            $data['about'] = $about;
+        }
+        if ($mentions !== []) {
+            $data['mentions'] = $mentions;
+        }
+
         return array_filter($data, fn ($v) => $v !== null && $v !== '');
     }
 

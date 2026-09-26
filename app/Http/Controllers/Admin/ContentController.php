@@ -7,6 +7,7 @@ use App\Models\AuditLog;
 use App\Models\Category;
 use App\Models\Content;
 use App\Models\ContentRevision;
+use App\Models\Entity;
 use App\Models\Fact;
 use App\Models\Group;
 use App\Models\Media;
@@ -140,6 +141,7 @@ class ContentController extends Controller
         $content->fill($data);
         $content->content_hash = $content->computeHash();
         $content->save();
+        $this->syncRelations($content, $request);
 
         $this->snapshot($content, '编辑保存 ' . $transLocale);
         AuditLog::record('content.updated', '编辑内容：' . $content->title, [], 'content', $content->id);
@@ -262,6 +264,16 @@ class ContentController extends Controller
             'categories'  => Category::with('children')->whereNull('parent_id')->orderBy('sort')->get(),
             'groups'      => Group::with('category')->orderBy('sort')->get(),
             'facts'       => Fact::orderBy('sort')->get(),
+            // 18R-2c：标签（站点级）+ 可关联实体（产品/服务/组织/主题）
+            'tags'             => \App\Models\Tag::orderBy('name')->get(),
+            'selectedTagIds'   => $anchor->exists ? $anchor->tags()->pluck('tags.id')->all() : [],
+            'entityOptions'    => Entity::whereIn('type', [
+                Entity::TYPE_PRODUCT, Entity::TYPE_SERVICE,
+                Entity::TYPE_ORGANIZATION, Entity::TYPE_TOPIC,
+            ])->orderBy('type')->orderBy('name')->get(),
+            'selectedLinks'    => $anchor->exists
+                ? $anchor->entityLinks()->get()->map(fn ($l) => ['entity_id' => $l->entity_id, 'relation_type' => $l->relation_type])->all()
+                : [],
         ]);
     }
 
@@ -300,7 +312,38 @@ class ContentController extends Controller
             'review_due'   => ['nullable', 'date'],
             'source_note'  => ['nullable', 'string', 'max:255'],
             'fact_refs'    => ['nullable', 'array'],
+            // 18R-2c：标签（受控 id）+ 内容-实体关系（relation_type 白名单）
+            'tag_ids'            => ['nullable', 'array'],
+            'tag_ids.*'          => ['integer', 'exists:tags,id'],
+            'entity_links'       => ['nullable', 'array'],
+            'entity_links.*.entity_id'    => ['integer', 'exists:entities,id'],
+            'entity_links.*.relation_type'=> ['in:about,mention'],
         ]);
+    }
+
+    /**
+     * 同步标签与内容-实体关系（仅默认语言 anchor；标签/关系为站点级，不随翻译行重复）。
+     */
+    protected function syncRelations(Content $content, Request $request): void
+    {
+        if ($content->locale !== LocaleRegistry::default()) {
+            return;
+        }
+        $content->tags()->sync((array) $request->input('tag_ids', []));
+
+        \App\Models\ContentEntity::where('content_id', $content->id)->delete();
+        foreach ((array) $request->input('entity_links', []) as $link) {
+            if (empty($link['entity_id'])) {
+                continue;
+            }
+            \App\Models\ContentEntity::create([
+                'site_id'        => $content->site_id,
+                'content_id'     => $content->id,
+                'entity_id'      => (int) $link['entity_id'],
+                'relation_type'  => in_array($link['relation_type'] ?? '', ['about', 'mention'], true)
+                    ? $link['relation_type'] : 'mention',
+            ]);
+        }
     }
 
     /**

@@ -121,6 +121,31 @@
     </section>
   @endif
 
+  {{-- 18R-2c：标签 + 相关企业实体（让文章成为关于产品/行业/场景的知识资产） --}}
+  @php $relatedEnts = $content->relatedEntities(); @endphp
+  @if($content->tags->isNotEmpty() || $relatedEnts->isNotEmpty())
+    <section class="sec" style="padding:var(--sp-5) 0 0" data-section="content" data-purpose="education" data-entity="Content">
+      @if($content->tags->isNotEmpty())
+        <div class="tags" style="display:flex;flex-wrap:wrap;gap:var(--sp-2)">
+          @foreach($content->tags as $tg)
+            <span class="tag" style="... ">#{{ $tg->name }}</span>
+          @endforeach
+        </div>
+      @endif
+      @if($relatedEnts->isNotEmpty())
+        <h2 class="sec-h" style="font-size:var(--fs-h4);margin-top:var(--sp-4)">{{ __('ui.c_related_entities') ?? '相关实体' }}</h2>
+        <div class="posts" style="margin-top:var(--sp-3)">
+          @foreach($relatedEnts as $ent)
+            <a class="post" href="{{ \App\Support\PublicUrl::entity($ent) ?: '#' }}">
+              <h3>{{ $ent->name }}</h3>
+              <p style="font-size:var(--fs-2xs)">{{ $ent->type }}</p>
+            </a>
+          @endforeach
+        </div>
+      @endif
+    </section>
+  @endif
+
   {{-- 相关内容 --}}
   @if(($related ?? false) && $related->isNotEmpty())
     <section class="sec" style="padding:var(--sp-4) 0 0">
