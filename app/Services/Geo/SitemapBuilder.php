@@ -60,6 +60,11 @@ class SitemapBuilder
         // 详情页虽仍可直接访问（200），但不得进入 sitemap。
         $indexableEntitySlugs = PublicIndex::indexableEntitySlugs();
 
+        // P-STEP 18R-2a：实体是否进 sitemap 由 EntityCapabilityRegistry::isSitemap() 声明。
+        // 2a 仅 product/service 有真实路由且被下方 Catalog 循环收录；case_study 虽声明
+        // sitemap=true，但 /cases 路由 2b 才建，故 2a 不新增收录段落（无 URL 可输出，
+        // 输出会 404）；download_asset 声明 sitemap=false，永不进 sitemap。
+
         if ($hasCatalog) {
             // 产品中心：总览 + 含产品的系列独立页 + 核心产品详情
             $add(PublicUrl::url('products/'), 'weekly', '0.9');

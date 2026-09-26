@@ -115,7 +115,7 @@ class SeoMetaController extends Controller
             'supportedLocales' => LocaleRegistry::supported(),
             'q'                => $search,
             'siteLevelExists'  => $siteLevelExists,
-            'entityTypeLabels' => EntityController::TYPES,
+            'entityTypeLabels' => EntityController::types(),
         ]);
     }
 
@@ -328,7 +328,7 @@ class SeoMetaController extends Controller
             'resolved'         => $resolved,
             'ogTypes'          => self::OG_TYPES,
             'twitterCards'     => self::TWITTER_CARDS,
-            'entityTypeLabels' => EntityController::TYPES,
+            'entityTypeLabels' => EntityController::types(),
             'contents'         => $scope === 'content' && $target === null
                 ? Content::where('site_id', $siteId)->where('locale', $locale)
                     ->orderByDesc('id')->limit(300)->get(['id', 'type', 'title', 'slug', 'status'])

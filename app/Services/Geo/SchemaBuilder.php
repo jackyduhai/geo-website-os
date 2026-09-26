@@ -8,6 +8,7 @@ use App\Models\Entity;
 use App\Models\Setting;
 use App\Services\Seo\SeoMetaResolver;
 use App\Services\Seo\SeoResult;
+use App\Support\Entities\EntityCapabilityRegistry;
 use App\Support\Localization\LocaleContext;
 use App\Support\Localization\LocaleRegistry;
 use App\Support\PublicUrl;
@@ -290,26 +291,21 @@ class SchemaBuilder
     }
 
     // ---------------------------------------------------------------
-    // Entity 通用 Schema（Entity Type 冻结枚举 → schema.org 类型）
+    // Entity 通用 Schema（Entity Type → schema.org 类型映射由
+    // {@see EntityCapabilityRegistry} 统一声明，此处不再硬编码）
     // ---------------------------------------------------------------
-
-    private const ENTITY_SCHEMA_TYPES = [
-        Entity::TYPE_ORGANIZATION => 'Organization',
-        Entity::TYPE_PERSON       => 'Person',
-        Entity::TYPE_PRODUCT      => 'Product',
-        Entity::TYPE_SERVICE      => 'Service',
-        Entity::TYPE_LOCATION     => 'Place',
-        Entity::TYPE_TOPIC        => 'WebPage',
-    ];
 
     /**
      * 按资源类型生成通用实体 Schema。
      * 数据源：Entity 正式字段 + SeoMetaResolver::resolveEntity（description /
      * canonical / og:image）+ Entity.metadata 通用扩展（sameAs / address 等）。
+     *
+     * schema=null 的类型（download_asset）返回 null，不产出 JSON-LD；
+     * case_study 产出 @type=CaseStudy 的 JSON-LD。
      */
     public function entity(Entity $e, ?SeoResult $seo = null): ?array
     {
-        $schemaType = self::ENTITY_SCHEMA_TYPES[$e->type] ?? null;
+        $schemaType = EntityCapabilityRegistry::schemaType($e->type);
         if ($schemaType === null) {
             return null;
         }

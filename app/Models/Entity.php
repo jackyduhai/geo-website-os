@@ -43,13 +43,16 @@ class Entity extends Model
         'sort_order' => 'integer',
     ];
 
-    // Entity types (frozen)
+    // Entity types（能力声明以 config/entities.php 的 EntityCapabilityRegistry 为唯一事实源；
+    // 这里只放代码内可能引用的 type 字符串常量，新增类型无需改 DB——type 是 varchar(32) 无 CHECK）。
     const TYPE_ORGANIZATION = 'organization';
     const TYPE_PRODUCT = 'product';
     const TYPE_SERVICE = 'service';
     const TYPE_PERSON = 'person';
     const TYPE_LOCATION = 'location';
     const TYPE_TOPIC = 'topic';
+    const TYPE_CASE_STUDY = 'case_study';
+    const TYPE_DOWNLOAD_ASSET = 'download_asset';
 
     // Status
     const STATUS_DRAFT = 'draft';

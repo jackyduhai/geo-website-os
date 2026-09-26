@@ -5,6 +5,7 @@ namespace App\Support\Search;
 use App\Models\Content;
 use App\Models\Entity;
 use App\Models\Site;
+use App\Support\Entities\EntityCapabilityRegistry;
 use App\Support\PublicIndex;
 use App\Support\PublicUrl;
 use App\Support\SiteContext;
@@ -184,9 +185,16 @@ class SearchIndexBuilder
         ];
     }
 
-    /** 实体 → 索引行；无公开落地页时返回 null。 */
+    /** 实体 → 索引行；类型不可搜索或无公开落地页时返回 null。 */
     public function documentForEntity(Entity $e): ?array
     {
+        // Registry gate：声明 searchable=false 的类型（organization/person/location/
+        // topic/download_asset）直接不索引。case_study 虽 searchable=true，但 2a 未接通
+        // PublicUrl（无 /cases 路由），下方 PublicUrl 门槛仍会 return null；2b 接通后自动索引。
+        if (! EntityCapabilityRegistry::isSearchable($e->type)) {
+            return null;
+        }
+
         if (PublicUrl::entity($e) === null) {
             return null;
         }

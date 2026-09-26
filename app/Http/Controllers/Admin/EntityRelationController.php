@@ -65,7 +65,7 @@ class EntityRelationController extends Controller
             'items'           => $items,
             'entities'        => $this->siteEntities(),
             'typeLabels'      => self::TYPE_LABELS,
-            'entityTypeNames' => EntityController::TYPES,
+            'entityTypeNames' => EntityController::types(),
             'fEntity'         => $fEntity,
             'fType'           => $fType,
         ]);
@@ -112,7 +112,7 @@ class EntityRelationController extends Controller
             'relation'        => $relation,
             'entities'        => $this->siteEntities(),
             'typeLabels'      => self::TYPE_LABELS,
-            'entityTypeNames' => EntityController::TYPES,
+            'entityTypeNames' => EntityController::types(),
             'preselectFrom'   => $preselectFrom,
         ];
     }

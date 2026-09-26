@@ -10,6 +10,7 @@ use App\Services\Geo\SchemaBuilder;
 use App\Services\Seo\SeoMetaResolver;
 use App\Services\Seo\SeoResult;
 use App\Support\Catalog;
+use App\Support\Entities\EntityCapabilityRegistry;
 use App\Support\Localization\LocaleContext;
 use App\Support\Narrative;
 use App\Support\Pages;
@@ -48,6 +49,13 @@ class EntityRenderContext implements RenderContext
      */
     public static function forEntity(Entity $entity): ?self
     {
+        // Registry gate：声明 public=false 的类型（organization/person/location/topic/
+        // download_asset）不尝试渲染详情页，控制器据此 404。case_study 虽 public=true，
+        // 但 2a 未实现渲染分支，仍落到末尾 return null（2b 加渲染上下文）。
+        if (! EntityCapabilityRegistry::isPublic($entity->type)) {
+            return null;
+        }
+
         if ($entity->type === Entity::TYPE_PRODUCT) {
             $product = Catalog::product($entity->slug);
             if (! $product || ! Catalog::isCoreProduct($entity->slug)) {

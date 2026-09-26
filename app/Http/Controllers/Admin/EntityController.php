@@ -10,6 +10,7 @@ use App\Models\Media;
 use App\Models\Setting;
 use App\Services\Seo\SeoMetaResolver;
 use App\Support\Catalog;
+use App\Support\Entities\EntityCapabilityRegistry;
 use App\Support\Localization\LocaleRegistry;
 use App\Support\SiteContext;
 use Database\Seeders\CatalogSeeder;
@@ -32,19 +33,21 @@ use Illuminate\View\View;
  */
 class EntityController extends Controller
 {
-    /** 实体类型（冻结枚举，禁止新增 brand / solution / place 等别名）。 */
-    public const TYPES = [
-        'organization' => '组织',
-        'product'      => '产品',
-        'service'      => '服务',
-        'person'       => '人物',
-        'location'     => '地点',
-        'topic'        => '主题',
-    ];
+    /**
+     * 实体类型白名单（type => 中文名）。
+     * 唯一事实源是 config/entities.php 的 EntityCapabilityRegistry；新增类型只改 Registry，
+     * 不再在此维护硬编码数组。2a 起开放 case_study / download_asset（仅通用字段，专属表单 2b）。
+     *
+     * @return array<string,string>
+     */
+    public static function types(): array
+    {
+        return EntityCapabilityRegistry::labels();
+    }
 
     public function index(Request $request, ?string $tab = 'all'): View
     {
-        if ($tab !== 'all' && ! array_key_exists($tab, self::TYPES)) {
+        if ($tab !== 'all' && ! array_key_exists($tab, self::types())) {
             $tab = 'all';
         }
 
@@ -77,7 +80,7 @@ class EntityController extends Controller
         return view('admin.entities.index', [
             'items'          => $items,
             'tab'            => $tab,
-            'typeNames'      => self::TYPES,
+            'typeNames'      => self::types(),
             'typeCounts'     => $typeCounts,
             'relationCounts' => $relationCounts,
             'q'              => $search,
@@ -87,7 +90,7 @@ class EntityController extends Controller
 
     public function create(string $type): View
     {
-        abort_unless(array_key_exists($type, self::TYPES), 404);
+        abort_unless(array_key_exists($type, self::types()), 404);
 
         $entity = new Entity([
             'type'       => $type,
@@ -133,7 +136,7 @@ class EntityController extends Controller
 
         // 路径二：全新默认语言实体
         $type = (string) $request->input('type');
-        abort_unless(array_key_exists($type, self::TYPES), 404);
+        abort_unless(array_key_exists($type, self::types()), 404);
 
         $data = $this->validateData($request, null, $type);
 
@@ -299,7 +302,7 @@ class EntityController extends Controller
             'anchor'      => $anchor,
             'transLocale' => $transLocale,
             'versions'    => $versions,
-            'typeNames'   => self::TYPES,
+            'typeNames'   => self::types(),
             'mediaImages' => $mediaImages,
         ]);
     }
@@ -327,7 +330,7 @@ class EntityController extends Controller
 
         // 共享列 / metadata 字段仅默认语言表单校验
         if ($transLocale === LocaleRegistry::default()) {
-            $rules['type'] = ['required', Rule::in(array_keys(self::TYPES))];
+            $rules['type'] = ['required', Rule::in(array_keys(self::types()))];
             $rules['status'] = ['required', Rule::in([
                 Entity::STATUS_DRAFT, Entity::STATUS_PUBLISHED, Entity::STATUS_ARCHIVED,
             ])];

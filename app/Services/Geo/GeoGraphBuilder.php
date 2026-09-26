@@ -9,6 +9,7 @@ use App\Models\Fact;
 use App\Models\Setting;
 use App\Services\Seo\SeoMetaResolver;
 use App\Support\Catalog;
+use App\Support\Entities\EntityCapabilityRegistry;
 use App\Support\Localization\LocaleContext;
 use App\Support\Localization\LocaleRegistry;
 use App\Support\PublicIndex;
@@ -118,7 +119,9 @@ class GeoGraphBuilder
         ));
 
         return $entities
+            ->filter(fn (Entity $e): bool => EntityCapabilityRegistry::isGeo($e->type))
             ->map(fn (Entity $e) => $this->entityNode($e))
+            ->values()
             ->all();
     }
 

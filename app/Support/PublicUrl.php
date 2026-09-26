@@ -4,6 +4,7 @@ namespace App\Support;
 
 use App\Models\Content;
 use App\Models\Entity;
+use App\Support\Entities\EntityCapabilityRegistry;
 use App\Support\Localization\LocaleContext;
 use App\Support\Localization\LocaleRegistry;
 
@@ -148,6 +149,12 @@ class PublicUrl
      */
     public static function entity(Entity $entity): ?string
     {
+        // Registry gate：声明 public=false 的类型（organization/person/location/topic/
+        // download_asset）无独立前台页，直接返回 null，不再进入下方 match。
+        if (! EntityCapabilityRegistry::isPublic($entity->type)) {
+            return null;
+        }
+
         return match ($entity->type) {
             Entity::TYPE_PRODUCT => Catalog::isCoreProduct($entity->slug)
                 ? self::product($entity->slug)
@@ -155,6 +162,8 @@ class PublicUrl
             Entity::TYPE_SERVICE => Catalog::scene($entity->slug) !== null
                 ? self::solution($entity->slug)
                 : null,
+            // TODO 2b: case_study → /cases/{slug}（Registry 已声明 public=true，
+            // 2a 未建路由，暂 fall through 到 default→null，geo.json 中 case_study 节点无 url）
             default => null,
         };
     }

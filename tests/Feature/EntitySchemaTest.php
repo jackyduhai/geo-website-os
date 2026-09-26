@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Entity;
 use App\Models\EntityRelation;
 use App\Models\Site;
+use App\Support\Entities\EntityCapabilityRegistry;
 use App\Support\SiteContext;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -299,8 +300,15 @@ class EntitySchemaTest extends TestCase
 
     public function test_entity_types_are_frozen(): void
     {
-        $allowed = ['organization', 'product', 'service', 'person', 'location', 'topic'];
-        $this->assertEquals(6, count($allowed));
+        // 类型白名单与 EntityCapabilityRegistry 双向绑定：新增类型必须同时在此登记
+        // 预期、并在 config/entities.php 注册。断言两者一致——不硬编码数量，未来新增
+        // 类型只改 Registry（并同步此白名单），不再写死 6/8。
+        $allowed = [
+            'organization', 'product', 'service', 'person', 'location', 'topic',
+            'case_study', 'download_asset',
+        ];
+        $this->assertEquals($allowed, EntityCapabilityRegistry::types());
+        $this->assertSame(count($allowed), count(EntityCapabilityRegistry::types()));
     }
 
     public function test_no_from_type_in_entity_relations(): void
