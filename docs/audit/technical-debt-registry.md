@@ -177,6 +177,10 @@ ACTIVE  →  FIXED  →  TESTED  →  ACCEPTED  →  CLOSED
 
 | **TD-136** | **Menu Absolute URL Normalization**：菜单内部链接在 seed / 保存时被持久化为**绝对 URL**（依赖生成时 Host，实证 demo 库残留 http://localhost/products/、/contact/、/solutions/ 等中英链接），模板分发 / 多域名部署 / backup-restore 到不同域名时残留旧 Host | **P-STEP 18L-4b-3 观察 / 用户裁定** | **REGISTERED（DEFERRED v1.1，P2）** | 内部链接统一存**相对 URL**（渲染时按当前 Host 再生成绝对 URL），外部链接保持绝对；菜单 seed 与保存双侧归一化 + 多域名回归 | **NO（P2，v1.1）** | — |
 
+| **TD-137** | **Admin CSP script-src 'unsafe-inline'**：后台（admin 路由组，含 login）CSP 为 script-src 'self' 'unsafe-inline'，弱于前台已落地的 nonce 机制；defense-in-depth 下后台若遇 Stored XSS，CSP 不拦截内联脚本（前台 style-src 'unsafe-inline' 系内联主样式所需、CSS 风险低，一并记录为观察） | **P-STEP 18M-A3** | **REGISTERED（DEFERRED v1.1，P2）** | 后台布局内联 script 改 **nonce/hash**（与前台统一），admin CSP 接入 nonce；style-src 视主样式方案评估 nonce | **NO（P2，v1.1；后台已认证 + 输入全 escaping）** | TD-90 |
+| **TD-138** | **Full backup 仅覆盖 SQLite**：geo:backup/rollback 只整库备份/还原 DB（含 settings、media 引用元数据），**不含 media 物理文件**（storage/app/public 上传图）；灾难恢复（destroy→restore）下 media 丢失会致 DB 引用悬空（升级回滚不受影响，升级不动 media；templates/themes 随代码分发） | **P-STEP 18M-B3** | **REGISTERED（DEFERRED v1.1，P2）** | 统一全量备份（DB + storage/app/public media 打包 + manifest 计数/sha），restore 同步还原 media 并对拍；或文档化文件系统级备份约定 | **NO（P2，v1.1）** | — |
+| **TD-139** | **Template preview 为 GD 占位截图**：8 包 preview/desktop·mobile.webp 均为 GD 生成占位图（非真实渲染截图），后台模板预览与未来 AI/第三方选模板依赖真实截图 | **P-STEP 18M-B5** | **REGISTERED（v1.0 发布工程 / P3）** | 发布前对每包真实渲染后截取 desktop/mobile（zh/en × light/dark）替换占位图，随包分发 | **NO（P3，发布前替换）** | TD-117 |
+
 ### P4 — 观察与测试限制（默认 NON-BLOCKING，记录在案）
 
 | ID | Title | Source | Status | 说明 / 验收 | Blocks v1.0.0? |
