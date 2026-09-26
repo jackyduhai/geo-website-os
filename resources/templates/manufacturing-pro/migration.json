@@ -1,0 +1,23 @@
+{
+    "id": "manufacturing-pro",
+    "paths": [
+        {
+            "from": "1.0.0",
+            "to": "1.1.0",
+            "rules": {
+                "rename_fields": [
+                    { "block": "hero", "from": "lead", "to": "eyebrow" }
+                ],
+                "replace_blocks": [
+                    { "from": "feature_list", "to": "feature_grid" }
+                ],
+                "rename_tokens": [
+                    { "from": "primary_color", "to": "brand_primary" }
+                ],
+                "rename_variants": [
+                    { "block": "hero", "from": "full", "to": "image" }
+                ]
+            }
+        }
+    ]
+}

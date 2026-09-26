@@ -214,6 +214,19 @@ class TemplateManifestValidator
         if ($pages === []) {
             $errors[] = 'manifest 缺少 pages 字段';
         }
+        // migration（可选；声明则校验版本区间与 supported 标志，TD-131）
+        $migration = (array) ($manifest['migration'] ?? []);
+        if ($migration !== []) {
+            if (! self::isSemVer((string) ($migration['from'] ?? ''))) {
+                $errors[] = 'manifest migration.from 缺失或非 SemVer';
+            }
+            if (! self::isSemVer((string) ($migration['to'] ?? ''))) {
+                $errors[] = 'manifest migration.to 缺失或非 SemVer';
+            }
+            if (! array_key_exists('supported', $migration) || ! is_bool($migration['supported'])) {
+                $errors[] = 'manifest migration.supported 必须为布尔值';
+            }
+        }
 
         // identity（AI/GEO）
         $identity = (array) ($manifest['identity'] ?? []);

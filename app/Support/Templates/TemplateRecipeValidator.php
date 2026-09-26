@@ -83,6 +83,11 @@ class TemplateRecipeValidator
             }
         }
 
+        // migration.json 规则兼容性（TD-131）：保护字段 / 目标 block 注册必须有效。
+        foreach (TemplateMigrationRegistry::validate($packPath) as $migrationError) {
+            $errors[] = $migrationError;
+        }
+
         // preview 缺失（WARNING）
         if (! is_file($packPath . '/preview/desktop.webp')) {
             $warnings[] = '缺少 preview/desktop.webp 预览图';

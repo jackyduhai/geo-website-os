@@ -193,25 +193,54 @@
 
 ---
 
-## 8. Migration（TD-131）
+## 8. Migration（TD-131，Lite 已落地）
 
-包可在升级时声明迁移（建议 `migrations/{from}__{to}.json` 或 manifest `migrations`）：
+包在包根提供 `migration.json`（声明式、Registry 驱动；不允许 PHP/Blade/JS migration code）：
 
 ```json
 {
-  "from": "1.0.0",
-  "to": "1.1.0",
-  "steps": [
-    { "op": "renameBlock", "from": "old_hero", "to": "hero" },
-    { "op": "renameField", "block": "stats", "from": "num", "to": "value" },
-    { "op": "deprecateBlock", "block": "legacy_band" },
-    { "op": "replaceComponent", "from": "card.old", "to": "card.default" }
+  "id": "manufacturing-pro",
+  "paths": [
+    {
+      "from": "1.0.0",
+      "to": "1.1.0",
+      "rules": {
+        "rename_fields": [
+          { "block": "hero", "from": "lead", "to": "eyebrow" }
+        ],
+        "replace_blocks": [
+          { "from": "feature_list", "to": "feature_grid" }
+        ],
+        "rename_tokens": [
+          { "from": "primary_color", "to": "brand_primary" }
+        ],
+        "rename_variants": [
+          { "block": "hero", "from": "full", "to": "image" }
+        ]
+      }
+    }
   ]
 }
 ```
 
-- V1 仅支持声明式 rename / deprecate / replace-map（槽位级幂等、可对拍 / 回滚）。
-- `template:migrate {pack}` 在 Site 作用域执行，仅管理带 marker 的配方块，结束触发页面级失效。
+四类规则（Lite）：
+
+| 规则键 | 作用 | 约束 |
+|---|---|---|
+| `rename_fields` | 重命名某 block 的 content 键，值保留 | 不得命中 `url`/`href`/`canonical` 或前缀 `seo_`/`og_`/`schema_` |
+| `replace_blocks` | 整体替换 block type，content 可复用部分保留 | 目标 block 必须当前已在 BlockRegistry 注册 |
+| `rename_tokens` | 替换 content 中**精确等于**旧 token 名的字符串值 | 子串不误伤 |
+| `rename_variants` | 重命名某 block 的 `variant` 值 | — |
+
+命令（Site 作用域）：
+
+```
+php artisan template:migrate {pack} [--from=] [--to=] [--site=] [--dry-run] [--force] [--rollback]
+```
+
+- 流程：validate → 备份（`storage/app/template-migration-backups/{pack}-{from}-{to}-{时间}.json`）→ plan → apply（DB 事务）→ 迁移后 recheck 必须 0 changes（幂等），否则自动 restore；结束 flush 页面缓存。
+- 规则只改结构键 / type / variant / token 引用，**不自动改 SEO 内容、URL、Schema**；block type 替换导致的 GEO 语义变化在 plan 中显式标注。
+- `--rollback` 取最新备份恢复。完整自动迁移平台（批量、向导、Marketplace 联动）归 v1.1。
 
 ---
 
