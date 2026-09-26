@@ -2,7 +2,7 @@
      数据由 AboutController@page 从 Catalog / Pages / Narrative 准备，经
      SystemPageRenderContext 注入；subnav 由 composed 布局统一渲染。 --}}
 @if($aboutPage === 'profile')
-  <section class="page-hero">
+  <section class="page-hero" {!! $semanticAttrs ?? '' !!}>
     <div class="wrap-narrow">
       <span class="eyebrow">{{ __('ui.eyebrow_about') }}</span>
       <h1 class="ph-h">{{ $company['name'] }}</h1>
@@ -10,7 +10,7 @@
     </div>
   </section>
 
-  <section class="sec">
+  <section class="sec" {!! \App\Support\Blocks\SectionSemantic::forSection('about','brand','Organization') !!}>
     <div class="wrap about-layout">
       <div class="about-prose prose">
         {!! $bodyHtml !!}
@@ -36,7 +36,7 @@
   </section>
 
 @elseif($aboutPage === 'history')
-  <section class="page-hero">
+  <section class="page-hero" {!! $semanticAttrs ?? '' !!}>
     <div class="wrap-narrow">
       <span class="eyebrow">{{ __('ui.eyebrow_history') }}</span>
       <h1 class="ph-h">{{ __('ui.history_h1', ['year' => substr($company['founded'] ?? '', 0, 4) ?: date('Y')]) }}</h1>
@@ -44,7 +44,7 @@
     </div>
   </section>
 
-  <section class="sec">
+  <section class="sec" {!! \App\Support\Blocks\SectionSemantic::forSection('about','brand','Organization') !!}>
     <div class="wrap-narrow">
       @if(!empty($nodes ?? []))
       <ol class="timeline">
@@ -61,7 +61,7 @@
   </section>
 
 @else
-  <section class="page-hero">
+  <section class="page-hero" {!! $semanticAttrs ?? '' !!}>
     <div class="wrap-narrow">
       <span class="eyebrow">{{ __('ui.eyebrow_culture') }}</span>
       <h1 class="ph-h">{{ __('ui.culture_h1') }}</h1>
@@ -69,7 +69,7 @@
     </div>
   </section>
 
-  <section class="sec sec-tint">
+  <section class="sec sec-tint" {!! \App\Support\Blocks\SectionSemantic::forSection('about','brand','Organization') !!}>
     <div class="wrap">
       <div class="culture-grid">
         @foreach(($copy['cards'] ?? []) as $c)
@@ -84,7 +84,7 @@
   </section>
 
   @if(!empty($workshops))
-  <section class="sec">
+  <section class="sec" {!! \App\Support\Blocks\SectionSemantic::forSection('about','brand','Organization') !!}>
     <div class="wrap-narrow center-txt">
       <p class="prose">{{ __('ui.culture_prose') }}</p>
       <div class="actions" style="justify-content:center;margin-top:var(--sp-5)">
@@ -95,4 +95,4 @@
   @endif
 @endif
 
-@include('site._bottom_cta')
+@include('site._bottom_cta', ['semanticAttrs' => ''])

@@ -5,7 +5,7 @@
   $rtBody = trim((string) ($c['body'] ?? ''));
 @endphp
 @if($rtTitle !== '' || $rtBody !== '')
-  <section class="sec">
+  <section class="sec" {!! $semanticAttrs ?? '' !!}>
     <div class="wrap-narrow">
       @if($rtTitle)
         <div class="sec-head">

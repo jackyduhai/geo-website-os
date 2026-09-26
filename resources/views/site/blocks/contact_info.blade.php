@@ -30,7 +30,7 @@
       || ! empty($ciCompany['name']) || ! empty($ciTarget) || ! empty($ciRegions);
 @endphp
 @if($ciHasFacts)
-  <section class="sec">
+  <section class="sec" {!! $semanticAttrs ?? '' !!}>
     <div class="wrap">
       @if(! empty($c['title']))<div class="sec-head"><h2 class="sec-h">{{ $c['title'] }}</h2></div>@endif
       <dl class="contact-facts" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:var(--sp-6) var(--sp-10);margin:0">

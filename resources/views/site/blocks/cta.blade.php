@@ -7,7 +7,7 @@
   $caTint = array_key_exists('tint', $c) ? ! empty($c['tint']) : true;
 @endphp
 @if($caTitle !== '' || $caSub !== '' || ! empty($caButtons))
-  <section class="sec @if($caTint) sec-tint @endif">
+  <section class="sec @if($caTint) sec-tint @endif" {!! $semanticAttrs ?? '' !!}>
     <div class="wrap">
       <div class="cta-band" style="text-align:center">
         @if($caTitle)<h2 style="font-size:var(--fs-h2);margin:0 0 var(--sp-3)">{{ $caTitle }}</h2>@endif

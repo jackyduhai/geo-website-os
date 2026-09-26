@@ -11,11 +11,11 @@
 @endphp
 @if(! empty($stRows))
   @if($stTitle !== '')
-    <section class="sec sec-tint">
+    <section class="sec sec-tint" {!! \App\Support\Blocks\SectionSemantic::forSection('trust','trust','Organization') !!}>
       <div class="wrap"><div class="sec-head center"><h2 class="sec-h">{{ $stTitle }}</h2></div></div>
     </section>
   @endif
-  <section class="stats" aria-label="{{ $stTitle ?: __('ui.stats_aria') }}">
+  <section class="stats" aria-label="{{ $stTitle ?: __('ui.stats_aria') }}" {!! $semanticAttrs ?? '' !!}>
     <div class="wrap stats-in">
       @foreach($stRows as $s)
         <div class="stat reveal">

@@ -7,7 +7,7 @@
   $pgCards = $data ?? [];
 @endphp
 @if(! empty($pgCards))
-  <section class="sec">
+  <section class="sec" {!! $semanticAttrs ?? '' !!}>
     <div class="wrap">
       @if($pgTitle !== '' || $pgSub !== '')
         <div class="sec-head row">

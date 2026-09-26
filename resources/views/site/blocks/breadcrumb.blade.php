@@ -4,7 +4,7 @@
   $bcShowCurrent = array_key_exists('show_current', $c) ? ! empty($c['show_current']) : true;
   $bcCurrent = $page->title ?? ($block->page->title ?? null);
 @endphp
-<nav aria-label="{{ __('ui.breadcrumb') }}" style="font-size:var(--fs-xs)">
+<nav aria-label="{{ __('ui.breadcrumb') }}" style="font-size:var(--fs-xs)" {!! $semanticAttrs ?? '' !!}>
   <div class="wrap">
     <ol style="list-style:none;display:flex;flex-wrap:wrap;gap:var(--sp-2);align-items:center;margin:var(--sp-4) 0;padding:0;color:var(--ink-muted)">
       <li><a href="{{ \App\Support\PublicUrl::home() }}" style="color:var(--ink-muted)">{{ __('ui.back_home') }}</a></li>

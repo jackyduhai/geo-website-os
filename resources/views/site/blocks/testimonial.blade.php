@@ -11,7 +11,7 @@
   }
 @endphp
 @if(! empty($tmRows))
-  <section class="sec sec-tint">
+  <section class="sec sec-tint" {!! $semanticAttrs ?? '' !!}>
     <div class="wrap">
       @if($tmTitle)<div class="sec-head center"><h2 class="sec-h">{{ $tmTitle }}</h2></div>@endif
       <div class="grid g3 reveal" style="gap:var(--sp-7)">

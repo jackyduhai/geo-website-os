@@ -8,7 +8,7 @@
   $hButtons = is_array($c['buttons'] ?? null) ? $c['buttons'] : [];
   $hImage = ! empty($c['image_id']) ? \App\Models\Media::find((int) $c['image_id']) : null;
 @endphp
-<section class="hero-split reveal in" id="top">
+<section class="hero-split reveal in" id="top" {!! $semanticAttrs ?? '' !!}>
   <div class="wrap hero-in">
     <div class="hero-copy">
       @if($hEyebrow)<span class="hero-kicker-line">{{ $hEyebrow }}</span>@endif

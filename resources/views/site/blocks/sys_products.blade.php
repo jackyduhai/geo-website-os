@@ -4,7 +4,7 @@
      数据由 ProductController 从 Catalog / Narrative 准备，经 Render Context 注入；
      subnav 由 composed 布局统一渲染，不在此重复。 --}}
 @if(! empty($singleLine))
-  <section class="page-hero">
+  <section class="page-hero" {!! $semanticAttrs ?? '' !!}>
     <div class="wrap-narrow">
       <span class="eyebrow">{{ __('ui.product_series') }}</span>
       <h1 class="ph-h">{{ $singleLine['name'] }}</h1>
@@ -12,7 +12,7 @@
     </div>
   </section>
 
-  <section class="sec">
+  <section class="sec" {!! \App\Support\Blocks\SectionSemantic::forSection('product','comparison','Product','contact') !!}>
     <div class="wrap">
       <div class="prod-grid">
         @foreach($lineProducts as $p)
@@ -22,9 +22,9 @@
     </div>
   </section>
 
-  @include('site._bottom_cta')
+  @include('site._bottom_cta', ['semanticAttrs' => ''])
 @else
-  <section class="page-hero">
+  <section class="page-hero" {!! $semanticAttrs ?? '' !!}>
     <div class="wrap-narrow">
       <span class="eyebrow">{{ __('ui.eyebrow_products') }}</span>
       @if($flatMode ?? false)
@@ -37,7 +37,7 @@
   </section>
 
   @foreach($lines as $line)
-    <section class="sec {{ $loop->even ? 'sec-tint' : '' }}" id="{{ $line['slug'] ?? 'all' }}">
+    <section class="sec {{ $loop->even ? 'sec-tint' : '' }}" id="{{ $line['slug'] ?? 'all' }}" {!! \App\Support\Blocks\SectionSemantic::forSection('product','comparison','Product','contact') !!}>
       <div class="wrap">
         <div class="sec-head row">
           <div>
@@ -61,5 +61,5 @@
     </section>
   @endforeach
 
-  @include('site._bottom_cta')
+  @include('site._bottom_cta', ['semanticAttrs' => ''])
 @endif

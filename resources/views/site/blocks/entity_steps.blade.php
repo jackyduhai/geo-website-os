@@ -25,7 +25,7 @@
 
 @if($isService)
   @if(! empty($flowSteps))
-  <section class="sec">
+  <section class="sec" {!! $semanticAttrs ?? '' !!}>
     <div class="wrap">
       <div class="sec-head">
         <span class="eyebrow">{{ __('ui.workflow_eyebrow') }}</span>
@@ -37,7 +37,7 @@
   @endif
 @else
   @if(! empty($processSteps))
-  <section class="sec sec-tint">
+  <section class="sec sec-tint" {!! $semanticAttrs ?? '' !!}>
     <div class="wrap">
       <div class="sec-head">
         <span class="eyebrow">{{ __('ui.eyebrow_usage') }}</span>

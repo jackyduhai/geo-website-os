@@ -17,7 +17,7 @@
   $factoryH1 = implode(\App\Support\Localization\LocaleContext::current() === \App\Support\Localization\LocaleRegistry::default() ? '，' : ', ', $factoryH1Parts);
 @endphp
 
-<section class="page-hero">
+<section class="page-hero" {!! $semanticAttrs ?? '' !!}>
   <div class="wrap-narrow">
     <span class="eyebrow">{{ __('ui.eyebrow_factory') }}</span>
     <h1 class="ph-h">{{ $factoryH1 }}</h1>
@@ -26,7 +26,7 @@
 </section>
 
 {{-- 数据条 --}}
-<section class="stats" aria-label="{{ __('ui.stats_aria') }}">
+<section class="stats" aria-label="{{ __('ui.stats_aria') }}" {!! \App\Support\Blocks\SectionSemantic::forSection('trust','trust','Factory') !!}>
   <div class="wrap stats-in">
     @foreach($stats as $s)
       <div class="stat reveal">
@@ -38,7 +38,7 @@
 </section>
 
 {{-- 生产车间（无实拍图时用统一线性图标，不渲染示意图占位） --}}
-<section class="sec">
+<section class="sec" {!! \App\Support\Blocks\SectionSemantic::forSection('trust','trust','Factory') !!}>
   <div class="wrap-wide">
     <div class="sec-head">
       <span class="eyebrow">{{ __('ui.eyebrow_workshops') }}</span>
@@ -62,7 +62,7 @@
 
 {{-- 生产流程 --}}
 @if(!empty($steps))
-<section class="sec sec-tint">
+<section class="sec sec-tint" {!! \App\Support\Blocks\SectionSemantic::forSection('solution','education','Factory') !!}>
   <div class="wrap">
     <div class="sec-head">
       <span class="eyebrow">{{ __('ui.eyebrow_process') }}</span>
@@ -75,7 +75,7 @@
 
 {{-- 资质与标准：SC 号 / 执行标准号未核齐前整体隐藏，不出现标题、不留空位 --}}
 @if($certsReady)
-<section class="sec">
+<section class="sec" {!! \App\Support\Blocks\SectionSemantic::forSection('certificate','trust','Factory') !!}>
   <div class="wrap-narrow">
     <div class="sec-head"><span class="eyebrow">{{ __('ui.eyebrow_certification') }}</span><h2 class="sec-h">{{ __('ui.cert_h2') }}</h2></div>
     <dl class="facts auto">
@@ -88,7 +88,7 @@
 @endif
 
 {{-- 销售覆盖区域（纯文字，无合规地图前不放地图） --}}
-<section class="sec {{ $certsReady ? 'sec-tint' : '' }}">
+<section class="sec {{ $certsReady ? 'sec-tint' : '' }}" {!! \App\Support\Blocks\SectionSemantic::forSection('trust','trust','Factory') !!}>
   <div class="wrap-narrow">
     <div class="sec-head">
       <span class="eyebrow">{{ __('ui.eyebrow_coverage') }}</span>
@@ -101,4 +101,4 @@
   </div>
 </section>
 
-@include('site._bottom_cta', ['variant' => 'factory'])
+@include('site._bottom_cta', ['variant' => 'factory', 'semanticAttrs' => ''])

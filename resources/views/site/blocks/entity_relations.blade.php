@@ -10,7 +10,7 @@
 @if($isService)
   @if($part === 'adjacent')
     @if(! empty($prev) || ! empty($next))
-    <section class="sec">
+    <section class="sec" {!! \App\Support\Blocks\SectionSemantic::forSection('solution','comparison','Service') !!}>
       <div class="wrap">
         <div class="adj-grid">
           @foreach(['prev' => $prev, 'next' => $next] as $dir => $adj)
@@ -27,7 +27,7 @@
     @endif
   @else
     @if(! empty($scene['pain_points']))
-    <section class="sec">
+    <section class="sec" {!! \App\Support\Blocks\SectionSemantic::forSection('solution','education','Service') !!}>
       <div class="wrap">
         <div class="sec-head">
           <span class="eyebrow">{{ __('ui.pain_eyebrow') }}</span>
@@ -46,7 +46,7 @@
     @endif
 
     @if(! empty($combo))
-    <section class="sec sec-tint">
+    <section class="sec sec-tint" {!! \App\Support\Blocks\SectionSemantic::forSection('product','comparison','Product') !!}>
       <div class="wrap">
         <div class="sec-head">
           <span class="eyebrow">{{ __('ui.combo_eyebrow') }}</span>
@@ -65,7 +65,7 @@
 @else
   @if($part === 'related')
     @if(! empty($related))
-    <section class="sec">
+    <section class="sec" {!! \App\Support\Blocks\SectionSemantic::forSection('product','comparison','Product') !!}>
       <div class="wrap">
         <div class="sec-head">
           <span class="eyebrow">{{ __('ui.eyebrow_related') }}</span>
@@ -81,7 +81,7 @@
     @endif
   @else
     @if(! empty($scenes))
-    <section class="sec">
+    <section class="sec" {!! \App\Support\Blocks\SectionSemantic::forSection('solution','education','Service') !!}>
       <div class="wrap">
         <div class="sec-head row">
           <div>

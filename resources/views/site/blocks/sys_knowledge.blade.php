@@ -1,7 +1,7 @@
 {{-- 系统块 sys_knowledge：知识总览主体（page-hero + 文章网格 + pager）。
      数据由 KnowledgeController@index / channel 从 Catalog / Pages 准备，经
      SystemPageRenderContext 注入；频道 subnav 由 composed 布局统一渲染。 --}}
-<section class="page-hero">
+<section class="page-hero" {!! $semanticAttrs ?? '' !!}>
   <div class="wrap-narrow">
     <span class="eyebrow">{{ __('ui.eyebrow_knowledge') }}</span>
     <h1 class="ph-h">{{ $active ? ($channels[$active] ?? __('ui.eyebrow_knowledge')) : __('ui.knowledge_h1') }}</h1>
@@ -9,7 +9,7 @@
   </div>
 </section>
 
-<section class="sec">
+<section class="sec" {!! \App\Support\Blocks\SectionSemantic::forSection('faq','education','Content') !!}>
   <div class="wrap">
     @if($items->count())
       <div class="kgrid kgrid-3">
@@ -35,4 +35,4 @@
   </div>
 </section>
 
-@include('site._bottom_cta')
+@include('site._bottom_cta', ['semanticAttrs' => ''])

@@ -8,7 +8,7 @@
   $fgItems = array_filter($fgItems, fn ($i) => trim((string) ($i['title'] ?? '')) !== '');
 @endphp
 @if(! empty($fgItems))
-  <section class="sec">
+  <section class="sec" {!! $semanticAttrs ?? '' !!}>
     <div class="wrap">
       @if($fgTitle !== '' || $fgSub !== '')
         <div class="sec-head center">

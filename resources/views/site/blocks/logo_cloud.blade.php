@@ -9,7 +9,7 @@
   }
 @endphp
 @if(! empty($lcLogos))
-  <section class="sec">
+  <section class="sec" {!! $semanticAttrs ?? '' !!}>
     <div class="wrap">
       @if($lcTitle)<div class="sec-head center"><h2 class="sec-h">{{ $lcTitle }}</h2></div>@endif
       <div class="logo-cloud" style="display:flex;flex-wrap:wrap;gap:var(--sp-9);align-items:center;justify-content:center">

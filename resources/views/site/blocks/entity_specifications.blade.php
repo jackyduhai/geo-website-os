@@ -28,7 +28,7 @@
 
 @if($isService)
   @if(! empty($paramRows))
-  <section class="sec is-inverse">
+  <section class="sec is-inverse" {!! \App\Support\Blocks\SectionSemantic::forSection('product','education','Service') !!}>
     <div class="wrap-narrow">
       <div class="sec-head">
         <span class="eyebrow accent">{{ __('ui.params_eyebrow') }}</span>
@@ -43,7 +43,7 @@
   @endif
 @else
   @if(! empty($specRows))
-  <section class="sec sec-tint">
+  <section class="sec sec-tint" {!! \App\Support\Blocks\SectionSemantic::forSection('product','education','Product') !!}>
     <div class="wrap-narrow">
       <div class="sec-head">
         <span class="eyebrow">{{ __('ui.eyebrow_spec') }}</span>

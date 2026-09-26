@@ -11,7 +11,7 @@
   }
 @endphp
 @if(! empty($fqPairs))
-  <section class="sec{{ ! empty($c['tint']) ? ' sec-tint' : '' }}" id="block-faq-{{ $block->id }}">
+  <section class="sec{{ ! empty($c['tint']) ? ' sec-tint' : '' }}" id="block-faq-{{ $block->id }}" {!! $semanticAttrs ?? '' !!}>
     <div class="wrap-narrow">
       <div class="sec-head center">
         <span class="eyebrow">{{ __('ui.eyebrow_faq') }}</span>

@@ -6,7 +6,7 @@
   $cgCards = $data ?? [];
 @endphp
 @if(! empty($cgCards))
-  <section class="sec">
+  <section class="sec" {!! $semanticAttrs ?? '' !!}>
     <div class="wrap">
       @if($cgTitle !== '' || $cgSub !== '')
         <div class="sec-head row">

@@ -97,9 +97,10 @@ class BlockRegistry
         }
 
         $viewData = array_merge($context, [
-            'block' => $block,
-            'blk'   => $block,
-            'data'  => self::resolveData($type, $block, $context),
+            'block'         => $block,
+            'blk'           => $block,
+            'data'          => self::resolveData($type, $block, $context),
+            'semanticAttrs' => SectionSemantic::attributes($type, $context),
         ]);
 
         return view($type->view, $viewData)->render();

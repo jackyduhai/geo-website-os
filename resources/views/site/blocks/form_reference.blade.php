@@ -12,7 +12,7 @@
   $frForm = $resolver->findById($c['form_id'] ?? null) ?? $resolver->defaultContact();
 @endphp
 @if($frForm)
-  <section class="sec sec-tint" id="block-form-{{ $block->id }}">
+  <section class="sec sec-tint" id="block-form-{{ $block->id }}" {!! $semanticAttrs ?? '' !!}>
     <div class="wrap-narrow">
       @if($frTitle !== '' || $frSub !== '')
         <div class="sec-head center">

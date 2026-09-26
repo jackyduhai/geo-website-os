@@ -29,6 +29,7 @@ final class BlockType
         public readonly bool $hasSchema,       // 是否产出结构化数据（FAQ 等）
         public readonly bool $system,          // 系统块（Entity 直驱），不进“自由添加”
         public readonly array $defaultContent,
+        public readonly array $semantic,       // GEO Section 语义覆盖（section/purpose/entity/conversion）
         public readonly string $help = '',
     ) {}
 
@@ -50,6 +51,7 @@ final class BlockType
             hasSchema: (bool) ($cfg['schema'] ?? false),
             system: (bool) ($cfg['system'] ?? false),
             defaultContent: $cfg['default'] ?? [],
+            semantic: (array) ($cfg['semantic'] ?? []),
             help: $cfg['help'] ?? '',
         );
     }

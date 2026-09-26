@@ -2,6 +2,8 @@
 
 namespace App\Console\Commands;
 
+use App\Support\Blocks\BlockRegistry;
+use App\Support\Blocks\SectionSemantic;
 use App\Support\Templates\TemplatePackageManager;
 use App\Support\Templates\TemplateRecipeValidator;
 use Illuminate\Console\Command;
@@ -78,6 +80,19 @@ class TemplateValidate extends Command
             }
         }
 
+        // TD-132：平台 Section Semantic 词表自检（内置默认映射 + config 显式声明）。
+        $semanticErrors = array_merge(
+            SectionSemantic::validateDefaults(),
+            $this->declaredSemanticErrors()
+        );
+        if ($semanticErrors !== []) {
+            $this->line('<error>Section Semantic</error>');
+            foreach ($semanticErrors as $semanticError) {
+                $this->line("    <error>- {$semanticError}</error>");
+            }
+            $totalErrors += count($semanticErrors);
+        }
+
         if ($totalErrors > 0) {
             $this->error("Validation failed: {$totalErrors} error(s). Pack cannot be applied.");
 
@@ -93,5 +108,18 @@ class TemplateValidate extends Command
         $this->info('All template packs valid.' . ($totalWarnings > 0 ? " ({$totalWarnings} warning(s))" : ''));
 
         return self::SUCCESS;
+    }
+
+    /** 校验 config/blocks.php 各 block 的显式 semantic 声明，返回错误信息数组。 */
+    private function declaredSemanticErrors(): array
+    {
+        $errors = [];
+        foreach (BlockRegistry::all() as $type) {
+            foreach (SectionSemantic::validateDeclared($type->semantic) as $message) {
+                $errors[] = "{$type->type}: {$message}";
+            }
+        }
+
+        return $errors;
     }
 }

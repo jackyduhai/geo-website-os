@@ -1,6 +1,6 @@
 {{-- 系统块 sys_cooperation：合作方式主体（page-hero + 合作方式 + 流程 + FAQ）。
      数据由 CooperationController@show 从 Catalog / Pages 准备，经 SystemPageRenderContext 注入。 --}}
-<section class="page-hero">
+<section class="page-hero" {!! $semanticAttrs ?? '' !!}>
   <div class="wrap-narrow">
     <span class="eyebrow">{{ __('ui.eyebrow_cooperation') }}</span>
     <h1 class="ph-h">{{ __('ui.coop_h1', ['count' => count($coop['types'])]) }}</h1>
@@ -9,7 +9,7 @@
 </section>
 
 {{-- 合作方式 --}}
-<section class="sec">
+<section class="sec" {!! \App\Support\Blocks\SectionSemantic::forSection('conversion','conversion','Organization','contact') !!}>
   <div class="wrap">
     <div class="coop-grid3">
       @foreach($coop['types'] as $t)
@@ -29,7 +29,7 @@
 
 {{-- 合作流程 --}}
 @if(!empty($coop['process']))
-<section class="sec sec-tint">
+<section class="sec sec-tint" {!! \App\Support\Blocks\SectionSemantic::forSection('conversion','education','Organization','contact') !!}>
   <div class="wrap">
     <div class="sec-head center">
       <span class="eyebrow">{{ __('ui.eyebrow_process') }}</span>
@@ -45,7 +45,7 @@
 
 {{-- FAQ --}}
 @if(!empty($faqs))
-<section class="sec">
+<section class="sec" {!! \App\Support\Blocks\SectionSemantic::forSection('faq','education','Organization') !!}>
   <div class="wrap-narrow">
     <div class="sec-head center"><span class="eyebrow">{{ __('ui.eyebrow_faq') }}</span><h2 class="sec-h">{{ __('ui.coop_faq_h2') }}</h2></div>
     @include('site._faq_list', ['faqs' => $faqs])
@@ -53,4 +53,4 @@
 </section>
 @endif
 
-@include('site._bottom_cta')
+@include('site._bottom_cta', ['semanticAttrs' => ''])

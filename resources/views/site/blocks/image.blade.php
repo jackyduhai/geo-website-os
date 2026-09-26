@@ -6,7 +6,7 @@
   $imgCap = trim((string) ($c['caption'] ?? ''));
 @endphp
 @if($imgMedia)
-  <section class="sec">
+  <section class="sec" {!! $semanticAttrs ?? '' !!}>
     <div class="wrap" style="max-width:960px">
       <figure class="block-figure" style="margin:0">
         <x-picture :src="$imgMedia->url()" :alt="$imgAlt" loading="lazy" />

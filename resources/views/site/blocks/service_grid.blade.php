@@ -6,7 +6,7 @@
   $sgCards = $data ?? [];
 @endphp
 @if(! empty($sgCards))
-  <section class="sec sec-tint">
+  <section class="sec sec-tint" {!! $semanticAttrs ?? '' !!}>
     <div class="wrap">
       @if($sgTitle !== '' || $sgSub !== '')
         <div class="sec-head row">

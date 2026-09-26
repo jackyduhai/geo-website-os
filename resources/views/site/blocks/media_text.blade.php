@@ -10,7 +10,7 @@
   $mtReverse = ! empty($c['reverse']);
 @endphp
 @if($mtTitle !== '' || $mtBody !== '' || $mtMedia)
-  <section class="sec">
+  <section class="sec" {!! $semanticAttrs ?? '' !!}>
     <div class="wrap grid g2 @if($mtReverse) media-text-reverse @endif" style="gap:var(--sp-12);align-items:center">
       @if($mtMedia)
         <div class="reveal">

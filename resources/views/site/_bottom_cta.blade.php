@@ -9,7 +9,7 @@
   $bcPhone = config('copy.nav.phone');
   $bcPhoneTel = config('copy.nav.phoneTel');
 @endphp
-<section class="bcta" aria-labelledby="bcta-title">
+<section class="bcta" aria-labelledby="bcta-title" {!! \App\Support\Blocks\SectionSemantic::forSection('conversion','conversion','Organization','contact') !!}>
   <div class="wrap bcta-in">
     <h2 id="bcta-title">{{ $bcTitle }}</h2>
     <p class="bcta-d">{{ $bcDesc }}</p>

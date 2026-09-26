@@ -6,7 +6,7 @@
 @endphp
 
 @if($isService)
-  <section class="page-hero">
+  <section class="page-hero" {!! $semanticAttrs ?? '' !!}>
     <div class="wrap-narrow">
       <span class="eyebrow">{{ __('ui.eyebrow_solution') }}</span>
       <h1 class="ph-h">{{ $scene['title_q'] ?? $scene['name'] }}</h1>
@@ -14,7 +14,7 @@
     </div>
   </section>
 @else
-  <section class="page-hero prod-hero">
+  <section class="page-hero prod-hero" {!! $semanticAttrs ?? '' !!}>
     <div class="wrap prod-hero-in">
       <div>
         <span class="prod-tag-line">{{ $product['tag'] ?? $line['name'] ?? '' }}</span>
