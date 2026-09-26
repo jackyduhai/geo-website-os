@@ -28,13 +28,17 @@ return [
             'icon' => 'sparkle',
             'per_locale' => true,
             'fields' => [
+                ['key' => 'variant', 'label' => '首屏布局', 'type' => 'select', 'options' => [
+                    'split' => '左右分栏（文案 + 配图）',
+                    'center' => '居中文字',
+                ]],
                 ['key' => 'eyebrow', 'label' => '眉标（顶部小字）', 'type' => 'text'],
                 ['key' => 'title', 'label' => '主标题（H1）', 'type' => 'text', 'required' => true],
                 ['key' => 'subtitle', 'label' => '副标题 / 引导语', 'type' => 'textarea'],
                 ['key' => 'buttons', 'label' => '按钮', 'type' => 'buttons'],
                 ['key' => 'image_id', 'label' => '配图（媒体 ID，留空不显示）', 'type' => 'media'],
             ],
-            'default' => ['eyebrow' => '', 'title' => '', 'subtitle' => '', 'buttons' => [], 'image_id' => null],
+            'default' => ['variant' => 'split', 'eyebrow' => '', 'title' => '', 'subtitle' => '', 'buttons' => [], 'image_id' => null],
         ],
 
         'rich_text' => [

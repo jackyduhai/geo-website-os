@@ -8,6 +8,7 @@ use App\Models\Page;
 use App\Models\PageBlock;
 use App\Support\Blocks\BlockRegistry;
 use App\Support\Blocks\BlockType;
+use App\Support\Blocks\CompositionPolicy;
 use App\Support\Localization\LocaleRegistry;
 use App\Support\PageCache;
 use App\Support\Render\CompositionRenderer;
@@ -198,6 +199,12 @@ class PageController extends Controller
             return back()->withErrors(['type' => '该模板槽位不允许此区块']);
         }
 
+        $slotCount = (int) PageBlock::where('page_id', $page->id)
+            ->where('slot', $validated['slot'])->count();
+        if (CompositionPolicy::maxReached($slotCount)) {
+            return back()->withErrors(['type' => '该槽位区块已达上限（'.CompositionPolicy::MAX_BLOCKS_PER_SLOT.'）']);
+        }
+
         $maxSort = (int) PageBlock::where('page_id', $page->id)
             ->where('slot', $validated['slot'])->max('sort');
 
@@ -296,6 +303,39 @@ class PageController extends Controller
         PageCache::forgetPage($page);
 
         return back();
+    }
+
+    /**
+     * 快速切换区块布局变体（TD-133）：只改 variant，不改结构 / H1 / 语义。
+     * variant 必须在 CompositionPolicy 白名单内，否则阻断。
+     */
+    public function setVariant(Page $page, PageBlock $block, Request $request): RedirectResponse
+    {
+        $this->assertBelongs($page, $block);
+
+        $validated = $request->validate(['variant' => ['required', 'string', 'max:40']]);
+
+        if (! CompositionPolicy::isAllowedVariant($block->type, $validated['variant'])) {
+            return back()->withErrors(['variant' => '该区块不支持此布局变体']);
+        }
+
+        $cfg = $block->cfg();
+        if (($cfg['variant'] ?? null) === $validated['variant']) {
+            return back();
+        }
+
+        $auditBefore = ['variant' => $cfg['variant'] ?? null];
+        $cfg['variant'] = $validated['variant'];
+        $block->content = json_encode($cfg, JSON_UNESCAPED_UNICODE);
+        $block->save();
+
+        AuditLog::recordChange('block.variant', 'PageBlock', $block->id,
+            "切换区块布局：{$block->type} → {$validated['variant']}",
+            $auditBefore, ['variant' => $validated['variant']], ['variant']);
+
+        PageCache::forgetPage($page);
+
+        return back()->with('success', '区块布局已切换');
     }
 
     /**
