@@ -3,6 +3,8 @@
 namespace App\Support\Render;
 
 use App\Models\Entity;
+use App\Models\EntityRelation;
+use App\Models\Media;
 use App\Models\Page;
 use App\Models\Site;
 use App\Providers\AppServiceProvider;
@@ -208,6 +210,52 @@ class EntityRenderContext implements RenderContext
         return [$adjacent[0] ?? null, $adjacent[1] ?? null];
     }
 
+    /**
+     * 产品 offers 关联的下载资料（DownloadAsset）：供 download_panel 系统块渲染。
+     * DownloadAsset 无独立公开页（public=false），仅作为产品知识扩展在详情页呈现；
+     * 名称优先取当前 locale 翻译行，链接经 Media::url()。无资料返回空数组。
+     */
+    public function productDownloads(): array
+    {
+        if ($this->isService()) {
+            return [];
+        }
+
+        $rows = EntityRelation::where('from_entity_id', $this->entity->id)
+            ->where('relation_type', EntityRelation::TYPE_OFFERS)
+            ->get();
+
+        $out = [];
+        foreach ($rows as $rel) {
+            $asset = Entity::withoutSiteScope()->find($rel->to_entity_id);
+            if ($asset === null || $asset->type !== Entity::TYPE_DOWNLOAD_ASSET) {
+                continue;
+            }
+            // 当前 locale 翻译行优先
+            if ($asset->translation_group) {
+                $locRow = Entity::withoutSiteScope()
+                    ->where('translation_group', $asset->translation_group)
+                    ->where('locale', $this->locale())
+                    ->first();
+                if ($locRow !== null) {
+                    $asset = $locRow;
+                }
+            }
+            $meta = is_array($asset->metadata) ? $asset->metadata : [];
+            $mediaId = $meta['media_id'] ?? null;
+            $url = is_numeric($mediaId) ? (Media::find((int) $mediaId)?->url() ?? '#') : '#';
+            $out[] = [
+                'name'     => $asset->name,
+                'type'     => (string) ($meta['type'] ?? ''),
+                'language' => (string) ($meta['language'] ?? ''),
+                'version'  => (string) ($meta['version'] ?? ''),
+                'url'      => $url,
+            ];
+        }
+
+        return $out;
+    }
+
     public function faqs(): array
     {
         return $this->isService()
@@ -240,11 +288,12 @@ class EntityRenderContext implements RenderContext
             ];
         }
 
-        // 使用步骤 → 适用场景 → 规格
+        // 使用步骤 → 适用场景 → 规格 → 技术资料下载（无资料时 download_panel 自空渲染）
         return [
             new VirtualBlock('entity_steps', []),
             new VirtualBlock('entity_relations', ['part' => 'scenes']),
             new VirtualBlock('entity_specifications', []),
+            new VirtualBlock('download_panel', []),
         ];
     }
 
@@ -328,6 +377,7 @@ class EntityRenderContext implements RenderContext
             // TD-63 grid context
             'catalog' => $this->resource,
             'lineSlug' => $this->resource['line'] ?? null,
+            'downloads' => $this->productDownloads(),
         ]);
     }
 

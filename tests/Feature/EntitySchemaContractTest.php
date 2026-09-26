@@ -59,8 +59,9 @@ class EntitySchemaContractTest extends TestCase
         $this->assertSame('Acme Automotive Case', $schema['name']);
         $this->assertSame('Reduced rust by 60%', $schema['description']);
         $this->assertSame('zh-CN', $schema['inLanguage']);
-        // 2a 未建 /cases 路由 → PublicUrl 返回 null → 不输出 url（Public Render Contract）
-        $this->assertArrayNotHasKey('url', $schema);
+        // 18R-2b：/cases 路由已建，case_study public=true → Schema 输出指向详情页的 url
+        $this->assertArrayHasKey('url', $schema);
+        $this->assertStringContainsString('/cases/acme-case', $schema['url']);
     }
 
     public function test_download_asset_outputs_no_json_ld(): void

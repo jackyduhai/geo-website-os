@@ -7,6 +7,8 @@
   $isOrg = $type === 'organization';
   $isLocation = $type === 'location';
   $isService = $type === 'service';
+  $isCaseStudy = $type === 'case_study';
+  $isDownloadAsset = $type === 'download_asset';
   use App\Support\Localization\LocaleRegistry;
   $isDefault = $transLocale === LocaleRegistry::default();
   $localeLabels = ['zh-CN' => '中文', 'en' => 'English'];
@@ -44,6 +46,9 @@
       @elseif($type==='service')
         <a class="btn btn-sm" target="_blank" rel="noopener"
            href="{{ url('/solutions/'.$entity->slug.'/') }}">在前台查看</a>
+      @elseif($type==='case_study')
+        <a class="btn btn-sm" target="_blank" rel="noopener"
+           href="{{ url('/cases/'.$entity->slug) }}">在前台查看</a>
       @endif
     @endif
   </h2>
@@ -188,6 +193,67 @@
         <div class="form-row"><label>方案标题引导</label>
           <input type="text" name="svc_title_q" value="{{ old('svc_title_q', $meta['title_q'] ?? '') }}" maxlength="255">
           @error('svc_title_q')<div class="field-err">{{ $message }}</div>@enderror
+        </div>
+      </div>
+    @endif
+
+    {{-- 客户案例专属（metadata：industry/scenario/challenge/solution/result；禁 CRM 字段） --}}
+    @if($isDefault && $isCaseStudy)
+      <h2 class="mt-2">客户案例信息</h2>
+      <div class="form-grid">
+        <div class="form-row"><label>行业</label>
+          <input type="text" name="case_industry" value="{{ old('case_industry', $meta['industry'] ?? '') }}" maxlength="128">
+          @error('case_industry')<div class="field-err">{{ $message }}</div>@enderror
+        </div>
+        <div class="form-row"><label>场景</label>
+          <input type="text" name="case_scenario" value="{{ old('case_scenario', $meta['scenario'] ?? '') }}" maxlength="128">
+          @error('case_scenario')<div class="field-err">{{ $message }}</div>@enderror
+        </div>
+      </div>
+      <div class="form-row"><label>挑战</label>
+        <textarea name="case_challenge" rows="3">{{ old('case_challenge', $meta['challenge'] ?? '') }}</textarea>
+        @error('case_challenge')<div class="field-err">{{ $message }}</div>@enderror
+      </div>
+      <div class="form-row"><label>解决方案</label>
+        <textarea name="case_solution" rows="3">{{ old('case_solution', $meta['solution'] ?? '') }}</textarea>
+        @error('case_solution')<div class="field-err">{{ $message }}</div>@enderror
+      </div>
+      <div class="form-row"><label>成效 / 结果</label>
+        <textarea name="case_result" rows="3">{{ old('case_result', $meta['result'] ?? '') }}</textarea>
+        @error('case_result')<div class="field-err">{{ $message }}</div>@enderror
+      </div>
+      <p class="hint">关联产品 / 客户组织（role=customer）经「实体关系」维护；客户名称等 CRM 字段不存于案例 metadata。</p>
+    @endif
+
+    {{-- 下载资料专属（metadata：media_id/type/language/version；无独立公开页） --}}
+    @if($isDefault && $isDownloadAsset)
+      <h2 class="mt-2">下载资料信息</h2>
+      <div class="form-grid">
+        <div class="form-row"><label><span class="label-with-tip">资料文件（媒体库）
+          <x-admin-tip text="选择 PDF / 手册等文件；前台经产品 offers 关系在产品详情下载区展示，无独立下载页。"/></span></label>
+          <select name="asset_media_id" class="select">
+            <option value="">— 选择文件 —</option>
+            @foreach(($mediaDocs ?? []) as $m)
+              <option value="{{ $m->id }}" @selected((string) old('asset_media_id', $meta['media_id'] ?? '') === (string) $m->id)>{{ basename($m->path) }}</option>
+            @endforeach
+          </select>
+          @error('asset_media_id')<div class="field-err">{{ $message }}</div>@enderror
+        </div>
+        <div class="form-row"><label>资料类型</label>
+          <select name="asset_type" class="select">
+            @foreach(['datasheet','manual','certificate','whitepaper','brochure'] as $tOpt)
+              <option value="{{ $tOpt }}" @selected(old('asset_type', $meta['type'] ?? '') === $tOpt)>{{ $tOpt }}</option>
+            @endforeach
+          </select>
+          @error('asset_type')<div class="field-err">{{ $message }}</div>@enderror
+        </div>
+        <div class="form-row"><label>语言</label>
+          <input type="text" name="asset_language" value="{{ old('asset_language', $meta['language'] ?? '') }}" maxlength="16" placeholder="zh / en">
+          @error('asset_language')<div class="field-err">{{ $message }}</div>@enderror
+        </div>
+        <div class="form-row"><label>版本</label>
+          <input type="text" name="asset_version" value="{{ old('asset_version', $meta['version'] ?? '') }}" maxlength="32" placeholder="1.0">
+          @error('asset_version')<div class="field-err">{{ $message }}</div>@enderror
         </div>
       </div>
     @endif

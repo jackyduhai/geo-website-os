@@ -76,7 +76,7 @@ class EntityGeoGraphContractTest extends TestCase
         $this->assertArrayNotHasKey('url', $node, 'download_asset 无公开页，节点不得带 url');
     }
 
-    public function test_case_study_node_has_no_url_in_2a(): void
+    public function test_case_study_node_has_public_url_in_2b(): void
     {
         $this->makeEntity(Entity::TYPE_CASE_STUDY, 'beta-case', 'Beta Case');
 
@@ -84,8 +84,9 @@ class EntityGeoGraphContractTest extends TestCase
 
         $node = collect($graph['entities'])->firstWhere('type', Entity::TYPE_CASE_STUDY);
         $this->assertNotNull($node);
-        // 2a 未建 /cases 路由：PublicUrl 对 case_study 暂返回 null（2b 接通后才有 url）
-        $this->assertArrayNotHasKey('url', $node, '2a case_study 无 /cases 路由，节点不得带 url');
+        // 18R-2b：/cases 路由已建，case_study public=true → 节点带 url（指向真实可访问详情页）
+        $this->assertArrayHasKey('url', $node, '2b case_study 应有 /cases/{slug} url');
+        $this->assertStringContainsString('/cases/beta-case', $node['url']);
     }
 
     public function test_cross_type_relation_edges_in_graph(): void

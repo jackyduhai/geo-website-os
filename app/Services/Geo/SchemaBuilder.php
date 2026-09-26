@@ -358,6 +358,33 @@ class SchemaBuilder
             ];
         }
 
+        // 18R-2b：CaseStudy 业务事实增强（AI 读成"企业→场景→产品→结果"，非文章）。
+        if ($e->type === \App\Models\Entity::TYPE_CASE_STUDY) {
+            if (! empty($metadata['industry'])) {
+                $data['industry'] = (string) $metadata['industry'];
+            }
+            if (! empty($metadata['result'])) {
+                $data['result'] = (string) $metadata['result'];
+            }
+            // about → 关联产品（related_to → product），按真实 EntityRelation
+            $about = [];
+            $relRows = \App\Models\EntityRelation::where('from_entity_id', $e->id)
+                ->where('relation_type', \App\Models\EntityRelation::TYPE_RELATED_TO)
+                ->get();
+            foreach ($relRows as $rel) {
+                $to = \App\Models\Entity::withoutSiteScope()->find($rel->to_entity_id);
+                if ($to && $to->type === \App\Models\Entity::TYPE_PRODUCT) {
+                    $about[] = [
+                        '@type' => 'Product',
+                        'name'  => $to->name,
+                    ];
+                }
+            }
+            if ($about !== []) {
+                $data['about'] = $about;
+            }
+        }
+
         return array_filter($data, fn ($v) => $v !== null && $v !== '');
     }
 

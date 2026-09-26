@@ -65,6 +65,9 @@ final class SectionSemantic
         'sys_about'      => ['about',      'brand',      'Organization', null],
         'sys_factory'    => ['trust',      'trust',      'Factory',      null],
         'sys_cooperation'=> ['conversion', 'conversion', 'Organization', 'contact'],
+        // 客户案例 / 下载面板（18R-2b）：受控词表内
+        'case_list'      => ['case',       'comparison', 'Case',         null],
+        'download_panel' => ['product',    'conversion', 'Product',      'download'],
     ];
 
     /**

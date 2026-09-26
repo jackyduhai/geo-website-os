@@ -205,9 +205,11 @@ class SearchIndexBuilder
             'site_id'       => (int) $e->site_id,
             'locale'        => (string) $e->locale,
             'slug'          => (string) $e->slug,
-            'path'          => $e->type === Entity::TYPE_SERVICE
-                ? '/solutions/'.$e->slug.'/'
-                : '/products/'.$e->slug,
+            'path'          => match ($e->type) {
+                Entity::TYPE_SERVICE    => '/solutions/'.$e->slug.'/',
+                Entity::TYPE_CASE_STUDY => '/cases/'.$e->slug,
+                default                 => '/products/'.$e->slug,
+            },
             'title'         => mb_substr((string) $e->name, 0, 200),
             'summary'       => (string) ($e->summary ?? ''),
             'body'          => self::plainText((string) ($e->description ?? '')),

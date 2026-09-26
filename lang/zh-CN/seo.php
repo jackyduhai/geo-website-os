@@ -80,4 +80,5 @@ return [
     'search_title'                   => '站内搜索',
     'search_title_q'                 => '搜索：:q',
     'search_desc'                    => '站内内容检索',
+    'cases_index_desc'               => '各行业客户落地案例、挑战与成效。',
 ];

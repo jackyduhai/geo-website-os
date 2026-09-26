@@ -80,4 +80,5 @@ return [
     'search_title'                   => 'Search',
     'search_title_q'                 => 'Search: :q',
     'search_desc'                    => 'Site content search',
+    'cases_index_desc'               => 'Customer case studies, challenges and results across industries.',
 ];

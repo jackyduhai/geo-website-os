@@ -89,6 +89,31 @@ class SitemapBuilder
                 }
             }
 
+            // 客户案例（18R-2b）：仅当存在已发布且可索引案例时才收录总览 + 详情，
+            // 避免零案例时把会 404 的 /cases/ 写进 sitemap。
+            $caseRows = PublicIndex::entityQuery()->forLocale(LocaleContext::current())
+                ->ofType(\App\Models\Entity::TYPE_CASE_STUDY)->orderBy('sort_order')->get();
+            $caseSlugs = [];
+            foreach ($caseRows as $case) {
+                if (in_array($case->slug, $indexableEntitySlugs, true)) {
+                    $caseSlugs[] = $case->slug;
+                }
+            }
+            if ($caseSlugs !== []) {
+                $add(PublicUrl::url('cases/'), 'monthly', '0.8');
+                foreach ($caseRows as $case) {
+                    if (! in_array($case->slug, $caseSlugs, true)) {
+                        continue;
+                    }
+                    $add(
+                        PublicUrl::caseStudy($case->slug),
+                        'monthly',
+                        '0.7',
+                        ($case->updated_at ?? $case->published_at)?->toDateString()
+                    );
+                }
+            }
+
             // 工厂与合作：仅有实质内容时收录，避免收录会 404 的地址
             if (Catalog::hasProduction()) {
                 $add(PublicUrl::url('factory/'), 'monthly', '0.7');

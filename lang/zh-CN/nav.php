@@ -4,6 +4,7 @@ return [
     'home'         => '首页',
     'products'     => '产品中心',
     'solutions'    => '应用场景',
+    'cases'        => '客户案例',
     'about'        => '关于我们',
     'contact'      => '联系我们',
     'cooperation'  => '合作方式',

@@ -306,4 +306,17 @@ return [
     'consent_deny'   => '拒绝',
     'consent_aria'   => 'Cookie / 统计同意选择',
 
+    // ---- 客户案例（18R-2b） ----
+    'cases_eyebrow'   => 'CASE STUDIES · 客户案例',
+    'cases_h1'        => '客户案例',
+    'cases_lead'      => '真实行业场景下的落地实践与成效。',
+    'case_industry'   => '行业',
+    'case_scenario'   => '场景',
+    'case_challenge'  => '挑战',
+    'case_solution'   => '解决方案',
+    'case_result'     => '成效',
+    'case_products'   => '相关产品',
+    'case_customer'   => '客户',
+    'downloads_h2'    => '技术资料下载',
+
 ];

@@ -4,6 +4,7 @@ return [
     'home'         => 'Home',
     'products'     => 'Products',
     'solutions'    => 'Solutions',
+    'cases'        => 'Case Studies',
     'about'        => 'About Us',
     'contact'      => 'Contact Us',
     'cooperation'  => 'Cooperation',

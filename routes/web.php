@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Geo\FeedController;
 use App\Http\Controllers\Site\AboutController;
+use App\Http\Controllers\Site\CaseController;
 use App\Http\Controllers\Site\ContactController;
 use App\Http\Controllers\Site\CooperationController;
 use App\Http\Controllers\Site\FactoryController;
@@ -62,6 +63,13 @@ $registerFrontend = function (string $locale, string $nameSuffix): void {
     // 场景是否存在由当前站 Catalog 决定，show() 内查无即 404
     Route::get('solutions/{scene}{slash?}', [SolutionController::class, 'show'])
         ->where('scene', '[a-z0-9-]+')->where('slash', '/?')->defaults('_slash', 1)->name('solutions.show'.$nameSuffix);
+
+    // ---------- 客户案例（18R-2b）：列表 /cases + 详情 /cases/{slug} ----------
+    // 案例是否存在由当前站已发布 case_study Entity 决定，show() 内查无即 404。
+    Route::get('cases{slash?}', [CaseController::class, 'index'])
+        ->where('slash', '/?')->defaults('_slash', 1)->name('cases.index'.$nameSuffix);
+    Route::get('cases/{slug}{slash?}', [CaseController::class, 'show'])
+        ->where('slug', '[a-z0-9-]+')->where('slash', '/?')->name('cases.show'.$nameSuffix);
 
     // ---------- 工厂与资质 / 合作方式 ----------
     Route::get('factory{slash?}', [FactoryController::class, 'show'])

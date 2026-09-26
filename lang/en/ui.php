@@ -306,4 +306,17 @@ return [
     'consent_deny'   => 'Decline',
     'consent_aria'   => 'Cookie / analytics consent choices',
 
+    // ---- Case Studies (18R-2b) ----
+    'cases_eyebrow'   => 'CASE STUDIES',
+    'cases_h1'        => 'Case Studies',
+    'cases_lead'      => 'Real-world implementations and outcomes across industries.',
+    'case_industry'   => 'Industry',
+    'case_scenario'   => 'Scenario',
+    'case_challenge'  => 'Challenge',
+    'case_solution'   => 'Solution',
+    'case_result'     => 'Result',
+    'case_products'   => 'Related Products',
+    'case_customer'   => 'Customer',
+    'downloads_h2'    => 'Technical Resources',
+
 ];

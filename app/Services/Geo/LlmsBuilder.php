@@ -5,6 +5,7 @@ namespace App\Services\Geo;
 use App\Support\Catalog;
 use App\Support\PublicIndex;
 use App\Support\PublicUrl;
+use App\Support\Localization\LocaleContext;
 
 /**
  * llms.txt 生成器（v0.7 IA；P-STEP 14 / D.2 起结构化事实改由站点隔离 Catalog 驱动，遵循 llmstxt.org）
@@ -172,6 +173,28 @@ class LlmsBuilder
                  . ($names ? '：推荐组合为 ' . implode('、', $names) : '');
         }
         $L[] = '';
+
+        // ---------- 客户案例（18R-2b：仅当存在已发布且可索引案例时输出，避免空段落） ----------
+        $caseRows = PublicIndex::entityQuery()->forLocale(LocaleContext::current())
+            ->ofType(\App\Models\Entity::TYPE_CASE_STUDY)->orderBy('sort_order')->get();
+        $caseList = [];
+        foreach ($caseRows as $case) {
+            if (in_array($case->slug, $indexableEntitySlugs, true)) {
+                $caseList[] = $case;
+            }
+        }
+        if ($caseList !== []) {
+            $L[] = '## 客户案例';
+            $L[] = '';
+            $L[] = '- [客户案例](' . PublicUrl::url('cases/') . ')：各行业落地实践与成效';
+            foreach ($caseList as $case) {
+                $meta = is_array($case->metadata) ? $case->metadata : [];
+                $ind = $meta['industry'] ?? '';
+                $suffix = $ind !== '' ? '：' . $ind : '';
+                $L[] = '- [' . $case->name . '](' . PublicUrl::caseStudy($case->slug) . ')' . $suffix;
+            }
+            $L[] = '';
+        }
 
         // ---------- 合作与信任（仅链接真实可访问的页面） ----------
         $L[] = '## 合作与信任';
@@ -368,6 +391,28 @@ class LlmsBuilder
             $L[] = '- [' . $scene['name'] . '](' . PublicUrl::solution($scene['slug']) . ')';
         }
         $L[] = '';
+
+        // ---------- Case Studies (18R-2b: only when published indexable cases exist) ----------
+        $caseRowsEn = PublicIndex::entityQuery()->forLocale('en')
+            ->ofType(\App\Models\Entity::TYPE_CASE_STUDY)->orderBy('sort_order')->get();
+        $caseListEn = [];
+        foreach ($caseRowsEn as $case) {
+            if (in_array($case->slug, $indexableEntitySlugs, true)) {
+                $caseListEn[] = $case;
+            }
+        }
+        if ($caseListEn !== []) {
+            $L[] = '## Case Studies';
+            $L[] = '';
+            $L[] = '- [Case Studies](' . PublicUrl::url('cases/') . '): implementations and results across industries';
+            foreach ($caseListEn as $case) {
+                $meta = is_array($case->metadata) ? $case->metadata : [];
+                $ind = $meta['industry'] ?? '';
+                $suffix = $ind !== '' ? ': ' . $ind : '';
+                $L[] = '- [' . $case->name . '](' . PublicUrl::caseStudy($case->slug) . ')' . $suffix;
+            }
+            $L[] = '';
+        }
 
         // ---------- Cooperation & trust ----------
         $L[] = '## Cooperation & Trust';

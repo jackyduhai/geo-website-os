@@ -434,6 +434,46 @@ return [
             'help' => '系统块：合作方式 / 流程 / FAQ，数据来自 Catalog / Pages，不可手动添加。',
         ],
 
+        // ---------------- 客户案例（18R-2b）：CaseStudy Entity 直驱系统块 ----------------
+        'case_list' => [
+            'label' => '客户案例总览主体（系统）',
+            'category' => 'system',
+            'icon' => 'doc',
+            'system' => true,
+            'per_locale' => true,
+            'data_source' => false,
+            'allowed' => ['listing/main'],
+            'fields' => [],
+            'default' => [],
+            'help' => '系统块：客户案例卡片网格，数据来自已发布 case_study Entity，不可手动添加。',
+        ],
+
+        'case_detail' => [
+            'label' => '客户案例详情主体（系统）',
+            'category' => 'system',
+            'icon' => 'doc',
+            'system' => true,
+            'per_locale' => true,
+            'data_source' => false,
+            'allowed' => ['detail/main'],
+            'fields' => [],
+            'default' => [],
+            'help' => '系统块：案例挑战/方案/成效 + 关联产品 + 客户组织，由 case_study Entity 直驱，不可手动添加。',
+        ],
+
+        'download_panel' => [
+            'label' => '产品技术资料下载（系统）',
+            'category' => 'system',
+            'icon' => 'doc',
+            'system' => true,
+            'per_locale' => true,
+            'data_source' => false,
+            'allowed' => ['detail/main'],
+            'fields' => [],
+            'default' => [],
+            'help' => '系统块：产品 offers 关联的下载资料（DownloadAsset），无资料不渲染，不可手动添加。',
+        ],
+
     ],
 
 ];

@@ -206,6 +206,10 @@ class EntityController extends Controller
             ]);
             $this->applyMetadata($request, $entity, $type);
             $this->applyPublication($entity);
+            // 18R-2b：经表单直接改为 published 时同样走案例发布门禁
+            if ($entity->type === Entity::TYPE_CASE_STUDY && $entity->status === Entity::STATUS_PUBLISHED) {
+                $this->assertCaseStudyPublishable($entity);
+            }
         }
 
         $entity->save();
@@ -239,6 +243,7 @@ class EntityController extends Controller
 
     public function publish(Entity $entity): RedirectResponse
     {
+        $this->assertCaseStudyPublishable($entity);
         $entity->status = Entity::STATUS_PUBLISHED;
         $this->applyPublication($entity);
         $entity->save();
@@ -246,6 +251,38 @@ class EntityController extends Controller
         $this->resetReadModels();
 
         return redirect()->back()->with('success', '实体已发布。');
+    }
+
+    /**
+     * 18R-2b 孤儿案例门禁：case_study 的价值在 AI 可解析的业务关系链，不在文章本身。
+     * 发布前必须同时具备 ≥1 related_to Product/Service + ≥1 related_to Organization(role=customer)。
+     */
+    private function assertCaseStudyPublishable(Entity $entity): void
+    {
+        if ($entity->type !== Entity::TYPE_CASE_STUDY) {
+            return;
+        }
+        $bizCount = 0;
+        $custCount = 0;
+        foreach (EntityRelation::where('from_entity_id', $entity->id)
+            ->where('relation_type', EntityRelation::TYPE_RELATED_TO)->get() as $rel) {
+            $to = Entity::find($rel->to_entity_id);
+            if ($to === null) {
+                continue;
+            }
+            if (in_array($to->type, [Entity::TYPE_PRODUCT, Entity::TYPE_SERVICE], true)) {
+                $bizCount++;
+            }
+            $meta = is_array($rel->metadata) ? $rel->metadata : [];
+            if ($to->type === Entity::TYPE_ORGANIZATION && ($meta['role'] ?? null) === 'customer') {
+                $custCount++;
+            }
+        }
+        if ($bizCount < 1 || $custCount < 1) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'status' => '客户案例发布失败：发布前必须至少关联 1 个产品/服务，并经实体关系关联 1 个客户组织（role=customer）。',
+            ]);
+        }
     }
 
     public function unpublish(Entity $entity): RedirectResponse
@@ -296,6 +333,9 @@ class EntityController extends Controller
 
         $mediaImages = Media::where('mime', 'like', 'image/%')
             ->orderByDesc('id')->limit(100)->get();
+        // 下载资料选择器：非图片文件（PDF / 手册等）
+        $mediaDocs = Media::where('mime', 'not like', 'image/%')
+            ->orderByDesc('id')->limit(200)->get();
 
         return view('admin.entities.form', [
             'entity'      => $entity,
@@ -304,6 +344,7 @@ class EntityController extends Controller
             'versions'    => $versions,
             'typeNames'   => self::types(),
             'mediaImages' => $mediaImages,
+            'mediaDocs'   => $mediaDocs,
         ]);
     }
 
@@ -357,6 +398,19 @@ class EntityController extends Controller
             if ($type === Entity::TYPE_SERVICE) {
                 $rules['svc_scope'] = ['nullable', 'string', 'max:255'];
                 $rules['svc_title_q'] = ['nullable', 'string', 'max:255'];
+            }
+            if ($type === Entity::TYPE_CASE_STUDY) {
+                $rules['case_industry'] = ['nullable', 'string', 'max:128'];
+                $rules['case_scenario'] = ['nullable', 'string', 'max:128'];
+                $rules['case_challenge'] = ['nullable', 'string'];
+                $rules['case_solution'] = ['nullable', 'string'];
+                $rules['case_result'] = ['nullable', 'string'];
+            }
+            if ($type === Entity::TYPE_DOWNLOAD_ASSET) {
+                $rules['asset_media_id'] = ['nullable', 'integer'];
+                $rules['asset_type'] = ['nullable', 'in:datasheet,manual,certificate,whitepaper,brochure'];
+                $rules['asset_language'] = ['nullable', 'string', 'max:16'];
+                $rules['asset_version'] = ['nullable', 'string', 'max:32'];
             }
         }
 
@@ -433,6 +487,27 @@ class EntityController extends Controller
         if ($type === Entity::TYPE_SERVICE) {
             $this->setOrUnset($metadata, 'scope', trim((string) $request->input('svc_scope')));
             $this->setOrUnset($metadata, 'title_q', trim((string) $request->input('svc_title_q')));
+        }
+
+        if ($type === Entity::TYPE_CASE_STUDY) {
+            // 仅允许 industry/scenario/challenge/solution/result（CRM 字段禁止入 metadata）
+            $this->setOrUnset($metadata, 'industry', trim((string) $request->input('case_industry')));
+            $this->setOrUnset($metadata, 'scenario', trim((string) $request->input('case_scenario')));
+            $this->setOrUnset($metadata, 'challenge', trim((string) $request->input('case_challenge')));
+            $this->setOrUnset($metadata, 'solution', trim((string) $request->input('case_solution')));
+            $this->setOrUnset($metadata, 'result', trim((string) $request->input('case_result')));
+        }
+
+        if ($type === Entity::TYPE_DOWNLOAD_ASSET) {
+            // media_id 指向 Media；type 受控枚举；无独立公开页
+            if ($mid = (int) $request->input('asset_media_id')) {
+                $metadata['media_id'] = $mid;
+            } else {
+                unset($metadata['media_id']);
+            }
+            $this->setOrUnset($metadata, 'type', trim((string) $request->input('asset_type')));
+            $this->setOrUnset($metadata, 'language', trim((string) $request->input('asset_language')));
+            $this->setOrUnset($metadata, 'version', trim((string) $request->input('asset_version')));
         }
 
         $entity->metadata = $metadata;

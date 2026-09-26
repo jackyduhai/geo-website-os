@@ -143,6 +143,12 @@ class PublicUrl
         return self::base() . self::localePrefix() . '/solutions/' . $slug . '/';
     }
 
+    /** 客户案例详情页（详情型，无尾斜杠）：/cases/{slug}。 */
+    public static function caseStudy(string $slug): string
+    {
+        return self::base() . self::localePrefix() . '/cases/' . $slug;
+    }
+
     /**
      * 实体的公开落地页 URL；无独立前台页（组织 / 人物 / 地点 / 主题 / 非核心产品 /
      * 无场景服务）时返回 null——调用方据此「不输出 url」，而不是输出一个会 404 的地址。
@@ -162,8 +168,8 @@ class PublicUrl
             Entity::TYPE_SERVICE => Catalog::scene($entity->slug) !== null
                 ? self::solution($entity->slug)
                 : null,
-            // TODO 2b: case_study → /cases/{slug}（Registry 已声明 public=true，
-            // 2a 未建路由，暂 fall through 到 default→null，geo.json 中 case_study 节点无 url）
+            // 18R-2b：客户案例有独立公开详情页 /cases/{slug}（路由已建）。
+            Entity::TYPE_CASE_STUDY => self::caseStudy($entity->slug),
             default => null,
         };
     }

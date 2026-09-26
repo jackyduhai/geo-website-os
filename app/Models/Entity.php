@@ -83,4 +83,22 @@ class Entity extends Model
     {
         return $query->where('type', $type);
     }
+
+    /**
+     * 反向查询：引用了某产品的已发布客户案例（18R-2b，回答"哪些案例证明该产品有效"）。
+     * CaseStudy --related_to--> Product；这里反向从 Product 找 case_study。
+     */
+    public static function relatedCaseStudiesForProduct(int $productId, ?string $locale = null): \Illuminate\Database\Eloquent\Builder
+    {
+        $caseIds = EntityRelation::where('to_entity_id', $productId)
+            ->where('relation_type', EntityRelation::TYPE_RELATED_TO)
+            ->pluck('from_entity_id');
+
+        $query = static::query()
+            ->published()
+            ->ofType(self::TYPE_CASE_STUDY)
+            ->whereIn('id', $caseIds);
+
+        return $locale !== null ? $query->forLocale($locale) : $query;
+    }
 }
