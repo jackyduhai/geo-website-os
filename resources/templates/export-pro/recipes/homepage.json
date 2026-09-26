@@ -1,0 +1,77 @@
+{
+    "key": "homepage",
+    "target": { "type": "home" },
+    "template": "home",
+    "blocks": [
+        {
+            "slot": "main",
+            "type": "hero",
+            "content": {
+                "eyebrow": { "zh-CN": "全球供应 · 品质可信", "en": "Global Supplier · Trusted Quality" },
+                "title": { "zh-CN": "值得信赖的出口合作伙伴", "en": "Your Reliable Export Partner" },
+                "subtitle": { "zh-CN": "面向全球客户，提供稳定品质、可靠交付与专业服务。", "en": "Serving customers worldwide with consistent quality, reliable delivery and expert support." },
+                "buttons": [
+                    { "label": { "zh-CN": "获取报价", "en": "Request a Quote" }, "url": "/contact/", "style": "primary" },
+                    { "label": { "zh-CN": "查看产品", "en": "View Products" }, "url": "/products/", "style": "secondary" }
+                ]
+            }
+        },
+        {
+            "slot": "main",
+            "type": "stats",
+            "content": {
+                "title": { "zh-CN": "全球实力", "en": "Global Reach" },
+                "items": [
+                    { "value": "10+", "label": { "zh-CN": "年出口经验", "en": "Years Exporting" } },
+                    { "value": "30+", "label": { "zh-CN": "服务国家与地区", "en": "Countries Served" } },
+                    { "value": "98%", "label": { "zh-CN": "按时交付率", "en": "On-time Delivery" } }
+                ]
+            }
+        },
+        {
+            "slot": "main",
+            "type": "feature_grid",
+            "content": {
+                "title": { "zh-CN": "为什么选择我们", "en": "Why Partner With Us" },
+                "columns": 3,
+                "items": [
+                    { "icon": "award", "title": { "zh-CN": "认证资质", "en": "Certified Quality" }, "text": { "zh-CN": "完善的质量认证，符合国际标准。", "en": "Comprehensive certifications meeting international standards." } },
+                    { "icon": "package", "title": { "zh-CN": "工厂实力", "en": "Factory Capacity" }, "text": { "zh-CN": "自有产能保障，订单稳定可控。", "en": "In-house capacity keeps orders stable and controlled." } },
+                    { "icon": "truck", "title": { "zh-CN": "可靠交付", "en": "Reliable Logistics" }, "text": { "zh-CN": "成熟出口流程，按时送达全球。", "en": "Mature export processes deliver on time, worldwide." } }
+                ]
+            }
+        },
+        {
+            "slot": "main",
+            "type": "product_grid",
+            "content": {
+                "title": { "zh-CN": "产品中心", "en": "Our Products" },
+                "subtitle": { "zh-CN": "满足全球客户多元需求", "en": "Meeting diverse needs across global markets" },
+                "source": { "mode": "all" },
+                "limit": 8
+            }
+        },
+        {
+            "slot": "main",
+            "type": "faq",
+            "content": {
+                "title": { "zh-CN": "常见问题", "en": "Frequently Asked Questions" },
+                "items": [
+                    { "q": { "zh-CN": "是否支持出口与定制？", "en": "Do you support export and customization?" }, "a": { "zh-CN": "支持。我们有成熟的出口流程并可按需求定制。", "en": "Yes — mature export processes and tailored solutions are available." } },
+                    { "q": { "zh-CN": "如何获取报价？", "en": "How can I get a quote?" }, "a": { "zh-CN": "提交需求后，我们会尽快与您联系并提供报价。", "en": "Send us your requirements and we will respond promptly with a quote." } }
+                ]
+            }
+        },
+        {
+            "slot": "main",
+            "type": "cta",
+            "content": {
+                "title": { "zh-CN": "准备好开始合作了吗？", "en": "Ready to Work Together?" },
+                "subtitle": { "zh-CN": "告诉我们您的需求，获取专业方案与报价。", "en": "Tell us your needs for a tailored plan and quote." },
+                "buttons": [
+                    { "label": { "zh-CN": "获取报价", "en": "Request a Quote" }, "url": "/contact/", "style": "primary" }
+                ]
+            }
+        }
+    ]
+}

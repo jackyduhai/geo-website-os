@@ -1,0 +1,31 @@
+{
+    "id": "education-pro",
+    "name": "Education OS Pro",
+    "version": "1.0.0",
+    "industry": ["education"],
+    "locales": ["zh-CN", "en"],
+    "theme": "default",
+    "identity": {
+        "name": "Education Professional",
+        "industry": "education",
+        "audience": ["training institution", "education provider", "online course creator"]
+    },
+    "purpose": {
+        "primary": "signups",
+        "secondary": ["brand_authority", "information"]
+    },
+    "entities": ["Organization", "Content", "Person", "Case"],
+    "conversion": {
+        "primary": "signup",
+        "secondary": ["contact", "appointment"]
+    },
+    "seo": {
+        "recommended_schema": ["Organization", "Article", "FAQPage", "Person"]
+    },
+    "requires": {
+        "components": ["hero", "feature_grid", "content_grid", "testimonial", "stats", "cta"]
+    },
+    "pages": ["home"],
+    "author": "GEO Website OS",
+    "license": "MIT"
+}

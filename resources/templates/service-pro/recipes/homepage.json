@@ -1,0 +1,78 @@
+{
+    "key": "homepage",
+    "target": { "type": "home" },
+    "template": "home",
+    "blocks": [
+        {
+            "slot": "main",
+            "type": "hero",
+            "content": {
+                "eyebrow": { "zh-CN": "专业服务 · 值得托付", "en": "Expert Service You Can Trust" },
+                "title": { "zh-CN": "专业团队，为你解决关键问题", "en": "Expert Teams Solving What Matters Most" },
+                "subtitle": { "zh-CN": "以成熟方法论与丰富经验，帮助客户做出更优决策、达成更好结果。", "en": "Proven methodology and deep experience help clients decide better and deliver results." },
+                "buttons": [
+                    { "label": { "zh-CN": "立即咨询", "en": "Get in Touch" }, "url": "/contact/", "style": "primary" },
+                    { "label": { "zh-CN": "了解服务", "en": "Our Services" }, "url": "#services", "style": "secondary" }
+                ]
+            }
+        },
+        {
+            "slot": "main",
+            "type": "feature_grid",
+            "content": {
+                "title": { "zh-CN": "服务体系", "en": "Our Services" },
+                "columns": 3,
+                "items": [
+                    { "icon": "users", "title": { "zh-CN": "专业咨询", "en": "Advisory" }, "text": { "zh-CN": "深入理解需求，提供清晰、可落地的方案。", "en": "We understand your needs and deliver clear, actionable plans." } },
+                    { "icon": "sliders", "title": { "zh-CN": "落地执行", "en": "Execution" }, "text": { "zh-CN": "全程跟进实施，确保方案真正产生成效。", "en": "We stay with implementation until results are achieved." } },
+                    { "icon": "chart", "title": { "zh-CN": "持续优化", "en": "Optimization" }, "text": { "zh-CN": "基于反馈持续迭代，让结果稳步提升。", "en": "We iterate on feedback to steadily improve outcomes." } }
+                ]
+            }
+        },
+        {
+            "slot": "main",
+            "type": "media_text",
+            "content": {
+                "media_id": null,
+                "alt": { "zh-CN": "方法论示意图", "en": "Methodology image" },
+                "title": { "zh-CN": "成熟方法论，让每一步都有依据", "en": "A Proven Method Behind Every Step" },
+                "body": { "zh-CN": "我们把多年经验沉淀为清晰的工作流程：诊断、设计、执行、复盘，确保每个项目都可预期、可衡量。", "en": "Years of experience are distilled into a clear flow — diagnose, design, execute, review — predictable and measurable." },
+                "button_label": "",
+                "button_url": "",
+                "reverse": true
+            }
+        },
+        {
+            "slot": "main",
+            "type": "testimonial",
+            "content": {
+                "title": { "zh-CN": "客户怎么说", "en": "Client Stories" },
+                "items": [
+                    { "quote": { "zh-CN": "团队专业、响应及时，帮助我们在关键问题上做出了正确决策。", "en": "A professional, responsive team that guided us to the right decision." }, "name": { "zh-CN": "张总", "en": "Mr. Zhang" }, "role": { "zh-CN": "项目负责人", "en": "Project Lead" }, "company": "" }
+                ]
+            }
+        },
+        {
+            "slot": "main",
+            "type": "faq",
+            "content": {
+                "title": { "zh-CN": "常见问题", "en": "Frequently Asked Questions" },
+                "items": [
+                    { "q": { "zh-CN": "如何开始一次合作？", "en": "How does an engagement begin?" }, "a": { "zh-CN": "先进行需求沟通，我们会在了解情况后给出方案与排期。", "en": "It starts with a conversation — we propose a plan and timeline after understanding your situation." } },
+                    { "q": { "zh-CN": "如何收费？", "en": "How is pricing determined?" }, "a": { "zh-CN": "根据项目范围与投入确定，欢迎联系获取具体报价。", "en": "Pricing depends on scope and effort — contact us for a tailored quote." } }
+                ]
+            }
+        },
+        {
+            "slot": "main",
+            "type": "cta",
+            "content": {
+                "title": { "zh-CN": "有问题需要专业支持？", "en": "Need Expert Support?" },
+                "subtitle": { "zh-CN": "联系我们，获取针对性的建议与方案。", "en": "Reach out for tailored advice and a clear plan." },
+                "buttons": [
+                    { "label": { "zh-CN": "立即咨询", "en": "Get in Touch" }, "url": "/contact/", "style": "primary" }
+                ]
+            }
+        }
+    ]
+}

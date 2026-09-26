@@ -1,0 +1,85 @@
+{
+    "key": "homepage",
+    "target": { "type": "home" },
+    "template": "home",
+    "blocks": [
+        {
+            "slot": "main",
+            "type": "hero",
+            "content": {
+                "eyebrow": { "zh-CN": "智能软件 · 高效增长", "en": "Smart Software · Faster Growth" },
+                "title": { "zh-CN": "让业务更高效的智能平台", "en": "The Smart Platform That Scales Your Business" },
+                "subtitle": { "zh-CN": "一体化产品能力，帮助团队协作更顺畅、决策更智能、增长更快速。", "en": "An all-in-one product that helps teams collaborate, decide smarter and grow faster." },
+                "buttons": [
+                    { "label": { "zh-CN": "预约演示", "en": "Book a Demo" }, "url": "/contact/", "style": "primary" },
+                    { "label": { "zh-CN": "了解功能", "en": "Explore Features" }, "url": "#features", "style": "secondary" }
+                ]
+            }
+        },
+        {
+            "slot": "main",
+            "type": "feature_grid",
+            "content": {
+                "title": { "zh-CN": "核心能力", "en": "Core Features" },
+                "columns": 3,
+                "items": [
+                    { "icon": "bolt", "title": { "zh-CN": "高效自动化", "en": "Powerful Automation" }, "text": { "zh-CN": "重复工作自动完成，把时间留给更重要的事。", "en": "Automate repetitive work and focus on what matters." } },
+                    { "icon": "chart", "title": { "zh-CN": "实时洞察", "en": "Real-time Insights" }, "text": { "zh-CN": "数据看板实时更新，业务状态一目了然。", "en": "Live dashboards keep every metric in clear view." } },
+                    { "icon": "lock", "title": { "zh-CN": "安全可靠", "en": "Secure by Design" }, "text": { "zh-CN": "企业级安全与权限保障，数据始终受控。", "en": "Enterprise-grade security and access control." } }
+                ]
+            }
+        },
+        {
+            "slot": "main",
+            "type": "product_grid",
+            "content": {
+                "title": { "zh-CN": "产品模块", "en": "Product Modules" },
+                "subtitle": { "zh-CN": "灵活组合，按需启用", "en": "Compose and enable modules as you need" },
+                "source": { "mode": "all" },
+                "limit": 6
+            }
+        },
+        {
+            "slot": "main",
+            "type": "logo_cloud",
+            "content": {
+                "title": { "zh-CN": "受到众多团队信赖", "en": "Trusted by Teams" },
+                "items": []
+            }
+        },
+        {
+            "slot": "main",
+            "type": "stats",
+            "content": {
+                "title": { "zh-CN": "增长看得见", "en": "Growth You Can Measure" },
+                "items": [
+                    { "value": "30%", "label": { "zh-CN": "效率提升", "en": "Efficiency Gain" } },
+                    { "value": "10k+", "label": { "zh-CN": "活跃用户", "en": "Active Users" } },
+                    { "value": "99.9%", "label": { "zh-CN": "服务可用性", "en": "Uptime" } }
+                ]
+            }
+        },
+        {
+            "slot": "main",
+            "type": "faq",
+            "content": {
+                "title": { "zh-CN": "常见问题", "en": "Frequently Asked Questions" },
+                "items": [
+                    { "q": { "zh-CN": "如何开始使用？", "en": "How do I get started?" }, "a": { "zh-CN": "注册后即可开通，我们也提供上手引导与演示。", "en": "Sign up to get started — onboarding and a demo are available." } },
+                    { "q": { "zh-CN": "是否支持与现有系统集成？", "en": "Does it integrate with existing systems?" }, "a": { "zh-CN": "支持，提供标准接口与常用工具对接。", "en": "Yes — standard APIs connect with the tools you already use." } }
+                ]
+            }
+        },
+        {
+            "slot": "main",
+            "type": "cta",
+            "content": {
+                "title": { "zh-CN": "想亲自体验产品？", "en": "Want to See It in Action?" },
+                "subtitle": { "zh-CN": "预约一次演示，了解它如何帮助你的团队。", "en": "Book a demo and see how it helps your team." },
+                "buttons": [
+                    { "label": { "zh-CN": "预约演示", "en": "Book a Demo" }, "url": "/contact/", "style": "primary" }
+                ]
+            }
+        }
+    ]
+}

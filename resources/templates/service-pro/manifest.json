@@ -1,0 +1,31 @@
+{
+    "id": "service-pro",
+    "name": "Professional Service OS Pro",
+    "version": "1.0.0",
+    "industry": ["professional-service"],
+    "locales": ["zh-CN", "en"],
+    "theme": "default",
+    "identity": {
+        "name": "Professional Service Firm",
+        "industry": "professional-service",
+        "audience": ["consulting firm", "professional services agency", "expert team"]
+    },
+    "purpose": {
+        "primary": "lead_generation",
+        "secondary": ["brand_authority", "information"]
+    },
+    "entities": ["Organization", "Service", "Person", "Case"],
+    "conversion": {
+        "primary": "contact",
+        "secondary": ["appointment", "demo"]
+    },
+    "seo": {
+        "recommended_schema": ["Organization", "Service", "FAQPage", "Person"]
+    },
+    "requires": {
+        "components": ["hero", "feature_grid", "media_text", "testimonial", "faq", "cta"]
+    },
+    "pages": ["home"],
+    "author": "GEO Website OS",
+    "license": "MIT"
+}

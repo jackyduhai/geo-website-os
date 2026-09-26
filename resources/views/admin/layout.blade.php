@@ -48,6 +48,7 @@
     ]],
     ['label'=>'外观与扩展','icon'=>'template','links'=>[
         ['主题管理', str_starts_with($routeName,'admin.themes'), route('admin.themes.index')],
+        ['模板生态', str_starts_with($routeName,'admin.templates'), route('admin.templates.index')],
         ['插件管理', str_starts_with($routeName,'admin.plugins'), route('admin.plugins.index')],
     ]],
     ['label'=>'站点设置','icon'=>'settings','links'=>[

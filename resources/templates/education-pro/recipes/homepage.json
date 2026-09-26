@@ -1,0 +1,77 @@
+{
+    "key": "homepage",
+    "target": { "type": "home" },
+    "template": "home",
+    "blocks": [
+        {
+            "slot": "main",
+            "type": "hero",
+            "content": {
+                "eyebrow": { "zh-CN": "专业教育 · 助力成长", "en": "Quality Education · Real Growth" },
+                "title": { "zh-CN": "让每一次学习都有收获", "en": "Make Every Lesson Count" },
+                "subtitle": { "zh-CN": "科学的课程体系与专业师资，陪伴学员稳步成长、达成目标。", "en": "A structured curriculum and expert teachers help learners grow and reach their goals." },
+                "buttons": [
+                    { "label": { "zh-CN": "立即报名", "en": "Enroll Now" }, "url": "/contact/", "style": "primary" },
+                    { "label": { "zh-CN": "了解课程", "en": "Explore Courses" }, "url": "#courses", "style": "secondary" }
+                ]
+            }
+        },
+        {
+            "slot": "main",
+            "type": "feature_grid",
+            "content": {
+                "title": { "zh-CN": "我们的教学优势", "en": "Why Learn With Us" },
+                "columns": 3,
+                "items": [
+                    { "icon": "users", "title": { "zh-CN": "专业师资", "en": "Expert Teachers" }, "text": { "zh-CN": "经验丰富的老师，讲解清晰易懂。", "en": "Experienced teachers who explain clearly." } },
+                    { "icon": "sliders", "title": { "zh-CN": "科学体系", "en": "Structured Curriculum" }, "text": { "zh-CN": "循序渐进的课程设计，学得扎实。", "en": "Step-by-step design for solid progress." } },
+                    { "icon": "award", "title": { "zh-CN": "陪伴服务", "en": "Supported Learning" }, "text": { "zh-CN": "答疑与反馈，学习路上不掉队。", "en": "Support and feedback keep learners on track." } }
+                ]
+            }
+        },
+        {
+            "slot": "main",
+            "type": "content_grid",
+            "content": {
+                "title": { "zh-CN": "精选课程", "en": "Featured Courses" },
+                "subtitle": { "zh-CN": "找到适合你的学习内容", "en": "Find the right course for you" },
+                "category_id": null,
+                "limit": 6,
+                "source": { "mode": "latest", "ids": [] }
+            }
+        },
+        {
+            "slot": "main",
+            "type": "testimonial",
+            "content": {
+                "title": { "zh-CN": "学员的成长故事", "en": "Learner Stories" },
+                "items": [
+                    { "quote": { "zh-CN": "课程内容扎实、老师耐心，学习后能力有了明显提升。", "en": "Solid content and patient teachers — my skills improved noticeably." }, "name": { "zh-CN": "小林", "en": "Lin" }, "role": { "zh-CN": "学员", "en": "Student" }, "company": "" }
+                ]
+            }
+        },
+        {
+            "slot": "main",
+            "type": "stats",
+            "content": {
+                "title": { "zh-CN": "教学成果", "en": "By the Numbers" },
+                "items": [
+                    { "value": "5000+", "label": { "zh-CN": "累计学员", "en": "Learners Taught" } },
+                    { "value": "96%", "label": { "zh-CN": "学员满意度", "en": "Satisfaction" } },
+                    { "value": "200+", "label": { "zh-CN": "精品课程", "en": "Courses Offered" } }
+                ]
+            }
+        },
+        {
+            "slot": "main",
+            "type": "cta",
+            "content": {
+                "title": { "zh-CN": "准备好开始学习了吗？", "en": "Ready to Start Learning?" },
+                "subtitle": { "zh-CN": "立即报名，迈出成长的第一步。", "en": "Enroll now and take the first step." },
+                "buttons": [
+                    { "label": { "zh-CN": "立即报名", "en": "Enroll Now" }, "url": "/contact/", "style": "primary" }
+                ]
+            }
+        }
+    ]
+}

@@ -1,0 +1,64 @@
+{
+    "key": "homepage",
+    "target": { "type": "home" },
+    "template": "home",
+    "blocks": [
+        {
+            "slot": "main",
+            "type": "hero",
+            "content": {
+                "eyebrow": { "zh-CN": "专业医疗 · 安心之选", "en": "Trusted Healthcare · Peace of Mind" },
+                "title": { "zh-CN": "以专业守护健康与信任", "en": "Professional Care for Health and Trust" },
+                "subtitle": { "zh-CN": "专业团队、规范流程与贴心服务，为每一位客户提供可靠保障。", "en": "Expert teams, standardized processes and caring service you can rely on." },
+                "buttons": [
+                    { "label": { "zh-CN": "立即预约", "en": "Book an Appointment" }, "url": "/contact/", "style": "primary" },
+                    { "label": { "zh-CN": "了解服务", "en": "Our Services" }, "url": "#services", "style": "secondary" }
+                ]
+            }
+        },
+        {
+            "slot": "main",
+            "type": "feature_grid",
+            "content": {
+                "title": { "zh-CN": "为什么值得信赖", "en": "Why Trust Us" },
+                "columns": 3,
+                "items": [
+                    { "icon": "users", "title": { "zh-CN": "专业团队", "en": "Expert Team" }, "text": { "zh-CN": "资质齐全、经验丰富的专业人员。", "en": "Qualified, experienced professionals." } },
+                    { "icon": "shield", "title": { "zh-CN": "规范安全", "en": "Safety First" }, "text": { "zh-CN": "严格遵循标准流程，安全有保障。", "en": "Strict adherence to standardized, safe processes." } },
+                    { "icon": "award", "title": { "zh-CN": "贴心服务", "en": "Caring Service" }, "text": { "zh-CN": "全程耐心沟通，关注每位客户需求。", "en": "Patient, attentive care focused on every need." } }
+                ]
+            }
+        },
+        {
+            "slot": "main",
+            "type": "service_grid",
+            "content": {
+                "title": { "zh-CN": "服务项目", "en": "Our Services" },
+                "subtitle": { "zh-CN": "覆盖多元健康需求", "en": "Covering a wide range of health needs" },
+                "source": { "mode": "all" },
+                "limit": 6
+            }
+        },
+        {
+            "slot": "main",
+            "type": "testimonial",
+            "content": {
+                "title": { "zh-CN": "客户的真实反馈", "en": "What Clients Say" },
+                "items": [
+                    { "quote": { "zh-CN": "服务专业、流程规范，整个过程让人非常安心。", "en": "Professional and well-organized — the whole experience felt reassuring." }, "name": { "zh-CN": "陈女士", "en": "Ms. Chen" }, "role": "", "company": "" }
+                ]
+            }
+        },
+        {
+            "slot": "main",
+            "type": "cta",
+            "content": {
+                "title": { "zh-CN": "需要预约或咨询？", "en": "Ready to Book or Ask?" },
+                "subtitle": { "zh-CN": "联系我们，获取专业的帮助与建议。", "en": "Contact us for professional help and advice." },
+                "buttons": [
+                    { "label": { "zh-CN": "立即预约", "en": "Book an Appointment" }, "url": "/contact/", "style": "primary" }
+                ]
+            }
+        }
+    ]
+}

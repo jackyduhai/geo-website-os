@@ -5,26 +5,31 @@ namespace App\Console\Commands;
 use App\Support\CliSiteContext;
 use App\Support\Templates\RecipeApplier;
 use App\Support\Templates\TemplatePackageManager;
+use App\Support\Templates\TemplateRecipeValidator;
 use Illuminate\Console\Command;
 
 /**
- * template:apply（P-STEP 18L-3a）。
+ * template:activate（P-STEP 18L-3b；取代 18L-3a 的 template:apply）。
  * ------------------------------------------------------------------
- * 激活模板包并把其配方应用到站点（幂等，可重复执行）：
- *   template:apply {pack} [--site=] [--recipe=key1,key2]
+ * 生命周期「启用模板」：校验 → 激活（注册包模板）→ 应用配方生成页面骨架。
  *
- * 流程：解析站点 → 校验包 → 激活（注册包模板）→ 逐个配方落地 Page / Block。
- * 只组合已注册核心 block，不携带可执行代码；不复制业务事实。
+ *   template:activate {pack} [--site=] [--site-id=] [--recipe=key1,key2]
+ *
+ * 应用前先跑三层 template:validate（manifest / recipe / runtime），存在 ERROR
+ * 则拒绝激活（把 18L-3a 那种运行时 500 提前到应用前）。
+ *
+ * defaults（settings/menus/seo）不在本动作落地，由 template:bootstrap 显式完成，
+ * 避免启用骨架时误覆盖站点设置。包只组合已注册 block，不携带可执行代码。
  */
-class TemplateApply extends Command
+class TemplateActivate extends Command
 {
-    protected $signature = 'template:apply
+    protected $signature = 'template:activate
                             {pack : 模板包 id}
                             {--site= : 站点 slug}
                             {--site-id= : 站点 ID}
                             {--recipe= : 只应用指定配方（逗号分隔，默认全部）}';
 
-    protected $description = 'Activate a template pack and apply its recipes to a site';
+    protected $description = 'Validate, activate a template pack and apply its recipes';
 
     public function handle(): int
     {
@@ -35,15 +40,23 @@ class TemplateApply extends Command
             return self::FAILURE;
         }
 
-        if (! TemplatePackageManager::exists($pack)) {
-            $this->error("Template pack not found or invalid: {$pack}");
-            foreach (TemplatePackageManager::invalidPacks() as $id => $errors) {
-                if ($id === $pack) {
-                    foreach ($errors as $error) {
-                        $this->line("  - {$error}");
-                    }
-                }
-            }
+        $packPath = TemplatePackageManager::basePath() . '/' . $pack;
+        if (! is_dir($packPath)) {
+            $this->error("Template pack not found: {$pack}");
+
+            return self::FAILURE;
+        }
+
+        // 三层校验，ERROR 阻断
+        $check = TemplateRecipeValidator::inspect($packPath);
+        foreach ($check['errors'] as $error) {
+            $this->line("  <error>- {$error}</error>");
+        }
+        foreach ($check['warnings'] as $warning) {
+            $this->line("  <comment>- {$warning}</comment>");
+        }
+        if ($check['errors'] !== []) {
+            $this->error("Template pack「{$pack}」failed validation; activation aborted.");
 
             return self::FAILURE;
         }

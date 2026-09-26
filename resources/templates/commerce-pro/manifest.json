@@ -1,0 +1,31 @@
+{
+    "id": "commerce-pro",
+    "name": "Brand Commerce OS Pro",
+    "version": "1.0.0",
+    "industry": ["brand-commerce"],
+    "locales": ["zh-CN", "en"],
+    "theme": "default",
+    "identity": {
+        "name": "Brand Commerce Professional",
+        "industry": "brand-commerce",
+        "audience": ["consumer brand", "DTC and e-commerce business", "retail brand"]
+    },
+    "purpose": {
+        "primary": "ecommerce_sales",
+        "secondary": ["brand_authority", "product_showcase"]
+    },
+    "entities": ["Organization", "Product", "Content", "Person"],
+    "conversion": {
+        "primary": "purchase",
+        "secondary": ["contact", "signup"]
+    },
+    "seo": {
+        "recommended_schema": ["Organization", "Product", "FAQPage", "Article"]
+    },
+    "requires": {
+        "components": ["hero", "media_text", "product_grid", "testimonial", "logo_cloud", "cta"]
+    },
+    "pages": ["home"],
+    "author": "GEO Website OS",
+    "license": "MIT"
+}

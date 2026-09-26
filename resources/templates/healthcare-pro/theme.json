@@ -1,0 +1,5 @@
+{
+    "theme": "default",
+    "darkMode": true,
+    "comment": "A template pack references an installed Theme for visual tokens; it does not ship theme code. The active theme is resolved from manifest.theme and can be switched independently without changing page structure."
+}

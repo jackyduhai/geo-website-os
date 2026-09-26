@@ -21,6 +21,7 @@ use App\Http\Controllers\Admin\RedirectController;
 use App\Http\Controllers\Admin\SeoMetaController;
 use App\Http\Controllers\Admin\SettingController;
 use App\Http\Controllers\Admin\SiteController;
+use App\Http\Controllers\Admin\TemplateController;
 use App\Http\Controllers\Admin\ThemeController;
 use Illuminate\Support\Facades\Route;
 
@@ -205,6 +206,19 @@ Route::middleware(['admin.auth', 'admin.site'])->group(function () {
         ->where('name', '[a-z0-9\-]+')->name('themes.activate');
     Route::get('themes/{name}/preview', [ThemeController::class, 'preview'])
         ->where('name', '[a-z0-9\-]+')->name('themes.preview');
+    // ---------- 模板生态（per-site；声明式文件资源，平行主题，不上传） ----------
+    Route::get('templates', [TemplateController::class, 'index'])->name('templates.index');
+    Route::post('templates/deactivate', [TemplateController::class, 'deactivate'])->name('templates.deactivate');
+    Route::post('templates/{pack}/activate', [TemplateController::class, 'activate'])
+        ->where('pack', '[a-z0-9\-]+')->name('templates.activate');
+    Route::post('templates/{pack}/bootstrap', [TemplateController::class, 'bootstrap'])
+        ->where('pack', '[a-z0-9\-]+')->name('templates.bootstrap');
+    Route::get('templates/{pack}/preview', [TemplateController::class, 'preview'])
+        ->where('pack', '[a-z0-9\-]+')->name('templates.preview');
+    Route::get('templates/{pack}/preview/{view}', [TemplateController::class, 'screenshot'])
+        ->where(['pack' => '[a-z0-9\-]+', 'view' => 'desktop|mobile'])->name('templates.screenshot');
+    Route::get('templates/{pack}/compare', [TemplateController::class, 'compare'])
+        ->where('pack', '[a-z0-9\-]+')->name('templates.compare');
 
     Route::get('plugins', [PluginController::class, 'index'])->name('plugins.index');
     Route::post('plugins/{slug}/enable', [PluginController::class, 'enable'])

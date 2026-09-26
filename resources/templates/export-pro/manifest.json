@@ -1,0 +1,31 @@
+{
+    "id": "export-pro",
+    "name": "International Export OS Pro",
+    "version": "1.0.0",
+    "industry": ["international-export"],
+    "locales": ["zh-CN", "en"],
+    "theme": "default",
+    "identity": {
+        "name": "International Export Professional",
+        "industry": "international-export",
+        "audience": ["export-oriented company", "global supplier", "international manufacturer"]
+    },
+    "purpose": {
+        "primary": "lead_generation",
+        "secondary": ["brand_authority", "product_showcase"]
+    },
+    "entities": ["Organization", "Product", "Service", "Factory"],
+    "conversion": {
+        "primary": "inquiry",
+        "secondary": ["contact", "download"]
+    },
+    "seo": {
+        "recommended_schema": ["Organization", "Product", "FAQPage"]
+    },
+    "requires": {
+        "components": ["hero", "stats", "feature_grid", "product_grid", "faq", "cta"]
+    },
+    "pages": ["home"],
+    "author": "GEO Website OS",
+    "license": "MIT"
+}

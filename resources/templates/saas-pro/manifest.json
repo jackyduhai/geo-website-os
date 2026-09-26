@@ -1,0 +1,31 @@
+{
+    "id": "saas-pro",
+    "name": "SaaS Technology OS Pro",
+    "version": "1.0.0",
+    "industry": ["saas-technology"],
+    "locales": ["zh-CN", "en"],
+    "theme": "default",
+    "identity": {
+        "name": "SaaS Technology Professional",
+        "industry": "saas-technology",
+        "audience": ["SaaS company", "AI and software vendor", "cloud service provider"]
+    },
+    "purpose": {
+        "primary": "lead_generation",
+        "secondary": ["product_showcase", "signups"]
+    },
+    "entities": ["Organization", "Product", "Service", "Content"],
+    "conversion": {
+        "primary": "demo",
+        "secondary": ["signup", "contact"]
+    },
+    "seo": {
+        "recommended_schema": ["Organization", "WebSite", "Product", "FAQPage"]
+    },
+    "requires": {
+        "components": ["hero", "feature_grid", "product_grid", "logo_cloud", "stats", "faq", "cta"]
+    },
+    "pages": ["home"],
+    "author": "GEO Website OS",
+    "license": "MIT"
+}

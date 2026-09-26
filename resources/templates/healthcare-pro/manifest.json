@@ -1,0 +1,31 @@
+{
+    "id": "healthcare-pro",
+    "name": "Healthcare OS Pro",
+    "version": "1.0.0",
+    "industry": ["healthcare"],
+    "locales": ["zh-CN", "en"],
+    "theme": "default",
+    "identity": {
+        "name": "Healthcare Professional",
+        "industry": "healthcare",
+        "audience": ["healthcare provider", "life sciences company", "medical organization"]
+    },
+    "purpose": {
+        "primary": "lead_generation",
+        "secondary": ["brand_authority", "information"]
+    },
+    "entities": ["Organization", "Service", "Person", "Location"],
+    "conversion": {
+        "primary": "appointment",
+        "secondary": ["contact"]
+    },
+    "seo": {
+        "recommended_schema": ["Organization", "Service", "FAQPage", "Person", "Place"]
+    },
+    "requires": {
+        "components": ["hero", "feature_grid", "service_grid", "testimonial", "cta"]
+    },
+    "pages": ["home"],
+    "author": "GEO Website OS",
+    "license": "MIT"
+}

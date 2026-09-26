@@ -5,6 +5,23 @@
     "industry": ["manufacturing"],
     "locales": ["zh-CN", "en"],
     "theme": "default",
+    "identity": {
+        "name": "Manufacturing Professional",
+        "industry": "manufacturing",
+        "audience": ["B2B manufacturer", "OEM factory", "industrial supplier"]
+    },
+    "purpose": {
+        "primary": "lead_generation",
+        "secondary": ["brand_authority", "product_showcase"]
+    },
+    "entities": ["Organization", "Product", "Service", "Factory"],
+    "conversion": {
+        "primary": "inquiry",
+        "secondary": ["download", "contact"]
+    },
+    "seo": {
+        "recommended_schema": ["Organization", "Product", "FAQPage"]
+    },
     "requires": {
         "components": [
             "hero",

@@ -1,0 +1,5 @@
+{
+    "comment": "Default navigation suggested by the pack (neutral, no industry-specific labels). Consumed by the template installer in 18L-3b; the RecipeApplier in 18L-3a does not modify menus.",
+    "main": [],
+    "footer": []
+}

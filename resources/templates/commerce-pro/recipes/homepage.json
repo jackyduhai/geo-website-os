@@ -1,0 +1,73 @@
+{
+    "key": "homepage",
+    "target": { "type": "home" },
+    "template": "home",
+    "blocks": [
+        {
+            "slot": "main",
+            "type": "hero",
+            "content": {
+                "eyebrow": { "zh-CN": "品牌故事 · 品质之选", "en": "Our Story · Quality You Can Trust" },
+                "title": { "zh-CN": "用心做好每一件产品", "en": "Crafted With Care, Made for You" },
+                "subtitle": { "zh-CN": "从选材到成品，坚持品质与体验，让好产品走进日常生活。", "en": "From sourcing to finish, we pursue quality and experience in every product." },
+                "buttons": [
+                    { "label": { "zh-CN": "立即选购", "en": "Shop Now" }, "url": "/products/", "style": "primary" },
+                    { "label": { "zh-CN": "了解品牌", "en": "Our Story" }, "url": "#story", "style": "secondary" }
+                ]
+            }
+        },
+        {
+            "slot": "main",
+            "type": "media_text",
+            "content": {
+                "media_id": null,
+                "alt": { "zh-CN": "品牌理念图片", "en": "Brand story image" },
+                "title": { "zh-CN": "我们相信，好产品自己会说话", "en": "Great Products Speak for Themselves" },
+                "body": { "zh-CN": "每一件产品都源于对细节的坚持。我们用心打磨材质、工艺与体验，只为交付值得长期陪伴的好物。", "en": "Every product begins with an obsession for detail — materials, craft and experience, built to last." },
+                "button_label": { "zh-CN": "了解更多", "en": "Learn More" },
+                "button_url": "/contact/",
+                "reverse": false
+            }
+        },
+        {
+            "slot": "main",
+            "type": "product_grid",
+            "content": {
+                "title": { "zh-CN": "热销好物", "en": "Best Sellers" },
+                "subtitle": { "zh-CN": "深受用户喜爱的产品", "en": "Products our customers love" },
+                "source": { "mode": "all" },
+                "limit": 8
+            }
+        },
+        {
+            "slot": "main",
+            "type": "testimonial",
+            "content": {
+                "title": { "zh-CN": "用户的真实评价", "en": "What Customers Say" },
+                "items": [
+                    { "quote": { "zh-CN": "品质超出预期，使用体验非常好，已经回购多次。", "en": "The quality exceeded my expectations — I've reordered many times." }, "name": { "zh-CN": "李女士", "en": "Ms. Li" }, "role": "", "company": "" },
+                    { "quote": { "zh-CN": "包装精致、细节用心，送朋友也很合适。", "en": "Beautiful packaging and thoughtful details — perfect as a gift." }, "name": { "zh-CN": "王先生", "en": "Mr. Wang" }, "role": "", "company": "" }
+                ]
+            }
+        },
+        {
+            "slot": "main",
+            "type": "logo_cloud",
+            "content": {
+                "title": { "zh-CN": "合作渠道", "en": "Where to Find Us" },
+                "items": []
+            }
+        },
+        {
+            "slot": "main",
+            "type": "cta",
+            "content": {
+                "title": { "zh-CN": "把心仪好物带回家", "en": "Bring Your Favorites Home" },
+                "subtitle": { "zh-CN": "立即选购，享受品质生活。", "en": "Shop now and enjoy quality every day." },
+                "buttons": [
+                    { "label": { "zh-CN": "立即选购", "en": "Shop Now" }, "url": "/products/", "style": "primary" }
+                ]
+            }
+        }
+    ]
+}

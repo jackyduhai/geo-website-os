@@ -1,0 +1,31 @@
+{
+    "id": "construction-pro",
+    "name": "Construction & Real Estate OS Pro",
+    "version": "1.0.0",
+    "industry": ["construction-realestate"],
+    "locales": ["zh-CN", "en"],
+    "theme": "default",
+    "identity": {
+        "name": "Construction Professional",
+        "industry": "construction-realestate",
+        "audience": ["construction company", "real estate developer", "building contractor"]
+    },
+    "purpose": {
+        "primary": "lead_generation",
+        "secondary": ["brand_authority", "product_showcase"]
+    },
+    "entities": ["Organization", "Content", "Person", "Location"],
+    "conversion": {
+        "primary": "contact",
+        "secondary": ["appointment"]
+    },
+    "seo": {
+        "recommended_schema": ["Organization", "Article", "FAQPage", "Place"]
+    },
+    "requires": {
+        "components": ["hero", "stats", "content_grid", "feature_grid", "faq", "cta"]
+    },
+    "pages": ["home"],
+    "author": "GEO Website OS",
+    "license": "MIT"
+}

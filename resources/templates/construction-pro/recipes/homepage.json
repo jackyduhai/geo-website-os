@@ -1,0 +1,78 @@
+{
+    "key": "homepage",
+    "target": { "type": "home" },
+    "template": "home",
+    "blocks": [
+        {
+            "slot": "main",
+            "type": "hero",
+            "content": {
+                "eyebrow": { "zh-CN": "建筑工程 · 品质建造", "en": "Quality Construction · Built to Last" },
+                "title": { "zh-CN": "以匠心筑就每一个项目", "en": "Building Every Project With Craft" },
+                "subtitle": { "zh-CN": "从设计到交付，以专业团队与规范管理，保障工程品质与进度。", "en": "From design to delivery, professional teams and disciplined management ensure quality and schedule." },
+                "buttons": [
+                    { "label": { "zh-CN": "咨询合作", "en": "Start a Project" }, "url": "/contact/", "style": "primary" },
+                    { "label": { "zh-CN": "了解实力", "en": "Our Capabilities" }, "url": "#projects", "style": "secondary" }
+                ]
+            }
+        },
+        {
+            "slot": "main",
+            "type": "stats",
+            "content": {
+                "title": { "zh-CN": "实力数据", "en": "By the Numbers" },
+                "items": [
+                    { "value": "15+", "label": { "zh-CN": "年行业经验", "en": "Years of Experience" } },
+                    { "value": "200+", "label": { "zh-CN": "完成项目", "en": "Projects Delivered" } },
+                    { "value": "98%", "label": { "zh-CN": "按时交付率", "en": "On-time Delivery" } }
+                ]
+            }
+        },
+        {
+            "slot": "main",
+            "type": "content_grid",
+            "content": {
+                "title": { "zh-CN": "精选项目", "en": "Featured Projects" },
+                "subtitle": { "zh-CN": "覆盖多类型工程实践", "en": "A portfolio across project types" },
+                "category_id": null,
+                "limit": 6,
+                "source": { "mode": "latest", "ids": [] }
+            }
+        },
+        {
+            "slot": "main",
+            "type": "feature_grid",
+            "content": {
+                "title": { "zh-CN": "核心能力", "en": "Core Capabilities" },
+                "columns": 3,
+                "items": [
+                    { "icon": "sliders", "title": { "zh-CN": "设计规划", "en": "Design & Planning" }, "text": { "zh-CN": "专业设计与周密规划，方案科学合理。", "en": "Professional design and careful planning." } },
+                    { "icon": "package", "title": { "zh-CN": "施工管理", "en": "Construction Management" }, "text": { "zh-CN": "规范施工流程，质量全程可控。", "en": "Standardized processes with full quality control." } },
+                    { "icon": "shield", "title": { "zh-CN": "安全保障", "en": "Safety Assurance" }, "text": { "zh-CN": "严格安全管理，保障项目顺利推进。", "en": "Strict safety management keeps projects on track." } }
+                ]
+            }
+        },
+        {
+            "slot": "main",
+            "type": "faq",
+            "content": {
+                "title": { "zh-CN": "常见问题", "en": "Frequently Asked Questions" },
+                "items": [
+                    { "q": { "zh-CN": "可以承接哪些类型的项目？", "en": "What types of projects do you take on?" }, "a": { "zh-CN": "覆盖多种建筑与工程类型，欢迎联系说明需求。", "en": "We handle a range of construction projects — contact us with your needs." } },
+                    { "q": { "zh-CN": "如何评估工期与报价？", "en": "How are timeline and pricing assessed?" }, "a": { "zh-CN": "在了解项目范围后提供明确排期与报价。", "en": "We provide a clear schedule and quote once the scope is understood." } }
+                ]
+            }
+        },
+        {
+            "slot": "main",
+            "type": "cta",
+            "content": {
+                "title": { "zh-CN": "有项目计划需要专业团队？", "en": "Have a Project in Mind?" },
+                "subtitle": { "zh-CN": "联系我们，获取针对性的方案与建议。", "en": "Contact us for a tailored plan and proposal." },
+                "buttons": [
+                    { "label": { "zh-CN": "咨询合作", "en": "Start a Project" }, "url": "/contact/", "style": "primary" }
+                ]
+            }
+        }
+    ]
+}

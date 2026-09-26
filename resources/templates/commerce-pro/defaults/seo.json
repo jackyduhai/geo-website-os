@@ -1,0 +1,4 @@
+{
+    "comment": "Default SEO suggested by the pack. The pack does not override existing SeoMeta; page-level SEO is still managed through the admin and resolved by SeoMetaResolver.",
+    "site": []
+}

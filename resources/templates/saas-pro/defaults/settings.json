@@ -1,0 +1,4 @@
+{
+    "comment": "Site settings suggested by the pack. Applied explicitly by the installer in 18L-3b; never forced onto an existing site by the RecipeApplier.",
+    "site_supported_locales": ["zh-CN", "en"]
+}
