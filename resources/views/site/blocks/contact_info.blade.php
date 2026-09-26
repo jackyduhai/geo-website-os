@@ -50,7 +50,7 @@
           <div>
             <dt>{{ __('ui.dt_address') }}</dt>
             <dd>{{ $ciCompany['address']['full'] }}
-              @if($ciMap)<a class="map-link" href="{{ $ciMap }}" target="_blank" rel="noopener">{{ __('ui.view_map') }} <span aria-hidden="true">→</span></a>@endif
+              @if($ciMap)<a class="map-link" href="{{ \App\Support\SafeUrl::sanitize($ciMap) }}" target="_blank" rel="noopener">{{ __('ui.view_map') }} <span aria-hidden="true">→</span></a>@endif
             </dd>
           </div>
         @endif

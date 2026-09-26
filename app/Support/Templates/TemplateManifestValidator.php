@@ -4,6 +4,7 @@ namespace App\Support\Templates;
 
 use App\Support\Blocks\BlockRegistry;
 use App\Support\Localization\LocaleRegistry;
+use App\Support\Platform\PlatformVersion;
 use App\Support\Theme\ThemeManager;
 
 /**
@@ -182,6 +183,29 @@ class TemplateManifestValidator
                 if (! BlockRegistry::has($component)) {
                     $errors[] = "依赖 block「{$component}」未注册";
                 }
+            }
+        }
+
+        // requires 平台 / 契约 API 版本兼容性（TD-130）
+        foreach (PlatformVersion::CONTRACT_KEYS as $contract) {
+            $required = trim((string) ($manifest['requires'][$contract] ?? ''));
+            if ($required === '') {
+                $errors[] = "manifest 缺少 requires.{$contract} 版本声明";
+                continue;
+            }
+            if (! self::isSemVer($required)) {
+                $errors[] = "requires.{$contract}「{$required}」不符合语义化版本";
+                continue;
+            }
+            $current = (string) PlatformVersion::current($contract);
+            $reqMajor = explode('.', $required)[0];
+            $curMajor = explode('.', $current)[0];
+            if ($reqMajor !== $curMajor) {
+                $errors[] = "requires.{$contract} 主版本不匹配（包要求 {$required}，平台为 {$current}）";
+                continue;
+            }
+            if (version_compare($current, $required, '<')) {
+                $errors[] = "requires.{$contract} 平台版本过低（包要求 {$required}，平台为 {$current}）";
             }
         }
 

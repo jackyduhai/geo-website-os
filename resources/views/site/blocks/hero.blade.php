@@ -27,7 +27,7 @@
                   default => 'btn-primary',
               };
             @endphp
-            <a class="btn {{ $bClass }} btn-lg" href="{{ $bUrl }}">{{ $bLabel }}<span class="arr">→</span></a>
+            <a class="btn {{ $bClass }} btn-lg" href="{{ \App\Support\SafeUrl::sanitize($bUrl) }}">{{ $bLabel }}<span class="arr">→</span></a>
           @endforeach
         </div>
       @endif

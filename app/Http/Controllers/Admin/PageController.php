@@ -413,7 +413,7 @@ class PageController extends Controller
             $style = $row['style'] ?? 'primary';
             $out[] = [
                 'label' => $label,
-                'url'   => trim((string) ($row['url'] ?? '')),
+                'url'   => \App\Support\SafeUrl::sanitize(trim((string) ($row['url'] ?? ''))),
                 'style' => in_array($style, ['primary', 'secondary', 'ghost'], true) ? $style : 'primary',
             ];
         }

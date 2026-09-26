@@ -23,6 +23,11 @@
         "recommended_schema": ["Organization", "Product", "FAQPage", "Article"]
     },
     "requires": {
+        "platform": "1.0.0",
+        "theme_api": "1.0.0",
+        "component_api": "1.0.0",
+        "geo_contract": "1.0.0",
+        "seo_contract": "1.0.0",
         "components": ["hero", "media_text", "product_grid", "testimonial", "logo_cloud", "cta"]
     },
     "pages": ["home"],

@@ -24,7 +24,7 @@
         @endif
         @if($mtBtnLabel !== '' && $mtBtnUrl !== '')
           <div class="actions" style="margin-top:var(--sp-6)">
-            <a class="btn btn-primary" href="{{ $mtBtnUrl }}">{{ $mtBtnLabel }}<span class="arr">→</span></a>
+            <a class="btn btn-primary" href="{{ \App\Support\SafeUrl::sanitize($mtBtnUrl) }}">{{ $mtBtnLabel }}<span class="arr">→</span></a>
           </div>
         @endif
       </div>

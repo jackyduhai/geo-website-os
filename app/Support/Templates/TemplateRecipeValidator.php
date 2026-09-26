@@ -211,6 +211,27 @@ class TemplateRecipeValidator
             }
         }
 
+        // URL 安全（TD-135）：不可信模板中的链接字段必须过 scheme 白名单。
+        //   - buttons 字段：逐行检查 url
+        //   - 键名含 url/href/link 的文本字段：检查值
+        foreach ($blockType->fields as $f) {
+            $fkey = (string) ($f['key'] ?? '');
+            $ftype = (string) ($f['type'] ?? '');
+            if ($ftype === 'buttons') {
+                foreach ((array) ($content[$fkey] ?? []) as $row) {
+                    $u = trim((string) (is_array($row) ? ($row['url'] ?? '') : ''));
+                    if ($u !== '' && ! \App\Support\SafeUrl::isSafe($u)) {
+                        $errors[] = "{$where} 按钮链接含不被允许的协议：{$u}";
+                    }
+                }
+            } elseif ($ftype === 'text' && preg_match('/url|href|link/i', $fkey)) {
+                $u = trim((string) ($content[$fkey] ?? ''));
+                if ($u !== '' && ! \App\Support\SafeUrl::isSafe($u)) {
+                    $errors[] = "{$where} 链接字段「{$fkey}」含不被允许的协议：{$u}";
+                }
+            }
+        }
+
         // locale map 缺语言（WARNING）
         if ($declaredLocales !== []) {
             foreach ($content as $ck => $cv) {

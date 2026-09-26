@@ -173,7 +173,11 @@ class MenuController extends Controller
             'position'    => ['required', 'in:main,footer,mobile'],
             'parent_ref'  => ['nullable', 'string', 'max:100'],
             'label'       => ['required', 'string', 'max:60'],
-            'url'         => ['nullable', 'string', 'max:255'],
+            'url'         => ['nullable', 'string', 'max:255', function ($attribute, $value, $fail) {
+                if ($value !== null && $value !== '' && ! \App\Support\SafeUrl::isSafe((string) $value)) {
+                    $fail('链接包含不被允许的协议（仅支持 http/https、相对路径、tel/mailto）');
+                }
+            }],
             'category_id' => ['nullable', 'exists:categories,id'],
             'sort'        => ['nullable', 'integer'],
             'target'      => ['nullable', 'integer', 'in:0,1'],

@@ -737,6 +737,10 @@ class AppServiceProvider extends ServiceProvider
     private static function resolveMenuHref(string $href): array
     {
         $href = trim($href);
+        // TD-135 Safe Runtime Boundary：菜单链接（含自定义项）统一过 scheme 白名单，危险协议回退 '#'。
+        if ($href !== '' && $href !== '#' && ! \App\Support\SafeUrl::isSafe($href)) {
+            return ['url' => '#', 'external' => false, 'path' => '/'];
+        }
         if ($href === '' || $href === '#') {
             return ['url' => '#', 'external' => false, 'path' => '/'];
         }

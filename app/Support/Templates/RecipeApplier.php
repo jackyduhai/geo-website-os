@@ -344,6 +344,10 @@ class RecipeApplier
     /** 内部 URL 按非默认语言加前缀（外部 / 绝对 / scheme URL 不动）。 */
     private static function localizeUrl(string $url, string $locale): string
     {
+        // TD-135 Safe Runtime Boundary：recipe 为不可信输入，危险 scheme 一律回退 '#'（不加语言前缀）。
+        if ($url !== '' && ! \App\Support\SafeUrl::isSafe($url)) {
+            return '#';
+        }
         if ($locale === LocaleRegistry::default() || $url === '') {
             return $url;
         }
