@@ -175,6 +175,8 @@ ACTIVE  →  FIXED  →  TESTED  →  ACCEPTED  →  CLOSED
 | **TD-134** | 无单一 **Template SDK**：第三方 / AI 模板开发规范散落各 audit 文档，缺版本化、可校验的单一契约入口 | **P-STEP 18L-4 Discovery** | **CLOSED（18L-4a）** | Template SDK Specification：Manifest / Section / Component / Token / Metadata / Compatibility / Migration + template:validate --strict 自检；文件分发，V1 不做在线上传 / Marketplace | **YES（P1）** | TD-130, TD-127 |
 | **TD-135** | **Safe Runtime Boundary（P0）**：模板 / 后台 Block / CTA / Media / Menu 等所有 URL 入口无统一净化，javascript:/data:/vbscript:/file: 可经按钮 url 落地执行（Discovery 实证 cta/hero/media_text 直接输出 href） | **P-STEP 18L-4** | **CLOSED（18L-4a，P0）** | 统一 **SafeUrlService**（normalizeUrl / validateScheme / sanitizeOutput）：允许 http/https/mailto/tel/内部 route，拒绝危险 scheme；保存 + 渲染双侧强制、所有入口共用；安全拦截不阻断主流程 | **YES（P0）** | TD-130 |
 
+| **TD-136** | **Menu Absolute URL Normalization**：菜单内部链接在 seed / 保存时被持久化为**绝对 URL**（依赖生成时 Host，实证 demo 库残留 http://localhost/products/、/contact/、/solutions/ 等中英链接），模板分发 / 多域名部署 / backup-restore 到不同域名时残留旧 Host | **P-STEP 18L-4b-3 观察 / 用户裁定** | **REGISTERED（DEFERRED v1.1，P2）** | 内部链接统一存**相对 URL**（渲染时按当前 Host 再生成绝对 URL），外部链接保持绝对；菜单 seed 与保存双侧归一化 + 多域名回归 | **NO（P2，v1.1）** | — |
+
 ### P4 — 观察与测试限制（默认 NON-BLOCKING，记录在案）
 
 | ID | Title | Source | Status | 说明 / 验收 | Blocks v1.0.0? |
