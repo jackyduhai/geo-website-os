@@ -23,6 +23,7 @@ use App\Http\Controllers\Admin\SettingController;
 use App\Http\Controllers\Admin\SiteController;
 use App\Http\Controllers\Admin\TemplateController;
 use App\Http\Controllers\Admin\ThemeController;
+use App\Http\Controllers\Admin\WizardController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -38,6 +39,9 @@ Route::post('login', [AuthController::class, 'login'])->name('login.attempt');
 // ---------- 以下全部需要登录 ----------
 // admin.site：超级管理员可经顶部切换器（session admin_site_slug）选择当前管理站点。
 Route::middleware(['admin.auth', 'admin.site'])->group(function () {
+    // 18S Setup Wizard
+    Route::get('wizard', [WizardController::class, 'index'])->name('wizard');
+    Route::post('wizard/{step}', [WizardController::class, 'save'])->name('wizard.save');
 
     Route::post('logout', [AuthController::class, 'logout'])->name('logout');
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
