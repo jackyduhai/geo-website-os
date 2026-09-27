@@ -62,7 +62,7 @@ jobs:
 
       - name: Run tests
         # Sequential execution only. The project does not ship brianium/paratest,
-        # and the 993/5118 baseline is validated with the stock sequential runner;
+        # and the 1225/6534 baseline is validated with the stock sequential runner;
         # do not switch to --parallel without adding and separately validating it.
         run: php artisan test
 
@@ -126,8 +126,8 @@ jobs:
             "ci_run_id": "${GITHUB_RUN_ID}",
             "artifact_checksum": "sha256:${CHECKSUM}",
             "test_results": {
-              "tests": 993,
-              "assertions": 5118,
+              "tests": 1225,
+              "assertions": 6534,
               "failed": 0,
               "skipped": 0
             },

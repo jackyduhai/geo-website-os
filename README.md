@@ -9,7 +9,7 @@ It is designed for the generative-search era: alongside traditional SEO (canonic
 ## Highlights
 
 - **Multi-site by default** — host resolution (`Host` header / domain), per-site rows, automatic site scoping on Eloquent, and site-aware caching. Data never leaks across sites, even with explicit cross-site query parameters.
-- **Entity & knowledge-graph core** — six generic entity types (`organization`, `person`, `product`, `service`, `location`, `topic`) plus typed `EntityRelation` edges, with database-enforced uniqueness and foreign keys.
+- **Entity & knowledge-graph core** — eight generic entity types (`organization`, `person`, `product`, `service`, `location`, `topic`, `case_study`, `download_asset`) plus typed `EntityRelation` edges, with database-enforced uniqueness and foreign keys.
 - **Unified SEO + GEO layer** — a `SeoMetaResolver` with per-resource inheritance chains, a `UrlResolverInterface` for canonical URLs, and builders for JSON-LD, `geo.json`, `llms.txt`, `sitemap.xml`, `feed.xml`, and `robots.txt`. Content and Entity are parallel resources with explicit, predictable rules.
 - **Themes & plugins** — override views per theme without touching engine internals; enable/disable extensions at runtime.
 - **Installer / upgrade / rollback** — `php artisan geo:install` bootstraps a clean site; `geo:upgrade` runs ordered, idempotent migrations; backup/restore is scripted and tested.

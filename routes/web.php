@@ -134,31 +134,5 @@ Route::middleware('locale:zh-CN')->group(function () use ($registerFrontend): vo
     $registerFrontend('zh-CN', '');
 });
 
-/**
- * 本地化路径的小 helper（供旧 /scenarios 兼容重定向使用）：
- * en 组内给路径加 /en 前缀，使重定向留在当前语言。
- */
-if (! function_exists('PublicUrlLocalized')) {
-function PublicUrlLocalized(string $path): string
-{
-    $locale = App\Support\Localization\LocaleContext::current();
-    $prefix = App\Support\Localization\LocaleRegistry::prefix($locale);
-
-    return url(($prefix !== '' ? '/' . $prefix : '') . $path);
-}
-}
-
-/**
- * 按当前 locale 取对应路由（zh 组无后缀，en 组后缀 .en，与注册时 nameSuffix 一致）。
- * 供动态表单等需要 locale 正确 action 的视图使用，避免在 Blade 内判断语言或硬编码 URL。
- */
-if (! function_exists('localized_route')) {
-function localized_route(string $base, $parameters = []): string
-{
-    $locale = App\Support\Localization\LocaleContext::current();
-    $prefix = App\Support\Localization\LocaleRegistry::prefix($locale);
-    $name = $base . ($prefix !== '' ? '.' . $prefix : '');
-
-    return route($name, $parameters);
-}
-}
+// 注：PublicUrlLocalized() 与 localized_route() 已移至 app/Support/helpers.php
+// （composer.json autoload.files 加载），确保 route:cache 生产模式下仍可用。

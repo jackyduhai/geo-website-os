@@ -3,7 +3,7 @@
 > 面向 Claude / Cursor / Codex / ChatGPT 等 AI coding agent。
 > 目标：让 AI 在本系统上完成建站、换品牌、换行业、改页面、接表单等任务时，**遵循同一套架构契约与安全边界**，不破坏 GEO/SEO，不制造第二事实源。
 >
-> License: MIT　·　Platform version: `config('geo.version')`（2.0.0）　·　Stack: Laravel 12 / PHP 8.4 / SQLite（FTS5）/ Vite + Tailwind（构建期）
+> License: MIT　·　Platform version: `config('geo.version')`（1.0.0）　·　Stack: Laravel 12 / PHP 8.4 / SQLite（FTS5）/ Vite + Tailwind（构建期）
 
 ---
 

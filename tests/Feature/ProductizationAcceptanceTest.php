@@ -14,7 +14,7 @@ use Tests\TestCase;
  *
  * 与隔离环境 Release 演练互补，覆盖：
  * E/F. Theme 往返 + Plugin 启停全程引擎输出稳定
- * G.   Upgrade 后（本套件即 2.0.0 schema）站点/SEO/GEO 全链路健康
+ * G.   Upgrade 后（本套件即 1.0.0 schema）站点/SEO/GEO 全链路健康
  * H.   Multi-Site 全维度隔离（含主题设置与缓存）
  * I.   Security 静态项（发布模板 debug 默认、auth 中间件、无硬编码密钥）
  */
