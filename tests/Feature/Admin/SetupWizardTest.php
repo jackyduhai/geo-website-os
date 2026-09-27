@@ -160,6 +160,34 @@ class SetupWizardTest extends TestCase
             ->assertSee('Solid Wood Dining Table');
     }
 
+    public function test_cjk_product_name_gets_stable_slug_without_500(): void
+    {
+        // TD-161：纯中文产品名经 Str::slug 得空串，应被归一为合法唯一 slug，无 500。
+        $this->useFreshSite();
+
+        $this->actingAs($this->super)->post(route('admin.wizard.save', 1), [
+            'company_name' => '木居家居', 'email' => 'hi@muju.test',
+        ])->assertRedirect();
+
+        $this->actingAs($this->super)->post(route('admin.wizard.save', 3), [
+            'products' => [['name' => '实木餐桌', 'summary' => '橡木']],
+        ])->assertRedirect();
+
+        $product = Entity::withoutSiteScope()
+            ->where('site_id', $this->fresh->id)->where('type', Entity::TYPE_PRODUCT)
+            ->firstOrFail();
+
+        $this->assertNotSame('', $product->slug);
+        $this->assertMatchesRegularExpression('/^[a-z0-9]+(?:-[a-z0-9]+)*$/', $product->slug);
+        $this->assertSame('实木餐桌', $product->name);
+
+        // 发布后详情页可访问（URL 安全 slug，非空）
+        $this->actingAs($this->super)->post(route('admin.wizard.save', 6), [])
+            ->assertRedirect(route('admin.dashboard'));
+        $this->get("https://fresh.test/products/{$product->slug}")->assertOk()
+            ->assertSee('实木餐桌');
+    }
+
     public function test_wizard_completed_flag_is_recorded_only_after_step6(): void
     {
         $this->useFreshSite();

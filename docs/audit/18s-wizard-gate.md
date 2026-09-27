@@ -3,7 +3,7 @@
 - 阶段：P-STEP 18S / Product Capability 1（首次运行 Setup Wizard）
 - 基线 HEAD：`7828750`（18S Discovery，read-only）
 - 本 Gate 范围：Wizard 代码收尾 + 独立回归 + Fresh 浏览器盲测 + SEO/GEO 对拍
-- 结论：**PASS（P0 = 0）**
+- 结论：**Final PASS（P0 = 0）/ CLOSED**（含 TD-161 修复复验，见第 6 节）
 
 ---
 
@@ -73,9 +73,9 @@ Wizard 是一层纯编排（orchestration）控制器，不引入第二套事实
 | 产品详情页 | 200 | 含 `application/ld+json`、`rel=canonical`（自指）、hreflang；无 Whoops/SQLSTATE |
 - 对比向导前后：既有回归套件（SchemaJsonLdTest / SitemapRobotsTest / SeoHttpIntegrationTest / Localization18FTest 等）锁定输出契约且全绿；live 端点结构一致、新实体被正确摄入，**无异常 / 无回归**。
 
-### 3.5 登记的技术债（仅登记，不在本 Gate 修复）
-- **TD-161（P2）**：step3 纯中文产品名经 `Str::slug()` 得到空串（实测 `Str::slug('实木餐桌') === ''`），可能命中 `entities.slug` NOT NULL 约束。本 Gate 测试与盲测均以 ASCII 名规避；需在控制器对空 slug 兜底（如 `product-<id>` 回退或 translit）。
-- **TD-162（P3）**：向导 step3 创建的产品未归入产品系列/分组；在已有分组目录（演示站）的 `/products/` 分组列表中不出现（详情页仍 200），空站平铺列表正常。
+### 3.5 登记的技术债
+- **TD-161（原 P2，升 P1 后已 FIXED）**：step3 纯中文产品名经 `Str::slug()` 得到空串（实测 `Str::slug('实木餐桌') === ''`），会命中 `entities.slug` NOT NULL。修复与复验见第 6 节。
+- **TD-162（P3，保持不动）**：向导 step3 创建的产品未归入产品系列/分组；在已有分组目录（演示站）的 `/products/` 分组列表中不出现（详情页仍 200），空站平铺列表正常。
 
 ## 4. Release Impact
 - 不改变既有数据结构、路由对外契约、SEO/GEO 输出结构；纯新增后台入口。
@@ -83,4 +83,24 @@ Wizard 是一层纯编排（orchestration）控制器，不引入第二套事实
 - 红线遵守：未 push、未配 remote、未触碰 rc1 / 19A（19A 永久 HOLD，除非明确放行）；未修改 DIR B。
 
 ## 5. 结论
-**PASS（P0 = 0）**。Capability 1 Setup Wizard 工程收尾完成，按要求 STOP，不自动进入 Capability 2（GEO Health）。
+**Final PASS（P0 = 0）/ CLOSED**。Capability 1 Setup Wizard 工程收尾完成（含 TD-161 修复复验），按要求 STOP，不自动进入 Capability 2（GEO Health）。
+
+---
+
+## 6. TD-161 修复复验（P1，FIXED）
+
+### 6.1 问题
+中文企业用户在向导 step3 输入纯中文产品名（如「实木餐桌」）时，`Str::slug()` 返回空串，命中 `entities.slug` NOT NULL → 500，无法完成首跑。
+
+### 6.2 落点裁定（最小、不造第二套）
+- 勘察确认：项目无独立 slug 生成器（`UrlGeneratorGoldenTest` 仅锁定路径尾斜杠格式）；实体 slug 契约为 `^[a-z0-9]+(?:-[a-z0-9]+)*$`、按 site+type+locale 唯一。后台 CRUD 由用户提供 slug 并校验，仅「自动生成 slug」的写入路径（向导 / 未来导入）会触发空串。
+- **落点：Entity 模型 `creating` 钩子做唯一兜底**，而非只在 Wizard 打补丁。理由：它是覆盖全部写入路径（向导、tinker、import、Seeder 未来若遗漏 slug）的统一安全网；仅当 `slug` 为空/空白时触发，对显式合法 slug 零影响。
+- 新增 `app/Support/EntitySlug.php`：`Str::slug(name)` 非空即用；为空则退化为 `{type}-{md5(site|type|locale|name)前10位}`——非空、`[a-z0-9]` URL 安全、对同一输入稳定可复现；再按 site+type+locale 冲突追加 `-2/-3…` 保证唯一。id 在 insert 前不可得，故用哈希等价唯一回退（符合任务约定）。
+- 未改 WizardController 业务逻辑、未改表结构、未改路由对外契约；不复制 Catalog/Schema 既有 URL 规则。
+
+### 6.3 证据
+- **Focused test**：新增 `test_cjk_product_name_gets_stable_slug_without_500`（输入「实木餐桌」→ 创建成功、slug 非空且匹配 `^[a-z0-9]+(-[a-z0-9]+)*$`、无 500、发布后详情页 200 且显示中文名）。SetupWizardTest 现为 5 用例 / 61 断言。
+- **Fresh 浏览器重跑**：全新 sqlite `D:\Temp\geo18S\geo2.sqlite`（:8128），真实浏览器登录后走完 6 步，step3 用纯中文名「实木餐桌」。DB 真值：产品 `id=19 slug=product-04a80d610a name=实木餐桌 status=published`；`site_name=木居家居`、`wizard_completed=true`。前台 `/products/product-04a80d610a` 200 且显示「实木餐桌」。
+- **全量回归**：**1199 passed / 6393 assertions / 0 failed / 0 skipped**（约 504s）；较修复前 1198/6381 净增 1 用例 / 12 断言，无回退。日志 `D:\Temp\full_regression2.log`。
+- **SEO/GEO 不回归**：详情页 `application/ld+json`、自指 canonical、hreflang 正常；`/sitemap.xml`、`/llms.txt`、`/geo.json` 均含新 slug。
+- TD-162 保持 P3 不动。

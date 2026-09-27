@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use App\Support\BelongsToSite;
+use App\Support\EntitySlug;
 use App\Support\PageCache;
 use App\Support\Translatable;
 
@@ -22,6 +23,14 @@ class Entity extends Model
 
     protected static function booted(): void
     {
+        // TD-161：slug 兜底。后台 CRUD 总是显式提供合法 slug；此处仅对 slug 为空的写入
+        // （向导 Str::slug(纯中文名) 得空串 / 未来批量导入）归一为合法唯一 slug，覆盖全部写入路径。
+        static::creating(function (self $entity): void {
+            if (trim((string) $entity->slug) === '') {
+                $entity->slug = EntitySlug::fromName((string) $entity->name, (string) $entity->type, $entity->site_id, $entity->locale);
+            }
+        });
+
         // P-STEP 18C / TD-08b：Entity（产品 / 服务 / 组织 / 地点……）是前台目录、
         // Schema、GEO、Sitemap 的权威数据源（17B 起 Product 正式成为 Entity）。任何
         // 写入 / 删除（后台、tinker、import、Seeder）都必须失效整页静态壳，否则匿名
