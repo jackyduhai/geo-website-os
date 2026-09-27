@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
 use App\Models\Media;
+use App\Support\MediaReferenceScanner;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -115,11 +116,44 @@ class MediaController extends Controller
         return back()->with('success', '媒体信息已更新');
     }
 
+    /**
+     * 删除媒体：先反查六路引用（Discovery §3.4）。存在阻断性引用时拒绝物理删除，
+     * 回退后台并审计 media.delete_blocked；无引用才删文件 + 删记录。
+     * ContentRevision 历史快照仅告警（回滚可能复活破图），不阻断。
+     */
     public function destroy(Media $media): RedirectResponse
     {
+        $refs = MediaReferenceScanner::for($media);
+        $blocking = array_values(array_filter($refs, fn (array $r) => empty($r['warning'])));
+
+        if (! empty($blocking)) {
+            $labels = array_map(fn (array $r) => $r['label'], array_slice($blocking, 0, 5));
+            AuditLog::record(
+                'media.delete_blocked',
+                '删除被阻止：' . $media->original_name,
+                ['total' => count($blocking), 'refs' => $labels],
+                'media',
+                $media->id
+            );
+
+            $msg = '该媒体被 ' . count($blocking) . ' 处引用，已拒绝删除：' . implode('；', $labels);
+            if (count($blocking) > 5) {
+                $msg .= ' 等共 ' . count($blocking) . ' 处';
+            }
+
+            return back()->with('error', $msg);
+        }
+
+        $warnings = MediaReferenceScanner::warnings($media);
+
         Storage::disk($media->disk)->delete($media->path);
         $media->delete();
 
-        return back()->with('success', '媒体已删除');
+        $success = '媒体已删除';
+        if (count($warnings) > 0) {
+            $success .= '；注意：' . count($warnings) . ' 条历史版本快照引用此文件，回滚可能复活破图';
+        }
+
+        return back()->with('success', $success);
     }
 }
