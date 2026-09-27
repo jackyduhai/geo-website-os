@@ -392,6 +392,7 @@ class EntityRenderContext implements RenderContext
                 $schema->organization(),
                 $schema->breadcrumb($this->crumbs()),
                 $schema->webPage($url, $this->resource['name'], $this->resource['desc'] ?? '', 'WebPage'),
+                $schema->entity($this->entity),
             ];
             if ($faqs !== []) {
                 $nodes[] = $schema->faqPageFromList($faqs, $url);
