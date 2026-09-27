@@ -127,20 +127,31 @@ MediaReferenceScanner::for(Media $m): array
 - `Content::scopePublished`（`Content.php:119-125`）只认 `status='published'`，所以 draft 和 archived **前台都不可见**——功能上等价；
 - 但后台列表、审计、未来的"归档恢复"流程会分叉：Admin 下架的文章进了 draft 草稿箱，Geoflow 下架的进了 archived，运营无法用一个视图看"所有下架内容"。
 
-### 4.3 v1.0 临时缓解（不改 GeoflowSync）
+### 4.3 v1.0 临时缓解（维持现状，不改 GeoflowSync 也不改 Admin unpublish）
 
-- **GeoflowSync::unpublish 维持 archived 不动**（上游语义="该主题已废弃，不要复活"，与人工"暂时撤回改稿"不同）；
-- 在 `ContentController::unpublish` 加注释 + AuditLog 区分 `content.unpublished`（draft）vs `content.archived_via_sync`（archived）；
-- 文档化两个状态的语义差异，v1.0 接受后台列表需按 status 筛选。
+- **两个入口的目标态本来就不同，v1.0 维持现状**：
+  - Admin Web 手动下线 → `published → draft`（内容仍由本站拥有，可再编辑、再发布；保留 `published_at` 作审计）；
+  - GeoflowSync 外部同步下线 → `published → archived`（上游权威下架，本站不得擅自一键复活）；
+- 在 `ContentController::unpublish` 与 `GeoflowSync::unpublish` 加注释，AuditLog 区分 `content.unpublished`（Admin→draft）vs `content.archived_via_sync`（Geoflow→archived）；
+- 文档化两状态语义差异，v1.0 接受后台列表需按 status 筛选。
 
-### 4.4 v1.1 统一方向
+### 4.4 v1.1 统一方向：Actor 决定目标态
 
-在 Publication Lifecycle Contract 中定义三态：
-- `draft` = 人工暂存/改稿中（可再发布）
-- `archived` = 上游/运营确认废弃（不可自动复活，需人工重新发布）
+Publication Lifecycle Contract 中定义三态，**目标态由触发动作的 Actor 决定，而非统一收敛到同一个状态**：
+
+| Actor | 动作 | 目标态 | 再发布路径 |
+|---|---|---|---|
+| Admin Web（本站运营） | 手动下线 | `published → draft` | 可直接再编辑→重走 ContentGate→publish；`published_at` 保留作审计 |
+| GeoflowSync（上游权威） | 外部同步下架 | `published → archived` | **禁止 Admin 一键再 publish**；必须先显式「取消归档」→draft→重新走 ContentGate→publish |
+
+状态语义：
+- `draft` = 本站拥有、暂存/改稿中（可再发布）
+- `archived` = 上游权威下架（本地不可擅自复活，需显式 unarchive 动作）
 - `published` = 已发布
 
-Admin 手动下架应改为 `archived`（与 GeoflowSync 对齐），draft 仅用于"从未发布过的草稿"。当前 Admin unpublish→draft 是历史遗留，v1.1 迁移时把已发布后下架的内容批量改 archived。
+**v1.0 现状即正确方向**，无需把 Admin unpublish 改成 archived。v1.1 要补的是：
+1. archived 状态的「取消归档」显式动作（带 ContentGate 重跑），堵住 Admin 直接 publish archived 内容的旁路；
+2. 后台列表提供「全部下线内容」聚合视图（draft + archived 合并展示，按来源 Actor 分列）。
 
 ---
 
@@ -227,7 +238,7 @@ Admin 手动下架应改为 `archived`（与 GeoflowSync 对齐），draft 仅�
 | 议题 | v1.0 动作 | v1.1 方向 |
 |---|---|---|
 | Media 删除守卫 | **必修**：实现 MediaReferenceScanner + destroy 拦截（第 3.4-3.5 节） | orphan-file 清理（Setting 旧图）；软删/引用计数 |
-| unpublish 分叉 | 不改代码，加注释+AuditLog 区分 | Publication Lifecycle Contract 统一三态，Admin unpublish→archived |
+| unpublish 分叉 | 不改代码，加注释+AuditLog 区分 | Actor 决定目标态：Admin→draft（可再发布）/ GeoflowSync→archived（需显式 unarchive+重走 Gate）；补归档恢复动作与聚合视图 |
 | Cache stale | 接受 6h 风险，发布说明披露 | lazy settlement + `geo:publish-due` 调度 |
 | TD-168 | **必修**：两条 E2E（成功/失败 rollback） | mysql/pgsql dump 支持；health check 自动化 |
 | Analytics | 登记 Missing | 18V Analytics P1 自建 PV/UV |
