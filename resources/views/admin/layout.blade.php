@@ -42,6 +42,7 @@
         ['SEO 设置', $settingsGroup==='seo', route('admin.settings.index','seo')],
         ['GEO 设置', $settingsGroup==='geo', route('admin.settings.index','geo')],
         ['抓取产出 / Sitemap', $is('admin.geo.tools') || $is('admin.geo.preview'), route('admin.geo.tools')],
+        ['GEO 健康', $is('admin.geo.health'), route('admin.geo.health')],
         ['301 跳转', str_starts_with($routeName,'admin.redirects'), route('admin.redirects.index')],
         ['GEOFlow 对接', $settingsGroup==='sync', route('admin.settings.index','sync')],
         ['同步日志', $is('admin.geo.sync-logs'), route('admin.geo.sync-logs')],

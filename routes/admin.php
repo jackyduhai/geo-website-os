@@ -245,4 +245,5 @@ Route::middleware(['admin.auth', 'admin.site'])->group(function () {
     Route::get('geo/preview/{kind}', [GeoController::class, 'preview'])
         ->where('kind', 'sitemap|llms|robots|rss')->name('geo.preview');
     Route::get('geo/sync-logs', [GeoController::class, 'syncLogs'])->name('geo.sync-logs');
+    Route::get('geo/health', [GeoController::class, 'health'])->name('geo.health');
 });
