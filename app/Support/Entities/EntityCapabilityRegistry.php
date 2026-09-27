@@ -96,16 +96,90 @@ class EntityCapabilityRegistry
         return (bool) (self::all()[$type]['sitemap'] ?? false);
     }
 
-    /** 该类型 metadata JSON 允许承载的业务键白名单。 */
+    /** 该类型 metadata JSON 允许承载的业务键白名单（扁平键名列表，向后兼容）。 */
     public static function metadataKeys(string $type): array
     {
-        return array_values(self::all()[$type]['metadata'] ?? []);
+        return array_values(array_map(
+            fn ($e): string => self::normalizeMeta($e)['key'],
+            self::all()[$type]['metadata'] ?? []
+        ));
     }
 
-    /** 该类型允许关联的目标类型声明（2a 仅声明，不强制校验）。 */
+    /** 该类型允许关联的目标类型声明（扁平目标类型列表，向后兼容；2a 仅声明不强制）。 */
     public static function relations(string $type): array
     {
-        return array_values(self::all()[$type]['relations'] ?? []);
+        return array_values(array_map(
+            fn ($e): string => self::normalizeRelation($e)['type'],
+            self::all()[$type]['relations'] ?? []
+        ));
+    }
+
+    /**
+     * Coverage 专用：归一化关系要求 → [['type'=>目标类型,'required'=>bool], ...]。
+     * 旧扁平字符串写法归一为 required=false（recommended），绝不意外升级为必备。
+     */
+    public static function relationRequirements(string $type): array
+    {
+        return array_values(array_map(
+            fn ($e): array => self::normalizeRelation($e),
+            self::all()[$type]['relations'] ?? []
+        ));
+    }
+
+    /** Coverage 专用：必备关系目标类型列表（required=true 的子集）。 */
+    public static function requiredRelations(string $type): array
+    {
+        return array_values(array_map(
+            fn (array $r): string => $r['type'],
+            array_filter(self::relationRequirements($type), fn (array $r): bool => $r['required'])
+        ));
+    }
+
+    /**
+     * Coverage 专用：归一化 metadata 要求 → [['key'=>键名,'required'=>bool], ...]。
+     * 旧扁平字符串写法归一为 required=false（recommended）。
+     */
+    public static function metadataRequirements(string $type): array
+    {
+        return array_values(array_map(
+            fn ($e): array => self::normalizeMeta($e),
+            self::all()[$type]['metadata'] ?? []
+        ));
+    }
+
+    /** Coverage 专用：必备 metadata 键名列表（required=true 的子集）。 */
+    public static function requiredMetadataKeys(string $type): array
+    {
+        return array_values(array_map(
+            fn (array $m): string => $m['key'],
+            array_filter(self::metadataRequirements($type), fn (array $m): bool => $m['required'])
+        ));
+    }
+
+    /** 归一化单条关系声明：兼容字符串形式（默认 recommended）。 */
+    private static function normalizeRelation($entry): array
+    {
+        if (is_string($entry)) {
+            return ['type' => $entry, 'required' => false];
+        }
+
+        return [
+            'type' => (string) ($entry['type'] ?? ''),
+            'required' => (bool) ($entry['required'] ?? false),
+        ];
+    }
+
+    /** 归一化单条 metadata 声明：兼容字符串形式（默认 recommended）。 */
+    private static function normalizeMeta($entry): array
+    {
+        if (is_string($entry)) {
+            return ['key' => $entry, 'required' => false];
+        }
+
+        return [
+            'key' => (string) ($entry['key'] ?? ''),
+            'required' => (bool) ($entry['required'] ?? false),
+        ];
     }
 
     /** 清空进程内缓存（测试 / config 重载后调用）。 */

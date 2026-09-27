@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Controllers\Geo\FeedController;
 use App\Models\Setting;
 use App\Models\SyncLog;
+use App\Services\Geo\EntityCoverageService;
 use App\Services\Geo\GeoHealthService;
 use App\Services\Geo\LlmsBuilder;
 use App\Services\Geo\SitemapBuilder;
@@ -61,6 +62,18 @@ class GeoController extends Controller
     {
         return view('admin.geo.health', [
             'report' => $health->report(),
+        ]);
+    }
+
+    /**
+     * 实体覆盖看板（P-STEP 18S Capability 3）：只读聚合当前站点每个公开实体按其
+     * 类型应覆盖的关系/必备字段填全程度。应覆盖项唯一来自 EntityCapabilityRegistry，
+     * 本端点不写库、不可公开。
+     */
+    public function coverage(EntityCoverageService $coverage): View
+    {
+        return view('admin.geo.coverage', [
+            'report' => $coverage->report(),
         ]);
     }
 }

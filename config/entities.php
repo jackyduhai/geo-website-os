@@ -40,7 +40,13 @@ return [
             'searchable' => false,
             'geo'        => true,
             'sitemap'    => false,
-            'relations'  => ['product', 'person', 'location'],
+            // Coverage 标记：纯字符串 = 建议（recommended）；['type'=>X,'required'=>true] = 必备。
+            // 旧扁平写法完全兼容，默认 recommended，不改变 relations 的"允许目标/声明式"语义。
+            'relations'  => [
+                ['type' => 'product', 'required' => true],
+                'person',
+                'location',
+            ],
             'metadata'   => ['brand', 'industry', 'phone', 'email', 'address', 'is_site_organization'],
         ],
 
@@ -51,7 +57,12 @@ return [
             'searchable' => true,
             'geo'        => true,
             'sitemap'    => true,
-            'relations'  => ['service', 'organization', 'download_asset'],
+            // 必备：连接 ≥1 服务/场景（uses→service）；建议：被组织 produces、提供资料。
+            'relations'  => [
+                ['type' => 'service', 'required' => true],
+                'organization',
+                'download_asset',
+            ],
             'metadata'   => ['core', 'line', 'tagline', 'key_params', 'params', 'og_image', 'card_image'],
         ],
 
@@ -62,7 +73,10 @@ return [
             'searchable' => true,
             'geo'        => true,
             'sitemap'    => true,
-            'relations'  => ['product'],
+            // 必备：组合 ≥1 产品（uses→product）。
+            'relations'  => [
+                ['type' => 'product', 'required' => true],
+            ],
             'metadata'   => ['scope', 'title_q', 'og_image', 'card_image'],
         ],
 
@@ -112,8 +126,19 @@ return [
             'searchable' => true,
             'geo'        => true,
             'sitemap'    => true,
-            'relations'  => ['product', 'organization', 'scenario'],
-            'metadata'   => ['industry', 'scenario', 'challenge', 'solution', 'result'],
+            // 必备：关联 ≥1 产品（related_to→product）；建议：客户组织、场景。
+            'relations'  => [
+                ['type' => 'product', 'required' => true],
+                'organization',
+                'scenario',
+            ],
+            // metadata 必备三要素（与发布门禁 TD-156 口径一致）；industry/scenario 建议。
+            'metadata'   => [
+                'industry', 'scenario',
+                ['key' => 'challenge', 'required' => true],
+                ['key' => 'solution', 'required' => true],
+                ['key' => 'result', 'required' => true],
+            ],
         ],
 
         // 下载资料（P-STEP 18R-2a 新增）。geo=true 让 AI 可在图谱中理解「某产品
@@ -127,8 +152,15 @@ return [
             'searchable' => false,
             'geo'        => true,
             'sitemap'    => false,
-            'relations'  => ['product', 'media'],
-            'metadata'   => ['media_id', 'type', 'language', 'version'],
+            // 必备：被某产品 offers 指向；必备 metadata.media_id（指向 Media）。
+            'relations'  => [
+                ['type' => 'product', 'required' => true],
+                'media',
+            ],
+            'metadata'   => [
+                ['key' => 'media_id', 'required' => true],
+                'type', 'language', 'version',
+            ],
         ],
 
     ],
