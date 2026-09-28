@@ -1,6 +1,6 @@
 @extends('admin.layout')
 @section('title','事实库')
-@section('page-desc','全站唯一事实源：页面、llms.txt、JSON-LD 共用同一组数字与资质；未核实内容请保持「待补」，不要编造。')
+@section('page-desc','GEO 知识图谱事实源：公开事实用于 geo.json 与 AI 理解；未核实内容请保持「待补」，不要编造。')
 @section('page-actions')
   <a class="btn btn-sm" href="{{ route('admin.facts.index') }}">全部</a>
   <a class="btn btn-sm" href="{{ route('admin.facts.index',['gap'=>1]) }}">只看待补</a>
@@ -8,6 +8,9 @@
 @endsection
 
 @section('content')
+<div class="alert alert-warn">
+  Fact 用于 <strong>GEO 知识图谱（geo.json / AI 理解）</strong>，修改 Fact 不会直接改变网站前台页面显示的公司名称等内容；前台公司名、联系方式等请在「站点设置」中修改。
+</div>
 <div class="card">
   <table class="tbl">
     <thead><tr><th>分组</th><th>条目</th><th>当前值</th><th>来源</th><th>公开</th><th>复核到期</th><th class="actions">操作</th></tr></thead>

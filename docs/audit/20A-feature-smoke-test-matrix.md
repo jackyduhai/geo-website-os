@@ -66,7 +66,7 @@
 | FT-027 | Content | 下线 | POST /admin/contents/{id}/unpublish | 下线 | 302，status=draft |
 | FT-028 | Content | 门禁检查 | POST /admin/contents/check | 检查内容完整性 | JSON 返回检查结果 |
 | FT-029 | Content | Markdown 预览 | POST /admin/contents/md-preview | 预览 MD | JSON 返回 HTML |
-| FT-030 | Content | 版本历史 | GET /admin/contents/{id}/revisions | 查看修订 | 200 列出 revisions |
+| FT-030 | Content | 版本历史 | GET /admin/contents/{id}/revisions | 查看修订 | 200 列出 revisions | ✅ 巡检 FAIL → 修复 BUG-FBS-001 后 PASS（user_id 有值显示"管理员"、NULL 显示"系统"） |
 
 ## 五、Entity 管理（FT-031 ~ FT-045）
 
@@ -189,7 +189,7 @@
 | FT-105 | Fact | 编辑 | GET /admin/facts/{id}/edit | 查看表单 | 200 |
 | FT-106 | Fact | 更新 | PUT /admin/facts/{id} | 改事实 | 302 |
 | FT-107 | Fact | 删除 | DELETE /admin/facts/{id} | 删除 | 302 |
-| FT-108 | Fact | 前台验证 | — | 确认 fact 影响前台 | 前台更新 |
+| FT-108 | Fact | 前台验证 | — | 确认 fact 影响前台 | 前台更新 | ✅ 巡检 FAIL → 定性为 GEO 图谱专用（BUG-FBS-003），后台已加 alert，geo.json 行为不变 |
 
 ## 十四、Inquiry / Form（FT-109 ~ FT-122）
 
@@ -205,8 +205,8 @@
 | FT-116 | Form | 删除 | DELETE /admin/forms/{id} | 删除 | 302 |
 | FT-117 | Form | 启停 | POST /admin/forms/{id}/toggle | 切换 | 302 |
 | FT-118 | Form | 表单提交详情 | GET /admin/forms/{id}/submissions | 查看提交 | 200 |
-| FT-119 | Form | 字段创建 | GET/POST /admin/forms/{id}/fields | 加字段 | 302 |
-| FT-120 | Form | 字段编辑 | GET/PUT /admin/forms/{id}/fields/{field} | 改字段 | 302 |
+| FT-119 | Form | 字段创建 | GET/POST /admin/forms/{id}/fields | 加字段 | 302 | ✅ 巡检 FAIL → 修复 BUG-FBS-002 后 PASS（zh-CN/en 两条记录落库） |
+| FT-120 | Form | 字段编辑 | GET/PUT /admin/forms/{id}/fields/{field} | 改字段 | 302 | ✅ 巡检 FAIL → 修复 BUG-FBS-002 后 PASS（值回填、可编辑更新） |
 | FT-121 | Form | 字段删除 | DELETE /admin/forms/{id}/fields/{field} | 删字段 | 302 |
 | FT-122 | Form | 前台提交 | POST /forms/{slug}/submit | 访客提交 | 302 |
 

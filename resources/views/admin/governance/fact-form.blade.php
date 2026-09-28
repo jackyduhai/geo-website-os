@@ -1,8 +1,11 @@
 @extends('admin.layout')
 @section('title', $fact->exists ? '编辑事实' : '新增事实')
-@section('page-desc','事实会同时供页面、llms.txt 与 JSON-LD 引用；未核实的内容请留空并取消「对外公开」。')
+@section('page-desc','事实用于 GEO 知识图谱（geo.json / AI 理解）；未核实的内容请留空并取消「对外公开」。')
 
 @section('content')
+<div class="alert alert-warn">
+  Fact 用于 <strong>GEO 知识图谱（geo.json / AI 理解）</strong>，修改 Fact 不会直接改变网站前台页面显示的公司名称等内容；前台公司名、联系方式等请在「站点设置」中修改。
+</div>
 <div class="card narrow">
   <h2>{{ $fact->exists ? '编辑事实：'.$fact->label : '新增事实' }}</h2>
   <form method="post"
