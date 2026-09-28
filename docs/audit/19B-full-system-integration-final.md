@@ -1,7 +1,7 @@
 # P-STEP 19B — Full-System Integration & Business Flow Validation — Final Report
 
 - **日期**：2026-09-28
-- **权威工作仓**：`D:\GEO-OS-rewrite\geo-website-os`（分支 main，HEAD `bd836fd`）
+- **权威工作仓**：`D:\GEO-OS-rewrite\geo-website-os`（分支 main；最新 commit 见 §15 与 `git log`）
 - **基线**：Pre-Release Hardening PASS（`e241460`），全量 1242 passed / 6534 assertions
 - **范围**：三场景（Blank / Demo / Custom Enterprise）全业务生命周期真实验收，新旧能力接缝对拍
 - **纪律**：只读验证 + P1 bug 修复 + 新增测试；未 push / 未 release / rc1 未移动 / 未架构解冻
@@ -14,7 +14,7 @@
 |---|---|
 | PHP | 8.4.25（`C:\php84\php.exe`） |
 | 数据库 | SQLite（`database/database.sqlite`，Demo 数据） |
-| 主库数据 | contents=7 / entities=20 / pages=20 / media=1 / entity_relations=58 / users=1 |
+| 主库数据 | contents=7 / entities=18 / pages=20 / media=1 / entity_relations=58 / users=1 |
 | Admin 凭据 | `admin@example.com` / `Admin@123456` |
 | rc1 tag | `v1.0.0-rc1 → 965d63c`（未移动） |
 | 临时环境 | 全部清理完毕（6 个临时 sqlite / 30+ 临时脚本 / cookie 文件 / .env 备份），工作树 clean |
@@ -74,7 +74,38 @@
 | DownloadAsset 隔离 | ✅ 无独立 public page、不出现在 sitemap |
 | Relation 六语义 | ✅ produces/offers/uses/located_in/related_to 在 geo.json 全命中 |
 | Page.template 唯一源 | ✅ categories.template 运行时 0 引用，渲染只走 context->template() |
-| 模板切换 / 跨站关系隔离 | ⚠️ 因 shell 环境中断未完成 live 复跑（代码路径已读，schema 节点由 context 独立产出） |
+| 模板切换 home→landing→home live E2E | ✅ 已完成（详见 §2.1）：页面全程 200、9 区块物理保留、HTML 仅 CSP nonce 差异、geo 实体6/关系7 不变、llms/sitemap 逐字节一致、Browser 两态视觉一致 |
+
+### §2.1 Scenario C — Template Switch Live E2E ✅ PASS
+
+**环境**：临时库（验证后已删），直接 PHP 内置服 `php -S 127.0.0.1:8133`（Laravel `server.php` router，`APP_ENV=e2e`，加载 `.env.e2e`），Host `127.0.0.1` 解析到 Acme（site id=2）。
+
+**对象**：Acme 首页 zh page id=21 / en page id=22（同 translation_group，is_home=1，published），各 9 个 active PageBlock（slot=main：sort 10 hero / 20 service_grid / 30 feature_grid / 40 product_grid / 50 stats / 60 content_grid / 70 testimonial / 80 faq / 90 cta）。
+
+**流程**：home（before）→ landing（after）→ home（final）；每次切换改 `Page.template` + `cache:clear`，真实 HTTP GET 采集 `/`、`/geo.json`、`/llms.txt`、`/sitemap.xml`。
+
+**对拍结果**：
+
+| 检查 | before(home)→after(landing) | final(切回) | 结论 |
+|---|---|---|---|
+| HTTP `/` | 200 → 200 | 200 | 页面全程可访问 |
+| PageBlock | 9 → 9（物理保留） | 9 | Composition 不丢 |
+| HTML 差异 | 仅 6 行、全部为随机 CSP nonce | 仅 6 行 CSP nonce | 渲染内容/结构不变 |
+| canonical | `http://127.0.0.1:8133/` | 同 | SEO 不丢 |
+| ld+json | Organization / WebSite / FAQPage（3 个） | 同 | Schema 不丢 |
+| `/geo.json` | entities=6 / relations=7 | 同 | 实体图不变（仅 generated_at 时间戳） |
+| `/llms.txt` | 逐字节 IDENTICAL | — | 机器可读输出不变 |
+| `/sitemap.xml` | 逐字节 IDENTICAL | — | 机器可读输出不变 |
+| Browser 视觉 | home/landing 截图一致（PAGE_TEXT_LEN 均 724），品牌 Acme、无出厂公司名 | — | 视觉结构一致 |
+
+**机制确认**：
+- 模板切换本质 = 改 `Page.template`；`PageBlock` 按 `slot` 物理保留，切换不触碰区块。
+- landing 模板 main=`*`（接受全部 block 类型），home 模板 main 限定 15 类（9 个区块类型均在允许列表），故两者在该组区块下渲染等价。
+- Schema 节点由 RenderContext 独立产出（Organization/WebSite/FAQPage），与模板选择无关；GEO feeds（geo/llms/sitemap）由实体图派生，不随模板变化。
+
+**已知简化（如实说明）**：Acme 首页 9 区块从 default 首页复制，区块内文案沿用出厂占位内容（hero「工业涂料·胶粘剂·功能助剂一体化定制」、出厂 FAQ 问答等），Scenario C 只改了品牌层（Organization=Acme）、未逐块改写 Acme 专属文案。此为测试数据简化，不影响"模板切换结构安全性"结论；区块 picked ids / 静态文案不随品牌自动改写，属内容数据层，登记为观察项（与 BUG-6 同类，进入 v1.1 backlog）。
+
+**结论**：模板切换 live E2E 通过——切换模板后页面仍 200、Composition 区块物理保留、SEO canonical/OG、Schema、GEO 实体图、llms、sitemap 全部不丢失，切回后完整恢复。未新增任何模型 / 表 / Renderer / 第二套规则。
 
 ---
 
@@ -91,7 +122,7 @@
 | 5 | Content 下线→DB=draft→PageCache 失效→PublicIndex/Sitemap/Search/GEO 全移除 | B/C | ✅ |
 | 6 | warm cache→unpublish→立即 404/BYPASS（不返回 6h 旧壳） | B/C | ✅ |
 | 7 | 下线后重新发布→全部恢复 | B/C | ✅ |
-| 8 | Template 切换→Composition→Schema→GEO 语义不丢失 | C | ⚠️ 未完成 live 复跑（代码路径确认无丢失） |
+| 8 | Template 切换→Composition→Schema→GEO 语义不丢失 | C | ✅ live E2E 通过（home→landing→home，见 §2.1） |
 
 ---
 
@@ -237,7 +268,7 @@
 
 | 步骤 | 结果 |
 |---|---|
-| Baseline counts | contents=8, entities=20, pages=20, media=1, inquiries=0, entity_relations=58 |
+| Baseline counts | contents=8, entities=20, pages=20, media=1, inquiries=0, entity_relations=58（联调当时含 2 个 Probe 残留，收尾已清理，最终 entities=18） |
 | Baseline DB sha256 | `f7c39cca…d3408` |
 | geo:backup | ✅ 产出 .sqlite(913KB) + .json 清单，manifest sha256 与原库一致 |
 | Good migration（加 e2e_19b_marker 列） | ✅ migrate --force 成功，batch=2 |
@@ -309,14 +340,14 @@ d43cda9 test(td-168): add upgrade/rollback E2E evidence (sqlite)
 - 工作树 **clean**
 - rc1 tag `v1.0.0-rc1 → 965d63c` **未移动**
 - 未 push / 未 release / 未连 GitHub / 未架构解冻
-- 主库 `database.sqlite` 完整（7 contents/20 entities/20 pages/1 media/58 relations）
+- 主库 `database.sqlite` 完整（7 contents / 18 entities / 20 pages / 1 media / 58 relations）
 - 临时环境全部清理（6 临时 sqlite / 30+ 临时脚本 / cookie 文件 / .env 备份）
 
 ---
 
 ## 十六、Final Gate 结论
 
-### 19B Full-System Integration — **PASS（有条件）**
+### 19B Full-System Integration — **PASS**
 
 **通过项**：
 - 三场景（Blank/Demo/Custom Enterprise）主体验证通过
@@ -329,11 +360,11 @@ d43cda9 test(td-168): add upgrade/rollback E2E evidence (sqlite)
 - SEO/GEO（canonical/hreflang/sitemap/llms/geo.json/Schema）不回归
 - 全量回归 1244 passed / 6662 assertions / 0 failed / 0 skipped
 
-**条件项（v1.0 发布后修，不阻塞 Release）**：
+**遗留项（v1.1 处理，不阻塞 Release）**：
 - 4 个 P2 + 2 个 P3 已登记 TD，均不影响 v1.0 核心功能
-- Scenario C 模板切换 live 复跑因 shell 中断未完成（代码路径确认无丢失）
+- Scenario C 区块文案沿用复制占位内容（测试数据简化，见 §2.1），区块内容随品牌自动改写进入 v1.1 backlog
 
-**建议**：19B 通过，可进入重新 Release Gate 裁定。P2/P3 bug 进入 v1.1 backlog，不阻塞 v1.0 正式发布。
+**建议**：19B 正式通过（Scenario C Template Switch Live E2E 已闭环），可进入最终 Release Gate 裁定。P2/P3 进入 v1.1 backlog，不阻塞 v1.0 发布。
 
 ---
 
