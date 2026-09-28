@@ -213,6 +213,16 @@ ACTIVE  →  FIXED  →  TESTED  →  ACCEPTED  →  CLOSED
 | **TD-174** | **Markdown 姝ｆ枃鏈噣鍖栵細`<img onerror=...>` 涓?`[x](javascript:...)` 鍘熸牱杈撳嚭**锛欳ommonMark 杞箟浜?`<script>`锛屼絾鍐呰仈浜嬩欢灞炴€?img 涓?javascript: 鍗忚閾炬帴鏈繃婊わ紝闇€ Editor 鍙婁互涓婃潈闄愭敞鍏ワ紙闈炶瀹㈠彲杈撅級 | **P-STEP 19B锛圔UG-5锛?* | **REGISTERED锛圥2锛寁1.1锛?* | Markdown 娓叉煋澧炲姞 HTML 鍑€鍖栵紙鐧藉悕鍗曟爣绛?灞炴€с€佸墺绂讳簨浠跺睘鎬т笌 javascript:/data: 鍗忚锛夛紱琛?XSS 鍚戦噺闃插洖褰掓祴璇?| NO锛堥渶 Editor 鏉冮檺銆侀潪鍖垮悕鏀诲嚮闈級 | TD-173 |
 | **TD-175** | **浜у搧璇︽儏椤典笉娓叉煋銆屽叧鑱斿鎴锋渚?/ 鍏宠仈涓婚銆嶅潡**锛欵ntity 妯″瀷鏈夊叧鑱旀柟娉曪紝浣嗕骇鍝佽鎯?Composition 鏈寕杞藉搴斿尯鍧楋紝瀵艰嚧宸叉湁妗堜緥/涓婚鍏崇郴涓嶅湪浜у搧椤靛睍绀?| **P-STEP 19B锛圔UG-6锛?* | **REGISTERED锛圥3锛寁1.1锛?* | 浜у搧璇︽儏 Composition 鎸傝浇鍏宠仈 CaseStudy / Topic 鍖哄潡锛堝鐢ㄧ幇鏈?block 涓庡叧绯汇€佹棤鏁版嵁鏃跺畨鍏ㄩ殣钘忥級锛涜ˉ娓叉煋娴嬭瘯 | NO锛圥3銆佸叧绯讳粛鍦?geo/schema 琛ㄨ揪锛?| TD-174 |
 
+| **TD-176** | **Setup Wizard Step 1 无输入校验**：企业信息首步空提交/非法邮箱/超长文本均静默落库；空提交直接跳 Step 2，把默认 site_name 覆盖为空串并凭空创建 Organization（脏数据） | **P-STEP 20A Final Acceptance** | **REGISTERED（P2，v1.1）** | Step 1 表单加服务端校验（必填/email/长度），失败回显不跳步、不覆盖 site_name、不建空 Organization；补空提交/非法输入防回归测试 | NO（仅首跑引导、可手动改正，不影响前台/GEO） | — |
+| **TD-177** | **Setup Wizard Step 3 无幂等**：产品/服务步双击或刷新重复提交，产生多条同名 Product | **P-STEP 20A** | **REGISTERED（P2，v1.1）** | 步骤提交加幂等（session 令牌/已完成判定/唯一约束兜底），重复提交不重复建实体；补双击/刷新防回归测试 | NO（仅重复草稿实体，可删除） | — |
+| **TD-178** | **/inquiry 提交无幂等、双击产生重复线索**：联系表单无 PRG/幂等键/去重，双击或重复提交产生同数据 Inquiry | **P-STEP 20A** | **REGISTERED（P2，v1.1）** | 表单提交改 PRG（Post/Redirect/Get）+ 幂等键或内容/时间窗去重；补重复提交防回归测试 | NO（仅重复数据，不影响功能） | — |
+| **TD-179** | **Wizard 完成后再次进入无“已完成”提示**：用户跑完向导后重入，仍显示未完成流程 | **P-STEP 20A** | **REGISTERED（P3）** | 检测向导已完成态，展示“已完成/可重跑”提示 | NO（P3） | — |
+| **TD-180** | **双击发布产生冗余 content_revisions 快照**：发布按钮双击，状态幂等但生成 2 条完全相同 revision | **P-STEP 20A** | **REGISTERED（P3）** | 发布动作幂等/版本快照去重（同内容同状态不重复写 revision） | NO（P3） | — |
+| **TD-181** | **Entity 编辑无乐观锁**：两 Tab 同编同一实体，后写静默覆盖先写，无冲突提示 | **P-STEP 20A** | **REGISTERED（P3）** | 引入版本号/乐观锁（version 或 updated_at 校验），冲突时提示 | NO（P3） | — |
+| **TD-182** | **Media 成功删除不写 audit_logs**：仅上传与引用阻断有审计记录，正常删除无日志 | **P-STEP 20A** | **REGISTERED（P3）** | Media 正常删除路径补 audit_logs 记录 | NO（P3） | — |
+| **TD-183** | **无 skip-to-content 链接**：键盘用户缺少“跳到主内容”的快捷链接 | **P-STEP 20A** | **REGISTERED（P3）** | 布局补 skip-to-content 链接及可见焦点样式 | NO（P3、A11y） | — |
+| **TD-184** | **Schema::hasTable()/cache key SELECT 重复调用**：每请求重复 3-5x hasTable、cache lookup 重复 4-10x（轻微，非 N+1） | **P-STEP 20A** | **REGISTERED（P3）** | 合并/记忆 hasTable 结果与 cache 查询，减少重复调用 | NO（P3、性能微小） | — |
+| **TD-185** | **Persona A 首跑 UX 障碍**：Dashboard 无引导、Logo 入口不直观、主题页缺启用按钮、“实体”等术语对企业老板有理解门槛 | **P-STEP 20A** | **REGISTERED（P3）** | 增加首跑引导、统一入口可见性、关键术语加说明/中性化 | NO（P3） | — |
 ### P4 — 观察与测试限制（默认 NON-BLOCKING，记录在案）
 
 | ID | Title | Source | Status | 说明 / 验收 | Blocks v1.0.0? |
