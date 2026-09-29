@@ -12,6 +12,10 @@ return [
     'phone_aria'               => '拨打合作热线',
     'subnav_aria'              => '栏目导航',
     'mode_aria_toggle'         => '切换外观模式（浅色 / 深色 / 跟随系统）',
+    'mode_light'               => '浅色',
+    'mode_dark'                => '深色',
+    'mode_system'              => '跟随系统',
+    'mode_aria_current'        => '当前外观：{mode}',
 
     // Eyebrows（区块眉标）
     'eyebrow_products'    => 'PRODUCTS · 产品中心',

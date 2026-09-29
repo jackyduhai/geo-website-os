@@ -202,6 +202,8 @@
 @if($allowDark)
 :root[data-color-scheme="dark"]{color-scheme:dark;{!! $darkCss !!}}
 @media (prefers-color-scheme:dark){:root:not([data-color-scheme]){color-scheme:dark;{!! $darkCss !!}}}
+:root[data-color-scheme="dark"] .theme-mode-toggle .tmt-sun{display:none;}
+:root[data-color-scheme="dark"] .theme-mode-toggle .tmt-moon{display:block;}
 @endif
 /* P-STEP 18L-1 Locale typography（TD-120）：英文（拉丁）字体 + 桌面标题精修，消除长标题孤字 */
 html[lang="en"]{--font:var(--font-en);}
@@ -328,10 +330,7 @@ a.card:focus-visible, summary:focus-visible, .page-link:focus-visible, .pcard .g
 .theme-mode-toggle:focus-visible{outline:2px solid var(--brand);outline-offset:2px;}
 .theme-mode-toggle svg{width:18px;height:18px;display:none;}
 .theme-mode-toggle .tmt-sun{display:block;}
-:root[data-color-mode-pref="dark"] .tmt-sun{display:none;}
-:root[data-color-mode-pref="dark"] .tmt-moon{display:block;}
-:root[data-color-mode-pref="system"] .tmt-sun{display:none;}
-:root[data-color-mode-pref="system"] .tmt-sys{display:block;}
+/* tmt-sys（跟随系统）仅作为后台站点默认模式，不显示在前台手动切换器：图标始终反映实际生效的亮/暗。 */
 @media(max-width:768px){.theme-mode-toggle{width:38px;height:38px;}}
 /* 语言切换器（P-STEP 18F） */
 .locale-switch{display:inline-flex;align-items:center;gap:2px;flex-shrink:0;padding:3px;
@@ -1736,7 +1735,6 @@ a.ft-v:hover{color:var(--on-inverse);}
   (function(){
     var btns=document.querySelectorAll('[data-theme-toggle]');
     if(!btns.length) return;
-    var order=['light','dark','system'];
     var labels={light:{!! json_encode(__('ui.mode_light')) !!},dark:{!! json_encode(__('ui.mode_dark')) !!},system:{!! json_encode(__('ui.mode_system')) !!}};
     var ariaCurrent={!! json_encode(__('ui.mode_aria_current')) !!};
     function sysDark(){ return window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches; }
@@ -1747,8 +1745,9 @@ a.ft-v:hover{color:var(--on-inverse);}
     }
     btns.forEach(function(btn){
       btn.addEventListener('click',function(){
-        var cur=document.documentElement.dataset.colorModePref || 'light';
-        var next=order[(order.indexOf(cur)+1)%order.length];
+        var root=document.documentElement;
+        var actual=root.getAttribute('data-color-scheme') || 'light';
+        var next=actual==='dark' ? 'light' : 'dark';
         try{ localStorage.setItem('gwos-color-mode',next); }catch(e){}
         paint(next);
         btn.setAttribute('aria-label', ariaCurrent.replace('{mode}', labels[next]));

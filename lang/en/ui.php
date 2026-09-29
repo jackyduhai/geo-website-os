@@ -12,6 +12,10 @@ return [
     'phone_aria'               => 'Call partner hotline',
     'subnav_aria'              => 'Section navigation',
     'mode_aria_toggle'         => 'Toggle appearance (light / dark / follow system)',
+    'mode_light'               => 'Light',
+    'mode_dark'                => 'Dark',
+    'mode_system'              => 'Follow system',
+    'mode_aria_current'        => 'Current appearance: {mode}',
 
     // Eyebrows
     'eyebrow_products'    => 'PRODUCTS',
