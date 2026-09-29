@@ -8,10 +8,22 @@
 <link rel="stylesheet" href="{{ asset('css/admin.css') }}?v={{ filemtime(public_path('css/admin.css')) }}">
 </head>
 <body class="login-page">
+@php
+  // 品牌：自定义 logo（完整横版）时只显示 logo；否则纯图标 + 公司名称。
+  // 复用现有站点设置，不另造事实源（与 admin layout / SchemaBuilder 同口径）。
+  $loginCustomLogo = trim((string)($siteSettings['geo_org_logo'] ?? ''));
+  $loginCompanyName = trim((string)($siteSettings['geo_org_name'] ?? ''))
+      ?: trim((string)($siteSettings['site_name'] ?? ''))
+      ?: config('app.name');
+@endphp
 <form class="login-card" method="post" action="{{ route('admin.login.attempt') }}">
   @csrf
-  <img class="login-logo" src="{{ asset('img/logo.png') }}" alt="GEO Website OS">
-  <div class="login-brand">GEO Website OS 后台</div>
+  @if($loginCustomLogo !== '')
+    <img class="login-logo-full" src="{{ asset($loginCustomLogo) }}" alt="{{ $loginCompanyName }}">
+  @else
+    <img class="login-logo" src="{{ asset('img/logo-icon.png') }}" alt="{{ $loginCompanyName }}">
+  @endif
+  <div class="login-brand">{{ $loginCompanyName }}</div>
   <div class="login-sub">多站点 GEO 内容管理系统</div>
 
   @if(session('error'))<div class="login-alert">{{ session('error') }}</div>@endif

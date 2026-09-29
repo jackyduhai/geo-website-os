@@ -303,9 +303,13 @@ a.card:focus-visible, summary:focus-visible, .page-link:focus-visible, .pcard .g
 /* ---------- 顶部导航（干净、吸顶、毛玻璃；去红绿顶条） ---------- */
 .hd{background:var(--hd-bg);backdrop-filter:saturate(1.3) blur(12px);-webkit-backdrop-filter:saturate(1.3) blur(12px);
   border-bottom:1px solid var(--line-soft);position:sticky;top:0;z-index:50;}
-.hd-in{display:flex;align-items:center;justify-content:space-between;gap:20px;min-height:68px;}
+.hd-in{display:flex;align-items:center;justify-content:space-between;gap:20px;min-height:68px;max-width:1520px;}
 .logo{display:flex;align-items:center;gap:10px;font-size:20px;font-weight:var(--fw-bold);color:var(--ink);letter-spacing:var(--ls-snug);flex-shrink:0;}
-.logo img{height:40px;width:auto;display:block;}
+.logo img{display:block;flex-shrink:0;}
+.logo .logo-icon{height:40px;width:40px;}
+.logo .logo-full{height:40px;width:auto;}
+.logo .logo-name{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  font-size:19px;font-weight:var(--fw-bold);letter-spacing:var(--ls-snug);line-height:1.2;}
 .nav{display:flex;gap:30px;flex-wrap:wrap;align-items:center;}
 .nav a{color:var(--ink-2);font-size:var(--fs-sm);font-weight:500;padding:8px 2px;border-bottom:2px solid transparent;white-space:nowrap;transition:color var(--motion-fast),border-color var(--motion-fast);}
 .nav a:hover{color:var(--brand);border-bottom-color:var(--accent);}
@@ -341,6 +345,15 @@ a.card:focus-visible, summary:focus-visible, .page-link:focus-visible, .pcard .g
 .locale-switch .ls-link:focus-visible{outline:2px solid var(--brand);outline-offset:1px;}
 .locale-switch .ls-cur{color:var(--brand);background:var(--brand-soft);}
 @media(max-width:768px){.locale-switch .ls-link,.locale-switch .ls-cur{min-width:30px;height:28px;padding:0 8px;}}
+/* 桌面紧凑档：视口不足以完整显示长导航 / 长公司名时（实测英文页在 1280/1366/1440
+   横向溢出、右侧语言控件被挤出），隐藏 CTA、收紧一级导航内边距、限制 logo 名称宽度，
+   保证语言 / 主题 / 菜单控件始终可见；宽屏（>1500）恢复完整显示。 */
+@media(min-width:769px) and (max-width:1500px){
+  .hd-in{gap:14px;}
+  .hd-right .hd-cta{display:none;}
+  .nav>li>a{padding:9px 9px;}
+  .logo .logo-name{max-width:200px;}
+}
 
 .nav-toggle{display:none;width:44px;height:44px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--surface);
   cursor:pointer;position:relative;flex-shrink:0}
@@ -869,6 +882,9 @@ html.js .reveal.in{opacity:1;transform:none;}
 }
 @media(max-width:768px){
   .nav-toggle{display:block;width:38px;height:38px;flex-shrink:0}
+  /* 移动端 logo 可收缩：长英文公司名省略号，保证语言 / 主题 / 汉堡控件不被挤出 */
+  .logo{flex:0 1 auto;min-width:0;}
+  .logo .logo-name{flex:0 1 auto;}
   /* 移动端顶栏直接保留两个动作入口（不再藏进汉堡菜单）：
      电话=仅图标的圆形描边按钮（完整号码在 aria-label，点按即拨号），CTA=紧凑绿按钮 */
   .hd-right{gap:8px}
@@ -912,6 +928,13 @@ html.js .reveal.in{opacity:1;transform:none;}
   .wrap{padding:0 16px;}
   .hd-in{min-height:62px;gap:12px}
   .logo img{height:34px}
+  .logo .logo-icon{width:34px}
+  .logo .logo-name{font-size:16px}
+  .logo{gap:8px}
+  /* 小屏顶栏空间紧张：隐藏 CTA 按钮（首页 hero 有全宽 CTA，内页有 CTA band /
+     汉堡菜单可联系），保留主题、语言、汉堡三个控件，避免溢出截断 */
+  .hd-right{gap:8px}
+  .hd-right .hd-cta{display:none}
   .g2,.g3,.g4,.ft-grid,.facts,.facts.auto{grid-template-columns:1fr;}
   .steps{grid-template-columns:1fr;}
   .pgrid{grid-template-columns:1fr;}
@@ -939,7 +962,8 @@ html.js .reveal.in{opacity:1;transform:none;}
   .hero-overlay h1,.hero-overlay h2{font-size:26px;max-width:100%}
   .hero-overlay p{font-size:14.5px;margin-bottom:16px}
   .hero-overlay .btn,.hero-overlay .btn-ghost{padding:10px 20px;font-size:14px}
-  .stat-n{font-size:38px;}
+  .stat-n{font-size:30px;}
+  .stat-n i{font-size:16px;}
   .cta-band{padding:32px 24px;border-radius:var(--radius);}
   .cta-band h2{font-size:22px;}
   .cta-band .cta-phone{font-size:26px;}
@@ -1450,13 +1474,19 @@ a.ft-v:hover{color:var(--on-inverse);}
           ? $siteSettings['geo_org_en_name']
           : ($siteSettings['site_name'] ?? config('app.name')))
       : ($siteSettings['site_name'] ?? config('app.name'));
+  // 自定义 logo（完整横版，含名称）时只显示 logo；否则用纯图标 + 公司名称文字。
+  $headerCustomLogo = trim((string)($siteSettings['geo_org_logo'] ?? ''));
 @endphp
 <header class="hd" id="siteHeader">
   <input type="checkbox" id="nav-toggle" aria-label="{{ config('copy.nav.ariaLabels.openMenu') ?? __('ui.open_menu') }}">
   <div class="wrap hd-in">
     <a class="logo" href="{{ \App\Support\PublicUrl::home() }}" aria-label="{{ $brandDisplayName }} {{ __('nav.home') }}">
-      <img src="{{ asset(!empty($siteSettings['geo_org_logo']) ? $siteSettings['geo_org_logo'] : 'img/logo.png') }}"
-           alt="{{ $brandDisplayName }}" height="40">
+      @if($headerCustomLogo !== '')
+        <img class="logo-full" src="{{ asset($headerCustomLogo) }}" alt="{{ $brandDisplayName }}">
+      @else
+        <img class="logo-icon" src="{{ asset('img/logo-icon.png') }}" alt="{{ $brandDisplayName }}">
+        <span class="logo-name">{{ $brandDisplayName }}</span>
+      @endif
     </a>
     <nav aria-label="{{ config('copy.nav.ariaLabels.primaryNav') ?? __('ui.primary_nav') }}"><ul class="nav" id="primary-nav" style="margin:0;padding:0;">
       @foreach(($mainMenu ?? []) as $m)

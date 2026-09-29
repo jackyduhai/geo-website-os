@@ -61,7 +61,12 @@ h1,h2,h3,h4{margin:0}
 .side .brand{display:flex;align-items:center;gap:9px;height:58px;padding:0 20px;font-size:15px;font-weight:800;
   color:var(--ink);border-bottom:1px solid var(--line);flex-shrink:0}
 .side .brand:hover{text-decoration:none}
-.side .brand img{width:30px;height:30px;border-radius:7px;flex-shrink:0}
+.side .brand img{flex-shrink:0}
+/* 纯图标（正方形，保持比例不变形）；自定义完整 logo（横版，固定高度、宽度自适应） */
+.side .brand .brand-icon{width:30px;height:30px;border-radius:7px}
+.side .brand .brand-full{height:30px;width:auto}
+.side .brand .brand-name{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  font-size:15px;font-weight:800;line-height:1.2}
 .main{flex:1;margin-left:var(--sidebar-w);min-width:0;display:flex;flex-direction:column;min-height:100vh}
 .topbar{background:var(--surface);border-bottom:1px solid var(--line);height:58px;display:flex;
   align-items:center;justify-content:space-between;padding:0 26px;position:sticky;top:0;z-index:20}
@@ -487,6 +492,7 @@ th .size-tag{font-weight:400}
 .login-card{background:#fff;border-radius:14px;padding:38px 36px;width:min(380px,calc(100vw - 32px));max-width:100%;
   box-shadow:0 20px 60px rgba(0,0,0,.3)}
 .login-logo{width:56px;height:56px;border-radius:12px;display:block;margin-bottom:14px}
+.login-logo-full{height:56px;width:auto;display:block;margin-bottom:14px}
 .login-brand{font-size:21px;font-weight:800;color:var(--ink);margin-bottom:4px}
 .login-sub{font-size:13px;color:var(--faint);margin-bottom:26px}
 .login-card label{display:block;font-size:13.5px;font-weight:600;margin:14px 0 6px}

@@ -274,7 +274,7 @@ return [
     'home_workshops_btn2' => 'Book An On-Site Visit',
     'pc_title_name' => 'Standardized Parameter Example: :name',
     'pc_title_dot' => 'Standardized Parameter Example · :name',
-    'locale_zh' => 'Chinese',
+    'locale_zh' => '中',
     'locale_en' => 'EN',
     'locale_switch_aria' => 'Switch language',
 

@@ -274,7 +274,7 @@ return [
     'home_workshops_btn2' => '预约实地参观',
     'pc_title_name' => '标准化参数示例：:name',
     'pc_title_dot' => '标准化参数示例 · :name',
-    'locale_zh' => '中文',
+    'locale_zh' => '中',
     'locale_en' => 'EN',
     'locale_switch_aria' => '切换语言',
 

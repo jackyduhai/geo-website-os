@@ -16,7 +16,7 @@
           @if($fgSub)<p class="sec-sub">{{ $fgSub }}</p>@endif
         </div>
       @endif
-      <div class="grid reveal" style="grid-template-columns:repeat({{ $fgCols }},1fr);gap:var(--sp-7)">
+      <div class="grid reveal g{{ $fgCols }}" style="gap:var(--sp-7)">
         @foreach($fgItems as $it)
           <div class="card" style="padding:var(--sp-7)">
             <span class="feat-ic">@include('site._icon', ['name' => $it['icon'] ?? 'default'])</span>

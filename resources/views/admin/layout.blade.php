@@ -70,14 +70,25 @@
   // 顶部站点切换器数据（仅超管；多于一个站点时才有切换意义）。
   $adminSites = $isSuperAdmin ? \App\Models\Site::orderBy('id')->get() : collect();
   $currentAdminSiteSlug = session('admin_site_slug') ?: optional(\App\Support\SiteContext::currentSite())->slug;
+
+  // 品牌：自定义 logo（完整横版，含名称）时只显示 logo；否则用纯图标 + 公司名称。
+  // 名称复用现有站点设置，不另造事实源（与 SchemaBuilder / GeoGraphBuilder 同口径）。
+  $adminCustomLogo = trim((string)($siteSettings['geo_org_logo'] ?? ''));
+  $adminCompanyName = trim((string)($siteSettings['geo_org_name'] ?? ''))
+      ?: trim((string)($siteSettings['site_name'] ?? ''))
+      ?: config('app.name');
 @endphp
 
 <div class="side-overlay" data-close-side></div>
 <div class="layout">
   <aside class="side" id="adminSide">
     <a class="brand" href="{{ route('admin.dashboard') }}">
-      <img src="{{ asset('img/logo.png') }}" alt="GEO Website OS">
-      <span>GEO Website OS 后台</span>
+      @if($adminCustomLogo !== '')
+        <img class="brand-full" src="{{ asset($adminCustomLogo) }}" alt="{{ $adminCompanyName }}">
+      @else
+        <img class="brand-icon" src="{{ asset('img/logo-icon.png') }}" alt="{{ $adminCompanyName }}">
+        <span class="brand-name">{{ $adminCompanyName }}</span>
+      @endif
     </a>
 
     <nav class="side-nav" aria-label="后台主导航">
