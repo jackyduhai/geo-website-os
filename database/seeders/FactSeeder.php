@@ -16,6 +16,14 @@ use Illuminate\Database\Seeder;
  */
 class FactSeeder extends Seeder
 {
+    /**
+     * 演示数据统一为默认语言（20G-3）。
+     *
+     * facts 是行级翻译模型，同一 key 可有 zh / en 多行；种子必须显式声明
+     * 写入哪种语言，否则会随数据库返回顺序覆盖到任意语言行上。
+     */
+    private const SEED_LOCALE = 'zh-CN';
+
     public function run(): void
     {
         $reviewed = '2026-09-14';
@@ -87,8 +95,16 @@ class FactSeeder extends Seeder
         $sort = 0;
         foreach ($rows as $r) {
             [$key, $label, $value, $group, $source, $note] = array_pad($r, 6, '');
+            /**
+             * 匹配条件必须带 `locale`（20G-3）。
+             *
+             * facts 已纳入行级翻译，唯一约束是 UNIQUE(site_id, key, locale)，
+             * 同一个 key 会有 zh / en 两行。若只按 key 查找，
+             * Eloquent 会取「第一条」—— 可能是 en 行，于是中文种子数据会
+             * 覆盖英文翻译。这里显式锁定 `zh-CN`（演示数据全部为中文）。
+             */
             Fact::updateOrCreate(
-                ['key' => $key],
+                ['key' => $key, 'locale' => self::SEED_LOCALE],
                 [
                     'label'       => $label,
                     'value'       => $value,
@@ -114,7 +130,7 @@ class FactSeeder extends Seeder
         ];
         foreach ($gaps as $g) {
             Fact::updateOrCreate(
-                ['key' => $g[0]],
+                ['key' => $g[0], 'locale' => self::SEED_LOCALE],
                 [
                     'label'       => $g[1],
                     'value'       => $g[2],

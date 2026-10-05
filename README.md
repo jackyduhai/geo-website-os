@@ -9,6 +9,7 @@ It is designed for the generative-search era: alongside traditional SEO (canonic
 ## Highlights
 
 - **Multi-site by default** — host resolution (`Host` header / domain), per-site rows, automatic site scoping on Eloquent, and site-aware caching. Data never leaks across sites, even with explicit cross-site query parameters.
+- **Multi-language out of the box** — `zh-CN` (default) and `en` are enabled per site at creation time. Content, entities, facts, and taxonomy use a **row-level translation model** (`locale` + `translation_group`), so the same slug coexists across languages (`UNIQUE(site_id, slug, locale)`). Language-prefixed routes (`/en/...`) are gated per site: requesting a locale a site has not enabled returns 404 rather than silently falling back.
 - **Entity & knowledge-graph core** — eight generic entity types (`organization`, `person`, `product`, `service`, `location`, `topic`, `case_study`, `download_asset`) plus typed `EntityRelation` edges, with database-enforced uniqueness and foreign keys.
 - **Unified SEO + GEO layer** — a `SeoMetaResolver` with per-resource inheritance chains, a `UrlResolverInterface` for canonical URLs, and builders for JSON-LD, `geo.json`, `llms.txt`, `sitemap.xml`, `feed.xml`, and `robots.txt`. Content and Entity are parallel resources with explicit, predictable rules.
 - **Themes & plugins** — override views per theme without touching engine internals; enable/disable extensions at runtime.

@@ -8,6 +8,7 @@ use App\Models\Entity;
 use App\Models\Page;
 use App\Models\PageBlock;
 use App\Models\Site;
+use App\Models\Setting;
 use App\Models\User;
 use App\Services\Sync\GeoflowSync;
 use App\Support\Catalog;
@@ -183,6 +184,10 @@ class UnpublishCacheInvalidationTest extends TestCase
      */
     public function test_geoflow_sync_unpublish_invalidates_page_cache(): void
     {
+        // 20G-2·C-3：写开关关闭时 unpublish 也必须被拒绝（否则开关形同虚设，
+        // 上游可在官网关闭对接后仍把内容下线）。因此本用例需显式打开开关。
+        Setting::set('sync_geoflow_enabled', '1');
+
         $cat = $this->makeCategory('unpub-gf-cat');
         $content = $this->makePublishedContent($cat, 'unpub-geoflow', 'GeoFlow 下架标记 XYZPUB', [
             'external_id' => 'ext-unpub-123',
@@ -197,12 +202,36 @@ class UnpublishCacheInvalidationTest extends TestCase
         $result = app(GeoflowSync::class)->unpublish('ext-unpub-123');
         $this->assertTrue($result['ok']);
 
-        // Content::update → saved → 全局钩子 PageCache::flush()
+        // Content::update → saved → CacheInvalidationMap 登记 → PageCache::flush()
         $this->assertGreaterThan($v0, PageCache::version(), 'Geoflow unpublish 后整页缓存版本应 +1');
 
         $after = $this->get($url);
         $after->assertNotFound();
         $this->assertNotSame('HIT', $after->headers->get('X-Page-Cache'));
         $this->assertStringNotContainsString('GeoFlow 下架标记 XYZPUB', $after->getContent());
+    }
+
+    /**
+     * 20G-2·C-3：写开关关闭时 unpublish 必须被拒绝，且**不得改动任何数据**。
+     * 反向断言——只测「拒绝」不够，还要确认内容没被下线。
+     */
+    public function test_geoflow_sync_unpublish_is_blocked_when_switch_off(): void
+    {
+        Setting::set('sync_geoflow_enabled', '0');
+
+        $cat = $this->makeCategory('unpub-off-cat');
+        $content = $this->makePublishedContent($cat, 'unpub-off', '开关关闭标记 XOFF', [
+            'external_id' => 'ext-off-123',
+        ]);
+        SiteContext::setSite($this->site);
+
+        $result = app(GeoflowSync::class)->unpublish('ext-off-123');
+
+        $this->assertFalse($result['ok'] ?? true, '写开关关闭时 unpublish 必须被拒绝');
+        $this->assertSame(
+            'published',
+            Content::find($content->id)?->status,
+            '被拒绝的 unpublish 不得改动内容状态'
+        );
     }
 }

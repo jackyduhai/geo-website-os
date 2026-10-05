@@ -34,13 +34,26 @@ return new class extends Migration
 
     public function down(): void
     {
-        try {
-            Schema::table('menus', function (Blueprint $table) {
-                $table->dropIndex('menus_parent_key_active_index');
-            });
-        } catch (\Throwable $e) {
-            // 忽略不存在的索引
+        // ⚠️ 索引名有两来源（20G-6 · C-17）：
+        //   1. 本迁移 up() 建的 menus_parent_key_active_index
+        //   2. 后续迁移 2026_09_18_000005 建的 menus_parent_key_is_active_index
+        //      （以及建表迁移 2026_09_14_000005 的默认命名索引）
+        // 原实现只删第1 个名字，导致索引残留；而 SQLite 的 DROP COLUMN
+        // 在仍有索引引用该列时会直接失败 —— 于是回滚整体报错、不可用。
+        // 因此这里按「实际存在的索引名」逐个删除，不依赖名字猜测。
+        foreach ([
+            'menus_parent_key_active_index',
+            'menus_parent_key_is_active_index',
+        ] as $indexName) {
+            try {
+                Schema::table('menus', function (Blueprint $table) use ($indexName) {
+                    $table->dropIndex($indexName);
+                });
+            } catch (\Throwable $e) {
+                // 索引不存在（未创建或已被后续迁移改名）→ 跳过
+            }
         }
+
         if (Schema::hasColumn('menus', 'parent_key')) {
             Schema::table('menus', function (Blueprint $table) {
                 $table->dropColumn('parent_key');

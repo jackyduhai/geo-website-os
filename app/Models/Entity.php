@@ -34,15 +34,19 @@ class Entity extends Model
         // P-STEP 18C / TD-08b：Entity（产品 / 服务 / 组织 / 地点……）是前台目录、
         // Schema、GEO、Sitemap 的权威数据源（17B 起 Product 正式成为 Entity）。任何
         // 写入 / 删除（后台、tinker、import、Seeder）都必须失效整页静态壳，否则匿名
-        // 访客仍命中旧 SSR HTML。与 EntityRelation（18A）对称，挂模型层覆盖全写入路径。
-        static::saved(function (self $entity): void {
-            PageCache::flush();
-        });
+        // 访客仍命中旧 SSR HTML。
+        //
+        // ⚠️ 整页缓存失效登记的唯一事实源是 {@see \App\Support\CacheInvalidationMap}
+        // （20F-HAT P1-1 收口，Entity / EntityRelation 已在其MODELS 清单中）。
+        // 此处**刻意不再重复挂 saved/deleted 的 flush**：两处登记会让单次写入把版本号
+        // 推进2，破坏「一次写入= 一次失效」的确定性（TD-08b 断言依赖该不变量）。
         static::deleted(function (self $entity): void {
             // P-STEP 18G-2a 方案 ii：删除绑定该 Entity 的详情载体 Page（Page::deleting
             // 级联其 block / seo），等价 DB FK ON DELETE CASCADE、覆盖全部删除路径。
             Page::where('entity_id', $entity->id)->get()->each->delete();
-            PageCache::flush();
+            // M-2：content_entity 无 DB 外键约束，硬删时清理该实体的内容关联行，
+            // 避免孤儿行堆积（不泄漏前台，但成不可回收垃圾）。
+            ContentEntity::where('entity_id', $entity->id)->delete();
         });
     }
 

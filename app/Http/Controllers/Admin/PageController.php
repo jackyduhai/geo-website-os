@@ -142,6 +142,7 @@ class PageController extends Controller
         AuditLog::record('page.destroy', "删除页面：".($page->title ?: $page->slug ?: '#'.$page->id),
             [], 'Page', $page->id);
         $page->delete();
+        PageCache::flush();
 
         return redirect()->route('admin.pages.index')->with('success', '页面已删除');
     }

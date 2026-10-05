@@ -7,9 +7,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use App\Support\BelongsToSite;
+use App\Support\ContentFieldContract;
 use App\Support\PublicUrl;
 use App\Support\Translatable;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
@@ -27,6 +29,9 @@ class Content extends Model
     use SoftDeletes, BelongsToSite, Translatable;
 
     protected $guarded = [];
+
+    /** 内容指纹 Schema 版本（20G-2）。变更投影字段或算法时 +1，旧 hash 整体失效。 */
+    public const HASH_SCHEMA_VERSION = 2;
 
     /** 跨语言共享列（默认语言权威行单向同步）；title/slug/summary/body/GEO 文本按语言独立。 */
     protected static array $sharedTranslatableColumns = [
@@ -50,6 +55,18 @@ class Content extends Model
         // slot 列随建表迁移（2026_09_14_000003）创建，并由 2026_09_17_000002 为存量库补列。
         static::addGlobalScope('not_slot', function ($builder) {
             $builder->whereNull($builder->getModel()->getTable() . '.slot');
+        });
+
+        // M-2（与 Entity::deleted 对称）：content_entity / content_tag 都没有 DB 外键
+        // 约束（多态关联 + 跨类型引用，无法用 FK 表达），因此**物理删除**内容时必须
+        // 显式清理关联行，否则留下永久孤儿：不泄漏前台，但会持续堆积且让
+        // 「该内容关联了哪些实体」的计算结果失真。
+        //
+        // 只在 forceDelete 时清理：软删（deleted_at）保留关联是正确语义——内容随时可恢复，
+        // 提前删关联会让恢复后的内容丢失实体指向。Entity 侧是硬删模型故无条件清理。
+        static::forceDeleted(function (self $content): void {
+            ContentEntity::where('content_id', $content->id)->delete();
+            DB::table('content_tag')->where('content_id', $content->id)->delete();
         });
     }
 
@@ -216,7 +233,8 @@ class Content extends Model
      * 正文 Markdown 渲染为 HTML（前台唯一出口）。
      * 按「内容 id + 更新时间」缓存解析结果：知识文章正文较长，MISS 渲染可省 200–400ms；
      * 内容一保存 updated_at 即变化，键自然失效，绝不发旧渲染；外层另有整页缓存兜底。
-     * 输出与 Str::markdown($this->body) 完全一致，不做任何额外改写。
+     * html_input=escape：正文来源含后台编辑与 GEOFlow 外部同步，原始 HTML 一律
+     * 实体转义而非放行，封死存储型 XSS；与后台预览（mdPreview）保持同一渲染选项。
      */
     public function bodyHtml(): string
     {
@@ -227,21 +245,54 @@ class Content extends Model
         $key = 'content:mdhtml:'.$this->getKey().':'.optional($this->updated_at)->timestamp.':'.strlen($this->body);
 
         return Cache::store('file')->remember($key, now()->addDays(7), function () {
-            return (string) Str::markdown((string) $this->body);
+            return self::renderMarkdown((string) $this->body);
         });
     }
 
-    /** 内容指纹，供对接幂等判断 */
+    /**
+     * Markdown → HTML 的**唯一**渲染选项（前台正文、后台预览、Narrative 共用）。
+     *
+     * 安全策略集中于此，业务层不得自行拼 Str::markdown 选项：
+     * 两份渲染策略必然分叉，那是 20G-1 收敛前的真实漏洞形态。
+     *   - html_input='escape'      原始 HTML 实体转义，封死存储型 XSS
+     *   - allow_unsafe_links=false  javascript: 等危险协议不生成可执行链接
+     */
+    public static function renderMarkdown(string $markdown): string
+    {
+        return (string) Str::markdown($markdown, [
+            'html_input' => 'escape',
+            'allow_unsafe_links' => false,
+        ]);
+    }
+
+    /**
+     * 内容指纹，供对接幂等判断（20G-2 统一为 Schema v2）。
+     *
+     * 遍历 ContentFieldContract::hashableFields() 而非手工列举字段：
+     * 手工列举会漏字段（历史上只覆盖 7 个，导致 slug / category / geo_faq
+     * 等变更被误判为「内容未变化」而静默 skip）。
+     *
+     * 重要：本方法必须作用在**最终将要持久化的状态**上。若在
+     * published_at 等派生默认值填充之前调用，hash 与库中实际值不一致，
+     * 同一份 payload 每次推送都会被判「变化」。
+     */
     public function computeHash(): string
     {
+        $projection = [];
+
+        foreach (ContentFieldContract::hashableFields() as $field) {
+            $projection[$field] = $this->getAttribute($field);
+        }
+
         return hash('sha256', json_encode([
-            $this->title,
-            $this->summary,
-            $this->body,
-            $this->geo_conclusion,
-            $this->geo_explanation,
-            $this->geo_evidence,
-            $this->geo_boundary,
+            'v' => self::HASH_SCHEMA_VERSION,
+            'fields' => $projection,
         ], JSON_UNESCAPED_UNICODE));
+    }
+
+    /** 契约自检：hashable / syncable / revisionable 分层不得矛盾。 */
+    public static function syncContractConflicts(): array
+    {
+        return ContentFieldContract::audit();
     }
 }

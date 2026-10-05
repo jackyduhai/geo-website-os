@@ -13,7 +13,9 @@ use App\Support\Catalog;
 use App\Support\Entities\EntityCapabilityRegistry;
 use App\Support\Localization\LocaleRegistry;
 use App\Support\SiteContext;
+use App\Support\SlugSuggester;
 use Database\Seeders\CatalogSeeder;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -43,6 +45,17 @@ class EntityController extends Controller
     public static function types(): array
     {
         return EntityCapabilityRegistry::labels();
+    }
+
+    /**
+     * Slug 建议（20F-HAT P2-2）：名称 → 拼音 slug（晨光精密制造 → chen-guang-jing-mi-zhi-zao）。
+     * 仅作前端填充建议，保存时仍走完整 slug 校验；拼音库不可用时兜底返回清洗后的原文。
+     */
+    public function slugSuggest(Request $request): JsonResponse
+    {
+        return response()->json([
+            'slug' => SlugSuggester::fromText((string) $request->get('text', '')),
+        ]);
     }
 
     public function index(Request $request, ?string $tab = 'all'): View

@@ -87,10 +87,21 @@ class GeoGraphBuilder
         return (string) (Setting::get('geo_org_name') ?: $site?->name ?? '');
     }
 
-    /** 正式事实库公开行：事实 + 来源 + 核定/复核时间，口径与可见页面一致 */
-    protected function facts(): array
+    /**
+     * 正式事实库公开行：事实 + 来源 + 核定/复核时间，口径与可见页面一致。
+     *
+     * 语言隔离（20G-3）：`publicRows()` 缺省即按 `LocaleContext::current()` 过滤，
+     * 因此 `/en/geo.json` 只输出英文事实行。**禁止跨语言 fallback** ——
+     * 某条事实缺英文翻译时宁可不出现在 en 输出里，也不能把中文label / value
+     * 塞进英文站的知识图谱（那是 AI 检索场景的数据污染）。
+     *
+     * @param  string|null $locale 缺省取当前请求语言
+     */
+    protected function facts(?string $locale = null): array
     {
-        return Fact::publicRows()->map(fn ($f) => [
+        $locale ??= LocaleContext::current();
+
+        return Fact::publicRows($locale)->map(fn ($f) => [
             'key'         => $f->key,
             'label'       => $f->label,
             'value'       => $f->value,

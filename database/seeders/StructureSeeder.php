@@ -181,7 +181,7 @@ class StructureSeeder extends Seeder
                     ['label' => 'Contact Us', 'url' => PublicUrl::url('contact/'), 'style' => 'secondary'],
                 ],
             ] : [
-                'eyebrow'  => 'INDUSTRIAL MATERIALS · 工业材料',
+                'eyebrow'  => '工业材料',
                 'title'    => '工业涂料 · 胶粘剂 · 功能助剂 一体化定制',
                 'subtitle' => '专注防护涂料、工业胶粘剂与功能性助剂的研发与生产，提供从选型、打样到稳定供货的产品与 ODM / OEM 定制方案。',
                 'buttons'  => [

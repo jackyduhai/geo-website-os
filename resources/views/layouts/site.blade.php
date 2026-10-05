@@ -1468,11 +1468,16 @@ a.ft-v:hover{color:var(--on-inverse);}
 
 @php
   $isEnView = \App\Support\Localization\LocaleContext::current() !== \App\Support\Localization\LocaleRegistry::default();
-  $brandDisplayName = $isEnView
-      ? (trim((string)($siteSettings['geo_org_en_name'] ?? '')) !== ''
-          ? $siteSettings['geo_org_en_name']
-          : ($siteSettings['site_name'] ?? config('app.name')))
-      : ($siteSettings['site_name'] ?? config('app.name'));
+  // 导航简称（brand_display_name）优先：公司全称较长时，管理员可在基础信息里填一个
+  // 只用于顶部导航的短名，避免被截断；留空则按语言回退到完整公司名。
+  $navShortName = trim((string)($siteSettings['brand_display_name'] ?? ''));
+  $brandDisplayName = $navShortName !== ''
+      ? $navShortName
+      : ($isEnView
+          ? (trim((string)($siteSettings['geo_org_en_name'] ?? '')) !== ''
+              ? $siteSettings['geo_org_en_name']
+              : ($siteSettings['site_name'] ?? config('app.name')))
+          : ($siteSettings['site_name'] ?? config('app.name')));
   // 自定义 logo（完整横版，含名称）时只显示 logo；否则用纯图标 + 公司名称文字。
   $headerCustomLogo = trim((string)($siteSettings['geo_org_logo'] ?? ''));
 @endphp

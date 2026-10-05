@@ -89,17 +89,11 @@ class AppServiceProvider extends ServiceProvider
 
         // 前台整页静态化缓存的自动失效：任一影响前台展示的内容模型发生
         // 新增/修改/删除（后台保存、GEOFlow 推内容等），版本号 +1，旧页面缓存整体作废。
+        // 登记清单集中在 {@see CacheInvalidationMap}（20F-HAT P1-1 收口）：这是
+        // 「哪些模型影响前台展示」的唯一事实源，新增前台可见数据模型只改这一处，
+        // 并有测试锁定关键成员，杜绝再次漏登记。
         // 留言（Inquiry）、操作日志、同步日志、用户不影响前台展示，刻意不纳入。
-        foreach ([
-            Content::class, ContentRevision::class, Category::class, Group::class,
-            Banner::class, Menu::class, PageBlock::class, Setting::class,
-            Media::class, RedirectRule::class, Fact::class,
-            // SeoMeta 显式覆盖直接决定前台 title/description/canonical/OG/robots，变更即作废整页静态壳。
-            SeoMeta::class,
-        ] as $model) {
-            $model::saved(static fn () => PageCache::flush());
-            $model::deleted(static fn () => PageCache::flush());
-        }
+        \App\Support\CacheInvalidationMap::register();
 
         // P-STEP 18H-1：搜索索引增量同步（Content/Entity 保存即增量重算；noindex / 栏目 /
         // 关系 / 站点 / 设置变更标记 dirty，引擎查询前懒重建），索引无需人工 reindex。

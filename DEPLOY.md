@@ -15,6 +15,22 @@
 
 ## 2. 首次部署
 
+> ⚠️ **发布制品必须包含以下 5 个目录及其 `.gitignore` 占位文件。**
+> 缺失任一目录会导致 Laravel 抛 `Please provide a valid cache path`（HTTP 500），
+> 首页与后台全部不可用。这是 RC-6 在干净副本上实证复现过的制品缺陷。
+>
+> ```text
+> storage/framework/cache/data/    ← 文件缓存分片目录
+> storage/framework/sessions/     ← 会话文件
+> storage/framework/views/        ← 编译后视图
+> storage/logs/                   ← 日志
+> bootstrap/cache/                ← 包/服务发现缓存
+> ```
+>
+> 各目录内的 `.gitignore` 内容为 `*` + `!.gitignore`，
+> 既保证目录本身随制品分发，又不会把运行期残留提交进仓库。
+> 用 `git archive` 导出时这些占位会自动携带（已实证）。
+
 ```bash
 # 1) 上传代码到站点目录（示例 /www/wwwroot/geo-website-os），Web 根目录指向 .../geo-website-os/public
 cd /www/wwwroot/geo-website-os
@@ -190,11 +206,19 @@ curl -I http://127.0.0.1:8010/        # 首次 X-Page-Cache: MISS，再次 HIT
 
 ## 9. 上线前自检清单
 
+**目录完整性（缺任一即Laravel 抛 `Please provide a valid cache path` / 500）**
+
+- [ ] `storage/framework/cache/data/`、`storage/framework/sessions/`、`storage/framework/views/`、`storage/logs/`、`bootstrap/cache/` 均存在且可写
+
+**环境与安全**
+
 - [ ] `APP_ENV=production`、`APP_DEBUG=false`、`APP_URL` 为正式 https 域名
+- [ ] `SITE_DEFAULT_FALLBACK=false`（未知 Host 返回「站点不存在」而非静默回落默认站）
 - [ ] HTTPS 可访问，HSTS 按需开启，后台 `/admin` 使用强密码
 - [ ] `config:cache / route:cache / view:cache / event:cache` 已执行
 - [ ] OPcache 已开启，`X-Page-Cache` 第二次访问为 HIT
 - [ ] 上传图片可访问（`public/storage` 软链正常），Nginx 静态缓存生效
 - [ ] 留言提交全链路成功（前台提交 → 后台留言列表可见）
 - [ ] `/sitemap.xml`、`/llms.txt`、`/robots.txt` 可访问且地址为正式域名
+- [ ] `composer audit` 已执行且无未处理的高危漏洞
 - [ ] 数据库与上传目录已纳入备份

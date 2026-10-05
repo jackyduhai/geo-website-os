@@ -204,6 +204,7 @@ class PageController extends Controller
         if ($category->isSinglePage()) {
             $page = Content::published()
                 ->where('category_id', $category->id)
+                ->where('locale', LocaleContext::current())
                 ->orderByDesc('published_at')
                 ->first();
             if ($page) {
@@ -214,7 +215,9 @@ class PageController extends Controller
         $children = $category->children()->where('is_active', true)->orderBy('sort')->get();
         $groups   = $category->groups()->where('is_active', true)->orderBy('sort')->get();
 
-        $query = Content::published()->where('category_id', $category->id);
+        $query = Content::published()
+            ->where('category_id', $category->id)
+            ->where('locale', LocaleContext::current());
         if ($groupId = $request->integer('group')) {
             $query->where('group_id', $groupId);
         }

@@ -74,6 +74,8 @@ Route::middleware(['admin.auth', 'admin.site'])->group(function () {
     // ---------- Entities / knowledge-graph catalog resources (P-STEP 17B) ----------
     // organization / product / service / person / location / topic. EntityRelation
     // management UI is delivered in 17C; 17B ships entity CRUD + example seeding only.
+    // slug-suggest 是静态路径，必须注册在 entities/{entity} 之前，否则被动态段拦截。
+    Route::get('entities/slug-suggest', [EntityController::class, 'slugSuggest'])->name('entities.slug-suggest');
     Route::post('entities/seed-examples', [EntityController::class, 'seedExamples'])->name('entities.seed');
     Route::post('entities/{entity}/publish', [EntityController::class, 'publish'])->name('entities.publish');
     Route::post('entities/{entity}/unpublish', [EntityController::class, 'unpublish'])->name('entities.unpublish');
@@ -172,6 +174,8 @@ Route::middleware(['admin.auth', 'admin.site'])->group(function () {
     Route::get('facts/create', [FactController::class, 'create'])->name('facts.create');
     Route::post('facts', [FactController::class, 'store'])->name('facts.store');
     Route::get('facts/{fact}/edit', [FactController::class, 'edit'])->name('facts.edit');
+    // 20G-3：补录某语言的翻译行（translation_group 由系统按 key 派生，运营不填）
+    Route::post('facts/{fact}/translations', [FactController::class, 'storeTranslation'])->name('facts.translations.store');
     Route::put('facts/{fact}', [FactController::class, 'update'])->name('facts.update');
     Route::delete('facts/{fact}', [FactController::class, 'destroy'])->name('facts.destroy');
 

@@ -107,6 +107,7 @@ class NarrativeController extends Controller
             ]
         );
         Narrative::flush();
+        PageCache::flush();
 
         return redirect()
             ->route('admin.narrative.index')

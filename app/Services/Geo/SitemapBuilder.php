@@ -30,17 +30,28 @@ class SitemapBuilder
 {
     public function build(): string
     {
-        $today = now()->toDateString();
+        /**
+         * lastmod 取业务真值（C-8 · Derived Output Integrity · 20G-4）。
+         *
+         * 绝不以「今天」兜底：固定 IA 页（首页 / 目录 / 关于）没有对应内容实体，
+         * 其真实更新时间并不存在，填 today 等于向搜索引擎声明假事实——lastmod
+         * 是 GEO 产品的核心信号（AI 侧据此判断内容新鲜度），24 个 URL 里 24 个
+         * 编造日期会让整站 sitemap 的可信度归零。
+         *
+         * 规范允许 lastmod 缺失：无真实更新时间时**省略该字段**，不做任何假填充。
+         *
+         * @var array<int,array{loc:string,lastmod:?string,changefreq:string,priority:string}>
+         */
         $urls  = [];
 
         // 同一规范地址只收录一次（固定 IA、自定义栏目、文章之间可能重合，如 /knowledge/）
         $seen = [];
-        $add = function (string $loc, string $changefreq, string $priority, ?string $lastmod = null) use (&$urls, &$seen, $today) {
+        $add = function (string $loc, string $changefreq, string $priority, ?string $lastmod = null) use (&$urls, &$seen) {
             if (isset($seen[$loc])) {
                 return;
             }
             $seen[$loc] = true;
-            $urls[] = ['loc' => $loc, 'lastmod' => $lastmod ?? $today, 'changefreq' => $changefreq, 'priority' => $priority];
+            $urls[] = ['loc' => $loc, 'lastmod' => $lastmod, 'changefreq' => $changefreq, 'priority' => $priority];
         };
 
         // 首页 loc 冻结为「无尾斜杠」形态：默认语言为根地址 PublicUrl::base()，
@@ -60,6 +71,21 @@ class SitemapBuilder
         // 详情页虽仍可直接访问（200），但不得进入 sitemap。
         $indexableEntitySlugs = PublicIndex::indexableEntitySlugs();
 
+        /**
+         * 实体内容型 URL 的真实 lastmod：updated_at 优先，回退 published_at，
+         * 查不到（目录项无对应实体）时返回 null → 省略 lastmod，绝不填「今天」。
+         *
+         * @var \Closure(string):?string
+         */
+        $entityLastmod = function (string $slug): ?string {
+            $entity = PublicIndex::entityQuery()
+                ->forLocale(LocaleContext::current())
+                ->where('slug', $slug)
+                ->first();
+
+            return ($entity?->updated_at ?? $entity?->published_at)?->toDateString();
+        };
+
         // P-STEP 18R-2a：实体是否进 sitemap 由 EntityCapabilityRegistry::isSitemap() 声明。
         // 2a 仅 product/service 有真实路由且被下方 Catalog 循环收录；case_study 虽声明
         // sitemap=true，但 /cases 路由 2b 才建，故 2a 不新增收录段落（无 URL 可输出，
@@ -77,7 +103,7 @@ class SitemapBuilder
             foreach (Catalog::products() as $p) {
                 if (Catalog::isCoreProduct($p['slug'])
                     && in_array($p['slug'], $indexableEntitySlugs, true)) {
-                    $add(PublicUrl::product($p['slug']), 'weekly', '0.7');
+                    $add(PublicUrl::product($p['slug']), 'weekly', '0.7', $entityLastmod($p['slug']));
                 }
             }
 
@@ -85,7 +111,7 @@ class SitemapBuilder
             $add(PublicUrl::url('solutions/'), 'monthly', '0.9');
             foreach (Catalog::scenes() as $scene) {
                 if (in_array($scene['slug'], $indexableEntitySlugs, true)) {
-                    $add(PublicUrl::solution($scene['slug']), 'monthly', '0.8');
+                    $add(PublicUrl::solution($scene['slug']), 'monthly', '0.8', $entityLastmod($scene['slug']));
                 }
             }
 
@@ -126,7 +152,7 @@ class SitemapBuilder
         // 知识中心：总览 + 各启用子栏目（groups 数据驱动）+ 已发布文章（扁平 URL）
         $add(PublicUrl::url('knowledge/'), 'weekly', '0.7');
         foreach (\App\Models\Group::knowledgeChannels() as $ch) {
-            $add(PublicUrl::url('knowledge/' . $ch->slug . '/'), 'weekly', '0.6');
+            $add(PublicUrl::url('knowledge/' . $ch->slug . '/'), 'weekly', '0.6', $ch->updated_at?->toDateString());
         }
         // 仅收录知识分类下、公开可索引（启用栏目 + 非 noindex）的文章（扁平 /knowledge/{slug}）。
         $knowledgeArticles = PublicIndex::contentQuery()

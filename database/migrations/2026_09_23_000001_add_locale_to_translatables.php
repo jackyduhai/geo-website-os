@@ -121,16 +121,17 @@ return new class extends Migration
         });
 
         // contents：drop 新索引、去 locale/group、恢复 slug 全局唯一
-        Schema::table('contents', function (Blueprint $table) {
-            $table->dropIndex('contents_translation_group_index');
-            $table->dropUnique('contents_site_slug_locale_unique');
-            $table->dropUnique('contents_slot_unique');
-            $table->dropColumn(['translation_group', 'locale']);
-        });
-        Schema::table('contents', function (Blueprint $table) {
-            $table->unique('slug');
-            $table->unique('slot');
-        });
+        //
+        // ⚠️ SQLite 下 `dropUnique('名字')` 对**表级**唯一约束无效（20G-8-B 实测）。
+        // 约束是 down 的直接产物：`2026_09_17_000002` 用 `->unique()` 在 contents 上
+        // 建出的是表级约束（sqlite_autoindex_contents_N，origin=u），
+        // 而本迁移 down 里的 `dropUnique('contents_slot_unique')` / `dropUnique(
+        // 'contents_site_slug_locale_unique')` 按名找的是**命名索引**，找不到 →
+        // 报错并中断回滚链（且 Laravel 会吞掉异常、退出码仍是 0，极难发现）。
+        //
+        // 修法：contents 的 down 走**显式重建表**（与 up 的 rebuildContents() 对称），
+        // 顺带把 up 里创建的命名索引先删掉（那些是 origin=c，可以按名 DROP）。
+        $this->downSqliteContents();
 
         // entities
         Schema::table('entities', function (Blueprint $table) {
@@ -142,6 +143,75 @@ return new class extends Migration
     }
 
     /** contents 建新表（slug 无全局唯一）→ 拷数据 → 改名 → 建命名索引。 */
+    /**
+     * contents 的 SQLite 回滚：显式重建表，去掉 locale / translation_group，
+     * 恢复「slug 全局唯一」的上游形态。
+     *
+     * 为什么必须重建而不能用 dropUnique（20G-8-B 实测）：
+     * 本迁移的 up() 是「建新表 → 改名」，建出的唯一约束是**表级**
+     * （`sqlite_autoindex_contents_N`，origin=u）。SQLite 不支持按名DROP 表级约束，
+     * 而 `dropUnique('contents_slot_unique')` 找的是命名索引 → 报错、回滚链中断。
+     *
+     * 与 20G-6 · C-16 同一个坑的另一个面：那次的教训是「CTAS 重建会丢约束」，
+     * 所以这里**显式写出完整列定义 + 主键 + 外键 + 索引**，不做 CTAS。
+     *
+     * 保留的列 = up() 之前的形态（即无 locale / 无 translation_group），
+     * 唯一约束恢复为 up() 之前的 UNIQUE(site_id, slug) / UNIQUE(site_id, slot)
+     * （实测确认；注意不是 UNIQUE(slug)——本库是多站点，同slug 可跨站重复）。
+     */
+    private function downSqliteContents(): void
+    {
+        // 先删命名索引（origin=c，可按名 DROP）——顺序无所谓，
+        // 因为随后整表会被 DROP 掉。
+        DB::statement('DROP INDEX IF EXISTS contents_translation_group_index');
+        DB::statement('DROP INDEX IF EXISTS contents_site_slug_locale_unique');
+
+        DB::statement('PRAGMA foreign_keys = OFF');
+        Schema::dropIfExists('contents_down');
+
+        $colDefs = [];
+        foreach ($this->contentColumns as $name => $def) {
+            // 回滚目标：去掉 locale / translation_group
+            if ($name === 'locale' || $name === 'translation_group') {
+                continue;
+            }
+            $colDefs[] = '`'.$name.'` '.$def;
+        }
+        $colDefs = array_merge(['id INTEGER PRIMARY KEY AUTOINCREMENT'], $colDefs);
+        $colDefs[] = 'FOREIGN KEY (`site_id`) REFERENCES `sites`(`id`) ON DELETE RESTRICT';
+        // 唯一约束：恢复**该迁移 up 之前**的形态 —— 实测为
+        //   UNIQUE(site_id, slug) + UNIQUE(site_id, slot)
+        // ⚠️ 不能写 `UNIQUE(slug)`：本库是**多站点**系统，同一 slug 会在
+        // 多个站点各有一行（多站隔离的基线设计）。写成 UNIQUE(slug) 后，
+        // 回滚时 `INSERT INTO contents_down SELECT ...` 遇到
+        // 「A 站中文页 + A 站英文页 slug 相同」就直接唯一约束冲突 →
+        // 回滚失败（20G-8-A 实测：有数据时 FAIL，空库时却通过）。
+        $colDefs[] = 'UNIQUE(site_id, slug)';
+        $colDefs[] = 'UNIQUE(site_id, slot)';
+
+        DB::statement('CREATE TABLE `contents_down` ('.implode(', ', $colDefs).')');
+
+        $keepCols = array_values(array_diff(
+            array_keys($this->contentColumns),
+            ['locale', 'translation_group']
+        ));
+        $selectList = implode(', ', array_map(fn ($c) => '`'.$c.'`', $keepCols));
+
+        DB::statement('INSERT INTO `contents_down` ('.$selectList.') SELECT '.$selectList.' FROM `contents`');
+
+        DB::statement('DROP TABLE contents');
+        DB::statement('ALTER TABLE contents_down RENAME TO contents');
+
+        // 重建索引（与 rebuildContents 对称）
+        DB::statement('CREATE INDEX contents_site_id_index ON contents(site_id)');
+        DB::statement('CREATE INDEX contents_status_published_at_index ON contents(status, published_at)');
+        DB::statement('CREATE INDEX contents_type_category_id_index ON contents(type, category_id)');
+        DB::statement('CREATE INDEX contents_category_id_group_id_index ON contents(category_id, group_id)');
+        DB::statement('CREATE INDEX contents_external_id_index ON contents(external_id)');
+
+        DB::statement('PRAGMA foreign_keys = ON');
+    }
+
     private function rebuildContents(): void
     {
         $temp = 'contents_new';

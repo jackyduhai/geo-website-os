@@ -46,6 +46,23 @@ class ContentGate
     public const CONFLICT_VALUES = [];
 
     /**
+     * 发布时是否强制执行门禁（config/geo.gate.enforce_on_publish，默认 true）。
+     *
+     * false 时错误降级为警告而非阻断：这是唯一的降级开关，后台手动发布与
+     * GEOFlow 推送共用，两条内容路径不允许出现「手动严格、系统宽松」的双标。
+     */
+    public function isEnforced(): bool
+    {
+        return (bool) config('geo.gate.enforce_on_publish', true);
+    }
+
+    /** 证据链最少条数（config/geo.gate.min_evidence，默认 2）。 */
+    public function minEvidence(): int
+    {
+        return max(0, (int) config('geo.gate.min_evidence', 2));
+    }
+
+    /**
      * 执行全量校验
      *
      * @return array{passed:bool, errors:array, warnings:array}

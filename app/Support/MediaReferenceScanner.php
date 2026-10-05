@@ -8,21 +8,25 @@ use App\Models\ContentRevision;
 use App\Models\Entity;
 use App\Models\Media;
 use App\Models\SeoMeta;
+use App\Models\Setting;
 
 /**
- * 媒体引用反查守卫（Discovery §3.4 六路扫描）。
+ * 媒体引用反查守卫（Discovery §3.4 七路扫描）。
  *
  * media 表无 DB 外键约束，封面 / OG / Banner / 实体 metadata / 正文内联图 /
- * 页面 SEO OG 图均以软引用指向 media.id 或 /storage/{path} 字符串。物理删文件
- * 之前必须反查这些引用点，否则前台直接破图、OG 图 404。
+ * 页面 SEO OG 图 / 设置项图片（Logo / 默认 OG / 二维码）均以软引用指向 media.id
+ * 或 /storage/{path} 字符串。物理删文件之前必须反查这些引用点，否则前台直接
+ * 破图、OG 图 404。
  *
- * 六路（全部在当前站点上下文内查询，跨站引用天然隔离）：
+ * 七路（全部在当前站点上下文内查询，跨站引用天然隔离）：
  *   1. Content.cover_id        FK 直查
  *   2. Content.og_image_id     FK 直查
  *   3. Banner.image_id         FK 直查
  *   4. Entity.metadata JSON-int（media_id / og_image，whereJsonContains）
  *   5. Content.body            path-string LIKE（/storage/{path}）
  *   6. SeoMeta.og_image_path   精确匹配 + Entity.metadata->image LIKE 兜底
+ *   7. Settings 图片字段        geo_org_logo / seo_og_image / contact_wechat_qr
+ *      （Media Picker 存完整 URL，含 /storage/{path}）
  * 附查：ContentRevision 历史快照只记 warning，不阻断删除
  * （历史正文可被回滚复活图片引用，删文件本身仍放行，但需提示运营）。
  *
@@ -138,6 +142,25 @@ class MediaReferenceScanner
                     'label' => '实体《' . ($e->name ?: ("未命名#{$e->id}")) . '》配图',
                 ];
             });
+
+        // 路7：Settings 图片字段（站点 Logo / 默认 OG / 微信二维码）。
+        // Media Picker 选择后存的是完整 URL（含 /storage/{path}），删除前必须拦截。
+        $settingImageKeys = [
+            'geo_org_logo'      => '站点 Logo',
+            'seo_og_image'      => '默认社交分享图',
+            'contact_wechat_qr' => '微信二维码',
+        ];
+        foreach ($settingImageKeys as $sKey => $sLabel) {
+            $val = Setting::get($sKey);
+            if (is_string($val) && $val !== '' && str_contains($val, $storageUrl)) {
+                $refs[] = [
+                    'model' => Setting::class,
+                    'id'    => $sKey,
+                    'field' => $sKey,
+                    'label' => '设置项「' . $sLabel . '」',
+                ];
+            }
+        }
 
         // 附查：ContentRevision 历史快照——只告警不阻断。
         // 快照 body 里若引用本图，删除文件后回滚历史版本会复活一张破图；

@@ -18,11 +18,24 @@ use App\Support\Localization\LocaleContext;
  *     仅有生产实质、/cooperation/ 仅有合作内容时才输出；核心产品 / 场景、知识文章
  *     统一经 PublicIndex 过滤（published + 启用栏目 + 非 noindex）；
  *   - 最小站点（只有公司名）时摘要与各段按数据有无条件降级，不拼「自有 0 厂区 /
- *     0 车间 / 年产能」这类空壳句，也不输出会 404 / 500 的链接。
+ *     0 车间 / 年产能」这类空壳句，也不输出会 404 / 500 的链接；
+ *   - 输出前统一经 {@see LlmsSanitizer} 终洗兜底（20F-HAT P1-3）：AI 面向输出
+ *     绝不出现 0 值统计、空键值行、悬挂标点。四个出口（中文/英文 × 站点/通用降级）
+ *     全部在 build() 收口，避免后续新增分支绕过终洗。
  */
 class LlmsBuilder
 {
+    public function __construct(private readonly LlmsSanitizer $sanitizer)
+    {
+    }
+
     public function build(): string
+    {
+        return $this->sanitizer->clean(explode("\n", $this->compose()));
+    }
+
+    /** 组装（未终洗）。语言与降级分支在此分流，终洗统一在 build() 出口。 */
+    private function compose(): string
     {
         if (\App\Support\Localization\LocaleContext::current() !== \App\Support\Localization\LocaleRegistry::default()) {
             return $this->buildEnglish();
@@ -232,7 +245,10 @@ class LlmsBuilder
             $desc = trim((string) ($kg->description ?? ''));
             $L[] = '- [' . $kg->name . '](' . PublicUrl::url('knowledge/' . $kg->slug . '/') . ')' . ($desc !== '' ? '：' . $desc : '');
         }
+        // forLocale：20G-3 修复 —— 缺它会让中文 llms.txt 混入英文文章
+        // （此前的 buildEnglish 里有、buildGeneric 里漏了，两条路径不一致）。
         $knowledgeArticles = PublicIndex::contentQuery()
+            ->forLocale(LocaleContext::current())
             ->whereHas('category', fn ($q) => $q->where('slug', 'knowledge'))
             ->orderByDesc('published_at')->limit(20)->get();
         foreach ($knowledgeArticles as $article) {
@@ -281,7 +297,12 @@ class LlmsBuilder
         $L[] = '';
         $L[] = '- [首页](' . PublicUrl::home() . ')';
         // 仅列出公开可索引（published + 启用栏目 + 非 noindex）的内容。
-        foreach (PublicIndex::contentQuery()->orderByDesc('published_at')->limit(20)->get() as $article) {
+        // forLocale：20G-3 修复 —— 通用骨架也必须按当前语言取内容，
+        // 否则 /llms.txt（中文站）会列出英文文章（实测复现：中文 llms.txt
+        // 同时输出 ZH Article 与 EN Article）。
+        foreach (PublicIndex::contentQuery()
+            ->forLocale(LocaleContext::current())
+            ->orderByDesc('published_at')->limit(20)->get() as $article) {
             $L[] = '- [' . $article->title . '](' . $article->url() . ')';
         }
         $L[] = '';

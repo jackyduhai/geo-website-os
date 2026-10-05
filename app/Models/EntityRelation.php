@@ -67,11 +67,10 @@ class EntityRelation extends Model
 
         // P-STEP 18A / #114：关系是前台产品 / 场景关系区块与 GEO 的权威数据源，
         // 任何关系写入 / 删除都必须失效整页缓存，否则匿名访客仍命中旧 SSR HTML。
-        static::saved(function (self $relation) {
-            PageCache::flush();
-        });
-        static::deleted(function (self $relation) {
-            PageCache::flush();
-        });
+        //
+        // ⚠️ 整页缓存失效登记的唯一事实源是 {@see \App\Support\CacheInvalidationMap}
+        // （20F-HAT P1-1 收口，EntityRelation 已在其 MODELS 清单中）。此处**刻意不再
+        // 重复挂 flush**：两处登记会让单次写入把版本号推进 2，破坏
+        // 「一次写入 = 一次失效」的确定性。
     }
 }

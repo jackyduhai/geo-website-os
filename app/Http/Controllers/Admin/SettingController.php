@@ -49,7 +49,7 @@ class SettingController extends Controller
             ->whereNotIn('key', array_keys(self::RETIRED))
             ->orderBy('sort')
             ->get();
-        $images = Media::whereIn('mime_type', ['image/jpeg', 'image/png', 'image/webp', 'image/gif'])
+        $images = Media::whereIn('mime', ['image/jpeg', 'image/png', 'image/webp', 'image/gif'])
             ->orderByDesc('id')->limit(40)->get();
 
         return view('admin.settings.form', [

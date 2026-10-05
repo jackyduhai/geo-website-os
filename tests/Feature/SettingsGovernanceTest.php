@@ -34,9 +34,9 @@ class SettingsGovernanceTest extends TestCase
     protected User $super;
     protected Site $default;
 
-    /** 各组保留键数量（与 DefaultSettingSeeder 一致，合计 72）。 */
+    /** 各组保留键数量（与 DefaultSettingSeeder 一致，合计 73）。 */
     private const GROUP_COUNTS = [
-        'general' => 7,
+        'general' => 8,
         'theme'   => 16,
         'contact' => 7,
         'seo'     => 6,
@@ -117,6 +117,52 @@ class SettingsGovernanceTest extends TestCase
         PageCache::flush();
         $this->assertSame('Acme OS', Setting::get('site_name'));
         $this->get('/')->assertOk()->assertSee('Acme OS');
+    }
+
+    public function test_brand_display_name_shortens_nav_only_not_json_ld(): void
+    {
+        // 中文 / 英文全称（JSON-LD 与 SEO 用）。
+        $this->actingAs($this->super)->put('/admin/settings/general', [
+            'site_name' => '示例制造有限公司',
+        ])->assertRedirect();
+        Setting::set('geo_org_en_name', 'Example Manufacturing Co., Ltd.');
+        Setting::flush();
+        PageCache::flush();
+
+        // 未填简称：导航显示完整公司名（中文 / 英文）。
+        $this->get('/')->assertOk()->assertSee('示例制造有限公司', false);
+        $this->get('/en')->assertOk()->assertSee('Example Manufacturing Co., Ltd.', false);
+
+        // 填写导航简称：导航只显示简称，但 JSON-LD Organization 仍用完整公司名。
+        $this->actingAs($this->super)->put('/admin/settings/general', [
+            'brand_display_name' => 'Acme',
+        ])->assertRedirect();
+        Setting::flush();
+        PageCache::flush();
+
+        $zh = $this->get('/')->assertOk();
+        $zh->assertSee('Acme', false)->assertSee('示例制造有限公司', false);
+        $en = $this->get('/en')->assertOk();
+        $en->assertSee('Acme', false)->assertSee('Example Manufacturing Co., Ltd.', false);
+
+        // 导航 logo 文本节点（logo-name）= 简称，中英文都如此。
+        foreach (['/' => 'Acme', '/en' => 'Acme'] as $path => $nav) {
+            $html = $this->get($path)->getContent();
+            $this->assertMatchesRegularExpression(
+                '/<span class="logo-name">' . preg_quote($nav, '/') . '<\/span>/',
+                $html,
+                "路径 [{$path}] 的导航 logo-name 应为简称 {$nav}"
+            );
+        }
+
+        // 清空简称：导航恢复完整公司名。
+        $this->actingAs($this->super)->put('/admin/settings/general', [
+            'brand_display_name' => '',
+        ])->assertRedirect();
+        Setting::flush();
+        PageCache::flush();
+        $this->get('/')->assertOk()->assertSee('示例制造有限公司', false);
+        $this->get('/en')->assertOk()->assertSee('Example Manufacturing Co., Ltd.', false);
     }
 
     public function test_retired_keys_are_hidden_and_not_writable(): void

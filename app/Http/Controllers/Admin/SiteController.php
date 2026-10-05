@@ -65,6 +65,31 @@ class SiteController extends Controller
         $makeDefault = $request->boolean('is_default');
 
         $site = DB::transaction(function () use ($data, $makeDefault): Site {
+            /**
+             * 新建站点的初始化数据必须在**同一事务内**写完（原子性要求：
+             * 任何一步失败都要整站回滚，不留半成品站点）。
+             *
+             * ⚠️ 曾在此加过 `PRAGMA defer_foreign_keys = ON`（记为 C-18），
+             *    **已于 RC-5 撤销** —— 该缺陷经三路对照证明**不成立**：
+             *      ① 变异测试：把 PRAGMA 换成无效名后，Production-Parity
+             *         的 7 个测试（含 `test_site_creation_succeeds_under_production_fk`）
+             *         依然全部通过 → 修法无牙齿；
+             *      ② 纯 PDO 层对照（同文件库 + FK=ON + 同连接 + 同事务）：
+             *         `defer=OFF` 与 `defer=ON` **都成功**；
+             *      ③ 真实 HTTP 路径 `POST /admin/sites`：同样成功。
+             *
+             *    原先观察到的「FK failed / 事务归零 / 行不可见」是**测试探针自身**
+             *    造成的假象 —— 探针在 bootstrap 之后才 `config()` 改库路径并
+             *    `DB::purge()`，重建了 Connection 实例，使「写用连接」与
+             *    「Schema/Setting 读用连接」不再是同一个，
+             *    从而人为制造出事务边界错位。
+             *    正确做法：库路径必须在 bootstrap **之前**通过
+             *    `DB_DATABASE` 环境变量注入。
+             *
+             * 教训：跨进程改库路径时，禁止在 bootstrap 后
+             * config()+purge()，否则取证结论不可信。
+             */
+
             $site = Site::create($data);
             if ($makeDefault) {
                 $this->promoteDefault($site);
@@ -79,6 +104,10 @@ class SiteController extends Controller
                 // 渲染未保存兜底欢迎屏、后台无 Page 可组合（违反零代码建站契约）。
                 (new \Database\Seeders\BlankHomepageSeeder($site))->run();
                 (new \Database\Seeders\SystemPageSeeder($site))->run();
+                // 20G-7.1 · UX-002：栏目 / 分组 / 导航可见性 / 语言开关。
+                // 缺它的话后台「新建内容」的栏目下拉为空（Category 0 行），
+                // 运营无法给内容归类 —— 零代码建站契约在此断裂。
+                (new \Database\Seeders\SiteStructureSeeder())->run();
             });
 
             return $site;

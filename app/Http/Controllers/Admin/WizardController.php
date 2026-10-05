@@ -96,10 +96,16 @@ class WizardController extends Controller
                 break;
             case 6:
                 // 发布：把 draft 的 product 置 published
+                // 逐条 save 触发 saved 事件（缓存失效 / 搜索索引 / Catalog），
+                // 避免批量 update 绕过事件导致缓存与索引仍为 draft（P1-1）。
                 Entity::where('type', Entity::TYPE_PRODUCT)
                     ->where('site_id', $siteId)
                     ->where('status', Entity::STATUS_DRAFT)
-                    ->update(['status' => Entity::STATUS_PUBLISHED]);
+                    ->get()
+                    ->each(function (Entity $e): void {
+                        $e->status = Entity::STATUS_PUBLISHED;
+                        $e->save();
+                    });
                 Setting::set('wizard_completed', 'true');
                 session(['wizard_step' => 1]);
                 Setting::flush();

@@ -126,6 +126,12 @@ class GeoInstall extends Command
         $this->call('db:seed', ['--class' => 'SystemPageSeeder', '--force' => true]);
         $this->line('  [ok] system pages (industry-neutral)');
 
+        // ---------- 4d-2. 栏目骨架 / 导航可见性 / 语言开关（20G-7.1 · UX-002）----------
+        // 与 SiteController@store 用同一个 Seeder —— 两条建站路径必须产出等价结构，
+        // 否则「命令行装的站」与「后台建的站」能力不一致（实测 default 站曾 0 栏目）。
+        $this->call('db:seed', ['--class' => 'SiteStructureSeeder', '--force' => true]);
+        $this->line('  [ok] category skeleton + nav visibility + bilingual switch');
+
         // ---------- 4e. 搜索派生索引初始化 ----------
         // 索引是派生只读模型：安装结束全量重建一次，保证 fresh install 后搜索立即可用、
         // 与初始数据一致（空站为 0 条）。之后内容变更由增量同步 / dirty 懒重建维护。

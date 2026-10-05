@@ -77,10 +77,18 @@ class Narrative
         return self::$htmlCache[$key];
     }
 
-    /** 渲染 Markdown 并把正文 H1 降级为 H2（每页只允许模板里的一个 H1） */
+    /**
+     * 渲染 Markdown 并把正文 H1 降级为 H2（每页只允许模板里的一个 H1）。
+     *
+     * 安全策略不在这里定义：正文来源含后台「页面文案」编辑与 GEOFlow 外部同步，
+     * 属不可信输入，必须复用 {@see Content::renderMarkdown} 这一唯一底层 renderer
+     * （html_input=escape + allow_unsafe_links=false）。本方法只负责 Narrative
+     * 专属的 H1→H2 降级后处理，不重复实现渲染选项——两份渲染策略必然分叉，
+     * 那是 20G-1 收敛前的真实漏洞形态。
+     */
     public static function renderMarkdown(string $markdown): string
     {
-        $html = Str::markdown($markdown);
+        $html = Content::renderMarkdown($markdown);
         $html = preg_replace('/<(\/?)h1>/i', '<$1h2>', $html);
         return trim($html);
     }

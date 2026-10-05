@@ -36,6 +36,21 @@ trait Translatable
                 $model->syncSharedColumns();
             }
         });
+
+        // 删除 anchor 时级联处理同 translation_group 的其余翻译行，避免「中文删了、
+        // 其他语言仍可访问」的泄漏（BUG-20B-002）。Content 为软删（级联软删），
+        // Entity 为硬删（级联硬删）；forceDelete 时物理删除。批量操作不触发模型
+        // 事件以避免递归；缓存失效由 anchor 自身的 deleted 事件负责。
+        static::deleting(function ($model): void {
+            $force = method_exists($model, 'isForceDeleting') && $model->isForceDeleting();
+            $base = static::where('translation_group', $model->translation_group)
+                ->whereKeyNot($model->getKey());
+            if ($force) {
+                $base->forceDelete();
+            } else {
+                $base->delete();
+            }
+        });
     }
 
     /** 同一 translation_group 的所有语言行。 */

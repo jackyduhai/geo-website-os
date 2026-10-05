@@ -38,6 +38,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'super.admin' => \App\Http\Middleware\EnsureSuperAdmin::class,
             'geoflow.token' => \App\Http\Middleware\VerifyGeoflowToken::class,
             'locale' => \App\Http\Middleware\SetLocale::class,
+            'utf8.guard' => \App\Http\Middleware\RejectMalformedUtf8::class,
         ]);
 
         // 后台鉴权先于路由模型绑定：未登录访问不存在的后台资源 ID 时返回 302 登录，
@@ -63,6 +64,16 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->web(prepend: [
             \App\Http\Middleware\ResolveSite::class,
             \App\Http\Middleware\SecurityHeaders::class,
+            \App\Http\Middleware\RejectMalformedUtf8::class,
+        ]);
+
+        // api 组同样必须解析站点：否则 SiteContext 惰性兜底 default site，
+        // GEOFlow 推送无论打到哪个域名都写入/校验 default 站（多站点写入落点错误）。
+        // RejectMalformedUtf8 把非法编码输入拦成 422（否则数组字段转 JSON 会 500）。
+        $middleware->api(prepend: [
+            \App\Http\Middleware\ResolveSite::class,
+            \App\Http\Middleware\SecurityHeaders::class,
+            \App\Http\Middleware\RejectMalformedUtf8::class,
         ]);
 
         // 其余自定义中间件按洋葱圈顺序追加：旧链 301/302 先跳转（不入静态化、

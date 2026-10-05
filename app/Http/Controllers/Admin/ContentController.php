@@ -139,6 +139,15 @@ class ContentController extends Controller
         unset($data['locale'], $data['translation_group']);
 
         $content->fill($data);
+
+        // 已发布内容不能把发布时间改到未来：否则后台显示已发布、前台 scopePublished
+        // 过滤导致 404（BUG-20B-RD-002，BUG-004 的 update 残留）。完整定时发布为 v1.1。
+        if ($content->status === 'published'
+            && $content->published_at
+            && $content->published_at->isFuture()) {
+            return back()->with('error', '已发布内容不能把发布时间改到未来（定时发布将在 v1.1 完整支持）。请把发布时间改为当前或过去时间，或先下架为草稿。')->withInput();
+        }
+
         $content->content_hash = $content->computeHash();
         $content->save();
         $this->syncRelations($content, $request);
@@ -178,9 +187,12 @@ class ContentController extends Controller
                 ->with('gateWarnings', $result['warnings']);
         }
 
-        if (! $content->published_at) {
-            $content->published_at = now();   // 留空则立即发布；指定未来时间即定时发布
+        // 完整定时发布为 v1.1 能力。v1.0 若 published_at 为未来时间，拒绝并提示，
+        // 避免「后台显示已发布、前台 404」的状态不一致（BUG-20B-004）。
+        if ($content->published_at && $content->published_at->isFuture()) {
+            return back()->with('error', '定时发布将在 v1.1 完整支持；请把发布时间改为当前时间或留空以立即发布。');
         }
+        $content->published_at = $content->published_at ?: now();
         $content->status = 'published';
         $content->content_hash = $content->computeHash();
         $content->save();
@@ -218,14 +230,17 @@ class ContentController extends Controller
     }
 
     /**
-     * 正文 Markdown 预览：用与前台完全相同的 Str::markdown 渲染，保证“所见即前台所得”，
-     * 支持 GFM 表格。仅管理员可用，不落库。
+     * 正文 Markdown 预览：用与前台完全相同的渲染（{@see Content::renderMarkdown}），
+     * 保证「所见即前台所得」，支持 GFM 表格。仅管理员可用，不落库。
+     *
+     * 收敛到唯一渲染出口（C-1）：预览若用裸 Str::markdown，后台看着安全的 HTML
+     * 到前台会被转义，或反之预览通过而前台注入——两份渲染策略必然分叉。
      */
     public function mdPreview(Request $request): JsonResponse
     {
         $text = (string) $request->input('text', '');
 
-        return response()->json(['html' => (string) \Illuminate\Support\Str::markdown($text)]);
+        return response()->json(['html' => Content::renderMarkdown($text)]);
     }
 
     public function revisions(Content $content): View

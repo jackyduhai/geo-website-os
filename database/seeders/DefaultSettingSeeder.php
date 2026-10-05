@@ -38,6 +38,7 @@ class DefaultSettingSeeder extends Seeder
         $rows = [
             // ---------- 基础信息 ----------
             ['site_name',        $siteName, 'general', '站点名称', 'text', '出现在导航与页脚', 10],
+            ['brand_display_name', '', 'general', '导航显示名称（简称）', 'text', '仅用于顶部导航的品牌名；公司全称较长、导航被截断时可填简称（如「Acme」），留空则显示站点全称；不影响 JSON-LD / SEO 中的公司全称', 12],
             ['site_supported_locales', ['zh-CN'], 'general', '前台可用语言', 'json', '前端语言（BCP-47）；默认仅 zh-CN，可启用 en', 20],
             ['site_default_locale', 'zh-CN', 'general', '前台默认语言', 'text', '访客默认语言，须在可用语言内', 30],
             ['site_description', '',       'general', '站点简介', 'textarea', '用于首页与默认 meta description', 40],
