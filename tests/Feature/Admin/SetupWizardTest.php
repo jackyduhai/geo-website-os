@@ -90,13 +90,13 @@ class SetupWizardTest extends TestCase
             'company_name' => 'Demo Tenant A Living',
             'email' => 'hi@demo-tenant-a.test',
             'phone' => '024-000000',
-            'address' => 'Sample City',
+            'address' => 'Example Street 1',
         ])->assertRedirect(route('admin.wizard', ['step' => 2]));
 
         $this->assertSame('Demo Tenant A Living', $this->setting('site_name'));
         $this->assertSame('hi@demo-tenant-a.test', $this->setting('contact_email'));
         $this->assertSame('024-000000', $this->setting('contact_phone'));
-        $this->assertSame('Sample City', $this->setting('contact_address'));
+        $this->assertSame('Example Street 1', $this->setting('contact_address'));
 
         $org = Entity::withoutSiteScope()
             ->where('site_id', $this->fresh->id)->where('type', Entity::TYPE_ORGANIZATION)
