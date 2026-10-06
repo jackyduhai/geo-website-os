@@ -140,11 +140,32 @@ class ExampleDatasetIntegrityTest extends TestCase
         $this->assertCount(3, Facts::cases());
     }
 
-    public function test_fact_library_has_17_public_and_6_gaps(): void
+    /**
+     * 事实库规模（RC-9 D-02 后）。
+     *
+     * facts 是行级翻译模型，公开事实每个 key 各有 zh-CN / en 两行：
+     *   17 公开 key × 2 语言 = 34 公开行
+     *   6 个待补充 key（地址 / 电话 / MOQ / 交付周期 / 资质 / 标准号）
+     *   只存在于 zh-CN —— 它们本就没有值，不补en 行，
+     *   门禁下不出现在任何 AI 出口。
+     * 合计 40 行。
+     */
+    public function test_fact_library_has_17_public_keys_in_two_locales_and_6_gaps(): void
     {
-        $this->assertSame(17, Fact::where('is_public', true)->count());
-        $this->assertSame(6, Fact::where('is_public', false)->count());
-        $this->assertSame(23, Fact::count());
+        // 公开行：两个语言各17 条
+        $this->assertSame(17, Fact::where('locale', 'zh-CN')->where('is_public', true)->count());
+        $this->assertSame(17, Fact::where('locale', 'en')->where('is_public', true)->count());
+
+        // 待补充项：只在默认语言，无英文占位
+        $this->assertSame(6, Fact::where('locale', 'zh-CN')->where('is_public', false)->count());
+        $this->assertSame(0, Fact::where('locale', 'en')->where('is_public', false)->count());
+
+        $this->assertSame(40, Fact::count());
+
+        // 两个语言的公开 key 集合必须完全一致 —— 否则英文站会缺事实
+        $zh = Fact::where('locale', 'zh-CN')->where('is_public', true)->pluck('key')->sort()->values();
+        $en = Fact::where('locale', 'en')->where('is_public', true)->pluck('key')->sort()->values();
+        $this->assertSame($zh->all(), $en->all(), 'zh-CN 与 en 的公开事实 key 集合不一致');
     }
 
     public function test_main_menu_structure_matches_example_dataset(): void

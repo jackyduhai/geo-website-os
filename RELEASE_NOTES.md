@@ -92,8 +92,41 @@ php artisan migrate:rollback --step=1   # 回滚
 | RC-6 Release Artifact Audit | 9 审计面通过 ·干净副本完整复现安装→GEO→回滚链 |
 | RC-7 Final Release | 1410 tests / 7349 assertions / 0 failures · `composer audit` 0 advisories |
 | RC-8 Public Boundary Redaction | 165 commits / 61 tags / 1961 blobs 全历史重写，真实业务标识残留 **0** |
+| RC-9 Final Acceptance | 25 Gate 验收；发现并修复 GEO 事实源分裂P0，新增跨出口契约测试 |
 
 工程 Gate 文档位于 `docs/audit/RC/`。
+
+---
+
+## AI 事实口径契约
+
+GEO WebsiteOS 同时服务两类消费者：访客（Human）与检索引擎 / 大模型（AI）。
+为保证两者看到**同一个真实世界**，系统冻结了三条口径规则：
+
+```text
+1. facts 表是「业务事实」的唯一权威源（Business Fact Canonical SoT）。
+   geo.json 与 llms.txt 的事实出口都必须经Fact::publicRows($locale) 取得，
+   不得自行读取另一套事实数据源。
+
+2. SchemaBuilder 不直接读 facts。JSON-LD 的实体属性类字段
+   （legalName / address / areaServed / knowsAbout）仍由站点 metadata 驱动。
+   这样做的原因是 Schema.org 字段集与业务事实表不是一一对应，
+   硬映射会产生「schema 里有、页面上没有」的字段。
+
+3. 口径分层不等于允许事实分叉。所有 AI 出口不得输出互相矛盾的事实，
+   同一条事实的取值与标签必须可对齐 —— 由契约测试强制。
+```
+
+新增公开事实时必须同时在 `database/seeders/FactSeeder.php` 与
+`app/Services/Geo/FactLabels.php` 登记，否则
+`tests/Feature/Geo/GeoFactConsistencyTest.php` 会失败并指出缺口。
+
+> 这套契约是在 RC-9 验收中发现的真实 P0 演化而来：修复前，同一批事实
+> （成立时间 / 面积 / 产能 / 总投资）同时存在于 `facts` 表与
+> `organization.metadata` 两处，且 locale 覆盖不同 ——
+> 英文站 `geo.json` 的 facts 为空、`llms.txt` 却能输出英文事实，
+> AI 同时消费两端会得到矛盾答案。
+> 完整根因与方案见 `docs/audit/RC/D-02-Architecture-Decision-Lock.md`。
 
 ---
 
@@ -111,3 +144,19 @@ php artisan migrate:rollback --step=1   # 回滚
 需要如实说明的一点代价：测试中的业务污染黑名单词表，在脱敏后守护的是**中性 fixture 词**而非原始标识。结构性约束（示例数据必须来自 Seeder、禁止硬编码）完整保留，但词表级护栏的特异性有所下降。恢复特异性的正确做法是把可疑词表外置为本地配置，而不是把真实标识写回公开仓库。
 
 `docs/audit/` 通过 `.gitattributes` 的 `export-ignore` 不进入发布制品包。
+
+---
+
+## 运行依赖
+
+必需：PHP 8.4+、Composer 2、数据库（SQLite 零配置或任何 Laravel 支持的数据库）。
+
+**Node.js / npm 不是运行必需**。前台主题以内联 CSS 形式随 Blade 布局发布，
+后台样式为 `public/css/admin.css`，无任何 Blade 视图引用 `@vite`。
+仅当你要自行构建 Tailwind / Vite 资产时才需要：
+
+```bash
+npm install && npm run build
+```
+
+生产部署不需要 Node.js，详见 `DEPLOY.md`。

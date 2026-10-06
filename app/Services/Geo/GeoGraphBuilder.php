@@ -103,7 +103,10 @@ class GeoGraphBuilder
 
         return Fact::publicRows($locale)->map(fn ($f) => [
             'key'         => $f->key,
-            'label'       => $f->label,
+            // 标签优先取共享契约 {@see FactLabels}，与 llms.txt 出口同源 ——
+            // 否则同一条事实在两个 AI 出口标签不同，AI 无法对齐（RC-9 D-02）。
+            // key 不在契约内（如运营自建事实）时回落到 `Fact.label`。
+            'label'       => FactLabels::for((string) $f->key, $locale) ?? $f->label,
             'value'       => $f->value,
             'group'       => $f->group,
             'source'      => $f->source,

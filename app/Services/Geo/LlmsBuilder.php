@@ -2,6 +2,7 @@
 
 namespace App\Services\Geo;
 
+use App\Models\Fact;
 use App\Support\Catalog;
 use App\Support\PublicIndex;
 use App\Support\PublicUrl;
@@ -22,11 +23,90 @@ use App\Support\Localization\LocaleContext;
  *   - 输出前统一经 {@see LlmsSanitizer} 终洗兜底（20F-HAT P1-3）：AI 面向输出
  *     绝不出现 0 值统计、空键值行、悬挂标点。四个出口（中文/英文 × 站点/通用降级）
  *     全部在 build() 收口，避免后续新增分支绕过终洗。
+ *
+ * ── 业务事实 SoT（RC-9 D-02 架构决策锁定）──────────────────────
+ * **业务数值类事实**（成立时间 / 面积 / 产能 / 总投资 / 技术积累 / 业务模式等）
+ * 必须来自 `facts` 表（Business Fact 的唯一 Canonical SoT），经
+ * {@see self::businessFacts()} 取得，**不得从 organization.metadata 另读一套**。
+ *
+ * 历史问题：同一批事实曾存在两份——`facts` 表（仅 zh-CN）与
+ * `organization.metadata['company']`（含 `_en`）。二者 locale 覆盖不同，
+ * 导致英文站 `geo.json` 的 facts 为空、`llms.txt` 却能输出英文事实，
+ * AI 同时消费两端会得到**矛盾答案**。
+ *
+ * 边界（分层 SoT）：
+ *   · 本类由 facts 表驱动 → geo.json + llms.txt，跨出口口径一致；
+ *   · 实体属性类（legalName / address / areaServed / knowsAbout）
+ *     仍由 organization.metadata 驱动，`SchemaBuilder` **不直接读 facts**
+ *     （遵守 SchemaBuilder.php:34 已冻结的数据源边界）；
+ *   · 跨出口一致性由 tests/Feature/Geo/GeoFactConsistencyTest.php 契约保证。
+ *
+ * @see \docs\audit\RC\D-02-Architecture-Decision-Lock.md
  */
 class LlmsBuilder
 {
     public function __construct(private readonly LlmsSanitizer $sanitizer)
     {
+    }
+
+    /**
+     * 业务事实读取入口 —— 唯一允许 llms.txt 取得业务事实的通道。
+     *
+     * 走 `Fact::publicRows()`：自带 SiteScope（站点隔离）、locale 门禁
+     * （缺该语言译文则不出现在该语言输出里）与 `is_public` 过滤，
+     * 与 geo.json 的事实出口**同源同规则**。
+     */
+    protected function businessFacts(): \Illuminate\Support\Collection
+    {
+        return Fact::publicRows();
+    }
+
+    /**
+     * 单条业务事实取值；不存在或未公开时返回 null（调用方据此跳过该行）。
+     */
+    protected function businessFact(string $key): ?string
+    {
+        $fact = $this->businessFacts()->firstWhere('key', $key);
+        $value = trim((string) ($fact?->value ?? ''));
+
+        return $value !== '' ? $value : null;
+    }
+
+    /**
+     * 渲染全部业务事实为 llms.txt 的 Markdown 行（**不含标题**）。
+     *
+     * 标签取自 {@see self::FACT_LABELS} 的当前语言映射，**不使用事实行自身的
+     * `label`** —— 因为 `geo.json` 输出的是 `Fact.label`（运营可编辑的原始标签），
+     * 而 llms.txt 用固定映射。两者若不一致，AI 无法把两个出口的同一条事实对齐，
+     * 等于又制造了一次口径分叉（RC-9 D-02 的同类问题）。
+     *
+     * locale 标签来自映射表，不做跨语言回落 —— 缺译文就不输出，
+     * 与 geo.json 的门禁行为一致。
+     */
+    protected function businessFactLines(): array
+    {
+        $locale = (string) (LocaleContext::has() ? LocaleContext::current() : 'zh-CN');
+
+        $lines = [];
+        foreach ($this->businessFacts() as $fact) {
+            $key = (string) $fact->key;
+
+            // 标签取自共享契约 {@see FactLabels}，与 geo.json 出口同源，
+            // 保证同一事实在两个 AI 出口的标签可被对齐。
+            // 不在契约内的 key 不输出：无法保证标签对齐，宁可不写。
+            $label = FactLabels::for($key, $locale);
+            if ($label === null) {
+                continue;
+            }
+
+            $value = trim((string) $fact->value);
+            if ($value === '') {
+                continue;
+            }
+            $lines[] = '- ' . $label . ': ' . $value;
+        }
+
+        return $lines;
     }
 
     public function build(): string
@@ -67,24 +147,26 @@ class LlmsBuilder
         $L           = [];
 
         // ---------- 标题与摘要（按数据有无条件拼接，不制造全 0 空壳） ----------
+        // 摘要里的数值同样取自 facts 表（RC-9 D-02），避免摘要与「核心事实」
+        // 段落出现两套口径；行业 / 客户群 / 区域属叙述性内容，仍走 Catalog。
         $L[] = '# ' . $company['name'];
         $L[] = '';
         $summary = '> ' . $company['name'];
-        if (! empty($company['founded_display'])) {
-            $summary .= '，' . $company['founded_display'] . '成立';
+        if ($fFounded = $this->businessFact('FACT-COMPANY-003')) {
+            $summary .= '，' . $fFounded . '成立';
         }
         if ($industry !== '') {
             $summary .= '，专注' . $industry . '的研发、生产与销售';
         }
         $capacity = [];
-        if (! empty($company['area_display'])) {
-            $capacity[] = '自有' . $company['area_display'] . '厂区';
+        if ($fArea = $this->businessFact('FACT-COMPANY-006')) {
+            $capacity[] = '自有' . $fArea . '厂区';
         }
         if ($workshopCnt > 0) {
             $capacity[] = $workshopCnt . '个生产车间';
         }
-        if (! empty($company['annual_capacity_display'])) {
-            $capacity[] = '年产能' . $company['annual_capacity_display'];
+        if ($fCap = $this->businessFact('FACT-COMPANY-007')) {
+            $capacity[] = '年产能' . $fCap;
         }
         if ($capacity !== []) {
             $summary .= '。' . implode('，', $capacity);
@@ -103,46 +185,26 @@ class LlmsBuilder
         $L[] = '';
 
         // ---------- 核心事实 ----------
+        // 业务数值类事实统一走 facts 表（RC-9 D-02：Business Fact 唯一 SoT），
+        // 与 geo.json 同源同规则；地址 / 电话属实体属性，仍由 metadata 提供。
         $L[] = '## 核心事实';
         $L[] = '';
-        $L[] = '- 公司全称：' . $company['name'];
-        $L[] = '- 品牌名：' . $brandName;
-        if (! empty($company['founded_display'])) {
-            $L[] = '- 成立时间：' . $company['founded_display'];
-        }
-        if (! empty($company['established_production_display'])) {
-            $L[] = '- 正式投产：' . $company['established_production_display'] . '，' . $workshopCnt . '大车间全面投产';
-        }
-        if (! empty($company['address']['full'])) {
-            $L[] = '- 注册与生产地址：' . $company['address']['full'];
-        }
-        if (! empty($company['area_display'])) {
-            $L[] = '- 厂区面积：' . $company['area_display'];
-        }
-        if (! empty($company['annual_capacity_display'])) {
-            $L[] = '- 年产能：' . $company['annual_capacity_display'];
-        }
-        if (! empty($company['total_investment_wan'])) {
-            $L[] = '- 总投资：约 ' . number_format($company['total_investment_wan']) . ' 万元';
-        }
-        if ($workshopCnt > 0) {
-            $L[] = '- 生产车间：' . implode('、', array_map(fn ($w) => $w['name'], $workshops));
-        }
-        if (! empty($company['tech_experience_years'])) {
-            $L[] = '- 技术积累：创始团队深耕' . $industry . '领域' . $company['tech_experience_years'] . '年';
-        }
-        if ($regionCnt > 0) {
-            $L[] = '- 销售区域：' . implode('、', $regions) . $regionCnt . '大区域';
+        foreach ($this->businessFactLines() as $line) {
+            $L[] = $line;
         }
         if (! empty($company['phone'])) {
             $L[] = '- 官方电话：' . $company['phone'];
         }
         $L[] = '- 官网：' . PublicUrl::home();
         $L[] = '';
-        if (! empty($company['tech_experience_display'])) {
-            $L[] = '**时间表述口径**：谈经验用「' . $company['tech_experience_display'] . '」，'
-                 . '谈公司用「' . ($company['founded_display'] ?? '') . '成立」，'
-                 . '谈产能用「' . ($company['established_production_display'] ?? '') . '投产」，三者各有所指。';
+        // 时间表述口径同样引用 facts，保证与上面各行同源。
+        $exp = $this->businessFact('FACT-COMPANY-012');
+        $founded = $this->businessFact('FACT-COMPANY-003');
+        $prod = $this->businessFact('FACT-COMPANY-004');
+        if ($exp !== null && ($founded !== null || $prod !== null)) {
+            $L[] = '**时间表述口径**：谈经验用「' . $exp . '」，'
+                 . '谈公司用「' . ($founded ?? '') . '成立」，'
+                 . '谈产能用「' . ($prod ?? '') . '投产」，三者各有所指。';
             $L[] = '';
         }
 
@@ -221,8 +283,8 @@ class LlmsBuilder
             $L[] = '- [工厂与资质](' . PublicUrl::url('factory/') . ')：厂区规模、' . $workshopCnt . '大车间、生产流程与' . $regionCnt . '大销售区域';
         }
         $L[] = '- [企业简介](' . PublicUrl::url('about/profile/') . ')：公司概况与核心事实';
-        if (! empty($company['founded_display'])) {
-            $L[] = '- [发展历程](' . PublicUrl::url('about/history/') . ')：' . $company['founded_display'] . '成立至今的可核实节点';
+        if ($fFounded = $this->businessFact('FACT-COMPANY-003')) {
+            $L[] = '- [发展历程](' . PublicUrl::url('about/history/') . ')：' . $fFounded . '成立至今的可核实节点';
         }
         $L[] = '- [企业文化](' . PublicUrl::url('about/culture/') . ')：使命、愿景、价值观与品牌口号';
         $contactLine = '- [联系我们](' . PublicUrl::url('contact/') . ')：';
@@ -336,22 +398,24 @@ class LlmsBuilder
         $L = [];
 
         // ---------- Title + summary ----------
+        // 摘要里的数值同样取自 facts 表（RC-9 D-02），避免摘要与 Core Facts
+        // 段落出现两套口径。取不到就整句省略，不拼 0 值空壳。
         $L[] = '# ' . $company['name'];
         $L[] = '';
         $summary = '> ' . $company['name'];
-        if (! empty($company['founded'])) {
-            $summary .= ', founded in ' . $company['founded'];
+        if ($founded = $this->businessFact('FACT-COMPANY-003')) {
+            $summary .= ', founded in ' . $founded;
         }
         $summary .= ', manufactures industrial materials';
         $caps = [];
-        if ((int) ($company['area_sqm'] ?? 0) > 0) {
-            $caps[] = 'a facility of approx. ' . number_format((int) $company['area_sqm']) . ' m²';
+        if ($area = $this->businessFact('FACT-COMPANY-006')) {
+            $caps[] = 'a facility of ' . lcfirst($area);
         }
         if (count($workshops) > 0) {
             $caps[] = count($workshops) . ' production workshops';
         }
-        if ((int) ($company['annual_capacity_tons'] ?? 0) > 0) {
-            $caps[] = 'an annual capacity of approx. ' . number_format((int) $company['annual_capacity_tons']) . ' tons';
+        if ($capacity = $this->businessFact('FACT-COMPANY-007')) {
+            $caps[] = 'an annual capacity of ' . lcfirst($capacity);
         }
         if ($caps !== []) {
             $summary .= ', with ' . implode(', ', $caps);
@@ -363,24 +427,12 @@ class LlmsBuilder
         $L[] = '';
 
         // ---------- Core facts ----------
+        // 业务数值类事实统一走 facts 表（RC-9 D-02：Business Fact 唯一 SoT），
+        // 与 geo.json 同源同规则；phone / website 属实体属性，仍由 metadata 提供。
         $L[] = '## Core Facts';
         $L[] = '';
-        $L[] = '- Company name: ' . $company['name'];
-        $L[] = '- Brand: ' . $brandName;
-        if (! empty($company['founded'])) {
-            $L[] = '- Founded: ' . $company['founded'];
-        }
-        if ((int) ($company['area_sqm'] ?? 0) > 0) {
-            $L[] = '- Facility area: approx. ' . number_format((int) $company['area_sqm']) . ' m²';
-        }
-        if ((int) ($company['annual_capacity_tons'] ?? 0) > 0) {
-            $L[] = '- Annual capacity: approx. ' . number_format((int) $company['annual_capacity_tons']) . ' tons';
-        }
-        if ((int) ($company['total_investment_wan'] ?? 0) > 0) {
-            $L[] = '- Total investment: approx. ' . number_format((int) $company['total_investment_wan']) . ' ten-thousand CNY';
-        }
-        if ((int) ($company['tech_experience_years'] ?? 0) > 0) {
-            $L[] = '- Industry experience: ' . $company['tech_experience_years'] . '+ years';
+        foreach ($this->businessFactLines() as $line) {
+            $L[] = $line;
         }
         if (! empty($company['phone'])) {
             $L[] = '- Phone: ' . $company['phone'];

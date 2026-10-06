@@ -35,9 +35,23 @@ touch database/database.sqlite
 # Bootstrap a clean site, default content, and an administrator (non-interactive flags available)
 php artisan geo:install
 
-npm install && npm run build
 php artisan serve
 ```
+
+That is the whole required path. The front-end theme ships as inline CSS inside the
+Blade layout plus `public/css/admin.css`, so no front-end build step is needed to run
+the site — and no Blade view references `@vite`.
+
+> **Optional — only when you build assets yourself.** `package.json` and `vite.config.js`
+> are kept for teams who want to run their own Tailwind/Vite pipeline for custom themes.
+> Only in that case:
+>
+> ```bash
+> npm install
+> npm run build
+> ```
+>
+> Production deployments do not need Node.js at all — see [`DEPLOY.md`](DEPLOY.md).
 
 For production-style provisioning on a fresh machine, see [`DEPLOY.md`](DEPLOY.md) and `scripts/install-release.sh`.
 
