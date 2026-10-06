@@ -193,7 +193,7 @@ RC-3  Site × Locale Quadrant       ✅ PASS  130/130
 RC-4  Security / GEOFlow Contract  ✅ PASS  47/47
 RC-5  Installation / Operational UX ✅ PASS  R1-R3 57/57 · R4 1410/7349/0/0/0
 RC-6  Release Artifact Audit        ✅ PASS  9 审计面 · 干净副本可复现
-RC-7  Final Diff Review → release commit → v1.0.0 tag▶ NEXT
+RC-7  Final Diff Review ✅ PASS  d51b6a0 · +28223/-321 · tag v1.0.0（未 push）
 ```
 
 **此刻禁止 commit / tag / push / release。**

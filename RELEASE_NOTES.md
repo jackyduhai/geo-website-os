@@ -90,5 +90,24 @@ php artisan migrate:rollback --step=1   # 回滚
 | RC-4 Security / GEOFlow Contract | 47 assertions 全绿（含「一次写入 = 一次缓存失效」计数验证） |
 | RC-5 Installation / Operational UX | 57 + 1410 tests / 7349 assertions / 0 failures |
 | RC-6 Release Artifact Audit | 9 审计面通过 ·干净副本完整复现安装→GEO→回滚链 |
+| RC-7 Final Release | 1410 tests / 7349 assertions / 0 failures · `composer audit` 0 advisories |
+| RC-8 Public Boundary Redaction | 165 commits / 61 tags / 1961 blobs 全历史重写，真实业务标识残留 **0** |
 
 工程 Gate 文档位于 `docs/audit/RC/`。
+
+---
+
+## 公开边界说明
+
+本仓库在首次公开推送前做过一次完整的历史脱敏重写，详见 `docs/audit/RC/RC-8-Public-Boundary-Redaction.md`。
+
+```text
+重写范围      165 commits · 61 tags · 1961 blobs
+替换口径      客户身份 → Demo Tenant A/B/C；行业/地点/第三方 → Sample *
+产品代码      0 处改动（app/ config/ database/ resources/ routes/ scripts/ public/ 零命中）
+全历史残留    0
+```
+
+需要如实说明的一点代价：测试中的业务污染黑名单词表，在脱敏后守护的是**中性 fixture 词**而非原始标识。结构性约束（示例数据必须来自 Seeder、禁止硬编码）完整保留，但词表级护栏的特异性有所下降。恢复特异性的正确做法是把可疑词表外置为本地配置，而不是把真实标识写回公开仓库。
+
+`docs/audit/` 通过 `.gitattributes` 的 `export-ignore` 不进入发布制品包。
