@@ -212,7 +212,13 @@ $iconUrl = static function (string $key, string $default) use ($iconBase, $favic
 @php
   /* P-STEP 18D Light/Dark：深色仅覆盖的语义令牌子集（ThemePalette::darkOverrides）。
      主选择器命中 SSR/JS 已解析的深色；@media 内 :not([data-color-scheme]) 为无 JS 且系统深色兜底。 */
-  $darkTokens = $darkTokens ?? \App\Support\Theme\ThemePalette::darkOverrides($siteSettings ?? []);
+  $darkTokens = $darkTokens ?? \App\Support\Theme\ThemePalette::darkOverrides(
+     $siteSettings ?? [],
+        // 必须与亮色 resolve() 传同一份激活主题种子：漏传会让暗色 --brand
+        // 永远回落到 ThemePalette::DEFAULTS（出厂蓝），表现为「切换主题后
+        // 暗色模式的导航 hover / 选中仍是上一个主题的颜色」。
+        \App\Support\Theme\ThemeManager::activeTokens()
+    );
   $darkCss = \App\Support\Theme\ThemePalette::toCss($darkTokens);
 @endphp
 @if($allowDark)

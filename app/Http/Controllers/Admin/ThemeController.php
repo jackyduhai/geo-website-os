@@ -25,6 +25,29 @@ use Illuminate\View\View;
  */
 class ThemeController extends Controller
 {
+    /**
+     * 切换主题时需要清空的「站点级视觉覆盖项」。
+     *
+     * 只含**主题种子能提供的视觉 token**。凡不在此列的 theme 组设置项都不清：
+     *   · theme_color_mode / theme_allow_dark —— 站点偏好（是否允许深色），与外观无关
+     *   · theme_custom_css              —— 运营手写规则，清掉会丢用户代码
+     */
+    public const SEED_OVERRIDABLE = [
+        'theme_primary',
+   'theme_primary_dark',
+  'theme_accent',
+        'theme_bg',
+      'theme_surface',
+        'theme_text',
+        'theme_text_muted',
+   'theme_radius',
+        'theme_container',
+        'theme_density',
+        'theme_shadow',
+      'theme_typography',
+        'theme_font',
+    ];
+
     public function index(): View
     {
         $themes = ThemeManager::all();
@@ -48,15 +71,29 @@ class ThemeController extends Controller
             abort(404);
         }
 
-        if (! ThemeManager::activate($name)) {
-            return redirect()->route('admin.themes.index')
-                ->with('error', '主题激活失败：主题清单无效或已缺失，激活态未改变。');
+if (! ThemeManager::activate($name)) {
+return redirect()->route('admin.themes.index')
+         ->with('error', '主题激活失败：主题清单无效或已缺失，激活态未改变。');
+  }
+
+        // 切换主题时清掉「会盖住主题种子」的站点级视觉覆盖项。
+        //
+        // 优先级链（见 docs/product/template-theme-site-settings-architecture.md）：
+        //     站点设置 > 激活主题种子 > ThemePalette::DEFAULTS
+        // 后果：一旦站点设置里写了 theme_primary，任何主题都切不动 ——
+        //  前台永远显示那一个颜色，「切换主题」形同虚设。
+        //
+        // 只清**视觉类**项；theme_color_mode / theme_allow_dark 属于
+        // 站点偏好（是否允许深色），与主题外观无关，保留。
+        // theme_custom_css 是运营手写规则，也不清（清了会丢用户代码）。
+        foreach (self::SEED_OVERRIDABLE as $key) {
+      Setting::set($key, '');
         }
 
         AuditLog::record('theme.activate', "切换主题：{$name}", [], 'Setting');
 
         return redirect()->route('admin.themes.index')
-            ->with('success', "已为当前站点切换主题：{$name}。");
+   ->with('success', "已为当前站点切换主题：{$name}（已清除该主题的站点级配色覆盖）。");
     }
 
     /**
