@@ -88,7 +88,24 @@
     @endif
 
     <div class="btn-row mt-2">
-      <a class="btn btn-sm" href="{{ route('admin.templates.preview', $id) }}" target="_blank" rel="noopener">预览</a>
+      {{-- RC-11 G：活站预览。在**隔离的预览站**里激活并渲染，
+           真实站点零风险（bootstrap 写库无自动回滚，绝不在真实站上试）。
+           预览站不常驻，关掉即整体回收。 --}}
+      @php $previewSite = \App\Models\Site::withoutGlobalScopes()->where('slug', 'tpl-preview-' . $id)->first(); @endphp
+      <form method="post" class="form-inline" action="{{ route('admin.templates.live-preview.open', $id) }}">
+        @csrf
+        <button class="btn btn-sm {{ $previewSite ? '' : 'btn-primary' }}">看真实效果</button>
+      </form>
+      @if($previewSite)
+        <form method="post" class="form-inline" action="{{ route('admin.templates.live-preview.close', $id) }}"
+              onsubmit="return confirm('关闭预览并删除该模板的预览站及其全部数据？')">
+          @csrf
+          <button class="btn btn-sm">关闭预览</button>
+        </form>
+        <a class="btn btn-sm" href="{{ \App\Support\Templates\TemplatePreviewSite::url($id) }}"
+           target="_blank" rel="noopener">打开 ↗</a>
+      @endif
+      <a class="btn btn-sm" href="{{ route('admin.templates.preview', $id) }}" target="_blank" rel="noopener">截图</a>
       <a class="btn btn-sm" href="{{ route('admin.templates.compare', $id) }}">对比</a>
       @if($isActive)
         <form method="post" class="form-inline" action="{{ route('admin.templates.deactivate') }}"

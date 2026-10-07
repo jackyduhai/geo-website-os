@@ -224,6 +224,12 @@ Route::middleware(['admin.auth', 'admin.site'])->group(function () {
         ->where('pack', '[a-z0-9\-]+')->name('templates.bootstrap');
     Route::get('templates/{pack}/preview', [TemplateController::class, 'preview'])
         ->where('pack', '[a-z0-9\-]+')->name('templates.preview');
+
+    // RC-11 G：活站预览。隔离站 + slug 访问，不碰正在使用的站点。
+    Route::post('templates/{pack}/live-preview', [TemplateController::class, 'openLivePreview'])
+        ->where('pack', '[a-z0-9\-]+')->name('templates.live-preview.open');
+    Route::post('templates/{pack}/live-preview/close', [TemplateController::class, 'closeLivePreview'])
+        ->where('pack', '[a-z0-9\-]+')->name('templates.live-preview.close');
     Route::get('templates/{pack}/preview/{view}', [TemplateController::class, 'screenshot'])
         ->where(['pack' => '[a-z0-9\-]+', 'view' => 'desktop|mobile'])->name('templates.screenshot');
     Route::get('templates/{pack}/compare', [TemplateController::class, 'compare'])

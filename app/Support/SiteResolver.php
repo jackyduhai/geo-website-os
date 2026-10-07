@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use App\Models\Site;
+use App\Support\Templates\TemplatePreviewSite;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
 
@@ -39,6 +40,17 @@ class SiteResolver
                 if ($site) {
                     return $site;
                 }
+            }
+        }
+
+        // 1b. 模板预览站（RC-11 G）：前台允许 ?site_slug=tpl-preview-<pack>。
+        //     **只认预览前缀** —— 绝不允许用它切到任意真实站点，
+        //     否则任何人都能通过改 query 参数访问别的站点。
+        $previewSlug = (string) $request->query('site_slug', '');
+        if ($previewSlug !== '' && TemplatePreviewSite::isPreviewSlug($previewSlug)) {
+            $previewSite = self::findBySlug($previewSlug);
+            if ($previewSite) {
+                return $previewSite;
             }
         }
 

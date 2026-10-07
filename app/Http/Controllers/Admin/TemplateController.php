@@ -11,6 +11,7 @@ use App\Support\SystemAuthorization;
 use App\Support\Templates\RecipeApplier;
 use App\Support\Templates\TemplateDefaultsInstaller;
 use App\Support\Templates\TemplatePackageManager;
+use App\Support\Templates\TemplatePreviewSite;
 use App\Support\Templates\TemplateRecipeValidator;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
@@ -102,6 +103,60 @@ class TemplateController extends Controller
 
         return redirect()->route('admin.templates.index')
             ->with('success', '已停用模板包，恢复核心模板。');
+    }
+
+    /**
+     * RC-11 G：开启活站预览。
+     *
+     * 建一个**隔离的预览站**（独立 site_id / settings / menus / seo），
+     * 把模板默认值装进去，然后跳到该站前台。
+     *
+     * 为什么不在当前站点上「激活 → 看 → 回滚」：
+     *   TemplateDefaultsInstaller::bootstrap() 写Setting / Menu / SeoMeta，
+     *   **无自动回滚**。拿真实站点做实验等于把生产数据当试验田。
+     *   预览站用完整体删除即可，真实站点零风险。
+     */
+    public function openLivePreview(string $pack): RedirectResponse
+    {
+        if (! TemplatePackageManager::exists($pack)) {
+            abort(404);
+        }
+
+        $site = TemplatePreviewSite::ensure($pack);
+        if ($site === null) {
+            return redirect()->route('admin.templates.index')
+                ->with('error', "模板「{$pack}」无法创建预览站，请检查包结构。");
+        }
+
+        $url = TemplatePreviewSite::url($pack);
+
+        return redirect()->away($url)
+            ->with('success', '预览站已就绪：' . $url
+                . '（独立站点，可随时「关闭预览」整体回收）');
+    }
+
+    /**
+     * RC-11 G：关闭活站预览，回收预览站全部数据。
+     */
+    public function closeLivePreview(string $pack): RedirectResponse
+    {
+        if (! TemplatePackageManager::exists($pack)) {
+            abort(404);
+        }
+
+        $site = Site::withoutGlobalScopes()
+            ->where('slug', TemplatePreviewSite::SLUG_PREFIX . $pack)
+            ->first();
+
+        if ($site === null) {
+            return redirect()->route('admin.templates.index')
+                ->with('error', '该模板当前没有开启中的预览站。');
+        }
+
+        TemplatePreviewSite::discard($site);
+
+        return redirect()->route('admin.templates.index')
+            ->with('success', "模板「{$pack}」的预览站已关闭并清理。");
     }
 
     /**
