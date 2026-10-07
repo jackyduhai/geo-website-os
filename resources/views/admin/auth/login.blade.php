@@ -5,6 +5,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex,nofollow">
 <title>登录 · GEO Website OS 后台</title>
+@php
+$bi = 'img/brand/';
+$biIco = file_exists(public_path($bi.'favicon.ico'))     ? $bi.'favicon.ico'     : 'favicon.ico';
+$biP32 = file_exists(public_path($bi.'favicon_png.png'))  ? $bi.'favicon_png.png'  : 'favicon-32.png';
+$biP16 = file_exists(public_path($bi.'favicon_16.png'))   ? $bi.'favicon_16.png'   : 'favicon-16.png';
+@endphp
+<link rel="icon" href="{{ asset($biIco) }}" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="{{ asset($biP32) }}">
+<link rel="icon" type="image/png" sizes="16x16" href="{{ asset($biP16) }}">
 <link rel="stylesheet" href="{{ asset('css/admin.css') }}?v={{ filemtime(public_path('css/admin.css')) }}">
 </head>
 <body class="login-page">

@@ -40,6 +40,84 @@
   </div>
   @endif
 
+  @if($group==='theme')
+  {{-- 品牌资源（RC-11 集中化）：Logo / Favicon / Apple Touch / OG 图统一在这里上传，
+       不再散落到 geo / seo / 站点设置多处。未上传时前台自动用内置默认图。 --}}
+  <form method="post" action="{{ route('admin.settings.brand-assets') }}" enctype="multipart/form-data" class="brand-assets">
+    @csrf
+    <div class="brand-assets-hd">
+      <div class="brand-assets-title">品牌资源</div>
+      <p class="small muted" style="margin:0">
+        在此统一管理站点标识与图标。<strong>全部可留空</strong> —— 未上传时前台自动使用系统内置默认标识。
+      </p>
+    </div>
+
+    <div class="brand-grid">
+      @php
+        // key => [label, 当前值, 尺寸建议, 前台用途]
+        $brandAssets = [
+          'geo_org_logo' => ['站点 Logo', '方形图，建议 ≥512×512 PNG', '顶栏 + 页脚 + SEO/Schema'],
+          'seo_og_image' => ['社交分享图', '1200×630（1.91:1）', '微信/微博等分享缩略图'],
+        ];
+        $faviconAssets = [
+          'favicon_ico'  => ['Favicon（.ico）', '16/32/48 多尺寸，≤2MB', '浏览器标签页图标'],
+          'favicon_png'  => ['Favicon（PNG）', '32×32 或 64×64 PNG', '现代浏览器首选'],
+          'favicon_16'   => ['Favicon 16px', '16×16 PNG', '小尺寸回退'],
+          'apple_touch'  => ['Apple Touch Icon', '180×180 PNG', 'iPhone/iPad 主屏'],
+        ];
+        $currentSite = \App\Support\SiteContext::currentSite();
+      @endphp
+
+      @foreach($brandAssets as $bk => [$bLabel, $bSize, $bUse])
+        @php($bVal = \App\Models\Setting::get($bk, ''))
+        <div class="brand-card">
+          <div class="brand-preview">
+            @if($bVal)<img src="{{ asset($bVal) }}" alt="{{ $bLabel }} 预览">@else<span class="brand-ph">默认</span>@endif
+          </div>
+          <div class="brand-meta">
+            <div class="brand-name">{{ $bLabel }}</div>
+            <div class="brand-size">{{ $bSize }}</div>
+            <div class="brand-use muted">{{ $bUse }}</div>
+          </div>
+          <div class="brand-ctl">
+            <input type="text" name="{{ $bk }}" value="{{ old($bk, $bVal) }}" list="media-paths" placeholder="留空 = 使用内置默认">
+            <input type="file" name="file_{{ $bk }}" accept="image/png,image/jpeg,image/webp,image/gif" class="file-input">
+            <label class="checkline small">
+              <input type="checkbox" name="clear_asset[]" value="{{ $bk }}" @if(!$bVal)disabled @endif>
+              清除自定义，恢复默认
+            </label>
+          </div>
+        </div>
+      @endforeach
+
+      @foreach($faviconAssets as $fk => [$fLabel, $fSize, $fUse])
+        @php($fPath = public_path('img/brand/' . $fk . '.png'))
+        @php($fHas = file_exists($fPath))
+        <div class="brand-card">
+          <div class="brand-preview">
+            @if($fHas)<img src="{{ asset('img/brand/' . $fk . '.png') }}?v={{ filemtime($fPath) }}" alt="{{ $fLabel }} 预览">@else<span class="brand-ph">默认</span>@endif
+          </div>
+          <div class="brand-meta">
+            <div class="brand-name">{{ $fLabel }}</div>
+            <div class="brand-size">{{ $fSize }}</div>
+            <div class="brand-use muted">{{ $fUse }}</div>
+          </div>
+          <div class="brand-ctl">
+            {{-- 图标走文件上传，由 SettingController 写入 public/img/brand/ --}}
+            <input type="file" name="brand_icon_{{ $fk }}" accept="image/png,image/x-icon,image/vnd.microsoft.icon" class="file-input">
+            <span class="small muted">{{ $fHas ? '已上传，可直接替换' : '未上传，使用内置默认' }}</span>
+          </div>
+        </div>
+      @endforeach
+    </div>
+
+    <div class="form-actions">
+      <button class="btn btn-primary">保存品牌资源</button>
+      <span class="small muted">留空或清除 = 使用系统内置默认标识，前台不会出现破图。</span>
+    </div>
+  </form>
+  @endif
+
   <form method="post" action="{{ route('admin.settings.update',$group) }}" enctype="multipart/form-data">
     @csrf @method('PUT')
 

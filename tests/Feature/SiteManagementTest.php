@@ -84,29 +84,51 @@ class SiteManagementTest extends TestCase
         $this->assertSame('active', $this->default->fresh()->status);
     }
 
-    public function test_store_rejects_invalid_slug(): void
+    /**
+     * slug 不再由运营者填写（RC-11 UX简化：标识对非技术人员无意义）。
+     *
+     * 旧契约是「手填 slug + 校验非法值/重复值」。新契约是
+     * 「表单不暴露 slug → 后端按站名自动生成 → 必然合法且唯一」。
+     *
+     * 因此本测试改为验证**自动生成的行为**：
+     *   · 传非法 slug 也被忽略（不报错、不生效）
+     *   · slug 由站名派生，且与已有 slug 冲突时自动加后缀
+     */
+    public function test_store_ignores_submitted_slug_and_derives_it_from_name(): void
     {
         $this->actingAs($this->super)->post(route('admin.sites.store'), [
             'name' => 'Bad',
-            'slug' => 'Site B',   // 含空格与大写
+            'slug' => 'Site B',   // 含空格与大写：应被忽略，而不是报错
             'status' => 'active',
-        ])->assertSessionHasErrors('slug');
+        ])->assertSessionHasNoErrors();
 
-        $this->assertNull(Site::where('slug', 'site b')->first());
+        $site = Site::where('name', 'Bad')->first();
+
+        $this->assertNotNull($site, '站点应创建成功');
+        $this->assertSame('bad', $site->slug, 'slug 应由站名派生为合法值');
+        $this->assertNull(Site::where('slug', 'site b')->first(), '非法 slug 不应生效');
     }
 
-    public function test_store_rejects_duplicate_slug_and_duplicate_domain(): void
+    public function test_derived_slug_is_unique_when_name_collides(): void
+    {
+        Site::create(['name' => 'Dup', 'slug' => 'dup', 'domain' => 'b.test', 'status' => 'active']);
+
+        $this->actingAs($this->super)->post(route('admin.sites.store'), [
+            'name' => 'Dup', 'domain' => 'c.test', 'status' => 'active',
+        ])->assertSessionHasNoErrors();
+
+        $sites = Site::where('name', 'Dup')->pluck('slug')->sort()->values()->all();
+
+        $this->assertCount(2, $sites);
+        $this->assertSame(['dup', 'dup-2'], $sites, '同名站点的 slug 应自动加后缀保持唯一');
+    }
+
+    public function test_store_rejects_duplicate_domain(): void
     {
         Site::create(['name' => 'B', 'slug' => 'site-b', 'domain' => 'b.test', 'status' => 'active']);
 
-        // 重复 slug
         $this->actingAs($this->super)->post(route('admin.sites.store'), [
-            'name' => 'Dup slug', 'slug' => 'site-b', 'status' => 'active',
-        ])->assertSessionHasErrors('slug');
-
-        // 重复域名
-        $this->actingAs($this->super)->post(route('admin.sites.store'), [
-            'name' => 'Dup domain', 'slug' => 'site-c', 'domain' => 'b.test', 'status' => 'active',
+            'name' => 'Dup domain', 'domain' => 'b.test', 'status' => 'active',
         ])->assertSessionHasErrors('domain');
     }
 

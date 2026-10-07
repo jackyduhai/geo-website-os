@@ -6,6 +6,16 @@
 <meta name="csrf-token" content="{{ csrf_token() }}">
 <meta name="robots" content="noindex,nofollow">
 <title>@yield('title', '仪表盘') · GEO Website OS 后台</title>
+{{-- 图标：优先后台「企业品牌 → 品牌资源」上传的，缺失回落系统默认 --}}
+@php
+$bi = 'img/brand/';
+$biIco  = file_exists(public_path($bi.'favicon.ico'))    ? $bi.'favicon.ico'    : 'favicon.ico';
+$biP32  = file_exists(public_path($bi.'favicon_png.png')) ? $bi.'favicon_png.png' : 'favicon-32.png';
+$biP16  = file_exists(public_path($bi.'favicon_16.png'))  ? $bi.'favicon_16.png'  : 'favicon-16.png';
+@endphp
+<link rel="icon" href="{{ asset($biIco) }}" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="{{ asset($biP32) }}">
+<link rel="icon" type="image/png" sizes="16x16" href="{{ asset($biP16) }}">
 <link rel="stylesheet" href="{{ asset('css/admin.css') }}?v={{ filemtime(public_path('css/admin.css')) }}">
 @stack('head')
 </head>

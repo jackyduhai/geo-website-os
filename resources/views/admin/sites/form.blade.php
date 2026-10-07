@@ -5,7 +5,7 @@
 @section('content')
 <div class="card narrow">
   <h2>{{ $site->exists ? '编辑站点：'.$site->name : '新建站点' }}</h2>
-  <form method="post"
+  <form method="post" enctype="multipart/form-data"
         action="{{ $site->exists ? route('admin.sites.update', $site) : route('admin.sites.store') }}">
     @csrf @if($site->exists)@method('PUT')@endif
 
@@ -15,10 +15,17 @@
         @error('name')<div class="field-err">{{ $message }}</div>@enderror
       </div>
 
-      <div class="form-row"><label><span class="label-with-tip">标识 slug <span class="req">*</span>
-        <x-admin-tip text="站点的稳定内部标识，只能是小写字母、数字与连字符；创建后不可修改，后台切换站点依赖它。"/></span></label>
-        <input type="text" name="slug" value="{{ old('slug', $site->slug) }}" maxlength="80"
-               placeholder="site-a" @if($site->exists) readonly aria-readonly="true" @endif required>
+      <div class="form-row"><label>标识 slug <span class="req">*</span></label>
+        @if($site->exists)
+          {{--已创建：slug 是内部稳定标识，改了会断掉既有链接与数据关联，因此只读展示 --}}
+          <input type="text" value="{{ $site->slug }}" readonly aria-readonly="true"
+                 class="input-readonly" tabindex="-1">
+          <div class="field-hint">系统自动生成，不可修改。</div>
+        @else
+          {{-- 创建中：slug 尚未产生，保存时留空由系统按站点名自动生成 --}}
+          <input type="hidden" name="slug" value="">
+          <div class="field-hint">保存时由系统根据站点名称自动生成，无需填写。</div>
+        @endif
         @error('slug')<div class="field-err">{{ $message }}</div>@enderror
       </div>
     </div>
@@ -46,10 +53,30 @@
       @error('description')<div class="field-err">{{ $message }}</div>@enderror
     </div>
 
-    <div class="form-row"><label><span class="label-with-tip">站点 Logo 路径
-      <x-admin-tip text="媒体公开路径，如 /storage/logos/xxx.png。可先在媒体库上传图片后把路径填到这里；留空则使用系统默认标识。"/></span></label>
-      <input type="text" name="logo" value="{{ old('logo', $site->logo) }}" maxlength="255"
-             placeholder="/storage/...（可留空）">
+    <div class="form-row">
+      <label><span class="label-with-tip">站点 Logo
+        <x-admin-tip text="直接上传图片，无需手动填写服务器路径。建议 512×512 以上的正方形图片（PNG / JPG / WebP），系统会自动压缩并生成适配尺寸。留空则使用系统默认标识。"/></span></label>
+
+      <div class="logo-upload">
+        <div class="logo-preview">
+          @php $logoUrl = $site->logo ?: asset('img/logo.png'); @endphp
+          <img id="siteLogoPreview" src="{{ $logoUrl }}" alt="{{ $site->name }} Logo 预览">
+        </div>
+        <div class="logo-controls">
+          <input type="file" id="siteLogoFile" accept="image/png,image/jpeg,image/webp,image/gif"
+                 class="logo-file-input">
+          <div class="logo-actions">
+            <button type="button" class="btn btn-ghost btn-sm" id="siteLogoPick">选择图片</button>
+            <button type="button" class="btn btn-ghost btn-sm hidden" id="siteLogoReset">还原</button>
+          </div>
+          <div class="field-hint">
+            支持 PNG / JPG / WebP / GIF，不超过 2 MB。<br>
+            建议<strong>正方形</strong>（如 512×512）；非正方形会按比例缩放，不裁切。
+          </div>
+          <input type="hidden" name="logo" id="siteLogoValue" value="{{ old('logo', $site->logo) }}">
+          <input type="hidden" name="logo_remove" id="siteLogoRemove" value="0">
+        </div>
+      </div>
       @error('logo')<div class="field-err">{{ $message }}</div>@enderror
     </div>
 
@@ -71,3 +98,78 @@
   </form>
 </div>
 @endsection
+
+@push('scripts')
+<script>
+/**
+ * 站点 Logo 上传交互。
+ *
+ * 运营者只做一件事：选文件 → 看预览 → 保存。
+ * 隐藏域 `logo` 在选图后写入「移除标记 + 文件」组合：
+ *   · 选了新文件 → 服务端存文件并覆盖 logo 路径
+ *   · 点了移除   → logo_remove=1，服务端把 logo 置空（回默认标识）
+ */
+(function () {
+  var file  = document.getElementById('siteLogoFile');
+  var pick  = document.getElementById('siteLogoPick');
+  var reset = document.getElementById('siteLogoReset');
+  var prev  = document.getElementById('siteLogoPreview');
+  var value = document.getElementById('siteLogoValue');
+  var rm    = document.getElementById('siteLogoRemove');
+
+  if (!file || !pick || !prev) return;
+
+  var DEFAULT_LOGO = prev.getAttribute('src');   // 未设置 Logo 时的系统默认图
+  var original     = value ? value.value : '';   // 打开页面时的既有路径
+
+  // 「移除」按钮：首次点击进入待移除态，二次点击才真正清空
+  var pendingRemove = false;
+
+  function showReset() {
+    if (reset) reset.classList.toggle('hidden', !original && !value.value);
+  }
+
+  pick.addEventListener('click', function () { file.click(); });
+
+  file.addEventListener('change', function () {
+    var f = file.files && file.files[0];
+    if (!f) return;
+
+    // 前端预检，与服务端校验规则一致，减少一次无谓往返
+    if (f.size > 2 * 1024 * 1024) {
+      alert('图片超过 2 MB，请压缩后再上传（当前 ' + (f.size / 1024 / 1024).toFixed(1) + ' MB）');
+      file.value = '';
+      return;
+    }
+
+    pendingRemove = false;
+    if (rm) rm.value = '0';
+    prev.src = URL.createObjectURL(f);
+    showReset();
+  });
+
+  if (reset) {
+    reset.addEventListener('click', function () {
+      if (pendingRemove) {
+        // 二次点击：确认清空
+        if (value) value.value = '';
+        if (rm) rm.value = '1';
+        prev.src = DEFAULT_LOGO;
+        file.value = '';
+        pendingRemove = false;
+        reset.classList.add('hidden');
+        reset.textContent = '选择图片';
+        return;
+      }
+      // 首次点击：进入待确认态（仅当原本有自定义 Logo 时才需要）
+      if (!original) return;
+      pendingRemove = true;
+      prev.src = DEFAULT_LOGO;
+      reset.textContent = '确认移除';
+    });
+  }
+
+  showReset();
+})();
+</script>
+@endpush

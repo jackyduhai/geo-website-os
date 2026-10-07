@@ -74,9 +74,25 @@
 <meta property="article:modified_time" content="{{ $seo['modified'] }}">
 @endif
 
-<link rel="icon" href="{{ asset('favicon.ico') }}" sizes="any">
-<link rel="icon" type="image/png" href="{{ asset('favicon.png') }}">
-<link rel="apple-touch-icon" href="{{ asset('apple-touch-icon.png') }}">
+@php
+$iconBase = 'img/brand/';
+// 与 SettingController::$iconTargets 一一对应
+$faviconFiles = [
+    'ico'         => 'favicon.ico',
+    'png'         => 'favicon_png.png',
+    '16'          => 'favicon_16.png',
+    'apple_touch' => 'apple-touch-icon.png',
+];
+$iconUrl = static function (string $key, string $default) use ($iconBase, $faviconFiles) {
+    $custom = $iconBase . ($faviconFiles[$key] ?? $key);
+    return asset(file_exists(public_path($custom)) ? $custom : $default);
+};
+@endphp
+<link rel="icon" href="{{ $iconUrl('ico', 'favicon.ico') }}" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="{{ $iconUrl('png', 'favicon-32.png') }}">
+<link rel="icon" type="image/png" sizes="16x16" href="{{ $iconUrl('16', 'favicon-16.png') }}">
+<link rel="apple-touch-icon" sizes="180x180"
+      href="{{ $iconUrl('apple_touch', 'apple-touch-icon.png') }}">
 <style>
 /* ============================================================
    GEO Website OS · Design System（全站唯一一套，禁止页面另起样式）
@@ -1478,8 +1494,21 @@ a.ft-v:hover{color:var(--on-inverse);}
               ? $siteSettings['geo_org_en_name']
               : ($siteSettings['site_name'] ?? config('app.name')))
           : ($siteSettings['site_name'] ?? config('app.name')));
-  // 自定义 logo（完整横版，含名称）时只显示 logo；否则用纯图标 + 公司名称文字。
-  $headerCustomLogo = trim((string)($siteSettings['geo_org_logo'] ?? ''));
+@endphp
+{{-- Logo 唯一来源 = site.logo（后台「站点设置 → 站点 Logo」上传的路径）。
+     geo_org_logo 是早期遗留的 Setting 键，保留为兼容回退，避免历史升级站点 logo 变空。
+     三者必须同源，否则用户上传后前台不同步。 --}}
+@php
+// Logo 唯一来源 = site.logo（后台「站点设置 → 站点 Logo」上传的路径）。
+// geo_org_logo 是早期遗留的Setting 键，保留为兼容回退，避免历史升级站点 logo 变空。
+$currentSite = \App\Support\SiteContext::currentSite();
+$headerCustomLogo = trim((string)($currentSite?->logo ?? ''))
+    ?: trim((string)($siteSettings['geo_org_logo'] ?? ''));
+
+// 横版 lockup（宽 ≥ 2.2 倍高，通常图形+文字已合成一张）→ 只输出图，不再并排公司名；
+// 方形 / 竖版 / 判不出来→ 输出图 **并** 并排公司名，避免品牌名在页面上消失。
+$headerLogoIsLockup = $headerCustomLogo !== ''
+    && \App\Support\ImageOptimizer::isWideLockup(public_path(ltrim($headerCustomLogo, '/')));
 @endphp
 <header class="hd" id="siteHeader">
   <input type="checkbox" id="nav-toggle" aria-label="{{ config('copy.nav.ariaLabels.openMenu') ?? __('ui.open_menu') }}">
@@ -1487,6 +1516,9 @@ a.ft-v:hover{color:var(--on-inverse);}
     <a class="logo" href="{{ \App\Support\PublicUrl::home() }}" aria-label="{{ $brandDisplayName }} {{ __('nav.home') }}">
       @if($headerCustomLogo !== '')
         <img class="logo-full" src="{{ asset($headerCustomLogo) }}" alt="{{ $brandDisplayName }}">
+        @unless($headerLogoIsLockup)
+          <span class="logo-name">{{ $brandDisplayName }}</span>
+        @endunless
       @else
         <img class="logo-icon" src="{{ asset('img/logo-icon.png') }}" alt="{{ $brandDisplayName }}">
         <span class="logo-name">{{ $brandDisplayName }}</span>
@@ -1607,7 +1639,7 @@ a.ft-v:hover{color:var(--on-inverse);}
   <div class="wrap">
     <div class="ft-grid">
       <div class="ft-brand">
-        <img src="{{ asset(!empty($siteSettings['geo_org_logo']) ? $siteSettings['geo_org_logo'] : 'img/logo.png') }}"
+        <img src="{{ asset($headerCustomLogo !== '' ? $headerCustomLogo : 'img/logo.png') }}"
              alt="{{ $brandDisplayName }}" height="40">
         <p class="ft-desc">{{ \App\Support\Copy::footerSlogan() }}</p>
         @if(!empty($ftFacts))

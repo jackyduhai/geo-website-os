@@ -144,6 +144,34 @@ class ImageOptimizer
     }
 
     /**
+     * 读取已落盘图片的 [宽, 高]；不存在或不可读返回 null。
+     *
+     * 供视图判断「上传的 Logo 是横版 lockup（含公司名）还是方形/图标」。
+     */
+    public static function dimensionsOf(string $absolute): ?array
+    {
+        $info = @getimagesize($absolute);
+
+        return $info === false ? null : [(int) $info[0], (int) $info[1]];
+    }
+
+    /**
+     * 判断图片是否「横向 lockup」——宽显著大于高（默认 ≥ 2.2 倍）。
+     *
+     * 判定不了（文件缺失 / 非图片）时返回 false，按「方形图标」处理：
+     * 宁可多显示一次公司名，也不要让品牌名在页面上消失。
+     */
+    public static function isWideLockup(string $absolute, float $ratio = 2.2): bool
+    {
+        $dim = self::dimensionsOf($absolute);
+        if ($dim === null || $dim[1] <= 0) {
+            return false;
+        }
+
+        return ($dim[0] / $dim[1]) >= $ratio;
+    }
+
+    /**
      * 为已落盘的 JPEG/PNG 生成同目录、同主名的 .webp 兄弟文件（幂等：webp 已新于原图则跳过）。
      * 原图永不删除、不改扩展名；webp 仅作为 <picture> 的首选源，缺失时前端自动回退原图。
      *

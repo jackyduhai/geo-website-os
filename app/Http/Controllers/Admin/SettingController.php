@@ -10,6 +10,7 @@ use App\Support\Audit\AuditSnapshot;
 use App\Support\ImageOptimizer;
 use App\Support\PageCache;
 use App\Support\Theme\ThemePresets;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
@@ -306,5 +307,98 @@ class SettingController extends Controller
         }
 
         return null;
+    }
+
+    /**
+     * 品牌资源集中上传（RC-11）。
+     *
+     * 把原来散在「站点设置 → 站点 Logo」「SEO → 默认分享图」等位置的品牌标识
+     * 上传，统一收到「企业品牌」页一个表单里处理。
+     *
+     * 两类资产分别处理：
+     *   ① Setting 类（geo_org_logo / seo_og_image）—— 仍走 media 优化管线，
+     *      落 storage，路径写回 Setting；
+     *   ② 图标类（favicon / apple-touch）—— 直接写 public/img/brand/，
+     *      由前台布局按固定路径引用，不经 Setting。
+     *
+     * 全部可留空：清空或未上传时前台回落到内置默认图，不会出现破图。
+     */
+    public function updateBrandAssets(Request $request): RedirectResponse
+    {
+        $errors = [];
+
+        // ① 图片类设置：上传则替换，勾选清除则回退默认
+        foreach (['geo_org_logo', 'seo_og_image'] as $key) {
+            if ($request->boolean('clear_asset.' . $key . '_') || in_array($key, (array) $request->input('clear_asset', []), true)) {
+                Setting::set($key, '');
+                continue;
+            }
+            if ($request->hasFile('file_' . $key)) {
+                $file = $request->file('file_' . $key);
+                if (! $file->isValid()) {
+                    $errors[] = $key . ' 上传失败，请重试';
+                    continue;
+                }
+                $path = ImageOptimizer::store($file, 'settings', ImageOptimizer::MAXW_LOGO);
+                if ($path) {
+                    // 与 Media::url() 保持同一口径：公开路径必须带 /storage 前缀，
+                    // 否则前台 asset() 拼出的 URL 会 404（存的是 settings/xxx.png，
+                    // 实际可访问的是 /storage/settings/xxx.png）。
+                    Setting::set($key, '/storage/' . ltrim($path, '/'));
+                } else {
+                    $errors[] = $key . ' 保存失败';
+                }
+            }
+        }
+
+        // ② 图标类：直接落 public/img/brand/，带尺寸规范校验
+        $iconRules = [
+            'favicon_ico' => ['mimes:ico', 'max:2048'],
+            'favicon_png' => ['mimes:png', 'max:4096'],
+            'favicon_16'  => ['mimes:png', 'max:4096'],
+            'apple_touch' => ['mimes:png', 'max:4096'],
+        ];
+
+        foreach ($iconRules as $field => $rules) {
+            if (! $request->hasFile('brand_icon_' . $field)) {
+                continue;
+            }
+            $validator = validator($request->all(), ['brand_icon_' . $field => ['file'] + $rules]);
+            if ($validator->fails()) {
+                $errors[] = $field . ': ' . $validator->errors()->first();
+                continue;
+            }
+            $file = $request->file('brand_icon_' . $field);
+            if (! $file->isValid()) {
+                $errors[] = $field . ' 上传失败';
+                continue;
+            }
+            $dir = public_path('img/brand');
+            if (! is_dir($dir)) {
+                mkdir($dir, 0755, true);
+            }
+            // 表单字段名 → 磁盘文件名（必须与前台布局的回落路径一一对应）
+            $iconTargets = [
+                'favicon_ico'  => 'favicon.ico',
+                'favicon_png'  => 'favicon_png.png',
+                'favicon_16'   => 'favicon_16.png',
+                'apple_touch'  => 'apple-touch-icon.png',
+            ];
+            $target = $dir . '/' . $iconTargets[$field];
+            if ($file->move($dir, basename($target))) {
+                clearstatcache(true, $target);
+            } else {
+                $errors[] = $field . ' 写入失败';
+            }
+        }
+
+        Setting::flush();
+        PageCache::flush();
+
+        if ($errors !== []) {
+            return back()->withErrors($errors)->withInput();
+        }
+
+        return back()->with('success', '品牌资源已保存。未设置的项继续使用系统内置默认标识。');
     }
 }

@@ -239,6 +239,9 @@ Route::middleware(['admin.auth', 'admin.site'])->group(function () {
     Route::get('settings/{group?}', [SettingController::class, 'index'])
         ->where('group', 'general|theme|contact|copy|seo|geo|analytics|sync')->name('settings.index');
     Route::put('settings/{group}', [SettingController::class, 'update'])->name('settings.update');
+    // 品牌资源（RC-11 集中化上传入口）：Logo / Favicon / Apple Touch / OG 图
+    Route::post('settings/brand-assets', [SettingController::class, 'updateBrandAssets'])
+        ->name('settings.brand-assets');
     Route::post('settings/theme/preset', [SettingController::class, 'applyPreset'])
         ->name('settings.preset');
     Route::post('settings/sync/regenerate-token', [SettingController::class, 'regenerateToken'])

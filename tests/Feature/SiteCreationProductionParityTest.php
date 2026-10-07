@@ -282,10 +282,12 @@ class SiteCreationProductionParityTest extends TestCase
     public function test_cli_and_admin_paths_produce_equivalent_structure(): void
     {
         // Path B：后台建站（控制器跑完整 5 Seeder 链）
+        // 注意：slug 由服务端按站名派生（RC-11），表单传入值被忽略，
+        // 因此断言必须按 name 定位，不能依赖传入的 slug。
         $this->createSiteViaAdmin([
-            'name' => 'Admin Path', 'slug' => 'path-admin', 'domain' => 'path-admin.test',
+            'name' => 'Path Admin', 'slug' => 'path-admin', 'domain' => 'path-admin.test',
         ])->assertRedirect();
-        $adminSite = Site::where('slug', 'path-admin')->firstOrFail();
+        $adminSite = Site::where('name', 'Path Admin')->firstOrFail();
         $adminStruct = $this->structureFingerprint($adminSite->id);
 
         // Path A：CLI 建站（geo:install 的那套 Seeder，不经控制器事务）

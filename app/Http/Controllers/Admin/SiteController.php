@@ -12,6 +12,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 use Illuminate\View\View;
 
 /**
@@ -63,6 +64,14 @@ class SiteController extends Controller
     {
         $data = $this->validateData($request);
         $makeDefault = $request->boolean('is_default');
+
+        // Logo 上传（表单直接选文件，运营者无需知道服务器路径）。
+        $logoPath = $this->storeUploadedLogo($request);
+        if ($logoPath !== null) {
+            $data['logo'] = $logoPath;
+        }
+
+        $data['slug'] = $this->generateSlug((string) ($data['name'] ?? ''));
 
         $site = DB::transaction(function () use ($data, $makeDefault): Site {
             /**
@@ -128,6 +137,14 @@ class SiteController extends Controller
     public function update(Request $request, Site $site): RedirectResponse
     {
         $data = $this->validateData($request, $site);
+
+        // Logo 上传：选了新图就更新路径；点了「移除」则清空回默认标识。
+        $logoPath = $this->storeUploadedLogo($request);
+        if ($logoPath !== null) {
+            $data['logo'] = $logoPath;
+        } elseif ($request->boolean('logo_remove')) {
+            $data['logo'] = null;
+        }
 
         // 默认站不允许在编辑表单里被取消默认；要更换默认站，请对另一站点「设为默认」。
         $makeDefault = $site->is_default || $request->boolean('is_default');
@@ -234,36 +251,104 @@ class SiteController extends Controller
         $data = $request->validate(
             [
                 'name' => ['required', 'string', 'max:120'],
-                'slug' => [
-                    'required', 'regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/',
-                    'unique:sites,slug' . ($site ? ',' . $site->id : ''),
-                ],
                 'domain' => [
                     'nullable', 'string', 'max:255',
                     'unique:sites,domain' . ($site ? ',' . $site->id : ''),
                 ],
                 'description' => ['nullable', 'string', 'max:5000'],
                 'logo' => ['nullable', 'string', 'max:255'],
+                'logo_file' => [
+                    'nullable', 'file', 'image',
+                    'mimes:jpg,jpeg,png,webp,gif',
+                    'max:2048',
+                    'dimensions:min_width=64,min_height=64',
+                ],
                 'status' => ['required', 'in:' . implode(',', [
                     Site::STATUS_ACTIVE, Site::STATUS_INACTIVE, Site::STATUS_MAINTENANCE,
                 ])],
             ],
             [
                 'name.required' => '请填写站点名称',
-                'slug.required' => '请填写站点标识',
-                'slug.regex' => '站点标识只能包含小写字母、数字和连字符（如 site-a）',
-                'slug.unique' => '该站点标识已被使用',
                 'domain.unique' => '该域名已绑定到其他站点，一个域名只能对应一个站点',
+                'logo_file.image' => 'Logo 必须是图片文件',
+                'logo_file.mimes' => 'Logo 只支持 JPG / PNG / WebP / GIF 格式',
+                'logo_file.max' => 'Logo 不能超过 2 MB',
+                'logo_file.dimensions' => 'Logo 尺寸太小，宽度与高度至少各 64 像素',
                 'status.in' => '站点状态非法',
             ],
         );
 
+        /**
+         * 文件字段不能进 `$data`。
+         *
+         * `validate()` 会把 `logo_file` / `logo_remove` 一并返回，它们分别是
+         * UploadedFile 实例与标记字符串，**都不是数据库列** —— 若透传给
+         * `Site::create()` / `update()` 会触发 `no such column: logo_file`
+         * （SQLSTATE[HY000] → 500）。logo 实际路径由 storeUploadedLogo() 单独处理。
+         */
+        unset($data['logo_file'], $data['logo_remove']);
+
         // 编辑场景下 slug 只读，忽略任何随表单提交的 slug，保证标识稳定。
         if ($site) {
+            unset($data['slug']);
+        } else {
+            // 新建场景：slug 不再要求运营者填写，由系统按站点名生成。
             unset($data['slug']);
         }
 
         return $data;
+    }
+
+    /**
+     * 保存站点 Logo 上传文件，返回可直接访问的公开路径。
+     *
+     * 走公共 `ImageOptimizer::store()`：自动按比例压缩到内容图上限，
+     * 不裁切、不变形（站点 Logo 常为非正方形，裁切会破坏标识完整性）。
+     *
+     * 未选文件时返回 null，表示「沿用原有值」，由调用方决定语义。
+     */
+    private function storeUploadedLogo(Request $request): ?string
+    {
+        if (! $request->hasFile('logo_file')) {
+            return null;
+        }
+
+        $path = \App\Support\ImageOptimizer::store(
+            $request->file('logo_file'),
+            'sites/' . date('Ym'),
+            1024          // Logo 显示尺寸不超过 1024px，够清晰又不浪费带宽
+        );
+
+        return $path ? \Illuminate\Support\Str::start($path, '/') : null;
+    }
+
+    /**
+     * 按站点名生成稳定 slug。
+     *
+     * slug 是内部稳定标识（后台切换站点、既有链接都依赖它），运营者不需要
+     * 理解它的存在意义，因此**不在表单暴露**，由系统按名称生成并保证唯一。
+     *
+     * 规则：中文等非ASCII 字符无法音译，退化为 `site-<n>` 形式；
+     * 同名时追加递增后缀（site-a / site-a-2 / site-a-3）。
+     */
+    private function generateSlug(string $name): string
+    {
+        $base = Str::slug($name);
+
+        // Str::slug 对纯中文会返回空串，此时用保底形式
+        if ($base === '' || $base === null) {
+            $base = 'site';
+        }
+
+        //站点表可能已有相同 slug（改名场景），加数字后缀避开
+        $candidate = $base;
+        $suffix = 2;
+        while (Site::withoutGlobalScopes()->where('slug', $candidate)->exists()) {
+            $candidate = $base . '-' . $suffix;
+            $suffix++;
+        }
+
+        return $candidate;
     }
 
     /**

@@ -570,3 +570,127 @@ th .size-tag{font-weight:400}
 .locale-tabs .lt-state{font-size:12px;font-weight:700;}
 .locale-tabs .lt-state.todo{color:#9aa5b5;}
 .locale-tabs .lt-state.done{color:#16a34a;}
+/* ============================================================
+   站点表单 ·只读 slug 与 Logo 上传（RC-11 UX 简化）
+   ============================================================ */
+
+/* 只读标识：视觉上明确「不可编辑」，而非看起来能改却改不了 */
+.input-readonly{
+  background:#f1f3f6;
+  color:#6b7280;
+  cursor:not-allowed;
+  border-style:dashed;
+}
+.field-hint{
+  margin-top:6px;
+  font-size:12px;
+  line-height:1.6;
+  color:#6b7280;
+}
+.field-hint strong{color:#374151;font-weight:600}
+
+/* Logo 上传区 */
+.logo-upload{
+  display:flex;
+  gap:16px;
+  align-items:flex-start;
+  flex-wrap:wrap;
+}
+.logo-preview{
+  width:88px;height:88px;
+  flex:0 0 88px;
+  border:1px solid #e5e7eb;
+  border-radius:10px;
+  background:#fff;
+  display:flex;align-items:center;justify-content:center;
+  overflow:hidden;
+}
+.logo-preview img{
+  max-width:100%;max-height:100%;
+  object-fit:contain;
+}
+.logo-controls{flex:1;min-width:220px}
+/* 原生 file input 默认样式太窄，用 label 式按钮触发 */
+.logo-file-input{
+  position:absolute;
+  width:1px;height:1px;
+  opacity:0;
+  overflow:hidden;
+}
+.logo-actions{
+  display:flex;gap:8px;margin-bottom:8px;
+}
+.hidden{display:none}
+
+/* 移动端：预览与控件改为纵向排列，避免挤压 */
+@media (max-width:640px){
+  .logo-upload{flex-direction:column}
+  .logo-controls{width:100%}
+}
+
+/* ============================================================
+   品牌资源（RC-11）：Logo / Favicon / Apple Touch / OG 图集中上传
+   ============================================================ */
+.brand-assets{
+  border:1px solid #e6e9ee;
+  border-radius:12px;
+  padding:18px;
+  margin-bottom:20px;
+  background:#fbfcfe;
+}
+.brand-assets-hd{margin-bottom:16px}
+.brand-assets-title{font-weight:600;font-size:15px;margin-bottom:4px}
+
+/* 卡片网格：桌面 3 列，平板 2 列，手机 1 列 */
+.brand-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(240px,1fr));
+  gap:14px;
+}
+.brand-card{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  border:1px solid #e5e7eb;
+  border-radius:10px;
+  padding:14px;
+  background:#fff;
+}
+/* 预览框：固定高度，图标居中，不拉伸 */
+.brand-preview{
+  height:96px;
+  border:1px dashed #e5e7eb;
+  border-radius:8px;
+  background:#fff;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  overflow:hidden;
+}
+.brand-preview img{max-width:100%;max-height:100%;object-fit:contain}
+.brand-ph{font-size:12px;color:#9ca3af}
+
+.brand-meta{display:flex;flex-direction:column;gap:2px}
+.brand-name{font-weight:600;font-size:13px}
+.brand-size{font-size:12px;color:#6b7280}
+.brand-use{font-size:11px}
+
+.brand-ctl{display:flex;flex-direction:column;gap:6px;margin-top:auto}
+.brand-ctl input[type="text"]{width:100%}
+.brand-ctl .checkline{font-size:11px}
+
+/* 原生 file input 样式化的触发器按钮 */
+.file-input{
+  font-size:12px;
+  width:100%;
+}
+.file-input::file-selector-button{
+  border:1px solid #d1d5db;
+  background:#fff;
+  border-radius:6px;
+  padding:5px 10px;
+  margin-right:8px;
+  font-size:12px;
+  cursor:pointer;
+}
+.file-input::file-selector-button:hover{background:#f3f4f6}
