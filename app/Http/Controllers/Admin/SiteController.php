@@ -319,7 +319,10 @@ class SiteController extends Controller
             1024          // Logo 显示尺寸不超过 1024px，够清晰又不浪费带宽
         );
 
-        return $path ? \Illuminate\Support\Str::start($path, '/') : null;
+        // 公开路径必须带 /storage 前缀（与 Media::url() 、SettingController 同口径）。
+        // 只补 '/' 会让前台 asset() 拼出 /sites/xxx.png → 404 破图，
+        // 且图片 404 时浏览器把 alt 文本显示出来，视觉上「公司名重复两次」。
+        return $path ? '/storage/' . ltrim($path, '/') : null;
     }
 
     /**

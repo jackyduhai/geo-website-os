@@ -1505,6 +1505,16 @@ $currentSite = \App\Support\SiteContext::currentSite();
 $headerCustomLogo = trim((string)($currentSite?->logo ?? ''))
     ?: trim((string)($siteSettings['geo_org_logo'] ?? ''));
 
+// 存量兼容：RC-11 修复前上传的 logo 缺 /storage 前缀，直接 asset() 会 404。
+// 图片 404 时浏览器会把 alt 文本渲染出来，视觉上「公司名出现两次」。
+// 这里做读取侧兜底：拼不出文件时才补前缀，不改动数据库原值。
+if ($headerCustomLogo !== ''
+    && ! str_starts_with($headerCustomLogo, '/storage/')
+    && file_exists(public_path('storage/' . ltrim($headerCustomLogo, '/')))
+) {
+    $headerCustomLogo = '/storage/' . ltrim($headerCustomLogo, '/');
+}
+
 // 横版 lockup（宽 ≥ 2.2 倍高，通常图形+文字已合成一张）→ 只输出图，不再并排公司名；
 // 方形 / 竖版 / 判不出来→ 输出图 **并** 并排公司名，避免品牌名在页面上消失。
 $headerLogoIsLockup = $headerCustomLogo !== ''
