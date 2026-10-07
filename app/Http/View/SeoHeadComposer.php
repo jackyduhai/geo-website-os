@@ -118,7 +118,17 @@ class SeoHeadComposer
             'title_full'     => (string) $titleFull,
             'description'    => (string) $description,
             'canonical'      => (string) $canonical,
-            'noindex'        => (bool) ($seo['noindex'] ?? ($siteResult->noindex ?? false)),
+            // 模板活站预览站（RC-11 G3）：它经 ?site_slug= 暴露在**当前域名**下，
+            // 且复制了真实站的全部内容 —— 若不进 noindex，搜索引擎会收录
+            // 「同内容、不同 URL」的重复页，稀释真实站的抓取与 canonical 信号。
+            // 对 GEO 产品这是实打实的损害，故与 ThemeController::preview()
+            // 的 X-Robots-Tag 同等对待：预览一律不进索引。
+            //
+            // 注意必须**前置覆盖**而非 `??` 兜底：上游（PageController 等）总会
+            // 显式传 `noindex => false`，`??` 会被短路，预览站就漏出可索引信号。
+            'noindex'        => \App\Support\Templates\TemplatePreviewSite::isPreviewSlug(
+                (string) (\App\Support\SiteContext::currentSite()?->slug ?? '')
+            ) || (bool) ($seo['noindex'] ?? ($siteResult->noindex ?? false)),
             'type'           => (string) ($seo['type'] ?? ($siteResult->ogType ?? 'website')),
             'image'          => (string) $ogImage,
             'og_title'       => (string) $ogTitle,
