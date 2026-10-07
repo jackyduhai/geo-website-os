@@ -24,6 +24,7 @@ use App\Support\SiteCacheKey;
 use App\Support\GeoUrlGenerator;
 use Illuminate\Routing\UrlGenerator;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 
@@ -75,6 +76,31 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        /**
+         * asset() / url() 的根地址兜底（RC-11）。
+         *
+         * 背景：Laravel 的 `asset()` 基于 config('app.url')（即 .env 的 APP_URL）
+         * 生成**绝对 URL**。若部署时忘了把 APP_URL 改成实际访问地址（或仍是
+         * 默认的 http://localhost），所有 CSS/JS/图片 都会指向错误主机 ——
+         * 浏览器加载失败，页面表现为「完全没有样式」。
+         *
+         * 症状实例：后台 /admin/plugins 引用 http://localhost/css/admin.css，
+         * 而实际访问地址是 http://127.0.0.1:8080 → 样式全丢。
+         *
+         * 处置：HTTP 请求下按**当前请求的真实 origin** 覆写根地址，
+         * 让 asset() 与访问地址一致；命令行（队列 / 迁移 / tinker）下不覆写，
+         * 仍用 APP_URL，保证任务里的绝对 URL 稳定可预期。
+         *
+         * 不影响 SEO：canonical / sitemap 等走 PublicUrl 或 SeoMetaResolver，
+         * 它们本来就用 request()->root() / 站点域名。
+         */
+        if (! $this->app->runningInConsole() && PHP_SAPI !== 'cli') {
+            $root = rtrim($this->app->request->root(), '/');
+            if ($root !== '' && $root !== rtrim((string) config('app.url'), '/')) {
+                URL::forceRootUrl($root);
+            }
+        }
+
         // 导航 / 页脚视图记忆归属本 Provider，注册到统一复位器（进程内仅注册一次，回调幂等）。
         if (! self::$stateCallbackRegistered) {
             RequestScopedState::onReset([self::class, 'flushViewComposerMemos']);

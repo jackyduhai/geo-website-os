@@ -57,13 +57,16 @@ class KnowledgeController extends Controller
             ->orderByDesc('published_at')
             ->paginate(self::PER_PAGE);
 
-        return $this->render($schema, $items, $channel, $group->name, $request);
+        // H1 与面包屑统一走 Group::displayName()，它按当前语言解析
+        // `nav.knowledge-{slug}` 翻译键，缺键才回落分组原始 name。
+        // 直接用 $group->name 会让英文频道页标题露出中文（RC-11 实测缺陷）。
+        return $this->render($schema, $items, $channel, $group->displayName(), $request);
     }
 
     private function render(SchemaBuilder $schema, $items, ?string $active, string $title, Request $request)
     {
         $channels = Group::knowledgeChannels();
-        $channelMap = $channels->pluck('name', 'slug')->all(); // slug => 名称，供视图 H1 取值
+        $channelMap = $channels->mapWithKeys(fn ($g) => [$g->slug => $g->displayName()])->all(); // slug => 当前语言名称
 
         $crumbs = [
             ['name' => __('nav.home'), 'url' => PublicUrl::home()],

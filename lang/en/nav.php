@@ -43,6 +43,10 @@ return [
     'ft-contact'       => 'Contact Us',
 
     // Knowledge dynamic groups
+    // Must cover every group slug seeded by SiteStructureSeeder; a missing key
+    // makes the English UI fall back to groups.name and leak Chinese labels.
+    'knowledge-faq'       => 'FAQ',
+    'knowledge-guide'     => 'User Guide',
     'knowledge-selection' => 'Selection Guide',
     'knowledge-process'   => 'Process & Formulation',
     'knowledge-business'  => 'Selection & Application',

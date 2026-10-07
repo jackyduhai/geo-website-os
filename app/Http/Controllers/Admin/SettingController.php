@@ -84,7 +84,7 @@ class SettingController extends Controller
                 $fileKey = 'file_' . $key;
                 if ($request->hasFile($fileKey)) {
                     $path = ImageOptimizer::store($request->file($fileKey), 'settings', ImageOptimizer::MAXW_LOGO);
-                    $this->applySetting($key, $path, $item->type, $before, $after);
+                    $this->applySetting($key, $path ? '/storage/' . ltrim($path, '/') : '', $item->type, $before, $after);
                 } elseif ($request->exists($key)) {
                     $this->applySetting($key, (string) $request->input($key, ''), $item->type, $before, $after);
                 }

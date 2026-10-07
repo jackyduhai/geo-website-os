@@ -43,6 +43,10 @@ return [
     'ft-contact'       => '联系我们',
 
     // Knowledge 动态分组
+    //必须与 SiteStructureSeeder 定义的分组 slug 一一对应，
+    // 否则英文态回落 groups.name 露出中文（RC-11 实测缺陷）。
+    'knowledge-faq'       => '常见问题',
+    'knowledge-guide'     => '使用指南',
     'knowledge-selection' => '选型指南',
     'knowledge-process'   => '工艺与配方',
     'knowledge-business'  => '选型与应用',

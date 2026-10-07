@@ -58,15 +58,64 @@ final class SafeUrl
         return in_array(strtolower($m[1]), self::ALLOWED_SCHEMES, true);
     }
 
-    /**
-     * 渲染用：返回可安全输出的 URL；不安全返回 fallback（绝不输出危险协议）。
-     * 输出保留原始 trim 值（仅做安全裁决，不重写正常 URL）。
+/**
+     * 输出用：返回安全 URL，并把握有当前 origin 的**绝对地址转成根相对路径**。
+     *
+     * 为什么需要（RC-11 实测）：
+     *   运营者在区块编辑器里粘贴 `http://localhost/products/` 这类绝对地址后，
+     *   部署到真实域名时这些链接会**静默指向错误主机**（前台 CTA /按钮点不动），
+     *   而且后台看不出问题 —— 页面能渲染，只是链接是坏的。
+     *
+     * 处置：同源（scheme+host+port 与当前请求一致）或指向 APP_URL 的绝对地址，
+     * 一律降级为 `/path` 根相对路径 —— 换域名零维护，且不会被第三方域名劫持。
+     * 跨站外链保持原样（不篡改外部链接）。
      */
     public static function sanitize(?string $url, string $fallback = '#'): string
     {
         $raw = trim((string) $url);
 
-        return self::isSafe($raw) ? $raw : $fallback;
+        if (! self::isSafe($raw)) {
+            return $fallback;
+        }
+
+        return self::relativize($raw);
+    }
+
+    /**
+     * 同源绝对 URL → 根相对路径；其余原样返回。
+     */
+    public static function relativize(string $url): string
+    {
+        if ($url === '' || ! preg_match('~^https?://~i', $url)) {
+            return $url;                       // 已是相对路径 / 协议相对 / 非 http
+        }
+
+        $parts = parse_url($url);
+        $host  = strtolower((string) ($parts['host'] ?? ''));
+        if ($host === '') {
+            return $url;
+        }
+
+        // 当前请求的 origin
+        $currentHost = strtolower((string) request()->getHost());
+        if ($currentHost === '') {
+            $currentHost = strtolower((string) parse_url((string) config('app.url'), PHP_URL_HOST));
+        }
+
+        // APP_URL 的 host 也要视作同源（部署时改过 APP_URL 但历史内容仍是旧值）
+        $appHost = strtolower((string) parse_url((string) config('app.url'), PHP_URL_HOST));
+        $isSameOrigin = $host === $currentHost || $host === $appHost;
+
+        if (! $isSameOrigin) {
+            return $url;                       // 外部链接，不动
+        }
+
+        $path  = (string) ($parts['path'] ?? '');
+        $path  = $path === '' ? '/' : $path;
+        $query = isset($parts['query']) && $parts['query'] !== '' ? '?' . $parts['query'] : '';
+        $frag  = isset($parts['fragment']) && $parts['fragment'] !== '' ? '#' . $parts['fragment'] : '';
+
+        return $path . $query . $frag;
     }
 
     /**
