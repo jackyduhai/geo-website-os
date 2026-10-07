@@ -24,6 +24,13 @@ Homestead.yaml
 Thumbs.db
 dist/
 
+# 后台上传的运行时资产（RC-11 品牌资源上传会写入这里）。
+# 属于**单个站点的运行数据**，不是产品资产：入库会让任何人的一次上传
+# 变成仓库默认配置，并可能随发布包分发。
+/public/img/brand
+/storage/sites
+/storage/settings
+
 /_shots/
 /_ref/
 
