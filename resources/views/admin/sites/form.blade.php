@@ -59,7 +59,10 @@
 
       <div class="logo-upload">
         <div class="logo-preview">
-          @php $logoUrl = $site->logo ?: asset('img/logo.png'); @endphp
+          {{--空值回落必须与前台一致：都用方形 logo-icon.png。
+     之前这里回落到横版 logo.png（1024×256），塞进 88×88 方框被压成横条，
+     让运营者以为上传错了。 --}}
+          @php $logoUrl = $site->logo ?: asset('img/logo-icon.png'); @endphp
           <img id="siteLogoPreview" src="{{ $logoUrl }}" alt="{{ $site->name }} Logo 预览">
         </div>
         <div class="logo-controls">
