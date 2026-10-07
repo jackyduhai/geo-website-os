@@ -108,9 +108,18 @@ final class TemplatePreviewSite
                 (new SiteStructureSeeder())->run();
             });
 
-            // 把模板默认值装到这个预览站（只写该站，不碰其它站）
-            SiteContext::withSite($site, static function () use ($pack): void {
-                TemplateDefaultsInstaller::bootstrap(SiteContext::currentSite(), $pack, false);
+            // 关键：defaults（settings / menus / seo）与 **recipe（页面 + 区块）**
+            // 是两件事，缺一不可 ——
+            //   RecipeApplier::apply() 才把 recipes/*.json 里的 block 组合落地成页面区块，
+            //   只跑 bootstrap() 的话，两个不同模板的预览会长得一模一样
+            //   （2026-11 实测踩过：两个预览站区块全是 rich_text/contact_info，
+            //     size 只差 13 字节，肉眼无法区分）。
+            foreach (TemplatePackageManager::recipes($pack) as $recipe) {
+                RecipeApplier::apply($site, $pack, $recipe);
+            }
+
+            SiteContext::withSite($site, static function () use ($site, $pack): void {
+                TemplateDefaultsInstaller::bootstrap($site, $pack, false);
             });
 
             return $site;
