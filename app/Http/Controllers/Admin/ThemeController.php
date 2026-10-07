@@ -34,17 +34,17 @@ class ThemeController extends Controller
      */
     public const SEED_OVERRIDABLE = [
         'theme_primary',
-   'theme_primary_dark',
-  'theme_accent',
+        'theme_primary_dark',
+        'theme_accent',
         'theme_bg',
-      'theme_surface',
+        'theme_surface',
         'theme_text',
         'theme_text_muted',
-   'theme_radius',
+        'theme_radius',
         'theme_container',
         'theme_density',
         'theme_shadow',
-      'theme_typography',
+        'theme_typography',
         'theme_font',
     ];
 
@@ -71,10 +71,10 @@ class ThemeController extends Controller
             abort(404);
         }
 
-if (! ThemeManager::activate($name)) {
-return redirect()->route('admin.themes.index')
-         ->with('error', '主题激活失败：主题清单无效或已缺失，激活态未改变。');
-  }
+        if (! ThemeManager::activate($name)) {
+            return redirect()->route('admin.themes.index')
+                ->with('error', '主题激活失败：主题清单无效或已缺失，激活态未改变。');
+        }
 
         // 切换主题时清掉「会盖住主题种子」的站点级视觉覆盖项。
         //
@@ -87,13 +87,13 @@ return redirect()->route('admin.themes.index')
         // 站点偏好（是否允许深色），与主题外观无关，保留。
         // theme_custom_css 是运营手写规则，也不清（清了会丢用户代码）。
         foreach (self::SEED_OVERRIDABLE as $key) {
-      Setting::set($key, '');
+            Setting::set($key, '');
         }
 
         AuditLog::record('theme.activate', "切换主题：{$name}", [], 'Setting');
 
         return redirect()->route('admin.themes.index')
-   ->with('success', "已为当前站点切换主题：{$name}（已清除该主题的站点级配色覆盖）。");
+            ->with('success', "已为当前站点切换主题：{$name}（已清除该主题的站点级配色覆盖）。");
     }
 
     /**

@@ -58,7 +58,7 @@ final class SafeUrl
         return in_array(strtolower($m[1]), self::ALLOWED_SCHEMES, true);
     }
 
-/**
+    /**
      * 输出用：返回安全 URL，并把握有当前 origin 的**绝对地址转成根相对路径**。
      *
      * 为什么需要（RC-11 实测）：

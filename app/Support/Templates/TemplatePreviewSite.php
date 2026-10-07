@@ -114,11 +114,11 @@ final class TemplatePreviewSite
             //   只跑 bootstrap() 的话，两个不同模板的预览会长得一模一样
             //   （2026-11 实测踩过：两个预览站区块全是 rich_text/contact_info，
             //     size 只差 13 字节，肉眼无法区分）。
-foreach (TemplatePackageManager::recipes($pack) as $recipe) {
-           RecipeApplier::apply($site, $pack, $recipe);
-       }
+            foreach (TemplatePackageManager::recipes($pack) as $recipe) {
+                RecipeApplier::apply($site, $pack, $recipe);
+            }
 
-// 复制真实站的内容与实体作为演示数据。
+            // 复制真实站的内容与实体作为演示数据。
             //
             // 为什么必需（RC-11 H2 实测）：预览站只有骨架时 contents / entities 都是 0，
             // 所有**依赖数据源**的区块（产品网格 / 服务网格 / 客户评价 / Logo 墙…）
@@ -156,34 +156,34 @@ foreach (TemplatePackageManager::recipes($pack) as $recipe) {
             ->first();
 
         if ($source === null) {
-      return;
+            return;
         }
 
         foreach (['contents', 'entities'] as $table) {
             foreach (DB::table($table)->where('site_id', $source->id)->get() as $row) {
                 $data = (array) $row;
-       $data['site_id'] = $preview->id;
-        unset($data['id']);
-      DB::table($table)->insert($data);
-   }
+                $data['site_id'] = $preview->id;
+                unset($data['id']);
+                DB::table($table)->insert($data);
+            }
         }
 
         // 实体关系：源与目标 id 按同一顺序对应，重建映射后复制
         $newIds = DB::table('entities')->where('site_id', $preview->id)->orderBy('id')->pluck('id')->all();
         $oldIds = DB::table('entities')->where('site_id', $source->id)->orderBy('id')->pluck('id')->all();
-  $map = array_combine($oldIds, $newIds) ?: [];
+        $map = array_combine($oldIds, $newIds) ?: [];
 
         foreach (DB::table('entity_relations')->where('site_id', $source->id)->get() as $rel) {
-       $data = (array) $rel;
+            $data = (array) $rel;
             $data['site_id'] = $preview->id;
             foreach (['from_entity_id', 'to_entity_id'] as $fk) {
-        if (isset($map[$data[$fk]])) {
-  $data[$fk] = $map[$data[$fk]];
-   }
-       }
-       unset($data['id']);
-   DB::table('entity_relations')->insert($data);
-  }
+                if (isset($map[$data[$fk]])) {
+                    $data[$fk] = $map[$data[$fk]];
+                }
+            }
+            unset($data['id']);
+            DB::table('entity_relations')->insert($data);
+        }
     }
 
     /**
