@@ -63,6 +63,121 @@ class TemplatePackageManager
     }
 
     /**
+     * 汇总模板包的结构特征（RC-11 F）。
+     *
+     * 存在的理由：manifest 只声明「这个包是什么行业」，不声明「它长什么样」。
+     * 8 个出厂包的 `manifest.json` 差异集中在 industry / identity 等文案，
+     * 单看 manifest 无法区分；而真正决定页面形态的是 `recipes/*.json` 里的
+     * block 组合与顺序 —— 8 个包的 homepage 结构两两不同（5~7 个 block）。
+     *
+     * 把这份结构摘要提到 Manager 层而不是控制器里临时拼，
+     * 是为了让「模板卡片」「对比页」「活站预览」共用同一口径。
+     *
+     * @return array{
+     *   recipe_count:int, page_list:array<int,string>,
+     *   block_counts:array<string,int>, block_total:int,
+     *   homepage_blocks:array<int,array{0:string,1:string}>
+     * }
+     */
+    public static function structure(string $id): array
+    {
+        $empty = [
+            'recipe_count'    => 0,
+            'page_list'       => [],
+            'block_counts'    => [],
+            'block_total'     => 0,
+            'homepage_blocks' => [],
+        ];
+
+        if (! self::exists($id)) {
+            return $empty;
+        }
+
+        $packPath = self::basePath() . '/' . $id;
+        $recipes  = glob($packPath . '/recipes/*.json') ?: [];
+        $labels   = self::blockLabels();
+        $pages    = [];
+        $counts   = [];
+        $homepage = [];
+        $total    = 0;
+
+        foreach ($recipes as $file) {
+            $name = basename($file, '.json');
+            $pages[] = $name;
+
+            $recipe = json_decode((string) file_get_contents($file), true);
+            $blocks = is_array($recipe['blocks'] ?? null) ? $recipe['blocks'] : [];
+
+            $seq = [];
+            foreach ($blocks as $b) {
+                $type = (string) ($b['type'] ?? '');
+                if ($type === '') {
+                    continue;
+                }
+                $seq[] = $type;
+                $counts[$type] = ($counts[$type] ?? 0) + 1;
+                $total++;
+            }
+
+            if ($name === 'homepage') {
+                $homepage = $seq;
+            }
+        }
+
+        return [
+            'recipe_count'    => count($recipes),
+            'page_list'       => $pages,
+            'block_counts'    => $counts,
+            'block_total'     => $total,
+            // label 取注册表；未注册回落 key 本身（暴露问题而非隐藏）
+            'homepage_blocks' => array_map(
+                static fn (string $t): array => [$t, $labels[$t] ?? $t],
+                $homepage
+            ),
+        ];
+    }
+
+    /**
+     * block 类型 key → 中文label（来自 config/blocks.php 的唯一权威定义）。
+     *
+     * 结构摘要要展示给人看，必须用注册表的 label 而不是裸 key，
+     * 否则卡片上会出现 "feature_grid" 这种只有作者懂的词。
+     * 未注册的类型回落为 key 本身（暴露问题，而不是静默隐藏）。
+     *
+     * @return array<string,string>
+     */
+    public static function blockLabels(): array
+    {
+        static $cache = null;
+        if ($cache === null) {
+            $cache = [];
+            foreach ((array) (config('blocks.types') ?: []) as $key => $def) {
+                $label = (string) ($def['label'] ?? '');
+                if ($label !== '') {
+                    $cache[(string) $key] = $label;
+                }
+            }
+        }
+
+        return $cache;
+    }
+
+    /**
+     * 一次性取出全部包的结构摘要（后台模板生态列表用）。
+     *
+     * @return array<string,array> id => structure()
+     */
+    public static function structureMatrix(): array
+    {
+        $out = [];
+        foreach (array_keys(self::all()) as $id) {
+            $out[$id] = self::structure($id);
+        }
+
+        return $out;
+    }
+
+    /**
      * 发现「已放置目录但清单无效」的模板包。
      *
      * @return array<string,array<int,string>> id => 错误列表

@@ -44,6 +44,49 @@
       </div>
     </div>
 
+    {{-- RC-11 F · 结构特征。
+         manifest 只说明「什么行业」，看不出「长什么样」；真正决定页面形态的是
+         recipes/*.json 的 block 组合与顺序。这段把该结构直接暴露给使用者，
+         即使暂无预览截图，8 个模板也能被真实区分开。 --}}
+    @php $st = $structure[$id] ?? null; @endphp
+    @if($st)
+      <div class="tpl-struct">
+        <div class="tpl-struct-row">
+          <span class="tpl-k">页面配方</span>
+          <span class="tpl-v">
+            @if($st['recipe_count'] > 0)
+              {{ $st['recipe_count'] }} 个
+              <span class="small muted">（{{ implode(' / ', $st['page_list']) }}）</span>
+            @else
+              <span class="muted">无</span>
+            @endif
+          </span>
+        </div>
+        <div class="tpl-struct-row">
+          <span class="tpl-k">区块总数</span>
+          <span class="tpl-v">{{ $st['block_total'] }} 个
+            @if($st['block_counts'])
+              <span class="small muted">（{{ implode(' · ', array_map(
+                fn ($t, $c) => $c . '× ' . (\App\Support\Templates\TemplatePackageManager::blockLabels()[$t] ?? $t),
+                array_keys($st['block_counts']),
+                $st['block_counts']
+              )) }}）</span>
+            @endif
+          </span>
+        </div>
+        @if($st['homepage_blocks'])
+          <div class="tpl-struct-row">
+            <span class="tpl-k">首页结构</span>
+            <span class="tpl-v">
+              @foreach($st['homepage_blocks'] as [$bt, $btLabel])
+                <span class="tpl-block">{{ $btLabel }}</span>
+              @endforeach
+            </span>
+          </div>
+        @endif
+      </div>
+    @endif
+
     <div class="btn-row mt-2">
       <a class="btn btn-sm" href="{{ route('admin.templates.preview', $id) }}" target="_blank" rel="noopener">预览</a>
       <a class="btn btn-sm" href="{{ route('admin.templates.compare', $id) }}">对比</a>

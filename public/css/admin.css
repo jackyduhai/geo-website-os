@@ -694,3 +694,50 @@ th .size-tag{font-weight:400}
   cursor:pointer;
 }
 .file-input::file-selector-button:hover{background:#f3f4f6}
+
+/* ============================================================
+   模板生态 · 结构特征表（RC-11 F）
+   manifest 只说明「什么行业」，看不出「长什么样」。
+   这段把 recipes/*.json 的 block 组合与顺序直接暴露出来，
+   使暂无预览截图时 8 个模板仍可被真实区分。
+   ============================================================ */
+.tpl-struct{
+  margin-top:10px;
+  padding:10px 12px;
+  border:1px solid #e8ebf0;
+  border-radius:8px;
+  background:#fafbfd;
+}
+.tpl-struct-row{
+  display:flex;
+  gap:10px;
+  align-items:flex-start;
+  font-size:12px;
+  line-height:1.7;
+}
+.tpl-struct-row + .tpl-struct-row{margin-top:4px}
+.tpl-k{
+  flex:0 0 60px;
+  color:#6b7280;
+  font-weight:600;
+}
+.tpl-v{flex:1;min-width:0;word-break:break-word}
+.tpl-block{
+  display:inline-block;
+  padding:1px 7px;
+  margin:1px 3px 1px 0;
+  border:1px solid #d7dde5;
+  border-radius:999px;
+  background:#fff;
+  color:#374151;
+  font-size:11px;
+  white-space:nowrap;
+}
+/* 首尾block 稍作强调，让「顺序」在视觉上也可读 */
+.tpl-block:first-child{border-color:var(--primary,#2563eb);color:var(--primary,#2563eb)}
+.tpl-block:last-child{border-color:#9ca3af;color:#4b5563}
+
+@media (max-width:640px){
+  .tpl-struct-row{flex-direction:column;gap:2px}
+  .tpl-k{flex:none}
+}

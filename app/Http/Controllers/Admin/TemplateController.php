@@ -36,6 +36,7 @@ class TemplateController extends Controller
             'active'  => TemplatePackageManager::active(),
             'invalid' => TemplatePackageManager::invalidPacks(),
             'cross'   => $this->crossSiteMatrix(),
+            'structure' => TemplatePackageManager::structureMatrix(),
         ]);
     }
 
