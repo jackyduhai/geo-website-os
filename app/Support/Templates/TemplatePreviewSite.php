@@ -114,9 +114,25 @@ final class TemplatePreviewSite
             //   只跑 bootstrap() 的话，两个不同模板的预览会长得一模一样
             //   （2026-11 实测踩过：两个预览站区块全是 rich_text/contact_info，
             //     size 只差 13 字节，肉眼无法区分）。
-            foreach (TemplatePackageManager::recipes($pack) as $recipe) {
-                RecipeApplier::apply($site, $pack, $recipe);
-            }
+foreach (TemplatePackageManager::recipes($pack) as $recipe) {
+           RecipeApplier::apply($site, $pack, $recipe);
+       }
+
+// 复制真实站的内容与实体作为演示数据。
+            //
+            // 为什么必需（RC-11 H2 实测）：预览站只有骨架时 contents / entities 都是 0，
+            // 所有**依赖数据源**的区块（产品网格 / 服务网格 / 客户评价 / Logo 墙…）
+            // 会自动跳过，首页只剩 hero / about / case 三段——
+            // 用户看到的是「大片空白」，而非「这个模板长这样」。空骨架不能作为模板预览。
+            //
+            // 为什么复制真实站、而不是跑 ContentSeeder / DemoSeeder：
+            //   ① ContentSeeder 在门禁失败分支调 `$this->command->error()`，
+            //      HTTP 上下文里 $this->command 为 null → 500；
+            //   ② DemoSeeder 末尾 `Site::where('slug', DEFAULT_SLUG)->update(...)`
+            //      **硬编码默认站**，会把组织信息写进真实站点；
+            //   ③ 预览的意义本就是「这套模板套在真实内容上长什么样」，
+            //      复制真实内容比造一份假内容更贴近真实使用场景。
+            self::copyDemoContent($site);
 
             SiteContext::withSite($site, static function () use ($site, $pack): void {
                 TemplateDefaultsInstaller::bootstrap($site, $pack, false);
@@ -124,6 +140,50 @@ final class TemplatePreviewSite
 
             return $site;
         });
+    }
+
+    /**
+     * 把默认站已有的内容 / 实体复制到预览站。
+     *
+     * 只复制**内容与实体**（区块结构由 recipe 决定，不复制），site_id 指向预览站。
+     * 找不到默认站或默认站无内容时静默跳过 —— 预览站仍可用，只是内容区块会跳过。
+     */
+    private static function copyDemoContent(Site $preview): void
+    {
+        $source = Site::withoutGlobalScopes()
+            ->where('slug', Site::DEFAULT_SLUG)
+            ->where('id', '!=', $preview->id)
+            ->first();
+
+        if ($source === null) {
+      return;
+        }
+
+        foreach (['contents', 'entities'] as $table) {
+            foreach (DB::table($table)->where('site_id', $source->id)->get() as $row) {
+                $data = (array) $row;
+       $data['site_id'] = $preview->id;
+        unset($data['id']);
+      DB::table($table)->insert($data);
+   }
+        }
+
+        // 实体关系：源与目标 id 按同一顺序对应，重建映射后复制
+        $newIds = DB::table('entities')->where('site_id', $preview->id)->orderBy('id')->pluck('id')->all();
+        $oldIds = DB::table('entities')->where('site_id', $source->id)->orderBy('id')->pluck('id')->all();
+  $map = array_combine($oldIds, $newIds) ?: [];
+
+        foreach (DB::table('entity_relations')->where('site_id', $source->id)->get() as $rel) {
+       $data = (array) $rel;
+            $data['site_id'] = $preview->id;
+            foreach (['from_entity_id', 'to_entity_id'] as $fk) {
+        if (isset($map[$data[$fk]])) {
+  $data[$fk] = $map[$data[$fk]];
+   }
+       }
+       unset($data['id']);
+   DB::table('entity_relations')->insert($data);
+  }
     }
 
     /**
