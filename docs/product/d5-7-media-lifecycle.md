@@ -1,6 +1,7 @@
-# D5-7 裁决建议：Media Lifecycle（媒体生命周期）
+# D5-7 裁决：Media Lifecycle（媒体生命周期）
 
-- **状态**：**PROPOSED（待裁定）**（2026-10-08）· 领域裁决，非实现设计
+- **状态**：**DECIDED（已冻结）**（2026-10-08）· 领域裁决，非实现设计
+- **基线**：98f86f3（PROPOSED）→ 本版收紧冻结
 - **上游**：D1（生命周期域模型）· D4（P6 禁 CASCADE）· D5-2 Entity Lifecycle
   · D5-4 Semantic Reference · D5-5 Fact Ownership · PKS Boundary
   · D5-1 Content Trash · D5-6 Page Lifecycle
@@ -157,43 +158,141 @@ Page Lifecycle（P17/G-11）：Block 实时读媒体，缺失重算/null。
 
 ---
 
-## 七、建议冻结结论
+## 七、冻结结论（P18 / G-12 最终版）
 
-### P18（建议编号）
+### P18（正式冻结）
 
 ```text
-P18  Media 是资产对象（Asset）：二进制文件 + DB 记录同一生命周期，
-     不是知识对象、不是纯基础设施。
-     Media 无软删 / 回收站；删除是引用保护的：
-     被引用媒体不可删，仅未引用媒体可删，且文件 + 记录一起删。
-     引用方拥有引用，Media 生命周期不 mutate 引用方。
-     媒体不可用时渲染必须优雅降级（null / fallback），不得破图或报错。
-     OG / Cover 走多级 fallback；WebP 兄弟是派生文件，
-     不得在媒体删除后残留为孤儿。
+P18  Media 是资产对象（Asset）：
+  ① Media 由二进制文件与其 DB 记录共同构成一个资产；
+     文件本体与 Media 记录属于同一生命周期。
+  ② Media 不承载业务事实、不具有知识权威性，
+     不属于 PKS / discovery knowledge object。
+  ③ Media 不使用 SoftDeletes，不设 Content Trash；
+     删除即不可恢复的终态操作。
+  ④ Media 删除必须执行引用保护：
+     当前仍被任何有效引用方使用的 Media 不得删除。
+  ⑤ 删除 Media 不得 mutate 引用方；
+     引用关系由引用方拥有，Media 只接受/拒绝自身删除。
+  ⑥ 未被引用的 Media 才允许进入删除流程；
+     删除必须同时处理 Media DB 记录与其文件资产。
+  ⑦ Media 缺失属于可降级状态：
+     引用方不得因 Media 缺失产生 500、悬空对象或非法渲染状态。
+  ⑧ Media 生命周期不得通过复制文件快照、
+     stale metadata 或引用方状态来维持“已删除资产”。
 ```
 
-### G-12（建议编号 · Implementation Gate）：Media Lifecycle Integrity
+### G-12（Implementation Gate · 正式冻结）：Media Lifecycle Integrity
 
 ```text
-① 媒体删除必须经七路引用扫描：有阻断引用 → 拒绝并审计，
-   文件 + 记录都保留。
-② 未引用媒体删除必须文件 + 记录一起删除。
-③ 媒体删除不得 mutate 引用方（Content / Page / Entity / Banner / SeoMeta / Settings）。
-④ 删除必须清理派生 WebP 兄弟（或显式纳入孤儿治理）。
-⑤ 渲染必须对缺失媒体优雅降级（null / fallback），不得破图。
-⑥ 须变异验证（短路引用扫描 / 绕过文件删除 / 跳过 webp 清理
-   → 对应测试 FAIL）。
+① Reference Protection（引用保护）
+   Media 删除前必须通过统一 MediaReferenceScanner；
+   当前有效引用存在时必须拒绝删除并产生 media.delete_blocked 审计；
+   不得绕过扫描直接删除。
+② Asset / DB Consistency（资产/记录一致性）
+   Media 的 DB 记录与其文件资产属于同一生命周期；
+   成功删除不得留下仍属于该 Media 的有效资产；
+   文件删除失败不得无条件删除 DB 记录或宣告删除成功。
+③ Derivative Cleanup（衍生物清理）
+   Media 删除必须覆盖其受管理的衍生文件，包括 WebP sibling，
+   禁止形成已知孤儿资产。
+④ External-reference Isolation（外部引用隔离）
+   Media 删除 / 拒绝删除不得 mutate 引用方：
+   Content / Page / Entity / Fact / SEO 等均保持自身状态。
+⑤ Graceful Degradation（优雅降级）
+   被引用 Media 缺失、purge 或不可解析时，
+   引用方必须安全降级为 null / fallback，
+   不得 500、悬空对象或非法渲染。
+⑥ Mutation Verification（变异验证）
+   必须对引用保护、文件/DB 一致性、衍生物清理、
+   外部引用隔离、缺失降级实施变异验证；
+   移除关键护栏后对应测试必须 FAIL。
 ```
 
 ---
 
-## 八、开放边界（显式记录，不静默解决）
+## 七·补、删除语义与一致性收紧（裁定冻结）
+
+### 7.1 删除流程：引用保护是领域门禁，不是 UI 提示
 
 ```text
-① 孤儿文件 / 缺失文件检测与清理（当前无）：属 Implementation，
+Reference Scan
+  ├─ still referenced? YES → REJECT（审计 media.delete_blocked）
+  └─ NO → DELETE ASSET
+            ├─ binary / derivatives（含 WebP sibling）
+            └─ DB record
+任何绕过 MediaReferenceScanner 直接 delete() 成功的实现，均违反领域契约。
+```
+
+### 7.2 MediaReferenceScanner = 唯一删除资格判定入口
+
+```text
+不神化“七”这个数字：
+  当前已发现的全部一等引用路径必须纳入统一删除资格判定。
+未来新增 Media 引用类型，必须进入 Scanner / Contract；
+  不得因 Scanner 仍只有七路而让新引用类型自动获得删除资格。
+```
+
+### 7.3 文件 / DB 一致性：结果性不变量（不冻结原子事务实现）
+
+```text
+工程现实：DB transaction 无法与 S3 / filesystem delete 组成真正跨系统原子事务。
+领域层冻结结果性不变量，不冻结技术实现：
+  成功终态：DB 记录不存在 + 属于该 Media 的文件/衍生文件已完成处置。
+  失败终态：不得错误宣告为已删除 + 必须留下可重试 / 可审计状态。
+具体采用 delete-first / record-first / pending-delete / retry /
+  reconciliation，由 Architecture 阶段决定。
+```
+
+### 7.4 WebP 兄弟属于同一 Asset lifecycle
+
+```text
+Original + Derived WebP 同一生命周期：
+  Media DELETE → Original → WebP sibling / generated derivative 同步处置。
+DB 已删、Original 已删、WebP 残留 = 违反 G-12 的资产一致性。
+```
+
+### 7.5 引用保护 ≠ 反向 mutation
+
+```text
+引用方拥有“我要引用这个媒体”；Media 拥有“这个资产是否允许被删除”。
+Media 删除时不得反向修改 Content / Page / Entity / Fact / SEO
+  来“制造未引用状态”。
+```
+
+### 7.6 缺失 Media：运行时降级原则
+
+```text
+Media exists → render URL；Media missing → null / fallback。
+missing ≠ 500 ≠ dangling object ≠ fake asset。
+OG / Cover fallback：SeoMeta → og → cover → site logo。
+与 D5-6 Block live recomputation 同一哲学：引用是动态关系，非死亡对象快照。
+```
+
+### 7.7 Media 无 Trash（与 Page 原因不同）
+
+```text
+Content → Soft Delete → Trash → Restore / Force Delete
+Page    → Hard Delete（结构对象，删除自有结构）
+Media   → Protected Hard Delete → No Trash
+  （资产对象，删除前必须证明“不再被引用”；核心保护是
+   Pre-delete Reference Protection，而非 Trash）
+```
+
+---
+
+## 八、开放边界（显式记录，不污染 P18 领域定义）
+
+```text
+① 去重（Deduplication）：同一 binary 多次上传 → 多个 Media record。
+   属 Asset Identity / Deduplication Policy，非生命周期正确性；
+   不得把两个 Media 记录偷偷当成同一生命周期对象。
+② 孤儿文件检测（Storage Integrity / Reconciliation）：
+   DB ↔ Storage 可能漂移；检测与清理属 Architecture，
    不得静默自动删除（等同静默资产损失）。
-② 去重策略（hash 去重 / 引用计数）：留待产品决策。
-③ 外部存储（s3）一致性与删除失败处理：留待架构决策。
+③ S3 / 跨磁盘一致性（Storage Backend Architecture）：
+   非本领域裁决；但冻结基础规则——Media 记录必须明确其所属存储资产，
+   生命周期操作不得默认假定“当前默认 disk”。
 ④ Media 是否需要回收站（当前无）：若引入，与 D5-1 对齐。
 ⑤ alt 强制要求等无障碍规则：留待产品/Implementation。
 ```
@@ -208,8 +307,10 @@ P18  Media 是资产对象（Asset）：二进制文件 + DB 记录同一生命�
 ❌ 不把 Media 变成知识对象或第二套 SoT
 ❌ 不静默自动清理媒体 / 孤儿文件
 ❌ 不自动进入下一阶段
-❌ 本文件在裁定通过前不加入 check-discovery-docs.sh
+❌ 不把去重 / 孤儿 / S3 后端问题写进 P18 领域定义
 ```
 
-**下一步**：D5-7 经用户裁定后，D5 系列全部 DECIDED
-→ Architecture Decision → Implementation。
+**D5 全部领域生命周期项收口**：D5-7 DECIDED
+→ 下一步为 **D5 全量 Architecture Synthesis / Implementation Contract**
+（汇总 P14–P18 与 G-7–G-12 为可执行架构契约），再进入 Implementation；
+进入前仍须按 Gate 纪律等用户明确授权。
