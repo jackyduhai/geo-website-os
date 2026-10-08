@@ -1,11 +1,13 @@
-# D5-6 裁决建议：Page Lifecycle（页面生命周期）
+# D5-6 裁决：Page Lifecycle（页面生命周期）
 
-- **状态**：**PROPOSED（待裁定）**（2026-10-08）· 领域裁决，非实现设计
+- **状态**：**DECIDED**（2026-10-08，收紧后冻结）· 领域裁决，非实现授权
 - **上游**：D1（生命周期域模型）· D4（P6 禁 CASCADE）· D5-2 Entity Lifecycle
   · D5-4 Semantic Reference · D5-5 Fact Ownership · PKS Boundary · D5-1 Content Trash
 - **章程**：`docs/product/stage1-discovery-charter.md`
 - **硬约束**：本裁决**不重定义**已冻结的 PKS / Entity / Reference / Fact / Content Trash 规则。
 - **纪律**：不改产品代码、不做 UI、只定义页面生命周期契约。
+- **冻结要点**：Page 是结构视图（非知识对象）；系统页/首页 fallback；
+  自定义页 human-surface only；Override 随 Entity purge；Block 实时重算。
 
 ---
 
@@ -124,87 +126,155 @@ Page = 把 Template + 若干 Block 绑定为「页面实例」的结构视图。
 
 ---
 
-## 二、Page 四个子角色的生命周期
+## 二、四类 Page 的生命周期（正式冻结）
+
+| Page 类型 | 生命周期 | Discovery |
+|---|---|---|
+| **System Page** | 持久化可编辑层可删除；代码 fallback 保证路由 | 按既有 PKS/domain 规则，不因本裁决改变 |
+| **Home Page** | 与 System Page 同语义，fallback 保证 `/` | 按既有 PKS/domain 规则 |
+| **Custom Landing Page** | 硬删、无 Trash、不可恢复 | **human surface only，不进入 discovery / PKS** |
+| **Entity Detail Override** | 归 Entity 所有，随 Entity purge 级联清除 | 不独立成为知识对象 |
 
 ```text
-① 系统页：路由由代码保证（fallback），持久化行 = 可编辑定制层。
-   删除持久化行 → 定制（page-level SEO / 区块）丢失，但路由不消失。
-② 首页：同系统页，代码 fallback。
-③ 自定义落地页：硬删、无回收站、不可恢复；
-   人类面 only，不进 discovery。
-④ 实体详情 override：归 Entity 所有，Entity purge 时级联清除。
+冻结边界：「Custom Landing Page 不进 discovery」不是 Implementation 偏好，
+而是 Page 领域定位的一部分。未来若要让 Landing Page 成为 AI 可发现对象，
+必须重新开产品/领域裁决，不能在实现时偷偷扩大其 discovery 资格。
+
+两种 Entity 关联必须严格区分：
+  Entity Detail Override = Entity 的结构投影 → 随 Entity purge 消亡
+  普通 Page + Entity Block = 独立 Page + 实时读取 Entity
+    → Entity 消亡后 Page 继续存在，只是重算结果
 ```
 
 ---
 
-## 三、删除 / 级联语义
+## 三、Page 删除语义（正式冻结）
 
 ```text
-Page 删除（硬删）：
-  清理「页面自己拥有」的结构：PageBlock · 页面级 SeoMeta · 翻译行
-  不 mutate 被引用的 Content / Entity / Media（Block 仅解除读取）。
-  判据与 D5-1 一致：自有关联随终态清理，外部知识只解除引用。
+Page 无 SoftDeletes：
+  DELETE Page → 不可逆结构终态
+
+允许清理（Page 自有结构）：
+  PageBlock · Page-level SeoMeta · translation rows · 其他 Page 自有结构
+
+禁止：
+  删除 Content ❌  修改 Content 状态 ❌
+  删除 Entity  ❌  修改 Entity 状态  ❌
+  删除 Media   ❌  修改 Fact         ❌
+
+判据与 D5-1 一致：自有结构随终态清理；外部知识只解除引用，
+不随 Page 生命周期被 mutate。
+
 Entity purge：
-  仅级联「投影型」override page；其余页面因 Block 是实时读模型，
-  自动重算（被 purge 实体不再出现）。
+  仅级联「投影型」Detail Override；普通 Page 因 Block 是实时读模型，
+  自动重算（被 purge 实体不再出现），Page 本身继续存在。
 ```
 
 ---
 
-## 四、与已冻结规则的关系（硬约束，不重定义）
+## 四、Block 语义（正式冻结）与已冻结规则关系
+
+### Block 语义
 
 ```text
-PKS（P15/G-9）：系统页 / 首页 / 自定义页的 discovery 资格仍由 PKS 裁决；
-  本裁决只定义「页面结构如何持有 / 重算 / 终态」。
+Page → Block → 当前 published domain model
+不是：Page → Block → 历史快照
+
+  Entity purge → Block 再查询 → Entity 不再出现
+  Media purge  → Block 再解析 → media = null
+
+这是正确的运行时重算行为。
+不得为了「页面稳定」重新保存实体/媒体快照，把已死亡对象继续显示。
+Block 不保存被引用对象的生命周期快照或计算结果。
+```
+
+### 与已冻结规则的关系（硬约束，不重定义）
+
+```text
+PKS（P15/G-9）：Page Lifecycle 不重定义 PKS；
+  但本裁决冻结的 Custom Landing Page discovery isolation 属于 Page 现行领域约束。
+  即：PKS 仍是上层资格模型，Page Lifecycle 冻结自身 surface eligibility boundary。
 Entity Lifecycle（D5-2）：override page 随 Entity purge 级联，不改变 Entity 规则。
-Semantic Reference（D5-4/G-7）：Page 不引入新的语义引用；Block 实时读模型
-  不悬空、不告警。
+Semantic Reference（D5-4/G-7）：Page 不引入新语义引用；Block 实时读模型不悬空、不告警。
 Fact（P14/G-8）：Page 不存事实，Block 不持久化可计算值。
 Content Trash（P16/G-10）：Content(type=page) 走 Content Trash，与本裁决分离。
 ```
 
 ---
 
-## 五、建议冻结结论
+## 五、冻结结论（P17 / G-11 最终版）
 
-### P17（建议编号）
+### P17
 
 ```text
 P17  Page（composition）是绑定 Template 与 Block 的结构视图，
-     不是知识对象：不存业务事实、不复制 Entity / Content 状态。
-     系统页与首页的路由由代码 fallback 保证，
-     持久化行是可编辑定制层——删除它重置定制，不消除路由。
-     自定义落地页为硬删、无回收站；实体详情 override 归 Entity
-     所有并随其 purge 级联。Page 的生命周期不 mutate
-     被引用的 Content / Entity / Media。
+     不是知识对象。
+     ① Page 不存业务事实，不复制 Entity / Content 状态，
+       不成为第二套知识 SoT。
+     ② 系统页与首页的固定路由由代码 fallback 保证；
+       持久化 Page 只是可编辑定制层。
+       删除持久化行不得导致固定路由消失。
+     ③ 自定义组合页属于 human surface，
+       当前领域规则下不进入 discovery / PKS。
+     ④ Entity Detail Override 是 Entity 的投影型结构载体，
+       不构成独立知识对象；Entity purge 时必须随之清除。
+     ⑤ Page 硬删除只清理 Page 自有结构及页面级关联，
+       不得 mutate 被引用的 Content / Entity / Media。
+     ⑥ Block 是实时读模型 / 数据源视图，
+       不保存被引用对象的生命周期快照或计算结果。
+     ⑦ 被引用对象发生 purge / 不再 published / 不可用时，
+       Block 必须依据当前领域状态重新计算，
+       不得形成 stale snapshot、dangling object 或渲染异常。
 ```
 
-### G-11（建议编号 · Implementation Gate）：Page Lifecycle Integrity
+### G-11（Implementation Gate）：Page Lifecycle Integrity
 
 ```text
-① 系统页 / 首页在持久化行缺失时必须经 fallback 解析
-   （路由不因记录缺失而 404）。
-② 删除 Page 必须级联其 PageBlock 与页面级 SeoMeta，
-   且不 mutate 被引用的 Content / Entity / Media（断言被引用对象不变）。
-③ Entity purge 必须删除绑定的 override page。
-④ Block 数据源必须在渲染时从 published 领域模型读取；
-   被引用 Entity / Media 消失时重算（条目消失 / 图片 null），不得报错或悬空。
-⑤ 自定义组合页默认不进 discovery 面（人类面 only）；
-   须变异验证（短路 fallback / 绕过 published 读取 → 对应测试 FAIL）。
+① System/Home fallback
+   持久化 Page 缺失时，固定路由必须仍可通过代码 fallback 解析；
+   不得因定制层删除导致固定页面 404。
+② Page hard delete isolation
+   删除 Page 必须清理 Page 自有结构：
+   PageBlock / 页面级 SeoMeta / 翻译等；
+   不得 mutate Content / Entity / Media / Fact。
+③ Entity override purge
+   Entity purge 必须清除其所属 Detail Override，
+   且同时清理该 Override 的自有结构。
+④ Block live recomputation
+   Block 必须从当前 published domain model 实时读取；
+   被引用对象 purge / unpublish / 不可用后必须重新计算，
+   不得继续读取历史快照。
+⑤ Discovery isolation
+   Custom Landing Page 默认属于 human surface only，
+   不得进入 discovery / PKS；
+   绕过该隔离的实现必须通过变异测试被发现。
+⑥ Structural reference integrity
+   删除 Page 后，不得产生新的有效 dangling menu target；
+   菜单对已不存在 Page 的引用必须被识别并进入既定治理流程。
+⑦ External-reference isolation
+   Page 删除、Override 删除、Block 重算均不得反向 mutate
+   被引用的 Content / Entity / Media / Fact。
+⑧ Mutation verification
+   对 fallback、Page cascade、Entity override purge、
+   Block live recomputation、discovery isolation、
+   reference isolation 实施变异验证；
+   删除关键护栏后对应测试必须 FAIL。
 ```
 
 ---
 
-## 六、开放边界（显式记录，不静默解决）
+## 六、开放边界（区分「未知业务决策」与「当前默认语义」）
 
 ```text
-① 自定义组合页是否需要「可恢复回收站」（当前硬删）：
-   属产品/Implementation 决策；若引入，应与 D5-1 对齐而非新造。
-② 自定义组合页是否应进入 discovery（当前排除）：
-   若要纳入，须作为显式产品规则，不改变 PKS 模型。
-③ 菜单 dangling link 是否需要引用校验（当前无）：
-   属结构引用治理，留待后续。
-④ Block 对 Form / Media / Entity 的引用是否需要门禁式校验，留待 Implementation。
+保持开放（业务决策，未来改变须另开裁决）：
+① Custom Page 是否未来需要 Trash —— 当前：硬删、无 Trash。
+② Custom Page 是否未来进入 discovery —— 当前：不进入。
+
+不再作为「是否成立」的开放问题（生命周期已冻结）：
+③ Menu dangling link：G-11⑥ 已冻结——必须被识别，不得无声产生结构性悬空。
+   具体实现（删除前阻断 / 删除后解除引用 / 标记 invalid）属 Implementation Contract。
+④ Block 引用门禁：「不得悬空、必须实时重算」已冻结；
+   具体门禁方式留 Implementation。
 ```
 
 ---
@@ -214,10 +284,10 @@ P17  Page（composition）是绑定 Template 与 Block 的结构视图，
 ```text
 ❌ 不改产品代码、不做 UI、不加路由
 ❌ 不重定义 PKS / Entity / Reference / Fact / Content Trash 已冻结规则
-❌ 不把 Page 变成第二套内容 / 事实表
+❌ 不把 Page 变成第二套内容 / 事实 / 知识 SoT
+❌ 不保存 Block 引用对象的生命周期快照
 ❌ 不自动进入下一阶段
-❌ 本文件在裁定通过前不加入 check-discovery-docs.sh
 ```
 
-**下一步**：D5-6 经用户裁定后 → D5-7 Media Lifecycle（最后一项 D5）
+**下一步**：D5-6 已冻结 → **D5-7 Media Lifecycle（最后一项 D5，等授权）**
 → Architecture Decision → Implementation。

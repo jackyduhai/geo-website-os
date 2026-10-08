@@ -45,6 +45,7 @@ check docs/product/d5-4-semantic-reference-degradation.md 200
 check docs/product/d5-5-fact-ownership-granularity.md 200
 check docs/product/pks-boundary-eligibility.md 250
 check docs/product/d5-1-content-trash.md 200
+check docs/product/d5-6-page-lifecycle.md 200
 
 # 2. 关键取证点必须在位（防止内容被替换但行数仍达标）
 key() {
@@ -69,6 +70,8 @@ key docs/product/pks-boundary-eligibility.md \
     "P15" "G-9" "surface-specific" "JSON-LD" "transitive"
 key docs/product/d5-1-content-trash.md \
     "P16" "G-10" "重新判定"
+key docs/product/d5-6-page-lifecycle.md \
+    "P17" "G-11" "fallback" "human surface"
 
 if (( FAIL )); then
   echo ""
