@@ -59,7 +59,7 @@ key docs/product/d5-2-entity-lifecycle-class-matrix.md \
 key docs/product/d5-3-relation-lifecycle.md \
     "structural assertion" "dangling"
 key docs/product/d5-4-semantic-reference-degradation.md \
-    "fact_refs" "ContentGate" "P13"
+    "fact_refs" "ContentGate" "P13" "KNOWN-DELETED" "UNKNOWN-ID"
 
 if (( FAIL )); then
   echo ""

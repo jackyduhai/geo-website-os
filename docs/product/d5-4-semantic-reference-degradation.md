@@ -166,6 +166,11 @@ Entity SoftDelete / Purge
 **关键设计**：**默认不阻止发布**（保持内容可编辑），
 只标记与告警。**阻止**是例外情况（如引用了从未存在的实体 id → 数据错误）。
 
+> **前置条件（2026-10-08 补遗，见「五之二」）**：
+> 表中「purged → WARNING」一行的可靠实现，要求检查器能区分
+> **KNOWN-DELETED**（曾存在、已永久清除）与 **UNKNOWN-ID**（从未被确认存在）；
+> 无法区分时，purged 必须按 UNKNOWN-ID 处理 → **BLOCK**。
+
 ---
 
 ## 四、这可能是 D5 最容易再次发现「数据库正确但语义错误」的地方
@@ -222,6 +227,109 @@ P13  语义引用（内容正文对实体的知识引用）无法在数据库层
 
 ---
 
+## 五之二、移交下游契约的两个语义边界（2026-10-08 补遗）
+
+- **性质**：不重开 D5-4 裁决，不写实现代码；
+  是进入 Architecture Decision / Implementation Contract 的**明确约束**。
+- 起因：physical purge 后实体行已不存在，退化规则表的 purged 分支
+  存在一个无法仅凭「id 不存在」闭合的语义缺口。
+
+### 边界一：Purge 后必须区分 KNOWN-DELETED 与 UNKNOWN-ID
+
+```text
+entity_refs.entity_id = X，而 X 在实体表中不存在时，
+检查器只能看到「X 不存在」，无法单凭此区分：
+
+  KNOWN-DELETED  曾被系统确认存在，现在已永久清除
+  UNKNOWN-ID     从未被系统确认存在（数据错误）
+
+⇒ 正式定义两个引用身份状态：
+  KNOWN-DELETED = 曾存在，现在已永久清除
+  UNKNOWN-ID    = 从未被系统确认存在
+```
+
+**架构约束（移交 Architecture Decision / Implementation Contract）：**
+
+```text
+① Semantic Reference Validator 必须能够区分
+   「实体当前不存在」与「实体已知曾存在但已永久清除」。
+   ⇒ 退化规则表「purged → WARNING」的可靠实现，
+     以存在一个可查询的 identity/tombstone registry 为前提。
+
+② 该 registry 必须可供 ContentGate 实时查询
+   （门禁路径上的身份判定，不是离线报表）。
+
+③ AuditLog ≠ identity/tombstone registry：
+   AuditLog 是审计证据，面向事后追溯，
+   不保证实时、可查询、面向门禁判定；
+   不得把「查 AuditLog」当作本约束的实现。
+
+④ 若架构阶段决定不建该 registry，
+   则 purged 无法与 UNKNOWN-ID 分离，必须按 UNKNOWN-ID 处理（BLOCK）。
+   届时须显式回改本契约，不得静默把 purged 降为 WARNING。
+```
+
+### 边界二：Warning ≠ Public eligibility（三条策略轴分离）
+
+```text
+Entity visibility policy      ≠
+Content publication policy    ≠
+Semantic reference health
+
+ContentGate 对语义引用的职责 = 报告引用健康度（WARNING / BLOCK），
+不得据此改变 Content 的发布状态。
+```
+
+```text
+合法组合示例：
+  Content = public · Entity = noindex · entity_refs = valid
+  → 允许 Content 公开；门禁仅提示
+    「该语义引用指向不进入 GEO 的实体」
+  → 绝不把 Content 拉成 draft / noindex
+```
+
+这与方案 C 的核心精神一致：**发现问题，不静默改变业务内容。**
+
+### G-7 Implementation Gate 矩阵（契约级五分支）
+
+```text
+Content public → entity_refs = valid entity
+  → PASS
+Content public → entity_refs = draft entity
+  → PASS + WARNING
+Content public → entity_refs = soft-deleted entity
+  → PASS + WARNING
+Content public → entity_refs = KNOWN-DELETED (known-purged) entity
+  → PASS + WARNING
+Content public → entity_refs = UNKNOWN-ID / nonexistent identity
+  → BLOCK
+```
+
+```text
+noindex 实体：身份存在且有效 → 归入 WARNING（同 draft 类），不 BLOCK。
+
+★ BLOCK 的原因不是「实体不可公开 / 不可见」，
+  而是「引用身份本身不存在」—— 数据错误。
+```
+
+### 观察到的可推广模式（仅记录，不立项）
+
+```text
+Structured Reference
+   → Identity
+   → Lifecycle-aware validation
+   → Publication Gate
+
+现已有：fact_refs → ContentGate
+本轮新增：entity_refs → ContentGate（实现阶段落地）
+```
+
+**⇒ 本轮不启动 Knowledge Reference Integrity 基础设施项目，
+不提前抽象统一 Reference Framework；**
+未来同类扩展（media_refs / taxonomy_refs …）须由后续独立 Discovery 授权。
+
+---
+
 ## 六、本裁决不做的事
 
 ```text
@@ -231,6 +339,9 @@ P13  语义引用（内容正文对实体的知识引用）无法在数据库层
 ❌ 不改ContentGate（属 Implementation）
 ❌ 不修G-1~G-7任何一项
 ❌ 不做 Trash UI
+❌ 不提前抽象统一 Reference Framework / Knowledge Reference Integrity 基础设施
+   （fact_refs / entity_refs 是同一模式的两个实例；media_refs /
+    taxonomy_refs 等泛化须由后续独立 Discovery 授权，不在 D5-4 范围）
 ```
 
 **下一步**：D5-5 Fact Ownership / Granularity
