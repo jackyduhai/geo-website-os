@@ -1,13 +1,30 @@
 # Stage 1 Discovery 章程：Publication Lifecycle Domain
 
-- **状态**：DISCOVERY ACTIVE（2026-10-08；**D2✅ D1 ✅ 完成，D4 为下一步**）
-- **基线**：`v1.0.0` = 504f71d（immutable）· `main` = 4dace6a
+- **状态**：DISCOVERY ACTIVE（2026-10-08；**D2✅ D1 ✅ D4 ✅ 完成，D5 为下一步**）
+- **基线**：`v1.0.0` = 504f71d（immutable）· `main` = f4c7d6c
 - **上游**：`docs/product/roadmap-1x.md` 阶段一
 - **交付物**：
-  - D2 → `docs/product/d2-public-surface-inventory.md` ✅ **已完成**
-  - D1 → `docs/product/d1-lifecycle-domain-model.md` ✅ **已完成**
-  - D4 / D3 / D5 → 未开始（**下一步建议 D4 Trash 边界**，因 D1 已查明三种删除语义并存）
+  - D2 → `d2-public-surface-inventory.md` ✅
+  - D1 → `d1-lifecycle-domain-model.md` ✅
+  - D4 → `d4-deletion-recovery-semantics.md` ✅
+  - **D5 Publicness / noindex Contract** ← **下一步**（裁决项已积累 7 条）
+  - D3 Scheduled Execution → 待 D5 后
 - **纪律**：本文是**研究章程，不是实现授权**。
+
+---
+
+## 零之二、D4 冻结的原则
+
+> **删除不是数据库操作，而是 Public Knowledge Set 的变更事件。**
+
+```text
+传统 CMS   Delete = 数据库行没了
+GEO Web OS Delete = 公开知识边界改变
+                = Frontend + GEO + LLM + Schema
+                + Sitemap + Search + Relations + Cache
+```
+
+已由 D4 探针实证：删除与恢复**确实**触发全部出口重算。
 
 > **Roadmap 是方向，不是需求实现授权。**
 > 每个 P0/P1 进入开发前，都必须重新完成 Discovery 与架构评估。
@@ -380,32 +397,36 @@ Discovery 本身也要被验收：
 ```text
 ① D2 现状测绘              ✅ d2-public-surface-inventory.md
 ② D1 领域模型              ✅ d1-lifecycle-domain-model.md
-③ D4 级联清单← 下一步。D1 已查明三种删除语义并存，正是 D4 的核心输入
-④ D5 验收契约                写码前定，不可后补；须含变异验证
-⑤ D3 Scheduled Execution     依赖前四项的模型
-⑥ 架构影响评估 → Architecture Decision Lock
-⑦ Implementation             （未获授权）
+③ D4 删除/恢复语义         ✅ d4-deletion-recovery-semantics.md
+④ D5 验收契约              ← 下一步。**裁决项已积累 7 条**，见下
+⑤ D3 Scheduled Execution   待 D5 后
+⑥ 架构影响评估→ Architecture Decision Lock
+⑦ Implementation           （未获授权）
 ```
 
-### D1 交给 D4 的关键输入
+### D5 裁决清单（已累积，均不得留给实现阶段顺手决定）
 
 ```text
-删除语义现状（D1 实测）
-  Content  软删（SoftDeletes trait）    可 restore()但无 UI 入口
-  Entity   **物理删除**（FK cascade）    不可恢复，不经 Trash
-  Page     待确认
-  Relation 随端点 cascade               自动
-
-因此 D4 必须回答的不只是「加什么字段」，而是：
-  **统一生命周期是否同时统一删除语义？**
-  若不统一，「统一生命周期」只完成了一半。
+① 「published + noindex 到底是不是 Public」—— 决定 G-4 的定性
+② Fact 能否随 Entity CASCADE —— **最危险**，删了 AI 答案静默变少且无错误信号
+③ content_entity CASCADE 是否合理 —— 内容会静默失去 about 声明
+④ Entity 物理删除是历史实现还是业务语义（A 需要 Trash / B 显式不可恢复 / C按 type）
+⑤ Inquiry / AuditLog 是否应有 Trash（D4 倾向：不应）
+⑥ scheduled 未到点、trash 状态下 Frontend Access 是什么
+⑦ RelationRef 是否需要独立 noindex
 ```
 
-**D2 优先于 D1** 是因为：不知道现有几个口径就无法设计统一契约，
-先设计状态机会把未知问题变成返工。**这一步已完成。**
+### D4 交给 D5 的两个新台账项
 
-D1 必须能用一份 Inventory 解释全部出口——**已完成**，且补验确认
-Collection 层 6 个状态格全部正确排除，缺口确实只在 Relation 层与 Schema 层。
+```text
+G-5（真实）  Content 删除不刷 PageCache、不更新 Search 索引
+             Entity 有 resetReadModels，Page 有 PageCache::flush，Content 两个都没有
+
+G-6（已撤销）原怀疑「Page 删除后 page_blocks 残留」
+             追查发现 `Page::booted()` 有 deleting 钩子级联清理 blocks + SeoMeta
+             ⇒ Page 反而是全库删除语义最规范的主体
+             留痕目的：**「缺口」必须追到根，不能停在现象**
+```
 
 ---
 
