@@ -1,13 +1,6 @@
-* text=auto eol=lf
-
-*.blade.php diff=html
-*.css diff=css
-*.html diff=html
-*.md diff=markdown
-*.php diff=php
-
-/.github export-ignore
-.styleci.yml export-ignore
-
-# Internal audit / pre-productization history (contains source-project context; never shipped)
-docs/audit/ export-ignore
+# docs/product 下的 Discovery 交付物是长期基线，不应被临时内容覆盖。
+# 这些文件由commit 固化，若出现大面积未提交 diff，先 git checkout HEAD -- 恢复。
+docs/product/d5-*.md            -merge=ours
+docs/product/d1-*.md            -merge=ours
+docs/product/d2-*.md            -merge=ours
+docs/product/d4-*.md            -merge=ours
