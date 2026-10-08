@@ -1,19 +1,71 @@
 # Stage 1 Discovery 章程：Publication Lifecycle Domain
 
-- **状态**：DISCOVERY ACTIVE（2026-10-08；**D2✅ D1 ✅ D4 ✅ 完成，D5 为下一步**）
-- **基线**：`v1.0.0` = 504f71d（immutable）· `main` = f4c7d6c
+- **状态**：**D4 FROZEN**（2026-10-08）· D2✅ D1✅ D4✅ · **下一步 D5 Domain Decisions**
+- **基线**：`v1.0.0` = 504f71d（immutable）· `main` = ae30d7e
 - **上游**：`docs/product/roadmap-1x.md` 阶段一
 - **交付物**：
   - D2 → `d2-public-surface-inventory.md` ✅
   - D1 → `d1-lifecycle-domain-model.md` ✅
-  - D4 → `d4-deletion-recovery-semantics.md` ✅
-  - **D5 Publicness / noindex Contract** ← **下一步**（裁决项已积累 7 条）
-  - D3 Scheduled Execution → 待 D5 后
+  - D4 → `d4-deletion-recovery-semantics.md` ✅ **FROZEN**
 - **纪律**：本文是**研究章程，不是实现授权**。
+- **D4 冻结后不再为文字细枝末节重开**；剩余事项作为
+  D5 / Architecture Decision / Implementation Gate 的**输入约束**向下传递。
 
 ---
 
-## 零之二、D4 冻结的原则
+## 零之二、D4 冻结的三条硬约束（超出「删除功能」范畴）
+
+```text
+P6  Fact 是受保护的知识资产，Entity purge 不得 CASCADE 删除
+P7  结构关系与语义知识引用必须分开处理
+PKS 不是数据库 join
+    = Domain eligibility + lifecycle state + relationship semantics
+    + semantic references + publication policy + derived-output validity
+```
+
+这三条已成为 GEO Web OS 的**知识生命周期基础规则**，
+供 D5 / D3 / Architecture Decision / Implementation / 测试共同引用。
+
+---
+
+## 零之三、阶段序列（含 D3 重新定位）
+
+```text
+D1  Lifecycle Domain Model                ✅
+D2  Public Surface Inventory             ✅
+D4  Deletion / Recovery Semantics        ✅ FROZEN
+    ↓
+D5  Domain Decisions                      ← 当前应进入
+    ↓
+D3  Architectural / UX implications      （原 Scheduled Execution）
+    ↓
+Architecture Decision
+    ↓
+Implementation
+    ↓
+Mutation / Regression / HTTP Gate
+```
+
+**D3 重新定位的理由**：scheduled 相关决策依赖生命周期模型
+（Content 已有时间门禁，Entity/Page 没有），因此在 D5 之后更合适。
+
+### D5 的顺序纪律
+
+> **先决定「什么知识应该存在」，再决定「数据库怎么删」。**
+
+不得从 `SoftDeletes` / Trash Controller / Purge Service 起步。
+
+**D5 真正第一问**：
+
+> **Entity 被永久清除以后，系统中的知识资产应该变成什么状态？**
+
+这一问裁决清楚后，
+`Relation → Fact → Content semantic reference → PKS → Cache/Search/GEO/SEO`
+都会自然收敛。
+
+---
+
+## 零之四、可提前冻结的原则（删除语义）
 
 > **删除不是数据库操作，而是 Public Knowledge Set 的变更事件。**
 
@@ -397,35 +449,47 @@ Discovery 本身也要被验收：
 ```text
 ① D2 现状测绘              ✅ d2-public-surface-inventory.md
 ② D1 领域模型              ✅ d1-lifecycle-domain-model.md
-③ D4 删除/恢复语义         ✅ d4-deletion-recovery-semantics.md
-④ D5 验收契约              ← 下一步。**裁决项已积累 7 条**，见下
-⑤ D3 Scheduled Execution   待 D5 后
-⑥ 架构影响评估→ Architecture Decision Lock
-⑦ Implementation           （未获授权）
+③ D4 删除/恢复语义         ✅ FROZEN  d4-deletion-recovery-semantics.md
+④ D5 Domain Decisions     ← 下一步（7 个决策，见下）
+⑤ D3 Architectural / UX implications（原 Scheduled Execution）
+⑥ Architecture Decision Lock
+⑦ Implementation → Mutation / Regression / HTTP Gate（未获授权）
 ```
 
-### D5 裁决清单（已累积，均不得留给实现阶段顺手决定）
+### D5 的 7 个 Domain Decisions
 
 ```text
-① 「published + noindex 到底是不是 Public」—— 决定 G-4 的定性
-② Fact 能否随 Entity CASCADE —— **最危险**，删了 AI 答案静默变少且无错误信号
-③ content_entity CASCADE 是否合理 —— 内容会静默失去 about 声明
-④ Entity 物理删除是历史实现还是业务语义（A 需要 Trash / B 显式不可恢复 / C按 type）
-⑤ Inquiry / AuditLog 是否应有 Trash（D4 倾向：不应）
-⑥ scheduled 未到点、trash 状态下 Frontend Access 是什么
-⑦ RelationRef 是否需要独立 noindex
+D5-1 P1  Content Trash 是正式能力还是移除错误承诺
+D5-2 P0  Entity 是否改为可恢复生命周期
+D5-3 P0  Entity purge 后 Relation：CASCADE / DETACH / PRESERVE
+D5-4 P0  Entity purge 后 content_entity 是否 DETACH
+          **且：仍存 Content 中的语义引用是否仍可公开**
+D5-5 P0  Entity purge 后 Fact 的历史知识资产生命周期
+          （**CASCADE 已定为禁止项 P6**；
+            PRESERVE 的 owner / visibility / rebind / audit 语义待定）
+D5-6 P1  Page 是可恢复资产还是可再生结构
+D5-7 P1  Media 是可恢复资产还是引用保护 + 永久删除
 ```
 
-### D4 交给 D5 的两个新台账项
+**决策顺序**（不先讨论 Trash UI）：
 
 ```text
-G-5（真实）  Content 删除不刷 PageCache、不更新 Search 索引
-             Entity 有 resetReadModels，Page 有 PageCache::flush，Content 两个都没有
+Entity → Relation → Fact → Content 语义引用
+       → Public Knowledge Set → Cache / Search / GEO / SEO
+```
 
+**G-5 单独作为 Implementation Gate，不是 Decision**——
+它不是「业务该怎样」，而是「已确定该怎样但当前没做到」。
+
+### D4 交给 D5 的两个台账
+
+```text
+G-5（真实，P1）Content lifecycle mutation 不失效 PageCache
+             （**仅 PageCache**。Search 索引已实测自动失效 1→0→1）
 G-6（已撤销）原怀疑「Page 删除后 page_blocks 残留」
-             追查发现 `Page::booted()` 有 deleting 钩子级联清理 blocks + SeoMeta
-             ⇒ Page 反而是全库删除语义最规范的主体
-             留痕目的：**「缺口」必须追到根，不能停在现象**
+             → Page::booted() 有 deleting 钩子级联清理，是全库最规范者
+             留痕：**「缺口」必须追到根，不能停在现象**
+```
 ```
 
 ---

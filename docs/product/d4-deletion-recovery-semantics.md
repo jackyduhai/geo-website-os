@@ -666,6 +666,84 @@ Cache / Search / GEO / SEO
 
 ---
 
+## 十一之零、向后传递的契约级注意事项（D4 FREEZE 后不再回改）
+
+以下两条**不是 D4 缺口**，是冻结时确认、需**向后传递**到
+D5 / Architecture Decision / Implementation Gate 的输入约束。
+
+### ① Restore 的语义是「按当前依赖图重算」，不是「恢复原状态」
+
+四阶段探针（探针 v3）已经证明这条规则：
+
+```text
+Entity delete            ← 实体被物理删除，relations 随之CASCADE
+Content soft-delete
+Content restore          ← 只恢复 Content 自身的生命周期状态
+```
+
+阶段 4 实测结果：
+
+```text
+PublicIndex           ❌   （target entity 已物理删除，不可回滚）
+GEO entity            ❌
+LLMS                  ❌
+Sitemap               ✅   （只含knowledge content，不依赖已删 entity）
+```
+
+**这与「restore = recompute」完全不矛盾，恰恰是它的正确含义**：
+
+> **Restore 恢复的是该对象自身的生命周期状态，
+> 而不是恢复删除前的整个知识快照。**
+
+若阶段 4 出现 GEO / LLMS 重新包含 `d4-target`，
+那才是缺陷——意味着 restore 走了快照路径，
+会把已删除的 Entity 重新拉回 Public Knowledge Set。
+
+### Implementation Test 契约写法
+
+```text
+✅ 正确：restore → recompute against CURRENT domain state
+❌ 错误：restore → recreate previous public state
+```
+
+**这个区别将来会直接保护免受「快照恢复导致已删除实体重新公开」的漏洞。**
+
+### ② G-5 最终实现时，测试应覆盖生命周期两个方向
+
+**证据等级不得越界**：
+
+```text
+D4 已证实   Content deletion → PageCache 未失效
+D4 未证实   restore 是否存在同类 PageCache 问题
+            （探针绕过了 PageCache，两个方向都没测）
+```
+
+因此 Implementation Gate 应覆盖完整状态迁移：
+
+```text
+PUBLIC
+   ↓ delete
+NOT PUBLIC
+   ↓ restore
+PUBLIC AGAIN
+```
+
+对应两条断言：
+
+```text
+【方向一·delete】（D4 已证实的缺口所在）
+  warm cache → delete → MUST NOT serve pre-delete representation
+
+【方向二·restore】（未来 Implementation Gate，D4 未证）
+  warm deleted-state cache → restore
+    → MUST NOT serve stale deleted representation
+    → MUST expose recomputed current representation
+```
+
+**第二条是未来 Gate，不是说当前 restore 已有 PageCache bug。**
+
+---
+
 ## 十一、本文档不做的事
 
 ```text
