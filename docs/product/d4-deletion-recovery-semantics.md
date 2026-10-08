@@ -12,7 +12,8 @@
 
 ## 零、可提前冻结的原则（本轮证据已足够）
 
-> **删除不是数据库操作，而是 Public Knowledge Set 的变更事件。**
+> **删除不是数据库操作，而是 Public Knowledge Set 的生命周期变更事件；
+> 所有公共出口必须依据最新生命周期状态重新计算或失效。**
 
 ```text
 传统 CMS                GEO Web OS
@@ -21,7 +22,54 @@ Delete = 数据库行没了     Delete = 公开知识边界改变
                            + Sitemap + Search + Relations + Cache
 ```
 
-**这不是修辞，D4 探针已实证**：删除与恢复**确实**触发全部出口重算（见第四节）。
+**注意措辞是「重新计算或失效」，不是单纯「重算」**——
+两者是不同层面的保证，见第 0.5 节。
+
+---
+
+## 0.5、证据边界（重要：区分两个不同层面的保证）
+
+### D4 **已证明**
+
+```text
+Lifecycle mutation → Public Knowledge Set **语义结果**变化
+```
+
+删除 / restore 前后，实际查询得到的 `PublicIndex`、GEO、LLMS、Sitemap 结果
+会随当前生命周期状态**正确变化**。
+
+### D4 **尚未完全证明**
+
+```text
+Lifecycle mutation → 全部cache / index / read-model **同步失效并重建**
+```
+
+**「最终查询结果正确」≠「缓存与索引已经被正确失效和重建」。**
+
+原因：探针在测试环境每次重新查询，**绕过了 PageCache**，
+也**不经过真实 HTTP 请求路径**。
+
+### 逐项实测结论（第二轮探针，阳性对照已PASS）
+
+| 派生物 | 是否同步失效 | 机制 |
+|---|---|---|
+| `PublicIndex` 查询 | ✅ **语义即时正确** | 每次查询现算 |
+| GEO / LLMS / Sitemap | ✅ **语义即时正确** | 每次 build 现算 |
+| **Search 索引** | ✅ **同步失效（实测 1→0→1）** | `SearchIndexSync` 的 `Content::deleted` 钩子 → `removeDocument()` 同步移除 |
+| **PageCache** | ❌ **未失效（唯一真实缺口）** | `ContentController::destroy` 无 `PageCache::flush()` |
+
+探针输出：
+
+```text
+search_before_delete  = 1
+search_after_delete   = 0        ← 删除时同步移除
+search_after_restore  = 1        ← 恢复时同步写回
+contentHasDeletedHook = true
+contentDestroyCallsFlush = false ← ContentController 里确实没有 PageCache::flush
+```
+
+**⇒ G-5 的范围必须缩小**：不是「缓存与索引都没失效」，
+而是**只有 PageCache 未失效**。Search 侧有自动机制（这一点原文档也写错了）。
 
 ---
 
@@ -34,7 +82,6 @@ Delete = 数据库行没了     Delete = 公开知识边界改变
 |---|---|---|---|---|---|
 | **Content** | ✅ | **logical**（SoftDeletes） | ✅ `restore()` 可用 | 半（**无 UI 入口**） | — |
 | **Entity** | ✅ | **physical** | ❌ | ❌ | — |
-| **Page** | ✅ | **physical** | ❌ | ❌ | — |
 | **Page** | ✅ | **physical**（但模型有 `deleting` 钩子级联清理） | ❌ | ❌ | ✅ blocks + SeoMeta 由 `Page::booted()` 清理（**全库最规范**） |
 | **Block** | ✅ | **physical** | ❌ | ❌ | ✅ 随 Page（由 Page 钩子级联） |
 | **Fact** | ❌ **无独立入口** | 随宿主 | — | — | ✅ 随 Entity/Content |
@@ -231,17 +278,94 @@ facts 是 Business Fact 唯一 SoT（D-02 架构锁定）
 **这比G-1/G-2/G-3 更危险**：那三处是「多输出了不该输出的」，
 这里是「事实消失了，AI 会给出一个「更少事实」的答案，且没有任何错误信号」。
 
-**⇒ 建议：Fact 必须 DETACH 或 PRESERVE，绝不 CASCADE。**
-但这是D5 / 架构决策范畴，D4 只提出问题。
+### 三个必须显式裁决的问题
 
-**② content_entity 级联是否合理？**
+**① Fact 能否随 Entity 一起物理删除？**
 
 ```text
-Entity 被 Purge → content_entity 行消失
-但 content 还在（published）
-⇒ 内容失去「about 哪些实体」的声明
-⇒ Schema / GEO 里该内容的 about 节点静默变空
+facts 是 Business Fact 唯一 SoT（D-02 架构锁定）
+它是 AI 答案的事实来源
+删除 Entity → facts 消失 → **AI 的答案静默改变**
 ```
+
+**这比 G-1/G-2/G-3 更危险**：那三处是「多输出了不该输出的」，
+这里是「事实消失了，AI 会给出一个「更少事实」的答案，且没有任何错误信号」。
+
+**⇒ CASCADE = prohibited（直接列为禁止项，不再作为开放问题讨论）**
+
+这是典型的 **silent knowledge loss**：
+
+```text
+Entity purge → Fact purge → AI knowledge silently shrinks
+                              → no exception
+                              → no broken relation
+                              → no obvious UI error
+```
+
+**② 但 DETACH 也不是简单的 FK 策略，而是新的领域语义**
+
+```text
+Fact.entity_id = NULL          （或换某种 owner-neutral 结构）
+```
+
+数据不丢，但会产生一系列新问题：
+
+```text
+事实还在，但它已经不知道属于哪个业务实体
+  · 谁负责它？
+  · 是否还能公开？
+  · 是否还能被 GEO 检索？
+  · 能不能重新绑定？
+  · 是否只是历史知识？
+  · Entity 已 purge 且不可恢复时，它还有没有公共意义？
+```
+
+**这些都需要另一个生命周期定义。因此 D5 的裁决问题不应写成
+「Fact：DETACH / PRESERVE / CASCADE？」，而应写成：**
+
+> **Fact 在宿主 Entity 永久清除后，是否仍作为历史知识资产保留；
+> 如果保留，其 owner、public visibility、rebind、audit semantics 是什么？**
+
+**③ PRESERVE（历史知识资产）是更值得优先研究的方案**
+
+```text
+Entity purge → Fact 不删除 → 进入 preserved / orphaned / historical 状态
+             → 默认不进入 Public Knowledge Set
+             → 保留审计与知识恢复价值
+```
+
+```text
+Entity → Fact CASCADE   AI 答案静默变少（禁止项）
+Entity → Fact NULL      事实失去归属，需要另一套生命周期才能解释
+Entity → Fact PRESERVE  知识资产保留下，默认不公开，语义可解释
+```
+
+**④ `content_entity` 级联：结构引用 ≠ 语义引用**
+
+```text
+Entity 被 Purge → content_entity 行消失（结构层干净了）
+但 content 还在（published）
+```
+
+**但数据库关系干净 ≠ 知识引用消失。** Content X 正文可能仍写着：
+
+> 「A 公司成立于 2012 年……」
+
+所以 `content_entity` 实际存在**两个层面**：
+
+```text
+Structural relation   →  content_entity（FK 行）
+Semantic reference    →  正文 / blocks / metadata / facts / JSON-LD / link
+```
+
+**⇒ D5 的裁决问题不能只到「FK 用 DETACH」为止，还必须问：**
+
+> **Entity purge 后，仍然存在的 Content 中对该 Entity 的显式知识引用，
+> 是否仍允许进入 Public Knowledge Set？**
+
+这揭示了一个更深的事实：
+
+> **Public Knowledge Set 并不是简单的数据库 join。**
 
 **与 G-1/G-2/G-3 同类**：不是数据错，是**语义边界被静默改变**。
 
@@ -319,7 +443,7 @@ C. 按 Entity type 分别决定（如 organization 可删、product 不可删）
 |---|---|---|---|---|---|---|
 | **Content** | soft ✅ | 半（无 UI） | ✅ 技术可行 | ✅ | revisions CASCADE | remove / **recompute** ✅ |
 | **Entity** | **physical** | ❌ | ❌ | FK cascade | relations CASCADE<br>content_entity CASCADE<br>**facts CASCADE ⚠️** | remove / **不可恢复** |
-| **Page** | physical | ❌ | ❌ | — | blocks **物理残留 ⚠️** | remove |
+| **Page** | physical（模型钩子级联） | ❌ | ❌ | — | ✅ blocks + SeoMeta 由 `Page::booted()` 自动清理 | remove |
 | **Block** | derived | derived | derived | derived | — | inherit |
 | **Fact** | derived | derived | derived | **CASCADE ⚠️ 需裁决** | host-bound | inherit（但宿主删除即消失） |
 | **Relation** | derived | derived | derived | cascade | endpoint-bound | inherit |
@@ -331,10 +455,23 @@ C. 按 Entity type 分别决定（如 organization 可删、product 不可删）
 ### 探针查出的两个新问题（须记入台账）
 
 ```text
-G-5  Content 删除不刷 PageCache、不更新 Search 索引
-     （Entity 有 resetReadModels，Page 有 PageCache::flush，Content 两个都没有）
-     探针中出口正确是因为测试环境每次重新查询；
-     真实 HTTP 场景下 PageCache 可能仍返回删除前的页面。
+G-5  **P1，范围已缩小** Content lifecycle mutation 不失效 PageCache
+     （**仅 PageCache**；Search 索引已实测自动失效 1→0→1，见 0.5 节）
+
+     证据链：
+       Page delete    → PageCache::flush()    ✅
+       Entity delete  → resetReadModels()      ✅（Catalog + SEO memo）
+       Content delete → SoftDelete ✅ / PageCache::flush ❌
+     而 Content 恰是企业最核心的公共知识内容资产之一。
+
+     Risk: 已删除或已恢复的内容，在真实 HTTP / 已索引场景下
+           可能暂时偏离实际 Public Knowledge Set。
+
+     Severity: **P1** —— 属 GEO/SEO 公共知识一致性问题，非普通优化项。
+
+     精确表述（两者不冲突，是不同层面的保证）：
+       探针已证明 **semantic recomputation path**（查询层语义正确）
+       G-5 证明的是 **production-like invalidation path 尚不完整**
 
 G-6  ❌ **已撤销（误报）** —— 原怀疑「Page 删除后 page_blocks 残留」
      追查发现 `Page::booted()` 有 deleting 钩子：
@@ -348,7 +485,88 @@ G-6  ❌ **已撤销（误报）** —— 原怀疑「Page 删除后 page_blocks
 
 ---
 
-## 九、D4 移交给 D5 / D3 的裁决项
+## 九之零、D4 冻结的母契约（P1–P10）
+
+**后续 D5、D3、Implementation、测试全部以这组原则为母契约。**
+
+```text
+P1  Deletion is a Public Knowledge Set lifecycle event,
+    not merely a database mutation.
+
+P2  Public outputs must reflect the current lifecycle state.
+    No deleted object may remain publicly represented
+    through stale cache, index, or derived output.
+
+P3  Restore must recompute public representations from current
+    source-of-truth state; it must never restore stale snapshots.
+
+P4  SoftDeletes is a domain-specific lifecycle primitive,
+    not a universal persistence rule.
+
+P5  Derived objects follow their owning aggregate lifecycle and
+    must not create independent Trash semantics unless explicitly justified.
+
+P6  Business Facts are protected knowledge assets.
+    Fact CASCADE on Entity purge is prohibited.
+
+P7  Structural relations and semantic knowledge references
+    must be treated as separate lifecycle concerns.
+
+P8  Audit data is retained and is never represented as Trash.
+
+P9  Business/regulated records such as Inquiry may use permanent
+    deletion semantics, but deletion must still obey authorization,
+    retention and audit requirements.
+
+P10 Every lifecycle mutation must have an explicit policy for:
+     visibility, cascade/detach/preserve, cache invalidation,
+     search indexing, GEO/SEO regeneration, and recovery.
+```
+
+---
+
+## 九、D5 的 Domain Decisions（D4 移交）
+
+**D4 留下的不是「7 个删除功能」，而是 7 个 Domain Decisions。**
+
+| Decision | 必须裁决的问题 | 优先级 |
+|---|---|---:|
+| **D5-1** | Content Trash 是正式能力，还是移除错误承诺？ | P1 |
+| **D5-2** | Entity 是否改为可恢复生命周期？ | **P0** |
+| **D5-3** | Entity purge 后 Relation：CASCADE / DETACH / PRESERVE？ | **P0** |
+| **D5-4** | Entity purge 后 `content_entity`：是否 DETACH？<br>**且：仍存 Content 中的语义引用是否仍可公开？** | **P0** |
+| **D5-5** | Entity purge 后 Fact 如何处理？<br>**（CASCADE 已列为禁止项；PRESERVE 的 owner / visibility / rebind / audit 语义是什么？）** | **P0** |
+| **D5-6** | Page 是可恢复资产还是可再生结构？ | P1 |
+| **D5-7** | Media 是可恢复资产，还是引用保护 + 永久删除？ | P1 |
+
+**另：G-5（Content mutation cache invalidation）单独作为 Implementation Gate，
+不是 Decision**——它不是「业务应该怎样」，而是**已经确定应该怎样但当前没做到**。
+
+### D5 的决策顺序（不先讨论 Trash UI）
+
+```text
+Entity
+  ↓
+Relation
+  ↓
+Fact
+  ↓
+Content reference（语义引用）
+  ↓
+Public Knowledge Set
+  ↓
+Cache / Search / GEO / SEO
+```
+
+即先回答：
+
+> **一个 Entity 被永久删除后，这个系统允许「什么知识继续存在」？**
+
+这是 D4/D5 的真正核心，而不是「回收站页面长什么样」。
+
+---
+
+## 十、D4 移交给 D5 / D3 的裁决项
 
 ```text
 → D5① Fact 是否可随 Entity CASCADE（AI 答案会静默变少，最危险）
@@ -363,7 +581,7 @@ G-6  ❌ **已撤销（误报）** —— 原怀疑「Page 删除后 page_blocks
 
 ---
 
-## 十、本文档不做的事
+## 十一、本文档不做的事
 
 ```text
 ❌ 不设计回收站 UI / API        —— D4 只研究语义
