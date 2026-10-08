@@ -1,11 +1,14 @@
-# PKS Boundary 裁决建议：Public Knowledge Set Eligibility
+# PKS Boundary 裁决：Public Knowledge Set Eligibility
 
-- **状态**：**PROPOSED（待裁定）**（2026-10-08）· 领域边界与契约裁决，非实现设计
+- **状态**：**DECIDED**（2026-10-08，三修正后冻结）· 领域边界与契约裁决，非实现设计
 - **上游**：D2（PKS 概念缺口）· D1（生命周期域模型）· D5-2 Entity Lifecycle
   · D5-3 Relation Lifecycle · D5-4 Semantic Reference · D5-5 Fact Ownership
 - **章程**：`docs/product/stage1-discovery-charter.md`
 - **纪律**：只做领域边界与契约裁决；**不改产品代码、不做 Trash UI、
   不修 G-1～G-8、不提前进入 Architecture Decision**。
+- **冻结前三处修正**：①真实路由是 surface constraint 而非通用成员谓词；
+  ②资格谓词按知识类型实例化（Fact 无 status）；
+  ③JSON-LD 是 page-local machine metadata，不是 PKS discovery projection。
 
 ---
 
@@ -29,20 +32,26 @@
    统一消费 ①②，不自行查 published 行。
 ```
 
-### 0.2 八个出口的真实筛选口径（探针实测）
+### 0.2 出口的真实筛选口径（探针实测，分两类）
 
-| 出口 | 成员筛选口径 | 额外门槛 |
+**A. Discovery / retrieval surfaces（PKS 投影）**
+
+| 出口 | 成员筛选口径 | 额外门槛（surface constraint） |
 |---|---|---|
-| **sitemap.xml** | PublicIndex + indexableEntitySlugs | 只收录真实 200 路由；不编造 lastmod |
-| **geo.json · entities** | PublicIndex::entityQuery | `isGeo(type)` 能力过滤 |
+| **geo.json · entities** | PublicIndex::entityQuery | `isGeo(type)` 能力；无 URL 语义节点仍入图 |
 | **geo.json · relations** | 两端均为公开可索引实体 | 默认语言端 + 当前语言译都存在才出边 |
 | **geo.json · contents** | PublicIndex::contentQuery | title/summary 经 SEO Resolution |
 | **geo.json · facts** | Fact::publicRows | is_public + locale + site |
-| **llms.txt** | PublicIndex + Catalog + Fact::publicRows | 只链 200 页；标签经 FactLabels；LlmsSanitizer 终洗 |
+| **llms.txt** | PublicIndex + Catalog + Fact::publicRows | 需链接的条目再要求真实 200 页；标签经 FactLabels |
+| **sitemap.xml** | PublicIndex + indexableEntitySlugs | 只收录真实 200 路由；不编造 lastmod |
 | **feed.xml (RSS)** | PublicIndex::contentQuery | 仅 knowledge/news；limit 30 |
 | **站内搜索** | PublicIndex + capability | `isSearchable` + 有前台落地页 |
-| **JSON-LD** | Entity/Content/Category/Site | 不读 facts；schema 字段须页面可见 |
-| **HTML 页缓存** | 匿名 GET 200 | 任一模型 save/delete → 全局 flush |
+
+**B. Page-local machine metadata（非 PKS 投影）**
+
+| 出口 | 性质 | 约束 |
+|---|---|---|
+| **JSON-LD** | 嵌入人类页面的结构化描述 | schema/page-visible 契约；不直读 facts；是否受 noindex/PKS 约束由独立 Surface Policy 定义 |
 
 ### 0.3 生命周期状态的真实表示
 
@@ -68,10 +77,10 @@ D2 第 270 行：「PublicIndex 只解决了实体和内容的可见性，
 ## 一、PKS 的定义
 
 ```text
-Public Knowledge Set（PKS）是一个「派生投影」，不是存储集合：
-  它是「在当前站点、当前语言下，有资格被机器可读出口
-  （geo / llms / sitemap / RSS / search / JSON-LD）收录的知识陈述」
-  在输出时刻由一组谓词合取判定得到。
+Public Knowledge Set（PKS）是一个「派生的知识资格投影」，不是存储集合：
+  它是「在当前站点、当前语言下，有资格被机器知识发现面
+  （geo / llms / sitemap / RSS / search）收录的知识陈述」
+  在输出时刻由「按知识类型适用的谓词」判定得到。
 
 PKS 成员不是「数据库行」，而是「知识陈述」：
   Entity 节点 · Content 节点 · Fact 陈述 · 以及连接它们的结构边。
@@ -81,7 +90,94 @@ Relation 与 Semantic Reference 本身不是独立成员，
 
 ---
 
-## 二、八条领域边界
+## 二、三层模型（冻结结构）
+
+```text
+                Domain Knowledge
+        （Entity / Content / Fact / Relation）
+                       │
+                       ▼
+          ┌─────────────────────────┐
+          │   PKS Eligibility        │
+          │   class-specific rules   │
+          │  PKS(Entity) PKS(Content)│
+          │  PKS(Fact)   PKS(Edge)   │
+          └─────────────────────────┘
+                       │
+                       ▼
+                  PKS Projection
+                       │
+          ┌────────────┼────────────┐
+          ▼            ▼            ▼
+      GEO / LLMS   Sitemap / RSS   Search
+          └────────────┼────────────┘
+                       ▼
+          surface-specific constraints
+          （真实 200 路由 / 能力类型 / 输出格式）
+          —— 只能收窄，不得扩大 PKS
+
+JSON-LD 走独立轨道：
+  Human Page
+     ▼
+  Page-local machine metadata
+     ▼
+  Schema / page-visible / 独立 Surface Policy
+```
+
+---
+
+## 三、按知识类型的成员资格（class-specific predicates）
+
+### PKS(Entity)
+
+```text
+∧ domain-registered      注册于 EntityCapabilityRegistry
+∧ status = published
+∧ not-noindex            SeoMeta 未标记
+∧ site-matches
+∧ locale-available       该语言有对应行
+（不要求真实路由：person/location/topic 等语义节点无独立落地页，
+  只要满足 isGeo 仍进入 GEO 图谱）
+```
+
+### PKS(Content)
+
+```text
+∧ domain-registered      归属启用栏目，或无栏目独立单页
+∧ status = published AND published_at 已到
+∧ not-noindex
+∧ site-matches
+∧ locale-available
+∧ reference-integrity    无 UNKNOWN-ID 语义引用（D5-4 G-7）
+```
+
+### PKS(Fact)
+
+```text
+∧ is_public
+∧ site-matches
+∧ locale-available
+（无 status、不适用 lifecycle-published；
+  知识有效性由自身 temporality + review lifecycle 决定，D5-5）
+```
+
+### PKS(Edge) —— 派生，不独立入集
+
+```text
+edge(A, R, B) ∈ PKS  ⇔  A ∈ PKS(Entity) 且 B ∈ PKS(Entity)
+且两端在当前语言都有可用译文。
+边没有独立的成员资格，不单独登记。
+```
+
+### Semantic Reference —— 派生，不独立入集
+
+```text
+entity_refs 随宿主 Content 被评价（D5-4 G-7），自身不获得成员资格。
+```
+
+---
+
+## 四、领域边界
 
 ### ① Domain eligibility（领域资格）
 
@@ -90,27 +186,22 @@ Relation 与 Semantic Reference 本身不是独立成员，
   Entity 类型 → 注册于 EntityCapabilityRegistry
   Content     → 归属启用栏目（或无栏目独立单页）
   Fact        → 站点级 canonical fact（D5-5）
-  Relation    → 派生，不独立入集，随端点
-  Semantic Ref→ 派生，不独立入集，随宿主并被评价
 未登记类型 / 自由文本中的提及 → 不构成 PKS 成员。
 ```
 
-### ② Lifecycle state（生命周期状态）
+### ② Lifecycle / visibility（按知识类型适用，不统一）
 
 ```text
-draft        → 不入 PKS
-published    → 候选（满足其余谓词才入集）
-archived     → 不入 PKS（实体的「软删除/退役」表示）
-soft-deleted → 不入 PKS（Content 的 deleted_at）
-purged       → 物理不存在，非 PKS
+Entity / Content → publication lifecycle（status=published）
+Fact             → publication visibility（is_public）+ fact lifecycle
+draft / archived / soft-deleted / purged → 不入 PKS（对 Entity/Content 而言）
 ```
 
 ### ③ Relationship semantics（结构边）
 
 ```text
-edge(A, R, B) ∈ PKS  ⇔  A ∈ PKS 且 B ∈ PKS
-  （D2 公开性不变量）
-且两端在当前语言都有可用译文（缺译则不输出该边）。
+edge(A, R, B) ∈ PKS  ⇔  A ∈ PKS 且 B ∈ PKS（D2 公开性不变量）
+且两端当前语言有可用译文。
 任一端 draft / archived / noindex / 他站 / 缺译 → 该边不成立。
 ```
 
@@ -136,30 +227,26 @@ Fact ∈ PKS  ⇔  is_public + 当前语言有译文 + site 匹配
 temporality 分类来自稳定 key / fact contract，禁止运行时启发式（D5-5）。
 ```
 
-### ⑥ Publication policy（可发布 vs 可入 PKS）—— 关键边界
+### ⑥ Publication policy（可发布 vs 可入 PKS）
 
 ```text
 「可发布（published）」是业务工作流状态；
 「可入 PKS」是机器知识投影条件。二者不等价：
-
-  published 是 PKS 的必要条件，但不是充分条件。
-
-  反例：
-   published + noindex            → 业务上已发布（人类页 200），不入机器 feed
-   published + 停用栏目            → 已发布，不入 PKS
-   published + UNKNOWN-ID refs    → 工作流已发布，PKS 阻断
-   published + 缺当前语言译文      → 已发布，不入该语言 PKS
-
-PKS = published ∧ 领域合格 ∧ 可索引 ∧ 引用完整 ∧ 语言可用 ∧ 路由真实
+  published 是 Entity/Content 入 PKS 的必要条件，但不是充分条件。
+  反例：published + noindex / 停用栏目 / UNKNOWN-ID refs / 缺译文
+       → 业务上已发布，不入（或该语言不入）PKS。
+对 Fact 而言根本不存在 published 谓词，由 is_public 决定。
 ```
 
-### ⑦ Derived-output validity（派生出口有效性）
+### ⑦ Derived-output validity & surface constraints
 
 ```text
-各出口都是 PKS 的投影，只能在 PKS 之上用能力声明取子集，
-  不得发明新知识、不得绕过 PKS 谓词自行查 published 行。
-  sitemap 取「有真实 200 路由」子集；geo 取 isGeo 子集；
-  search 取 isSearchable + 有落地页子集；llms 取 FactLabels 可对齐子集。
+各 discovery 出口都是 PKS 的投影：
+  只能在 PKS 之上用 surface-specific constraints 取子集，
+  不得发明新知识、不得绕过 PKS 语义、不得扩大 PKS。
+  真实 200 路由：sitemap 与 llms 需链接条目才要求；
+                GEO 图谱允许无 URL 语义节点。
+  能力类型：geo / searchable / sitemap 分别收窄。
 HTML 页缓存是派生副本：PKS 变化时必须失效（现有全局 flush 安全但粗，
   精细化属 Implementation，本裁决不预设）。
 ```
@@ -170,13 +257,42 @@ HTML 页缓存是派生副本：PKS 变化时必须失效（现有全局 flush �
 人类页面可见（HTTP 200） ≠ 机器知识 feed 可见。
   noindex 是「机器面」信号：人类直访 200，机器发现 feed 排除。
   直访 URL / 草稿预览 / 后台页面 = 人类面，不构成 PKS 成员。
-规则必须分别表达两个面：
-  PKS 成员资格描述机器面；HTTP 可达性描述人类面，二者不互相推导。
+两个面分别表达、分别断言，不互相推导。
+```
+
+### ⑨ JSON-LD：page-local machine metadata（显式裁决）
+
+```text
+JSON-LD 是嵌入人类页面的结构化描述，不是 PKS discovery projection。
+  PKS discovery 面 = geo / llms / sitemap / RSS / search
+  JSON-LD          = 页面自身的结构化描述，
+                     必须遵守 schema / page-visible 契约
+                     （每个字段页面可见；不直读 facts）
+  一个 noindex 页面仍可携带自己的 JSON-LD。
+  JSON-LD 是否受 noindex / PKS 限制，由独立 Surface Policy 定义，
+  不由实现阶段自行推断。
+若未来产品战略明确决定「JSON-LD 也完全服从 PKS」，
+  必须作为显式产品规则记录，而不是从现有 PublicIndex 自动推导。
 ```
 
 ---
 
-## 三、两条隐含等式正式破除
+## 五、PKS 成员资格的不传递性
+
+```text
+PKS membership is NOT transitive：
+
+  Content ∈ PKS   ≠  referenced Entity ∈ PKS
+  Entity A ∈ PKS  ≠  Relation(A,B) ∈ PKS  ≠  Entity B ∈ PKS
+
+Relation(A,B) 只有在自身通过 endpoint eligibility
+（A、B 均 ∈ PKS）时才成立；
+一个对象入集不自动使其引用目标、其关系端点入集。
+```
+
+---
+
+## 六、两条隐含等式正式破除
 
 ```text
 等式一：DB exists → therefore public          ❌ 不成立
@@ -184,76 +300,84 @@ HTML 页缓存是派生副本：PKS 变化时必须失效（现有全局 flush �
   成员资格是「正向断言」（状态 + 策略 + 门禁），不是「存在即公开」。
 
 等式二：Content published → every referenced knowledge is public   ❌ 不成立
-  Content 的 PKS 资格不传递给其引用目标；
+  Content 的 PKS 资格不传递给其引用目标（见第五节不传递性）；
   引用目标被独立评价：Content 可带 WARNING 入集，而目标为 draft/noindex。
 ```
 
 ---
 
-## 四、PKS 成员资格谓词（合取，输出时刻判定）
+## 七、冻结结论（P15 / G-9 最终版）
+
+### P15
 
 ```text
-PKS-eligible(x) ⇔
-     domain-registered(x)        // 领域登记（Registry / 栏目 / canonical fact）
-  ∧  lifecycle-published(x)      // status=published 且到发布时间
-  ∧  not-noindex(x)              // SeoMeta 未标记 noindex
-  ∧  site-matches(x)             // 当前站点
-  ∧  locale-available(x)         // 当前语言有译文
-  ∧  reference-integrity(x)      // 内容：无 UNKNOWN-ID 引用
-  ∧  real-route-exists(x)        // 带 URL 的出口：路由真实 200
+P15  Public Knowledge Set 是派生的知识资格投影，
+     而不是物化存储集合。
+     PKS 成员资格由"知识类型适用的领域资格、
+     生命周期 / 发布状态、站点与语言、可索引性、
+     引用完整性等适用谓词"在输出时刻共同决定。
+     Published 仅适用于具有发布生命周期的 Entity / Content，
+     并非所有知识类型的统一谓词。
+     Relation 与 Semantic Reference 不因宿主 / 端点而获得
+     独立的 PKS 成员资格。
+     一个对象进入 PKS 不会使其引用目标自动进入 PKS。
+     真实路由、具体能力、输出格式等属于
+     surface-specific constraints，而不是 PKS 的通用成员资格。
+```
 
-edge(A,R,B) 额外要求 A、B 均满足上式。
-不同出口再按能力声明取子集。
+### G-9（Implementation Gate）：PKS Projection Integrity
+
+```text
+① Discovery-oriented machine surfaces
+   （geo / llms / sitemap / RSS / search）
+   MUST derive their members from PKS eligibility semantics
+   and capability policy.
+
+② No outlet may independently reimplement or weaken
+   domain / lifecycle / visibility / locale eligibility.
+
+③ Surface-specific constraints
+   （例如真实 200 route、能力类型、输出格式）
+   MAY narrow the PKS projection，但不得扩大 PKS。
+
+④ 必须进行 mutation testing：
+   任一核心 eligibility predicate 被短路时，
+   对应出口测试 MUST FAIL。
+
+⑤ Human-page HTTP 200 与 machine-surface membership
+   必须分别断言。
+
+⑥ Page-local JSON-LD 是否属于 PKS projection
+   必须由独立 Surface Policy 明确，
+   不得由实现阶段自行推断。
 ```
 
 ---
 
-## 五、建议冻结结论
-
-```text
-P15（建议编号）
-  Public Knowledge Set 是派生投影而非存储集合。
-  成员资格由领域登记、发布状态、可索引性、站点/语言匹配、
-  引用完整性与真实路由的合取谓词在输出时刻判定；
-  「数据库存在」不蕴含成员资格，一个对象的成员资格
-  也不传递给其引用目标。Published 是必要而非充分条件。
-
-G-9（建议编号 · Implementation Gate）PKS Projection Integrity
-  ① 每个机器出口（sitemap / geo / llms / RSS / search / JSON-LD）
-    必须经 PKS 谓词（PublicIndex + capability registry）选取成员，
-    不得绕过谓词自行查 published 行。
-  ② 该投影必须变异验证：短路任一谓词（noindex / 栏目 / 端点 / 站点）
-    必须有测试失败。
-  ③ 人类面 200 可达不得被当作 PKS 成员资格；两个面分别断言。
-  ④ 缓存等派生副本在 PKS 变化时必须失效。
-```
-
----
-
-## 六、开放边界（显式记录，不静默解决）
+## 八、开放边界（显式记录，不静默解决）
 
 ```text
 ① retired（退役）状态：
    当前模型无独立 retired，语义上映射到 archived（不入 PKS）。
-   若业务需要「退役但作为历史知识保留在图谱」的表达，
-   属 Architecture/Implementation 新增，本阶段不预设。
+   若业务需要「退役但作为历史知识保留在图谱」，属 Architecture/Implementation 新增。
 ② review_due 到期出口行为（WARNING / 降级 / 保持公开）
    按 D5-5 G-8 留待 Implementation Contract。
-③ 缓存失效的精细化（逐页 vs 全局）留待 Implementation。
+③ 缓存失效精细化、JSON-LD 的独立 Surface Policy 细则，留待后续。
 ```
 
 ---
 
-## 七、本裁决不做的事
+## 九、本裁决不做的事
 
 ```text
 ❌ 不改产品代码、不加字段、不做 Trash UI
 ❌ 不修 G-1～G-8（既有裁决保持原样）
 ❌ 不新增 retired 状态、不做 fact_entity_refs、不做 Reference Framework
+❌ 不把 JSON-LD 当作 PKS discovery projection
+❌ 不把真实路由 / 能力当作通用 PKS 成员谓词
 ❌ 不提前进入 Architecture Decision
 ❌ 不把 PKS 落库为一张物化集合（它是投影）
-❌ 本文件在裁定通过前不加入 check-discovery-docs.sh
 ```
 
-**下一步**：PKS Boundary 经用户裁定后 → 回到 D5-1 / D5-6 / D5-7
+**下一步**：PKS Boundary 已冻结 → 回到 D5-1 / D5-6 / D5-7
 → Architecture Decision → Implementation。
