@@ -1,12 +1,12 @@
-# D5-5 裁决建议：Fact Ownership / Granularity
+# D5-5 裁决：Fact Ownership / Granularity
 
-- **状态**：D5-5 **PROPOSED（待裁定）**（2026-10-08）· 领域裁决，非实现设计
+- **状态**：D5-5 **DECIDED**（2026-10-08 裁定，精确修订版冻结）· 领域裁决，非实现设计
 - **上游**：`d4-deletion-recovery-semantics.md`（P6）· `d1-lifecycle-domain-model.md`
   · `d5-2-entity-lifecycle-class-matrix.md` · `d5-4-semantic-reference-degradation.md`
 - **章程**：`docs/product/stage1-discovery-charter.md` D5
 - **D5-5 已不是最初的问题**：CASCADE 已被 P6 禁止，且取证确认
   `facts` 表无 entity FK，Entity purge 事实上不可能删事实。
-  **真正要裁决的是：Fact 在什么粒度上拥有公共知识权威性。**
+  **真正裁决的是：Fact 在什么粒度上拥有公共知识权威性。**
 
 ---
 
@@ -185,6 +185,19 @@ HISTORICAL   纪元事实（真值不随复核改变）
 GAP          is_public = 0（待补充，不进任何公开出口）
 ```
 
+**下游契约：temporality 分类必须来自稳定的 Fact 语义契约，禁止运行时启发式。**
+
+```text
+Historical / Current-State 的分类
+  → 由稳定的 key / fact contract / canonical definition 决定
+  （不新增数据库字段也可以做到）
+  → 不得临时根据「有没有 review_due」猜：
+     review_due = NULL 不能单独证明它是 Historical
+     （现状事实也可能从未安排复核；gap 也可能 review_due 为 NULL）
+
+⇒ 禁止的实现：review_due == null → HISTORICAL
+```
+
 ---
 
 ## 五、裁决四：Entity 消失后事实的有效性（核心）
@@ -237,28 +250,88 @@ D 什么都不做
 
 ---
 
-## 六、建议冻结结论
+## 六、冻结结论（P14 / G-8 最终版）
+
+### P14（最终冻结版）
 
 ```text
-P14（建议编号）
-  Business Facts 是站点级、以复核为生命周期的 canonical 知识。
-  Entity 生命周期事件不得增删改事实，只能触发复核；
-  实体级属性不得建模为站点事实；
-  可由实体图计算的值不得存为事实。
-
-G-8（建议编号 · Implementation Gate）Fact review-state integrity
-  ① 公开事实输出必须携带可判定的复核状态
-    （geo.json 已输出 reviewed_at / review_due）
-  ② Entity purge 后必须产生事实复核信号（审计/任务），且不得改写事实
-  ③ 测试遵守 D5-4「无副作用」原则：purge 后事实行不变、语言行不变、
-    is_public 不变；只允许出现复核信号
-  ④ 现状事实超过 review_due 时的出口行为（WARNING / 降级）
-    属 Implementation Contract 细化，本裁决不预设
+P14  Business Facts 是站点 / business subject 级的
+     canonical knowledge。
+     Fact 的知识有效性由其自身的 temporality 与 review lifecycle
+     决定，而不是由任一 Entity 的存在性直接决定。
+     Entity lifecycle event 不得增删改 Fact；
+     只能触发对相关业务主体的事实复核信号。
+     实体级属性不得建模为站点 Fact；
+     可由 Entity Graph 计算的值不得持久化为 Canonical Fact。
 ```
 
+P14 把四件事彻底分开：**ownership · temporality · review lifecycle · entity lifecycle**。
+
+### G-8（最终冻结版 · Implementation Gate）：Fact Review-State Integrity
+
 ```text
-既有保护不重复立项：
-  Content 引用事实 → ContentGate 规则 6（悬空 fact_refs = ERROR）已存在。
+① Public Fact representations
+   MUST expose or make machine-determinable
+   the applicable review state（如 HISTORICAL / VERIFIED / REVIEW-DUE）。
+   状态可由既有 canonical fields + stable fact semantics 派生，
+   不要求新增 status 列。
+
+② Entity purge
+   MUST emit a fact re-review signal
+   at the owning site / business-subject scope。
+   本 Gate 不要求、也不得假设系统能够在没有
+   fact-entity structured linkage 的情况下自动定位
+   哪些具体 Fact 受该 purge 影响。
+
+③ Entity lifecycle event
+   MUST NOT mutate Fact rows：
+     - row 不删除
+     - value 不自动改写
+     - locale rows 不删除
+     - is_public 不自动改变
+   允许产生的副作用仅限：
+     review task / audit signal / re-review marker。
+
+④ review_due 到期后的 Public output 行为
+   （WARNING / 降级 / 保持公开）
+   属于 Implementation Contract，不由本领域裁决预设。
+
+⑤ 自动 fact-entity drift detection 不属于本 Gate。
+   没有结构化 fact → Entity linkage 时，
+   不得声称具备自动漂移检测能力。
+```
+
+### 知识治理原则（D5-5 核心推论）
+
+```text
+Entity lifecycle ≠ Fact lifecycle
+
+Entity lifecycle   → may trigger → Fact review lifecycle
+                   but never directly mutates → Fact canonical state
+
+Entity 是事件来源，Fact 才是事实状态的主人。
+（比「删除 Entity 时不要删 Fact」更强：它规定了职责方向）
+```
+
+### 永久能力边界（非缺陷，禁止在实现阶段脑补）
+
+```text
+没有 fact_entity_refs 等结构化 fact → Entity 链接
+  → 自动 drift detection = 不可能
+  → 模型必须写成：
+      purge → site/business-subject scope review signal
+            → review governance → 人工重新核定
+  → 不得写成：
+      purge → 自动找到受影响 Fact → 自动标记
+
+与 D5-4 的 KNOWN-DELETED / UNKNOWN-ID 同性质：
+  缺少结构化关系时，不假装系统拥有不存在的语义能力。
+```
+
+### 既有保护不重复立项
+
+```text
+Content 引用事实 → ContentGate 规则 6（悬空 fact_refs = ERROR）已存在。
 ```
 
 ---
@@ -272,8 +345,8 @@ G-8（建议编号 · Implementation Gate）Fact review-state integrity
 ❌ 不把实体级属性搬进 facts（方向相反）
 ❌ 不提前泛化 Reference Framework（沿用 D5-4 范围约束）
 ❌ 不把 legacy Support\Facts 的退场纳入本轮（独立清理项）
-❌ 不把 D5-5 文档加入 check-discovery-docs.sh（待裁定后再纳入护栏）
+❌ 不自动定位受 purge 影响的具体 Fact（无结构化链接，能力边界）
 ```
 
-**下一步**：D5-5 经用户裁定后 → PKS Boundary → D5-1 / D5-6 / D5-7
-→ Architecture Decision → Implementation。
+**下一步**：D5-5 已冻结 → **PKS Boundary**（下一步，等授权）
+→ 之后 D5-1 / D5-6 / D5-7 → Architecture Decision → Implementation。

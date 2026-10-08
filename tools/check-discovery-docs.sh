@@ -42,6 +42,7 @@ check docs/product/d5-entity-purge-knowledge-decisions.md 300
 check docs/product/d5-2-entity-lifecycle-class-matrix.md 250
 check docs/product/d5-3-relation-lifecycle.md        200
 check docs/product/d5-4-semantic-reference-degradation.md 200
+check docs/product/d5-5-fact-ownership-granularity.md 200
 
 # 2. 关键取证点必须在位（防止内容被替换但行数仍达标）
 key() {
@@ -60,6 +61,8 @@ key docs/product/d5-3-relation-lifecycle.md \
     "structural assertion" "dangling"
 key docs/product/d5-4-semantic-reference-degradation.md \
     "fact_refs" "ContentGate" "P13" "KNOWN-DELETED" "UNKNOWN-ID" "副作用"
+key docs/product/d5-5-fact-ownership-granularity.md \
+    "P14" "G-8" "fact_entity_refs"
 
 if (( FAIL )); then
   echo ""
