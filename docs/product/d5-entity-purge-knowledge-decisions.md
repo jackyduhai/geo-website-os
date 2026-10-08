@@ -357,6 +357,48 @@ D5-2Entity      D5-3Relation    D5-5Fact         D5-4 content_entity
 
 ---
 
+## 七之二、D5-2 裁决结果（已出，见独立交付物）
+
+**D5-2 已裁决**：`d5-2-entity-lifecycle-class-matrix.md`
+
+三个子问题的答案：
+
+```text
+Q1  organization 是 **Site Knowledge Aggregate Root**
+    但实现上混入了两种角色：
+      站点主体（metadata.is_site_organization=true，向导自动创建、
+                承载全部 Catalog metadata、被 same_as 锚定为 Site 身份）
+      客户案例（代码里已有 role=customer 判断，但创建路径不产生它）
+    ⇒ 站点主体**不应暴露为普通 Entity Delete**
+    ⇒ 永久 purge 仅在 Site teardown 语境
+    ⇒ 当前删除入口**零保护**（EntityController:245 无任何 type 区分）
+
+Q2  product / service / case_study（Public Knowledge Asset）**必须可恢复**
+    有 URL + sitemap + search + geo + schema，对外可见后果明确
+
+Q3  person / location / topic（Semantic Node）**不需要传统 Trash**
+    真正需要的是「删除后退化规则」：不产生公开悬空引用
+```
+
+**最重要的一条新冻结原则**：
+
+```text
+P11  Entity 生命周期策略由**生命周期角色**决定，不由 ORM trait 决定。
+     同一 type 内可能存在不同角色 —— organization 就是活证据。
+```
+
+**连锁影响**：D5-2 一旦确定生命周期模型，Relation 答案自然收敛：
+
+```text
+SoftDelete → PRESERVE structurally, SUPPRESS semantically
+Purge      → CASCADE
+```
+
+⇒ D5-3 不再是「CASCADE/DETACH/PRESERVE 三选一」，
+   而是**由上游 Entity 生命周期决定的二元策略**。
+
+---
+
 ## 八、本文档不做的事
 
 ```text
