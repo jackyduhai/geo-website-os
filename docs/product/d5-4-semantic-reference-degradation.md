@@ -312,6 +312,23 @@ noindex 实体：身份存在且有效 → 归入 WARNING（同 draft 类），�
   而是「引用身份本身不存在」—— 数据错误。
 ```
 
+### G-7 Gate 测试设计原则：必须断言「无副作用」
+
+```text
+Gate 测试不能只断言返回了 WARNING / BLOCK，
+还必须断言「业务状态未被这次门禁判定改变」：
+
+  Content public + Entity noindex + entity_refs valid
+    → Gate WARNING → Content 仍 public，
+      未被自动改 draft / noindex
+  Content public + UNKNOWN-ID
+    → Gate BLOCK → Content 保持原 publication state，
+      仅本次 publish/update 不通过
+
+⇒ 否则测试只验证了「报了警」，没验证「没有偷偷改变状态」，
+  Warning ≠ Public eligibility 就没有被真正测试。
+```
+
 ### 观察到的可推广模式（仅记录，不立项）
 
 ```text
