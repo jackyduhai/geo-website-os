@@ -1,11 +1,12 @@
 # Stage 1 Discovery 章程：Publication Lifecycle Domain
 
-- **状态**：DISCOVERY ACTIVE（2026-10-08 确立；**D2 已完成测绘，D1 尚未启动**）
-- **基线**：`v1.0.0` = 504f71d（immutable）· `main` = 51f6348
+- **状态**：DISCOVERY ACTIVE（2026-10-08；**D2✅ D1 ✅ 完成，D4 为下一步**）
+- **基线**：`v1.0.0` = 504f71d（immutable）· `main` = 4dace6a
 - **上游**：`docs/product/roadmap-1x.md` 阶段一
 - **交付物**：
   - D2 → `docs/product/d2-public-surface-inventory.md` ✅ **已完成**
-  - D1 / D3 / D4 / D5 → 未开始
+  - D1 → `docs/product/d1-lifecycle-domain-model.md` ✅ **已完成**
+  - D4 / D3 / D5 → 未开始（**下一步建议 D4 Trash 边界**，因 D1 已查明三种删除语义并存）
 - **纪律**：本文是**研究章程，不是实现授权**。
 
 > **Roadmap 是方向，不是需求实现授权。**
@@ -377,30 +378,34 @@ Discovery 本身也要被验收：
 ## 九、执行顺序与当前进度
 
 ```text
-① D2 现状测绘              ✅ 已完成（d2-public-surface-inventory.md）
-        ↓
-② D1 领域模型← 下一步。基于测绘结果设计，不凭空设计
-        ↓
-③ D4 级联清单                与 D1 同源，Trash 是生命周期的一部分
-        ↓
+① D2 现状测绘              ✅ d2-public-surface-inventory.md
+② D1 领域模型              ✅ d1-lifecycle-domain-model.md
+③ D4 级联清单← 下一步。D1 已查明三种删除语义并存，正是 D4 的核心输入
 ④ D5 验收契约                写码前定，不可后补；须含变异验证
-        ↓
 ⑤ D3 Scheduled Execution     依赖前四项的模型
-        ↓
 ⑥ 架构影响评估 → Architecture Decision Lock
-        ↓
 ⑦ Implementation             （未获授权）
 ```
 
-**D2 优先于 D1** 是因为：不知道现有几个口径就无法设计统一契约，
-先设计状态机会把未知问题变成返工。**这一步已完成，D1 可以启动。**
-
-但 D1 必须能用一份Inventory 解释全部出口：
+### D1 交给 D4 的关键输入
 
 ```text
-若 Lifecycle 能解释 Frontend 却解释不了 GEO relations / Schema 节点
-    → Lifecycle 模型尚未完整，不是 GEO 去迁就 Lifecycle
+删除语义现状（D1 实测）
+  Content  软删（SoftDeletes trait）    可 restore()但无 UI 入口
+  Entity   **物理删除**（FK cascade）    不可恢复，不经 Trash
+  Page     待确认
+  Relation 随端点 cascade               自动
+
+因此 D4 必须回答的不只是「加什么字段」，而是：
+  **统一生命周期是否同时统一删除语义？**
+  若不统一，「统一生命周期」只完成了一半。
 ```
+
+**D2 优先于 D1** 是因为：不知道现有几个口径就无法设计统一契约，
+先设计状态机会把未知问题变成返工。**这一步已完成。**
+
+D1 必须能用一份 Inventory 解释全部出口——**已完成**，且补验确认
+Collection 层 6 个状态格全部正确排除，缺口确实只在 Relation 层与 Schema 层。
 
 ---
 
