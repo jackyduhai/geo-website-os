@@ -6,7 +6,8 @@
 - **交付物**：
   - D2 → `d2-public-surface-inventory.md` ✅
   - D1 → `d1-lifecycle-domain-model.md` ✅
-  - D4 → `d4-deletion-recovery-semantics.md` ✅ **FROZEN**
+  - D4 → `d4-deletion-recovery-semantics.md` ✅ **FROZEN**（D5 取证已同步两处事实）
+  - **D5 → `d5-entity-purge-knowledge-decisions.md` 🚧 IN PROGRESS**
 - **纪律**：本文是**研究章程，不是实现授权**。
 - **D4 冻结后不再为文字细枝末节重开**；剩余事项作为
   D5 / Architecture Decision / Implementation Gate 的**输入约束**向下传递。
@@ -450,7 +451,7 @@ Discovery 本身也要被验收：
 ① D2 现状测绘              ✅ d2-public-surface-inventory.md
 ② D1 领域模型              ✅ d1-lifecycle-domain-model.md
 ③ D4 删除/恢复语义         ✅ FROZEN  d4-deletion-recovery-semantics.md
-④ D5 Domain Decisions     ← 下一步（7 个决策，见下）
+④ D5 Domain Decisions     🚧 进行中（第一问已取证，7 个决策，见下）
 ⑤ D3 Architectural / UX implications（原 Scheduled Execution）
 ⑥ Architecture Decision Lock
 ⑦ Implementation → Mutation / Regression / HTTP Gate（未获授权）
