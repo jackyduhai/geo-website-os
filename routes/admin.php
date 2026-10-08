@@ -79,6 +79,11 @@ Route::middleware(['admin.auth', 'admin.site'])->group(function () {
     Route::post('entities/seed-examples', [EntityController::class, 'seedExamples'])->name('entities.seed');
     Route::post('entities/{entity}/publish', [EntityController::class, 'publish'])->name('entities.publish');
     Route::post('entities/{entity}/unpublish', [EntityController::class, 'unpublish'])->name('entities.unpublish');
+    Route::post('entities/{entity}/deactivate', [EntityController::class, 'deactivate'])->name('entities.deactivate');
+    Route::post('entities/{entity}/retire', [EntityController::class, 'retire'])->name('entities.retire');
+    // restore / force-delete 需解析软删行（控制器内 withTrashed 手动解析），故用 int {id}。
+    Route::post('entities/{id}/restore', [EntityController::class, 'restoreEntity'])->name('entities.restore');
+    Route::delete('entities/{id}/force-delete', [EntityController::class, 'forceDeleteEntity'])->name('entities.force-delete');
     Route::get('entities/create/{type}', [EntityController::class, 'create'])->name('entities.create');
     Route::post('entities', [EntityController::class, 'store'])->name('entities.store');
     Route::get('entities/{entity}/edit', [EntityController::class, 'edit'])->name('entities.edit');

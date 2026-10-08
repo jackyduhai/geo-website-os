@@ -210,8 +210,13 @@ class EntityRelationDeepTest extends TestCase
 
         $relationId = $relation->id;
 
+        // WP-1：软删（可恢复暂存态）：组织入回收站，关系保留以便无损恢复。
         $org->delete();
+        $this->assertSoftDeleted('entities', ['id' => $org->id]);
+        $this->assertNotNull(EntityRelation::find($relationId));
 
+        // 物理删（forceDelete）才是终态：关系由外键 CASCADE 清除。
+        $org->forceDelete();
         $this->assertNull(EntityRelation::find($relationId));
     }
 

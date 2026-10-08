@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use App\Support\BelongsToSite;
 use App\Support\EntitySlug;
 use App\Support\PageCache;
@@ -12,14 +13,18 @@ use App\Support\Translatable;
 
 class Entity extends Model
 {
-    use BelongsToSite, Translatable;
+    use SoftDeletes, BelongsToSite, Translatable;
 
     protected $guarded = [];
 
     /** 跨语言共享列（默认语言权威行单向同步）；name/slug/summary/description 按语言独立。 */
     protected static array $sharedTranslatableColumns = [
-        'type', 'status', 'published_at', 'metadata', 'sort_order',
+        'type', 'role', 'status', 'published_at', 'metadata', 'sort_order',
     ];
+
+    // Organization 生命周期角色（WP-1）：role 列是生命周期策略唯一权威。
+    const ROLE_SITE_SUBJECT = 'site_subject';
+    const ROLE_CUSTOMER = 'customer';
 
     protected static function booted(): void
     {
@@ -31,21 +36,30 @@ class Entity extends Model
             }
         });
 
-        // P-STEP 18C / TD-08b：Entity（产品 / 服务 / 组织 / 地点……）是前台目录、
-        // Schema、GEO、Sitemap 的权威数据源（17B 起 Product 正式成为 Entity）。任何
-        // 写入 / 删除（后台、tinker、import、Seeder）都必须失效整页静态壳，否则匿名
-        // 访客仍命中旧 SSR HTML。
+        // WP-1：role 归一。显式写入优先；未显式设置时从 metadata 兜底（覆盖向导 /
+        // Seeder / 测试等只写 metadata 的路径），此后 role 驱动生命周期策略。
+        static::saving(function (self $entity): void {
+            if ($entity->role === null || $entity->role === '') {
+                $metadata = is_array($entity->metadata) ? $entity->metadata : [];
+                if ($entity->type === self::TYPE_ORGANIZATION) {
+                    if (! empty($metadata['is_site_organization'])) {
+                        $entity->role = self::ROLE_SITE_SUBJECT;
+                    } elseif (($metadata['role'] ?? null) === 'customer') {
+                        $entity->role = self::ROLE_CUSTOMER;
+                    }
+                }
+            }
+        });
+
+        // P-STEP 18C / TD-08b：Entity 是前台目录、Schema、GEO、Sitemap 的权威数据源。
+        // 整页缓存失效唯一登记在 CacheInvalidationMap，此处不重复挂 flush。
         //
-        // ⚠️ 整页缓存失效登记的唯一事实源是 {@see \App\Support\CacheInvalidationMap}
-        // （20F-HAT P1-1 收口，Entity / EntityRelation 已在其MODELS 清单中）。
-        // 此处**刻意不再重复挂 saved/deleted 的 flush**：两处登记会让单次写入把版本号
-        // 推进2，破坏「一次写入= 一次失效」的确定性（TD-08b 断言依赖该不变量）。
-        static::deleted(function (self $entity): void {
-            // P-STEP 18G-2a 方案 ii：删除绑定该 Entity 的详情载体 Page（Page::deleting
-            // 级联其 block / seo），等价 DB FK ON DELETE CASCADE、覆盖全部删除路径。
+        // WP-1：终态（forceDelete）才清理 Entity 拥有的结构投影；软删（可恢复）一律保留
+        // Override Page 与 ContentEntity，以支持无损恢复。
+        static::forceDeleted(function (self $entity): void {
+            // Entity Detail Override（Entity-owned projection）随 purge 级联清除（含其 block / seo）。
             Page::where('entity_id', $entity->id)->get()->each->delete();
-            // M-2：content_entity 无 DB 外键约束，硬删时清理该实体的内容关联行，
-            // 避免孤儿行堆积（不泄漏前台，但成不可回收垃圾）。
+            // content_entity 无 DB 外键，终态清理避免孤儿堆积。
             ContentEntity::where('entity_id', $entity->id)->delete();
         });
     }
@@ -95,6 +109,18 @@ class Entity extends Model
     public function scopeOfType($query, string $type)
     {
         return $query->where('type', $type);
+    }
+
+    /** 站点主体 organization（聚合根，受保护，普通删除被禁止）。 */
+    public function isSiteSubject(): bool
+    {
+        return $this->type === self::TYPE_ORGANIZATION && $this->role === self::ROLE_SITE_SUBJECT;
+    }
+
+    /** 客户案例 organization（独立生命周期）。 */
+    public function isCustomer(): bool
+    {
+        return $this->type === self::TYPE_ORGANIZATION && $this->role === self::ROLE_CUSTOMER;
     }
 
     /**

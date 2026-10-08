@@ -46,6 +46,7 @@ class CatalogSeeder extends Seeder
             'name'        => $company['name'] ?? 'Example Organization',
             'summary'     => $company['industry'] ?? null,
             'description' => $company['name_en'] ?? null,
+            'role'        => \App\Models\Entity::ROLE_SITE_SUBJECT,
             'status'      => 'published',
             'published_at' => $now,
             'sort_order'  => 0,

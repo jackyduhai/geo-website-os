@@ -105,8 +105,13 @@ class Remediation20BTest extends TestCase
         ]);
         $this->assertEquals(1, ContentEntity::count());
 
+        // WP-1：软删（可恢复暂存态）：产品入回收站，content_entity 保留以便无损恢复。
         $prod->delete();
+        $this->assertSoftDeleted('entities', ['id' => $prod->id]);
+        $this->assertEquals(1, ContentEntity::count());
 
+        // 物理删（forceDelete）才是终态：forceDeleted 钩子清理 content_entity（M-2）。
+        $prod->forceDelete();
         $this->assertEquals(0, ContentEntity::count(), '硬删 Entity 应清理 content_entity（M-2）');
     }
 

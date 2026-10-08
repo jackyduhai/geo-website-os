@@ -384,8 +384,15 @@ class DetailComposition18G2Test extends TestCase
             'site_id' => $this->default->id, 'page_id' => $page->id, 'title' => 'Page SEO',
         ]);
 
+        // WP-1：软删（可恢复暂存态）：实体入回收站，Override 页 / block / 页面级 SEO 保留以便无损恢复。
         $entity->delete();
+        $this->assertSoftDeleted('entities', ['id' => $entity->id]);
+        $this->assertDatabaseHas('pages', ['id' => $page->id]);
+        $this->assertDatabaseHas('page_blocks', ['page_id' => $page->id]);
+        $this->assertDatabaseHas('seo_metas', ['page_id' => $page->id]);
 
+        // 物理删（forceDelete）才是终态：Entity-owned override 随 purge 级联清除（含 block / SEO）。
+        $entity->forceDelete();
         $this->assertDatabaseMissing('pages', ['id' => $page->id]);
         $this->assertDatabaseMissing('page_blocks', ['page_id' => $page->id]);
         $this->assertDatabaseMissing('seo_metas', ['page_id' => $page->id]);

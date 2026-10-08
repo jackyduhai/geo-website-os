@@ -359,8 +359,16 @@ class AdminEntityRelationCrudTest extends TestCase
         $this->actingAs($this->super)->post(route('admin.relations.store'), $this->relationPayload($org, $p2, 'produces'))->assertRedirect();
         $this->assertSame(2, $this->relationCount($this->default));
 
-        // 经后台删除组织实体，其作为源端的两条关系由外键级联清除
+        // WP-1：destroy 现在是软删（可恢复暂存态）：其作为源端的两条关系保留以便无损恢复。
         $this->actingAs($this->super)->delete(route('admin.entities.destroy', $org))->assertRedirect();
+        $this->assertSoftDeleted('entities', ['id' => $org->id]);
+        $this->assertSame(2, EntityRelation::withoutSiteScope()
+            ->where(fn ($w) => $w->where('from_entity_id', $org->id)->orWhere('to_entity_id', $org->id))->count());
+
+        // 物理删（force-delete）才是终态：两条关系由外键 CASCADE 清除。
+        $this->actingAs($this->super)
+            ->delete(route('admin.entities.force-delete', ['id' => $org->id]))
+            ->assertRedirect();
         $this->assertSame(0, EntityRelation::withoutSiteScope()
             ->where(fn ($w) => $w->where('from_entity_id', $org->id)->orWhere('to_entity_id', $org->id))->count());
     }

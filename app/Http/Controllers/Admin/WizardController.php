@@ -56,6 +56,7 @@ class WizardController extends Controller
                 if (! Entity::where('type', Entity::TYPE_ORGANIZATION)->where('site_id', $siteId)->exists()) {
                     Entity::create([
                         'site_id' => $siteId, 'type' => Entity::TYPE_ORGANIZATION,
+                        'role' => Entity::ROLE_SITE_SUBJECT,
                         'slug' => 'site-organization', 'name' => $request->input('company_name', '本站组织'),
                         'status' => Entity::STATUS_PUBLISHED, 'locale' => 'zh-CN',
                         'metadata' => ['is_site_organization' => true],

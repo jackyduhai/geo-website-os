@@ -244,14 +244,98 @@ class EntityController extends Controller
 
     public function destroy(Entity $entity): RedirectResponse
     {
+        // WP-1：站点主体是知识库聚合根，禁止普通删除（只能 Deactivate/Retire；purge 仅 Site teardown）。
+        if ($entity->isSiteSubject()) {
+            AuditLog::record('entity.destroy_blocked', "拒绝删除站点主体：{$entity->name}", [], 'Entity', $entity->id);
+
+            return redirect()->back()
+                ->with('error', '站点主体是知识库聚合根，不能删除；请使用「停用」或「退役」。');
+        }
+
         $type = $entity->type;
-        AuditLog::record('entity.destroy', "删除实体：{$entity->name}", [], 'Entity', $entity->id);
-        // entity_relations 两端外键为 ON DELETE CASCADE，关联关系随实体自动清除。
+        // destroy = 软删（可恢复）：翻译行级联软删，结构边 / Override / 关系保留。
         $entity->delete();
+        AuditLog::record('entity.soft_delete', "软删实体：{$entity->name}", [], 'Entity', $entity->id);
         $this->resetReadModels();
 
         return redirect()->route('admin.entities.index', $type)
-            ->with('success', '实体已删除，关联关系已一并清除。');
+            ->with('success', '已移入回收站（可恢复）；如需彻底删除请使用「永久删除」。');
+    }
+
+    /**
+     * 恢复：数据无损恢复（含整组翻译），公共资格按 CURRENT 规则重算，不回放历史快照。
+     */
+    public function restoreEntity(int $entity): RedirectResponse
+    {
+        $model = Entity::withTrashed()->findOrFail($entity);
+
+        $rows = Entity::withTrashed()
+            ->where('translation_group', $model->translation_group)->get();
+
+        // 逐行断言 slug 冲突：当前有 ACTIVE 同 slug 实体则 BLOCK（不产生双 ACTIVE identity）。
+        foreach ($rows as $row) {
+            \App\Support\EntitySlugGuard::assertCanRestore($row);
+        }
+
+        foreach ($rows as $row) {
+            $row->restore();
+        }
+
+        AuditLog::record('entity.restore', "恢复实体：{$model->name}", [], 'Entity', $model->id);
+        $this->resetReadModels();
+
+        return redirect()->back()->with('success', '实体已恢复；公共资格已按当前规则重新判定。');
+    }
+
+    /**
+     * 永久删除：终态。清理 Entity 拥有的结构投影，关系随 FK CASCADE；不 mutate 外部知识。
+     */
+    public function forceDeleteEntity(int $entity): RedirectResponse
+    {
+        $model = Entity::withTrashed()->findOrFail($entity);
+
+        if ($model->isSiteSubject()) {
+            AuditLog::record('entity.purge_blocked', "拒绝永久删除站点主体：{$model->name}", [], 'Entity', $model->id);
+
+            return redirect()->back()
+                ->with('error', '站点主体不能永久删除（仅站点拆除时允许）。');
+        }
+
+        $type = $model->type;
+        $name = $model->name;
+        $model->forceDelete();
+        AuditLog::record('entity.force_delete', "永久删除实体：{$name}", [], 'Entity', $model->id);
+        $this->resetReadModels();
+
+        return redirect()->route('admin.entities.index', $type)
+            ->with('success', '实体已永久删除。');
+    }
+
+    /**
+     * 停用（站点主体可走）：转为草稿并撤出公共面。
+     */
+    public function deactivate(Entity $entity): RedirectResponse
+    {
+        $entity->status = Entity::STATUS_DRAFT;
+        $entity->published_at = null;
+        $entity->save();
+        AuditLog::record('entity.deactivate', "停用实体：{$entity->name}", [], 'Entity', $entity->id);
+        $this->resetReadModels();
+
+        return redirect()->back()->with('success', '实体已停用（转为草稿）。');
+    }
+
+    /**
+     * 退役（站点主体可走）：归档。
+     */
+    public function retire(Entity $entity): RedirectResponse
+    {
+        $entity->status = Entity::STATUS_ARCHIVED;
+        $entity->save();
+        AuditLog::record('entity.retire', "退役实体：{$entity->name}", [], 'Entity', $entity->id);
+        $this->resetReadModels();
+
+        return redirect()->back()->with('success', '实体已退役（归档）。');
     }
 
     public function publish(Entity $entity): RedirectResponse
@@ -375,7 +459,8 @@ class EntityController extends Controller
                 'required', 'regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/',
                 Rule::unique('entities', 'slug')
                     ->where(fn ($q) => $q->where('site_id', $siteId)
-                        ->where('type', $type)->where('locale', $transLocale))
+                        ->where('type', $type)->where('locale', $transLocale)
+                        ->whereNull('deleted_at'))
                     ->ignore($except?->id),
             ],
             'summary'     => ['nullable', 'string', 'max:1000'],

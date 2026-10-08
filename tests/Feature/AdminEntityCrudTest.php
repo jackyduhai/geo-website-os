@@ -373,8 +373,23 @@ class AdminEntityCrudTest extends TestCase
         $product = $this->entityOnSite($b, 'product', $core->slug);
 
         $this->actingAs($this->super)->get(route('admin.entities.edit', $product))->assertOk();
-        $this->actingAs($this->super)->delete(route('admin.entities.destroy', $product))->assertRedirect();
 
+        $relationCount = \DB::table('entity_relations')
+            ->where(fn ($q) => $q->where('from_entity_id', $product->id)->orWhere('to_entity_id', $product->id))
+            ->count();
+        $this->assertGreaterThan(0, $relationCount);
+
+        // WP-1：destroy 现在是软删（可恢复暂存态）：行仍在、关系保留以便无损恢复。
+        $this->actingAs($this->super)->delete(route('admin.entities.destroy', $product))->assertRedirect();
+        $this->assertSoftDeleted('entities', ['id' => $product->id]);
+        $this->assertSame($relationCount, \DB::table('entity_relations')
+            ->where(fn ($q) => $q->where('from_entity_id', $product->id)->orWhere('to_entity_id', $product->id))
+            ->count());
+
+        // 物理删（force-delete）才是终态：行消失、关系 CASCADE。
+        $this->actingAs($this->super)
+            ->delete(route('admin.entities.force-delete', ['id' => $product->id]))
+            ->assertRedirect();
         $this->assertDatabaseMissing('entities', ['id' => $product->id]);
         $this->assertSame(0, \DB::table('entity_relations')
             ->where(fn ($q) => $q->where('from_entity_id', $product->id)->orWhere('to_entity_id', $product->id))
