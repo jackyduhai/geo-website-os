@@ -1,13 +1,38 @@
 # Stage 1 Discovery 章程：Publication Lifecycle Domain
 
-- **状态**：DISCOVERY CHARTER（2026-10-08，**未开始实施**）
+- **状态**：DISCOVERY ACTIVE（2026-10-08 确立；**D2 已完成测绘，D1 尚未启动**）
 - **基线**：`v1.0.0` = 504f71d（immutable）· `main` = 51f6348
 - **上游**：`docs/product/roadmap-1x.md` 阶段一
+- **交付物**：
+  - D2 → `docs/product/d2-public-surface-inventory.md` ✅ **已完成**
+  - D1 / D3 / D4 / D5 → 未开始
 - **纪律**：本文是**研究章程，不是实现授权**。
 
 > **Roadmap 是方向，不是需求实现授权。**
 > 每个 P0/P1 进入开发前，都必须重新完成 Discovery 与架构评估。
 > 本文定义要研究什么、必须回答什么，**不预设答案**。
+
+---
+
+## 零之前置：Probe Validation 原则（已从本轮实践升格）
+
+本轮第一次探针返回 `draft_in_geojson = false`，
+若直接采信，就会把一个**真实缺口**写成「已排除」。
+因此确立探针的四步验证法：
+
+```text
+Probe Validation
+1. Positive control exists            阳性样本真实存在
+2. Probe detects positive control     探针能发现阳性样本 → 证明路径通
+3. Probe detects negative control     探针能正确排除阴性样本 → 证明过滤有效
+4. Only then interpret target result  才可解释目标结果
+```
+
+**缺第 2 步时，「未发现」只能说明「探针没找到路径」，不能说明「缺陷不存在」。**
+
+> **探针失败 ≠ 被测对象正常。**
+> 本轮实例：测试库无数据 / 表名猜错（`content_entity` 单数）/ 读错结构
+> （`entities`+`relations`+`contents` 三段，不是 `edges`）——三者叠加造成假阴性。
 
 ---
 
@@ -34,60 +59,51 @@ Lifecycle   ← 状态机的整体抽象
 
 ---
 
-## 一、D2 优先于 D1：已发现真实缺口
+## 一、D2 优先于 D1：已测绘完成，缺口已定位
 
-**当前 `PublicIndex` 不是唯一权威口径。** 这是实测发现，不是推测。
+**D2 交付物**：`docs/product/d2-public-surface-inventory.md`（已完成，2026-10-08）
 
-```text
-app/Support/PublicIndex.php  仅 84 行 / 3 个方法
-  contentQuery()  entityQuery()  indexableEntitySlugs()
-```
-
-四个 GEO 出口的使用方式实测：
-
-| 出口 | Entity / Content 来源 | 是否走 `PublicIndex` |
-|---|---|---|
-| `LlmsBuilder` | `PublicIndex::entityQuery()` / `contentQuery()` | ✅ |
-| `SitemapBuilder` | `PublicIndex::entityQuery()` / `contentQuery()` | ✅ |
-| `GeoGraphBuilder`（节点） | `PublicIndex::contentQuery()` 等 | ✅ |
-| **`GeoGraphBuilder`（Content↔Entity 边）** | `Entity::whereIn('id', ...)` | ❌ **裸查询** |
-| `SchemaBuilder` | 部分直接 Model 查询 | ⚠️ 需逐处核实 |
-
-### 已确认的缺口（P2 级，非阻塞，已实证）
-
-`app/Services/Geo/GeoGraphBuilder.php:238-240`
-
-```php
-$ceRows = \App\Models\ContentEntity::where('site_id', $siteId)->get();
-$entById = Entity::whereIn('id', $ceRows->pluck('entity_id'))->get()->keyBy('id');
-$pubContents = PublicIndex::contentQuery()->...   // Content 端受约束 ✅
-```
-
-**Content 端受 `PublicIndex` 约束，Entity 端是裸查询。**
-`Entity` 有 `scopePublished()`（`app/Models/Entity.php:90`）但此处未使用。
-
-**探针实测结果**（草稿实体 +已发布内容 + 一条 content_entity 边）：
+测绘结论摘要：
 
 ```text
-seg[entities]   count=1  → 只有 probe-pub-product        ← published 正确进入
-seg[relations]  count=1  → to = probe-draft-product      ← 草稿实体成了关系端点
-seg[contents]   count=1  → probe-article✅
+发现型出口主体路径  4/5 严格遵守 PublicIndex 契约
+  ✅ Sitemap / RSS / Search / LLM 实体段 / GEO 节点与 Entity↔Entity 关系
+
+缺口 4 处
+  G-1  GeoGraphBuilder:238   Content↔Entity 边端点   无 published + 无 locale
+  G-2  SchemaBuilder:293      article about/mentions  无 published
+  G-3  SchemaBuilder:393-403  产品 about              无 published + 无站点隔离 + 无 locale  ← P1
+  G-4  Catalog vs PublicIndex noindex 口径分歧       需 D5 裁决
 ```
 
-即：**草稿实体不在实体列表里，却出现在关系端点上。**
+**核心洞察**：
 
-对 AI 的实际后果：`geo.json` 会输出一条指向**不存在实体**的悬空关系。
-AI 侧拿到「content/article/probe-article → entity/product/probe-draft-product」，
-但实体列表里没有后者，无法解析出名称、类型与可信度。
+> `PublicIndex` 只解决了「实体和内容」的可见性，
+> **没有解决「关系」与「语义节点」**。
+> 三处G-1/G-2/G-3 不是三个独立 bug，而是同一个抽象缺失的三种表现。
 
-这与 D-02（两个出口数据源不同源导致 AI 得到矛盾答案）是**同类问题的残留**。
-D-02 已统一事实出口，但**关系端点的可见性口径尚未统一**。
+因此 Discovery 的第一个动作不是设计状态机，而是测绘——
+**这一步已完成**，接下来才能进入 D1。
 
-> 注：该探针属一次性实证，已在 Discovery 启动后删除。
-> 章程保留结论，正式判据由 D5Acceptance Contract 承接（需含变异验证）。
+### 硬门槛（进入 Implementation 前必须可执行）
 
-> **因此 Discovery 的第一个动作不是设计状态机，而是先测绘所有出口的可见性判定点。**
-> 在不知道有几个口径的情况下统一口径，等于把未知问题变成返工。
+> 对于给定 Site + Locale + Time，系统可以**唯一、确定性地**计算
+> Public Knowledge Set；所有人类页面与 AI/搜索出口**只能从这个集合派生**，
+> 不得自行定义另一套可见性。
+
+允许不同 Domain SoT（Entity / Content / Fact / Page / Relation），
+但 `Publicness` **不能再出现七套解释**。
+
+### D2 不是独立调查完就结束
+
+它输出的 Inventory + Invariants **必须能被 D1 的状态机解释**：
+
+```text
+若Lifecycle 能解释 Frontend
+但不能解释 GEO relations / Schema 节点
+    → 不是 GEO 去迁就 Lifecycle
+    → 而是 **Lifecycle 模型尚未完整**
+```
 
 ---
 
@@ -176,6 +192,28 @@ publish_at 变更
 
 **不能再出现某一个出口自己重新判断一次。**
 新增出口时若绕过契约，视为架构违规，不是实现瑕疵。
+
+### 现状测绘结论（已完成，详见交付物）
+
+```text
+✅ 已遵守：Sitemap / RSS / Search / LLM 实体段 / GEO 节点 / GEO Entity↔Entity 关系
+❌ 缺口：G-1 GEO Content↔Entity 边端点
+        G-2 Schema article about/mentions
+        G-3 Schema 产品 about（三维度同时失守，P1）
+⚠️ 待裁决：G-4 Catalog 与 PublicIndex 的 noindex 口径分歧
+✅ 契约外（合理）：前台详情页 / Internal Links / robots.txt
+```
+
+### 不变量（草案，D5 正式化）
+
+```text
+∀ edge(A, R, B) ∈ PublicRelations:  public(A) ∧ public(B)
+∀ node N ∈ PublicSchema:            public(N)
+```
+
+**当前违反。** 三处缺口都输出「edge public 但 node private」。
+
+将来应作为 **mutation test 目标**：故意短路端点过滤 → 必须有测试失败。
 
 ### 判据（引用工程验收原则）
 
@@ -336,26 +374,33 @@ Discovery 本身也要被验收：
 
 ---
 
-## 九、执行顺序建议
+## 九、执行顺序与当前进度
 
 ```text
-① D2 现状测绘（先知道有几个口径，才能统一）
+① D2 现状测绘              ✅ 已完成（d2-public-surface-inventory.md）
         ↓
-② D1 领域模型（基于测绘结果设计，不凭空设计）
+② D1 领域模型← 下一步。基于测绘结果设计，不凭空设计
         ↓
-③ D4 级联清单（与 D1 同源，Trash 是生命周期的一部分）
+③ D4 级联清单                与 D1 同源，Trash 是生命周期的一部分
         ↓
-④ D5 验收契约（写码前定，不可后补）
+④ D5 验收契约                写码前定，不可后补；须含变异验证
         ↓
-⑤ D3 Scheduled Execution（依赖前四项的模型）
+⑤ D3 Scheduled Execution     依赖前四项的模型
         ↓
 ⑥ 架构影响评估 → Architecture Decision Lock
         ↓
-⑦ Implementation
+⑦ Implementation             （未获授权）
 ```
 
 **D2 优先于 D1** 是因为：不知道现有几个口径就无法设计统一契约，
-先设计状态机会把未知问题变成返工。
+先设计状态机会把未知问题变成返工。**这一步已完成，D1 可以启动。**
+
+但 D1 必须能用一份Inventory 解释全部出口：
+
+```text
+若 Lifecycle 能解释 Frontend 却解释不了 GEO relations / Schema 节点
+    → Lifecycle 模型尚未完整，不是 GEO 去迁就 Lifecycle
+```
 
 ---
 
