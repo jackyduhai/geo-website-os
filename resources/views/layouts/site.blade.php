@@ -1052,6 +1052,10 @@ html.js .reveal.in{opacity:1;transform:none;}
 .nav-panel a{display:block;padding:11px 14px;border:0;border-radius:8px;font-size:14.5px;font-weight:500;
   color:var(--ink-2);white-space:normal;line-height:1.5;}
 .nav-panel a:hover{background:var(--surface-2);color:var(--brand);}
+/* WP-6 悬空菜单：非可点击占位，弱化提示 */
+.nav-invalid{display:inline-flex;align-items:center;padding:10px 12px;color:var(--ink-faint);
+  text-decoration:line-through;cursor:not-allowed;opacity:.7;}
+.nav-panel .nav-invalid{display:block;padding:11px 14px;font-size:14.5px;font-weight:500;line-height:1.5;}
 
 /* 面包屑：nav>ol>li 语义结构 */
 .crumb ol{list-style:none;display:flex;flex-wrap:wrap;align-items:center;margin:0;padding:0;}
@@ -1548,18 +1552,27 @@ $headerLogoIsLockup = $headerCustomLogo !== ''
           $hasChildren = ! empty($m['children']);
         @endphp
         <li>
-          <a href="{{ $m['url'] }}" class="{{ $on ? 'on' : '' }}" @if($on) aria-current="page" @endif
-             @if(!empty($m['external'])) target="_blank" rel="noopener" @endif
-             @if($hasChildren && $m['url'] === '#') data-no-jump="1" aria-haspopup="true" @endif>
-            {{ $m['name'] }}
-            @if($hasChildren)
-              <svg class="caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
-            @endif
-          </a>
+          @if(!empty($m['invalid']))
+            {{-- WP-6 悬空菜单：降级为非可点击占位，不输出伪有效链接 --}}
+            <span class="nav-invalid" aria-disabled="true" title="{{ __('ui.menu_target_invalid') }}">{{ $m['name'] }}</span>
+          @else
+            <a href="{{ $m['url'] }}" class="{{ $on ? 'on' : '' }}" @if($on) aria-current="page" @endif
+               @if(!empty($m['external'])) target="_blank" rel="noopener" @endif
+               @if($hasChildren && $m['url'] === '#') data-no-jump="1" aria-haspopup="true" @endif>
+              {{ $m['name'] }}
+              @if($hasChildren)
+                <svg class="caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+              @endif
+            </a>
+          @endif
           @if($hasChildren)
             <div class="nav-panel">
               @foreach($m['children'] as $ch)
-                <a href="{{ $ch['url'] }}" @if(!empty($ch['external'])) target="_blank" rel="noopener" @endif>{{ $ch['name'] }}</a>
+                @if(!empty($ch['invalid']))
+                  <span class="nav-invalid" aria-disabled="true">{{ $ch['name'] }}</span>
+                @else
+                  <a href="{{ $ch['url'] }}" @if(!empty($ch['external'])) target="_blank" rel="noopener" @endif>{{ $ch['name'] }}</a>
+                @endif
               @endforeach
             </div>
           @endif

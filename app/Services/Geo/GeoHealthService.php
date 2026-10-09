@@ -6,6 +6,7 @@ use App\Models\Content;
 use App\Models\ContentEntity;
 use App\Models\Entity;
 use App\Models\EntityRelation;
+use App\Models\Menu;
 use App\Models\SeoMeta;
 use App\Models\Site;
 use App\Services\Seo\SeoMetaResolver;
@@ -13,6 +14,7 @@ use App\Support\Catalog;
 use App\Support\Entities\EntityCapabilityRegistry;
 use App\Support\Localization\LocaleContext;
 use App\Support\Localization\LocaleRegistry;
+use App\Support\MenuTargetResolver;
 use App\Support\PublicIndex;
 use App\Support\PublicUrl;
 use App\Support\SiteContext;
@@ -78,6 +80,7 @@ class GeoHealthService
             'jsonld'       => $this->checkJsonLd($entities, $contents),
             'noindex'      => $this->checkNoindex($site, $locale),
             'edges'        => $this->checkEdges($site, $locale, $entities),
+            'menu_dangling' => $this->checkMenuDangling($site),
         ];
 
         $applicable = array_filter($checks, fn ($c) => $c['status'] !== 'N/A');
@@ -365,6 +368,45 @@ class GeoHealthService
                 'type' => 'entity', 'id' => $e->id, 'label' => $e->name,
                 'reason' => '公开实体未挂载任何关系边',
             ])->values()->all(),
+        ];
+    }
+
+    // ---------------------------------------------------------------
+    // Check F — Menu Dangling（历史悬空菜单识别）
+    // ---------------------------------------------------------------
+    // 遍历 ACTIVE 自定义菜单项，对内部链接按 dispatch 同口径判定是否可解析；
+    // 无法解析 → INVALID。外部链接不做实时可达性校验（不阻塞）。
+    // 只识别 / 计数，不自动删除或改写菜单（不反向 mutate）。
+    private function checkMenuDangling(Site $site): array
+    {
+        $resolver = app(MenuTargetResolver::class);
+        $items = Menu::where('site_id', $site->id)->where('is_active', true)->get();
+
+        $invalid = 0;
+        $external = 0;
+        $affected = [];
+
+        foreach ($items as $m) {
+            $class = $resolver->classify($m->link());
+            if ($class === MenuTargetResolver::INVALID) {
+                $invalid++;
+                $affected[] = [
+                    'type' => 'menu', 'id' => $m->id, 'label' => $m->label,
+                    'reason' => '菜单目标无法解析为有效路由（悬空，前台已降级为非链接）',
+                    'url' => route('admin.menus.index'),
+                ];
+            } elseif ($class === MenuTargetResolver::EXTERNAL) {
+                $external++;
+            }
+        }
+
+        $status = $items->isEmpty() ? 'N/A' : ($invalid === 0 ? 'PASS' : 'FAIL');
+
+        return [
+            'key' => 'menu_dangling', 'label' => 'Menu Dangling Targets',
+            'status' => $status,
+            'counts' => ['active_items' => $items->count(), 'invalid' => $invalid, 'external' => $external],
+            'affected' => $affected,
         ];
     }
 }

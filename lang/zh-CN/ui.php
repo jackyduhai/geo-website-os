@@ -5,6 +5,7 @@ return [
     'product_series'           => '产品系列',
     'open_menu'                => '打开导航菜单',
     'primary_nav'              => '主导航',
+    'menu_target_invalid'      => '菜单目标已失效，请在后台重新核定',
     'menu'                     => '菜单',
     'breadcrumb'               => '面包屑导航',
     'search_or_call_prefix'    => '，或直接致电',

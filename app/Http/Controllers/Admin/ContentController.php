@@ -14,6 +14,7 @@ use App\Models\Media;
 use App\Models\Setting;
 use App\Services\Gate\ContentGate;
 use App\Support\Localization\LocaleRegistry;
+use App\Support\MenuReferenceGuard;
 use App\Support\SiteContext;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -165,8 +166,13 @@ class ContentController extends Controller
         ])->with('success', '内容已保存');
     }
 
-    public function destroy(Content $content): RedirectResponse
+    public function destroy(Content $content, MenuReferenceGuard $guard): RedirectResponse
     {
+        // WP-6 删除前引用保护：仍被 ACTIVE 菜单引用则阻断（不自动改菜单）。
+        if ($guard->isReferenced($content->path())) {
+            return back()->with('error', '该内容仍被启用中的菜单引用，请先在「结构 · 菜单」中解除或隐藏该菜单项后再删除。');
+        }
+
         $title = $content->title;
         $content->delete();
         AuditLog::record('content.deleted', '删除内容：' . $title, [], 'content', $content->id);
@@ -246,7 +252,7 @@ class ContentController extends Controller
      * 清理自有关联（ContentEntity / content_tag / SeoMeta / Revision）；
      * 仅解除引用，不 mutate 被引用的 Fact / Entity / Media。
      */
-    public function forceDeleteContent(int $id): RedirectResponse
+    public function forceDeleteContent(int $id, MenuReferenceGuard $guard): RedirectResponse
     {
         $hit = Content::withTrashed()->findOrFail($id);
 
@@ -254,6 +260,11 @@ class ContentController extends Controller
             ->where('translation_group', $hit->translation_group)
             ->where('locale', LocaleRegistry::default())
             ->first() ?: $hit;
+
+        // WP-6 终态删除前引用保护（菜单可能在软删后才建立）。
+        if ($guard->isReferenced($anchor->path())) {
+            return back()->with('error', '该内容仍被启用中的菜单引用，请先在「结构 · 菜单」中解除或隐藏该菜单项后再永久删除。');
+        }
 
         $title = $anchor->title;
         // 锚点 forceDelete：Translatable 删除钩子级联物理删除其余翻译行；

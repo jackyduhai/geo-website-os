@@ -18,6 +18,7 @@ use App\Contracts\UrlResolverInterface;
 use App\Services\Seo\GenericUrlResolver;
 use App\Support\Catalog;
 use App\Support\Theme\ThemePalette;
+use App\Support\MenuTargetResolver;
 use App\Support\PageCache;
 use App\Support\RequestScopedState;
 use App\Support\SiteCacheKey;
@@ -304,6 +305,10 @@ class AppServiceProvider extends ServiceProvider
                 // 自己的 Catalog 中真实存在时才进入导航，空目录站不输出指向不存在目录的链接。
                 $visible = $visible && static::navPathExists($effectiveHref);
 
+                // WP-6 内部目标悬空判定：无法解析的内部链接标记 invalid（前台降级为非链接）。
+                $isInvalid = ! $isExternal
+                    && app(MenuTargetResolver::class)->classify($effectiveHref) === MenuTargetResolver::INVALID;
+
                 return [
                     'key'          => $key,
                     'default_name' => $defaultName,
@@ -313,6 +318,7 @@ class AppServiceProvider extends ServiceProvider
                     'url'          => $resolved['url'],
                     'patterns'     => $isExternal ? [] : static::navPattern($resolved['path'] ?? $effectiveHref),
                     'external'     => $isExternal,
+                    'invalid'      => $isInvalid,
                     'dynamic'      => $dynamic,
                     'visible'      => $visible,
                     'sort'         => $sort,
@@ -402,10 +408,14 @@ class AppServiceProvider extends ServiceProvider
 
             $renderChild = function ($m) use ($customSort) {
                 $resolved = static::resolveMenuHref($m->link());
+                $isExternal = $resolved['external'] || (int) $m->target === 1;
+                $isInvalid = ! $isExternal
+                    && app(MenuTargetResolver::class)->classify($m->link()) === MenuTargetResolver::INVALID;
                 return [
                     'name'     => $m->label,
                     'url'      => $resolved['url'],
-                    'external' => $resolved['external'] || (int) $m->target === 1,
+                    'external' => $isExternal,
+                    'invalid'  => $isInvalid,
                     'sort'     => $customSort($m),
                 ];
             };
@@ -444,19 +454,23 @@ class AppServiceProvider extends ServiceProvider
             $customRoots = $customAll->filter(fn ($m) => empty($m->parent_id) && ($m->parent_key === null || $m->parent_key === ''));
             foreach ($customRoots as $m) {
                 $resolved = static::resolveMenuHref($m->link());
+                $isExternal = $resolved['external'] || (int) $m->target === 1;
                 $children = $customAll
                     ->filter(fn ($c) => (int) $c->parent_id === (int) $m->id)
                     ->map($renderChild)
                     ->values()
                     ->all();
                 usort($children, fn ($a, $b) => $a['sort'] <=> $b['sort']);
+                $isInvalid = ! $isExternal
+                    && app(MenuTargetResolver::class)->classify($m->link()) === MenuTargetResolver::INVALID;
                 $menu[] = [
                     'key'      => null,
                     'name'     => $m->label,
                     'url'      => $resolved['url'],
                     'patterns' => $resolved['external'] ? [] : static::navPattern($resolved['path']),
                     'children' => $children,
-                    'external' => $resolved['external'] || (int) $m->target === 1,
+                    'external' => $isExternal,
+                    'invalid'  => $isInvalid,
                     'sort'     => $customSort($m),
                 ];
             }

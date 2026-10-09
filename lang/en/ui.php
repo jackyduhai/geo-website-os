@@ -5,6 +5,7 @@ return [
     'product_series'           => 'PRODUCT SERIES',
     'open_menu'                => 'Open menu',
     'primary_nav'              => 'Primary navigation',
+    'menu_target_invalid'      => 'Menu target is no longer valid, please review it',
     'menu'                     => 'Menu',
     'breadcrumb'               => 'Breadcrumb',
     'search_or_call_prefix'    => 'or call directly',

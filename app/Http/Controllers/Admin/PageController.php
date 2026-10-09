@@ -10,6 +10,7 @@ use App\Support\Blocks\BlockRegistry;
 use App\Support\Blocks\BlockType;
 use App\Support\Blocks\CompositionPolicy;
 use App\Support\Localization\LocaleRegistry;
+use App\Support\MenuReferenceGuard;
 use App\Support\PageCache;
 use App\Support\Render\CompositionRenderer;
 use App\Support\Render\PageRenderContext;
@@ -137,8 +138,13 @@ class PageController extends Controller
         return back()->with('success', '页面设置已保存');
     }
 
-    public function destroy(Page $page): RedirectResponse
+    public function destroy(Page $page, MenuReferenceGuard $guard): RedirectResponse
     {
+        // WP-6 删除前引用保护：仍被 ACTIVE 菜单引用则阻断（不自动改菜单）。
+        if ($guard->isReferenced('/' . ltrim((string) $page->slug, '/'))) {
+            return back()->with('error', '该页面仍被启用中的菜单引用，请先在「结构 · 菜单」中解除或隐藏该菜单项后再删除。');
+        }
+
         AuditLog::record('page.destroy', "删除页面：".($page->title ?: $page->slug ?: '#'.$page->id),
             [], 'Page', $page->id);
         $page->delete();
