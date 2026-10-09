@@ -175,6 +175,98 @@ class ContentController extends Controller
     }
 
     /**
+     * 回收站列表：仅展示已软删除内容（后台管理面可见 deleted 行）。
+     * 正常内容列表与公开面不受污染；not_slot 作用域继续排除叙事插槽片段。
+     */
+    public function trash(Request $request): View
+    {
+        $query = Content::onlyTrashed()->with('category', 'group')->latest('deleted_at');
+
+        if ($type = $request->get('type')) {
+            $query->where('type', $type);
+        }
+        if ($search = trim((string) $request->get('q'))) {
+            $query->where(function ($q) use ($search) {
+                $q->where('title', 'like', "%{$search}%")
+                  ->orWhere('slug', 'like', "%{$search}%");
+            });
+        }
+
+        return view('admin.contents.trash', [
+            'items'   => $query->paginate(20)->withQueryString(),
+            'q'       => $search,
+            'fType'   => $type,
+        ]);
+    }
+
+    /**
+     * 恢复：无损恢复内容及其整组翻译（数据恢复）；
+     * 恢复后按 CURRENT 规则重新判定公共资格，不回放历史公共快照。
+     */
+    public function restoreContent(int $id, ContentGate $gate): RedirectResponse
+    {
+        $hit = Content::withTrashed()->findOrFail($id);
+
+        // 以默认语言锚点为准（{id} 可能是某条翻译行）。
+        $anchor = Content::withTrashed()
+            ->where('translation_group', $hit->translation_group)
+            ->where('locale', LocaleRegistry::default())
+            ->first() ?: $hit;
+
+        // 逐行恢复整组翻译（deleted_at → NULL）。
+        $rows = Content::withTrashed()
+            ->where('translation_group', $anchor->translation_group)->get();
+        foreach ($rows as $row) {
+            $row->restore();
+        }
+
+        // 公共资格重算：原已发布的内容须按当前门禁重新判定。
+        $anchor->refresh();
+        $requalNote = '';
+        if ($anchor->status === 'published') {
+            $result = $gate->check($anchor);
+            if (! $result['passed']) {
+                // 当前规则下不再具备公共资格 → 降级为草稿（不静默保持公开）。
+                $anchor->status = 'draft';
+                $anchor->save(); // status 为共享列，自动同步到其余翻译行
+                $requalNote = '；恢复后未通过当前门禁，已转为草稿，请重新核定后发布';
+            } elseif ($result['warnings']) {
+                $requalNote = '；已恢复公开，有 ' . count($result['warnings']) . ' 条警告（不影响发布）';
+            }
+        }
+
+        AuditLog::record('content.restored', '恢复内容：' . $anchor->title, [], 'content', $anchor->id);
+
+        return redirect()->route('admin.contents.edit', $anchor)
+            ->with('success', '内容已恢复（数据无损）' . $requalNote);
+    }
+
+    /**
+     * 永久删除：不可逆终态。物理删除内容与整组翻译，
+     * 清理自有关联（ContentEntity / content_tag / SeoMeta / Revision）；
+     * 仅解除引用，不 mutate 被引用的 Fact / Entity / Media。
+     */
+    public function forceDeleteContent(int $id): RedirectResponse
+    {
+        $hit = Content::withTrashed()->findOrFail($id);
+
+        $anchor = Content::withTrashed()
+            ->where('translation_group', $hit->translation_group)
+            ->where('locale', LocaleRegistry::default())
+            ->first() ?: $hit;
+
+        $title = $anchor->title;
+        // 锚点 forceDelete：Translatable 删除钩子级联物理删除其余翻译行；
+        // forceDeleted 事件清理 ContentEntity / content_tag；
+        // SeoMeta / ContentRevision 随 FK CASCADE 删除。
+        $anchor->forceDelete();
+
+        AuditLog::record('content.force_deleted', '永久删除内容：' . $title, [], 'content', $anchor->id);
+
+        return redirect()->route('admin.contents.trash')->with('success', '内容已永久删除。');
+    }
+
+    /**
      * 发布：门禁不通过则拒绝，内容保持原状
      */
     public function publish(Request $request, Content $content, ContentGate $gate): RedirectResponse

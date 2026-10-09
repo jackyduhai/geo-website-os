@@ -66,6 +66,11 @@ Route::middleware(['admin.auth', 'admin.site'])->group(function () {
     Route::get('contents/{content}/edit', [ContentController::class, 'edit'])->name('contents.edit');
     Route::put('contents/{content}', [ContentController::class, 'update'])->name('contents.update');
     Route::delete('contents/{content}', [ContentController::class, 'destroy'])->name('contents.destroy');
+    // WP-5 回收站：trash 列表 + restore / force-delete（解析软删行，用 int {id}）。
+    // trash 不匹配 index 的 {tab?}（where 仅 article|page|all）。
+    Route::get('contents/trash', [ContentController::class, 'trash'])->name('contents.trash');
+    Route::post('contents/{id}/restore', [ContentController::class, 'restoreContent'])->name('contents.restore');
+    Route::delete('contents/{id}/force-delete', [ContentController::class, 'forceDeleteContent'])->name('contents.force-delete');
     Route::post('contents/{content}/publish', [ContentController::class, 'publish'])->name('contents.publish');
     Route::post('contents/{content}/unpublish', [ContentController::class, 'unpublish'])->name('contents.unpublish');
     Route::post('contents/check', [ContentController::class, 'check'])->name('contents.check');
