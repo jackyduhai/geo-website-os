@@ -64,6 +64,13 @@ class AppServiceProvider extends ServiceProvider
         // Bind generic URL resolver for SeoMeta canonical generation
         $this->app->bind(UrlResolverInterface::class, GenericUrlResolver::class);
 
+        // WP-3：语义引用解析契约 → 具体实现（组合 WP-4 TombstoneResolver）。
+        // ContentGate 经 SemanticReferenceValidator 依赖本接口，不直接依赖具体实现。
+        $this->app->bind(
+            \App\Services\Gate\Contracts\SemanticReferenceResolver::class,
+            \App\Services\Gate\EloquentSemanticReferenceResolver::class
+        );
+
         // P-STEP 18H-1：搜索引擎按运行环境选择——SQLite + FTS5 可用时走 FTS5，
         // 否则（MySQL / PostgreSQL / 未编译 FTS5）回退普通表 LIKE。上层只依赖接口，
         // 未来替换 Meilisearch / Elasticsearch 时无需改动调用方。

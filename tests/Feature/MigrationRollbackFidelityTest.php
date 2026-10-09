@@ -177,20 +177,20 @@ class MigrationRollbackFidelityTest extends TestCase
     }
 
     /**
-     * MRF-001  迁移清单基线已锁定为 58（WP-4 新增 entity_tombstones 墓碑表）。
+     * MRF-001  迁移清单基线已锁定为 59（WP-3 新增 contents.entity_refs 语义引用列）。
      *
-     * 旧基线是 57（WP-1 新增 entities role/lifecycle 迁移）。数量变化本身不是问题，但**必须有人知道它变了**，
-     * 否则旧报告的迁移结论会被静默沿用。WP-4 已对新迁移做独立库 up→down 往返验证
-     * （UP 建表 / DOWN dropIfExists，见 EntityTombstoneTest 与手工独立库往返）。
+     * 旧基线是 58（WP-4 新增 entity_tombstones 墓碑表）。数量变化本身不是问题，但**必须有人知道它变了**，
+     * 否则旧报告的迁移结论会被静默沿用。WP-3 已对新迁移做独立库 up→down 往返验证
+     * （UP 加 entity_refs 列 / DOWN dropColumn，见本 WP 手工独立库往返）。
      */
     public function test_mrf_001_migration_inventory_is_known(): void
     {
         $count = count(glob(database_path('migrations/*.php')) ?: []);
 
         $this->assertSame(
-            58,
+            59,
             $count,
-            "MRF-001 失败：迁移数为 {$count}，与已验证基线 58 不符。"
+            "MRF-001 失败：迁移数为 {$count}，与已验证基线 59 不符。"
             .'若确实新增/删除迁移，必须重跑 docs/audit/20G/e2e/migration-roundtrip.php '
             .'并更新本常量。'
         );

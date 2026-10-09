@@ -16,6 +16,10 @@ use App\Models\Fact;
  */
 class ContentGate
 {
+    public function __construct(protected SemanticReferenceValidator $semanticRefs)
+    {
+    }
+
     /** 绝对化与夸大表述 */
     public const BANNED_WORDS = [
         '全国销量第一', '销量第一', '销量领先', '行业第一', '中国第一', '全国第一',
@@ -152,6 +156,13 @@ class ContentGate
                 $errors[] = sprintf('引用了不存在的事实项：%s', $missing);
             }
         }
+
+        // ---------- 6b. 语义引用校验（生命周期感知，G-7） ----------
+        // entity_refs 是语义引用（知识完整性），与 content_entity（结构引用）分离；
+        // 只产出 errors/warnings，不据 WARNING 改变 Content 发布状态。
+        [$refErrors, $refWarnings] = $this->semanticRefs->validate($c);
+        $errors = array_merge($errors, $refErrors);
+        $warnings = array_merge($warnings, $refWarnings);
 
         // ---------- 7. 敏感信息占位符 ----------
         if (preg_match('/【待[^】]*】|TODO|TBD|XXX/i', $text)) {
