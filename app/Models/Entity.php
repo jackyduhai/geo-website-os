@@ -8,7 +8,9 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use App\Support\BelongsToSite;
 use App\Support\EntitySlug;
+use App\Support\Localization\LocaleRegistry;
 use App\Support\PageCache;
+use App\Support\TombstoneResolver;
 use App\Support\Translatable;
 
 class Entity extends Model
@@ -61,6 +63,13 @@ class Entity extends Model
             Page::where('entity_id', $entity->id)->get()->each->delete();
             // content_entity 无 DB 外键，终态清理避免孤儿堆积。
             ContentEntity::where('entity_id', $entity->id)->delete();
+
+            // WP-4：仅默认语言锚点 purge 时写一条墓碑（entity refs / content_entity
+            // 指向锚点 id）；翻译行级联 purge 不重复写。墓碑只作身份判定
+            // （KNOWN-DELETED vs UNKNOWN-ID），不复活实体、不进 PKS。
+            if ($entity->locale === LocaleRegistry::default()) {
+                app(TombstoneResolver::class)->record($entity);
+            }
         });
     }
 
