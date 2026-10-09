@@ -146,7 +146,23 @@ class MediaController extends Controller
 
         $warnings = MediaReferenceScanner::warnings($media);
 
-        Storage::disk($media->disk)->delete($media->path);
+        // WP-7：统一处置原文件 + WebP/衍生物；检查真实删除结果，不忽略返回值。
+        $result = app(\App\Support\MediaAssetPurger::class)->purge($media);
+
+        if (! $result['ok']) {
+            // 部分文件仍存在且无法删除：保留 DB 记录，置 delete_failed_at，可重试。
+            $media->forceFill(['delete_failed_at' => now()])->save();
+            AuditLog::record(
+                'media.delete_failed',
+                '媒体删除失败：' . $media->original_name,
+                ['failed' => $result['failed']],
+                'media',
+                $media->id
+            );
+
+            return back()->with('error', '部分文件删除失败，已保留记录，可稍后重试。');
+        }
+
         $media->delete();
 
         $success = '媒体已删除';

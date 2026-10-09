@@ -210,6 +210,21 @@ class ImageOptimizer
     }
 
     /**
+     * 把存储相对路径（如 media/202610/a.jpg）映射到其受管理的 WebP sibling 相对路径
+     * （media/202610/a.webp）。仅 JPEG/PNG 有 WebP sibling；其它类型返回 null。
+     *
+     * 与 ensureWebp / webpUrl 同口径：删除媒体时据此纳入衍生物清理，避免孤儿。
+     */
+    public static function webpSiblingRelative(string $relativePath): ?string
+    {
+        if (! preg_match('/\.(jpe?g|png)$/i', $relativePath)) {
+            return null;
+        }
+
+        return preg_replace('/\.[^.]+$/', '.webp', $relativePath);
+    }
+
+    /**
      * 把同站 /storage/... 的 JPEG/PNG 图片 URL 映射到其 .webp 兄弟 URL；
      * 兄弟文件不存在（未生成/非图片/外链）时返回 null，调用方据此回退原图，绝不裂图。
      */
