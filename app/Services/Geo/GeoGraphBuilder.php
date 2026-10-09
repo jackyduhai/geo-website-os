@@ -237,15 +237,38 @@ class GeoGraphBuilder
         $contentEdges = [];
         $ceRows = \App\Models\ContentEntity::where('site_id', $siteId)->get();
         if ($ceRows->isNotEmpty()) {
-            $entById = Entity::whereIn('id', $ceRows->pluck('entity_id'))->get()->keyBy('id');
+            $ceEntityIds = $ceRows->pluck('entity_id')->unique();
+
+            // WP-2：边端点经 PublicIndex 统一可见性（与 Entity↔Entity 边同一入口），
+            // 不再用裸 Entity::whereIn 直查。默认语言端（ContentEntity 锚点 id）。
+            $ceZh = PublicIndex::entityQuery()
+                ->forLocale($defaultLocale)
+                ->whereIn('id', $ceEntityIds)
+                ->get()
+                ->keyBy('id');
+
+            // 当前语言端：按 translation_group 反查（默认语言时即 $ceZh）。
+            $ceCurrent = $locale === $defaultLocale ? $ceZh : PublicIndex::entityQuery()
+                ->forLocale($locale)
+                ->whereIn('translation_group', $ceZh->pluck('translation_group')->unique())
+                ->get();
+            $ceCurrentByGroup = $ceCurrent->keyBy('translation_group');
+
             $pubContents = PublicIndex::contentQuery()
                 ->forLocale($locale)
                 ->whereIn('id', $ceRows->pluck('content_id'))->get()->keyBy('id');
+
             foreach ($ceRows as $ce) {
                 $content = $pubContents->get($ce->content_id);
-                $entity = $entById->get($ce->entity_id);
-                if (! $content || ! $entity) {
-                    continue;
+                $zhEntity = $ceZh->get($ce->entity_id);
+                if (! $content || ! $zhEntity) {
+                    continue; // 内容不公开，或默认语言端实体不公开（draft/noindex/soft-deleted/他站）
+                }
+                $entity = $locale === $defaultLocale
+                    ? $zhEntity
+                    : $ceCurrentByGroup->get($zhEntity->translation_group);
+                if (! $entity) {
+                    continue; // 当前语言缺译 → 不输出该边
                 }
                 $contentEdges[] = [
                     'from'          => 'content/' . $content->type . '/' . $content->slug,

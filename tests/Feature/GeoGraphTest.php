@@ -226,4 +226,70 @@ class GeoGraphTest extends TestCase
         $this->assertStringContainsString('示例制造有限公司', $raw, 'geo.json 中文应直出（JSON_UNESCAPED_UNICODE），便于 AI 直接读取');
         $this->assertStringNotContainsString('\u793a', $raw, '中文不应被 Unicode 转义');
     }
+
+    /**
+     * WP-2：Content↔Entity 边端点必须经 PublicIndex 统一可见性。
+     * 仅公开（published + 非 noindex + 未软删）实体可成为边端点；
+     * draft / noindex / soft-deleted 实体一律不出边。
+     */
+    public function test_content_edges_require_public_entity_endpoints(): void
+    {
+        $content = \App\Models\Content::create([
+            'site_id' => $this->site->id, 'type' => 'page', 'slug' => 'edge-page',
+            'title' => 'Edge Page', 'status' => 'published', 'published_at' => now(),
+        ]);
+
+        // ① 公开实体 → 出边（about）
+        $live = Entity::create([
+            'site_id' => $this->site->id, 'type' => Entity::TYPE_PRODUCT, 'slug' => 'live-entity',
+            'name' => 'Live Entity', 'status' => 'published',
+        ]);
+        \App\Models\ContentEntity::create([
+            'site_id' => $this->site->id, 'content_id' => $content->id,
+            'entity_id' => $live->id, 'relation_type' => \App\Models\ContentEntity::RELATION_ABOUT,
+        ]);
+
+        // ② draft 实体 → 不出边
+        $draft = Entity::create([
+            'site_id' => $this->site->id, 'type' => Entity::TYPE_PRODUCT, 'slug' => 'draft-entity',
+            'name' => 'Draft Entity', 'status' => 'draft',
+        ]);
+        \App\Models\ContentEntity::create([
+            'site_id' => $this->site->id, 'content_id' => $content->id,
+            'entity_id' => $draft->id, 'relation_type' => \App\Models\ContentEntity::RELATION_MENTION,
+        ]);
+
+        // ③ noindex 实体 → 不出边
+        $noindex = Entity::create([
+            'site_id' => $this->site->id, 'type' => Entity::TYPE_PRODUCT, 'slug' => 'noindex-entity',
+            'name' => 'Noindex Entity', 'status' => 'published',
+        ]);
+        \App\Models\SeoMeta::create([
+            'site_id' => $this->site->id, 'entity_id' => $noindex->id, 'noindex' => true,
+        ]);
+        \App\Models\ContentEntity::create([
+            'site_id' => $this->site->id, 'content_id' => $content->id,
+            'entity_id' => $noindex->id, 'relation_type' => \App\Models\ContentEntity::RELATION_MENTION,
+        ]);
+
+        // ④ soft-deleted 实体 → 不出边（ContentEntity 行保留，但端点不公开）
+        $soft = Entity::create([
+            'site_id' => $this->site->id, 'type' => Entity::TYPE_PRODUCT, 'slug' => 'soft-entity',
+            'name' => 'Soft Entity', 'status' => 'published',
+        ]);
+        \App\Models\ContentEntity::create([
+            'site_id' => $this->site->id, 'content_id' => $content->id,
+            'entity_id' => $soft->id, 'relation_type' => \App\Models\ContentEntity::RELATION_MENTION,
+        ]);
+        $soft->delete();
+
+        $contentEdges = collect($this->graph()['relations'])
+            ->filter(fn ($r) => str_starts_with((string) $r['from'], 'content/'));
+
+        $this->assertCount(1, $contentEdges, '仅公开实体可成为 content→entity 边端点');
+        $edge = $contentEdges->first();
+        $this->assertSame('content/page/edge-page', $edge['from']);
+        $this->assertSame('entity/product/live-entity', $edge['to']);
+        $this->assertSame('content_about', $edge['relation_type']);
+    }
 }

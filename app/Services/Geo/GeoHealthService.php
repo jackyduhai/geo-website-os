@@ -315,9 +315,9 @@ class GeoHealthService
         // --- Entity → Entity edges（两端均公开才算有效边）---
         $relations = EntityRelation::where('site_id', $site->id)->get();
         $endpointIds = $relations->flatMap(fn (EntityRelation $r) => [$r->from_entity_id, $r->to_entity_id])->unique();
-        $publicIds = Entity::withoutSiteScope()->where('site_id', $site->id)
-            ->whereIn('id', $endpointIds)->where('status', Entity::STATUS_PUBLISHED)
-            ->where('locale', $locale)->pluck('id')->flip();
+        $publicIds = PublicIndex::entityQuery()
+            ->forLocale($locale)
+            ->whereIn('id', $endpointIds)->pluck('id')->flip();
 
         $entityToEntity = 0;
         $byType = [];
