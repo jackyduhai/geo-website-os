@@ -9,6 +9,7 @@ use App\Models\Entity;
 use App\Models\Media;
 use App\Models\SeoMeta;
 use App\Models\Setting;
+use App\Support\Blocks\PageBlockMediaRefExtractor;
 
 /**
  * 媒体引用反查守卫（Discovery §3.4 七路扫描）。
@@ -27,6 +28,8 @@ use App\Models\Setting;
  *   6. SeoMeta.og_image_path   精确匹配 + Entity.metadata->image LIKE 兜底
  *   7. Settings 图片字段        geo_org_logo / seo_og_image / contact_wechat_qr
  *      （Media Picker 存完整 URL，含 /storage/{path}）
+ *   8. PageBlock 组合块        遍历 BlockRegistry 字段 schema 确定性提取 media 路径
+ *      （含 items 嵌套、inactive 块），未注册/契约外残留递归兜底（B3 第 8 路）
  * 附查：ContentRevision 历史快照只记 warning，不阻断删除
  * （历史正文可被回滚复活图片引用，删文件本身仍放行，但需提示运营）。
  *
@@ -160,6 +163,13 @@ class MediaReferenceScanner
                     'label' => '设置项「' . $sLabel . '」',
                 ];
             }
+        }
+
+        // 路8：PageBlock 组合块媒体引用（B3 第 8 路）。
+        // 遍历 BlockRegistry 字段 schema 确定性提取 media 路径（含 items 嵌套、inactive 块）；
+        // 未注册 / 契约外残留递归兜底。不确定时保护，宁可不放行删除。
+        foreach (PageBlockMediaRefExtractor::refs($media) as $ref) {
+            $refs[] = $ref;
         }
 
         // 附查：ContentRevision 历史快照——只告警不阻断。
