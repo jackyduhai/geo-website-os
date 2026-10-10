@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use App\Support\BelongsToSite;
 use App\Support\EntitySlug;
+use App\Support\FactReviewSignaler;
 use App\Support\Localization\LocaleRegistry;
 use App\Support\PageCache;
 use App\Support\TombstoneResolver;
@@ -69,6 +70,17 @@ class Entity extends Model
             // （KNOWN-DELETED vs UNKNOWN-ID），不复活实体、不进 PKS。
             if ($entity->locale === LocaleRegistry::default()) {
                 app(TombstoneResolver::class)->record($entity);
+
+                // WP-8：purge 后产生 site 粒度事实复核 open marker + 一次性审计事件。
+                // 没有 fact_entity_refs，不声称自动定位受影响具体 Fact；Fact 行不被 mutate。
+                app(FactReviewSignaler::class)->signalForPurge($entity);
+                AuditLog::record(
+                    'fact.review_signaled',
+                    '实体已永久删除，触发站点事实复核：' . $entity->name,
+                    ['entity_type' => $entity->type, 'entity_id' => $entity->id, 'scope' => 'site'],
+                    'entity',
+                    $entity->id
+                );
             }
         });
     }

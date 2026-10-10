@@ -177,20 +177,20 @@ class MigrationRollbackFidelityTest extends TestCase
     }
 
     /**
-     * MRF-001  迁移清单基线已锁定为 60（WP-7 新增 media.delete_failed_at 列）。
+     * MRF-001  迁移清单基线已锁定为 61（WP-8 新增 fact_review_markers 复核状态表）。
      *
-     * 旧基线是 59（WP-3 新增 contents.entity_refs 语义引用列）。数量变化本身不是问题，但**必须有人知道它变了**，
-     * 否则旧报告的迁移结论会被静默沿用。WP-7 已对新迁移做独立库 up→down 往返验证
-     * （UP 加 delete_failed_at 列 / DOWN dropColumn，见 docs/audit/20G/e2e/migration-roundtrip.php，41 PASS）。
+     * 旧基线是 60（WP-7 新增 media.delete_failed_at 列）。数量变化本身不是问题，但**必须有人知道它变了**，
+     * 否则旧报告的迁移结论会被静默沿用。WP-8 已对新迁移做独立库 up→down 往返验证
+     * （UP 建 fact_review_markers 表 / DOWN dropTable，见 docs/audit/20G/e2e/migration-roundtrip.php，41 PASS）。
      */
     public function test_mrf_001_migration_inventory_is_known(): void
     {
         $count = count(glob(database_path('migrations/*.php')) ?: []);
 
         $this->assertSame(
-            60,
+            61,
             $count,
-            "MRF-001 失败：迁移数为 {$count}，与已验证基线 60 不符。"
+            "MRF-001 失败：迁移数为 {$count}，与已验证基线 61 不符。"
             .'若确实新增/删除迁移，必须重跑 docs/audit/20G/e2e/migration-roundtrip.php '
             .'并更新本常量。'
         );
