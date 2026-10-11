@@ -5,8 +5,10 @@ namespace Tests\Feature;
 use App\Models\Media;
 use App\Models\PageBlock;
 use App\Models\Site;
+use App\Models\User;
 use App\Support\MediaReferenceScanner;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 /**
@@ -176,5 +178,29 @@ class PageBlockMediaReferenceTest extends TestCase
 
         $this->assertSame([], $hits);
         $this->assertFalse(MediaReferenceScanner::hasReferences($media));
+    }
+
+    public function test_actual_delete_route_is_blocked_by_pageblock_reference(): void
+    {
+        Storage::fake('public');
+        $media = $this->makeMedia('hero/202610/hero-e2e.jpg');
+        $this->makeBlock('hero', ['image_id' => $media->id]);
+
+        $admin = User::firstOrFail();
+
+        $response = $this->actingAs($admin)
+            ->delete(route('admin.media.destroy', $media));
+
+        // 门禁：阻止删除并回退，不删文件 / 不删 DB 行。
+        $response->assertRedirect();
+        $this->assertStringContainsString('已拒绝删除', session('error') ?? '');
+        $this->assertDatabaseHas('media', ['id' => $media->id]);
+
+        // 审计落 media.delete_blocked。
+        $this->assertDatabaseHas('audit_logs', [
+            'action'      => 'media.delete_blocked',
+            'target_type' => 'media',
+            'target_id'   => $media->id,
+        ]);
     }
 }
