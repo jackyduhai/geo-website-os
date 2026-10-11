@@ -18,6 +18,14 @@ class RejectMalformedUtf8
 {
     public function handle(Request $request, Closure $next): Response
     {
+        // JSON 请求体：Laravel 用无标志的 json_decode 解析，非法 UTF-8 会让整个 payload
+        // 解析为 null（$request->input() 为空），导致下面的递归检查“看不到”原始坏字节。
+        // 因此对 JSON 请求直接校验原始内容的 UTF-8 合法性，保证编码拦截先于鉴权与控制器。
+        if ($request->isJson() && $request->getContent() !== '' &&
+            ! mb_check_encoding($request->getContent(), 'UTF-8')) {
+            abort(422, 'Request input contains invalid UTF-8.');
+        }
+
         if (! $this->isClean($request->input())) {
             abort(422, 'Request input contains invalid UTF-8.');
         }
