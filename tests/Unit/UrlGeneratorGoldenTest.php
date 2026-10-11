@@ -4,6 +4,7 @@ namespace Tests\Unit;
 
 use Illuminate\Routing\UrlGenerator as BaseUrlGenerator;
 use Tests\TestCase;
+use PHPUnit\Framework\Attributes\DataProvider;
 
 /**
  * P-STEP 07 / P0-A：URL Generator 行为对拍（Golden Tests）。
@@ -43,9 +44,7 @@ class UrlGeneratorGoldenTest extends TestCase
         ];
     }
 
-    /**
-     * @dataProvider goldenUrls
-     */
+    #[DataProvider('goldenUrls')]
     public function test_url_generator_golden_output(string $path, string $expectedPath): void
     {
         $url = $this->gen->to($path);

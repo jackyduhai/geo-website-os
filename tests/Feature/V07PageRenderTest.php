@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Support\Facts;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
+use PHPUnit\Framework\Attributes\DataProvider;
 
 /**
  * v0.7 全站页面渲染与合规回归：
@@ -42,9 +43,7 @@ class V07PageRenderTest extends TestCase
         ];
     }
 
-    /**
-     * @dataProvider corePages
-     */
+    #[DataProvider('corePages')]
     public function test_core_page_renders_with_single_h1(string $path): void
     {
         $res = $this->get($path)->assertOk();

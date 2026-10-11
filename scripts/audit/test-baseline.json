@@ -1,0 +1,11 @@
+{
+  "_comment": "GEO-OS 全量测试基线（权威计数）。由 `php artisan test` 在 PHP 8.4 + sqlite :memory: 下实测得到。任何测试/断言的有意增删，都必须先重新执行全量回归，再有意更新本文件；CI 计数门禁会对实际结果与本基线做精确比对，防止测试数量意外减少或测试未被发现。",
+  "commit": "41357e440fa361ebf45acd9ecbe6c7700d2dda43",
+  "command": "php artisan test",
+  "environment": "PHP 8.4 / PHPUnit 11.5 / sqlite :memory:",
+  "tests": 1505,
+  "assertions": 7954,
+  "failures": 0,
+  "errors": 0,
+  "skipped": 0
+}

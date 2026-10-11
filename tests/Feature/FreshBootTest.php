@@ -19,7 +19,6 @@ class FreshBootTest extends TestCase
 {
     use RefreshDatabase;
 
-    /** @test 当前测试类不装载任何 Seeder */
     public function test_core_boots_on_fresh_database_without_demo_data(): void
     {
         // 全新库：无演示内容、无演示设置

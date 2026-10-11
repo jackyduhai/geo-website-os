@@ -11,12 +11,13 @@ use App\Support\SiteCacheKey;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Tests\TestCase;
+use PHPUnit\Framework\Attributes\Test;
 
 class SiteAwareCacheTest extends TestCase
 {
     use RefreshDatabase;
 
-    /** @test */
+    #[Test]
     public function cache_keys_include_site_id(): void
     {
         $this->assertStringStartsWith('site:1:', SiteCacheKey::settings());
@@ -25,7 +26,7 @@ class SiteAwareCacheTest extends TestCase
         $this->assertStringStartsWith('site:1:', SiteCacheKey::pagecacheVersion());
     }
 
-    /** @test */
+    #[Test]
     public function legacy_setting_cache_key_constant_is_gone(): void
     {
         // 旧的硬编码全局缓存键常量不应再存在（站点无关的固定 key 已被 Site-scoped key 取代）
@@ -33,7 +34,7 @@ class SiteAwareCacheTest extends TestCase
         $this->assertFalse($reflection->hasConstant('CACHE_KEY'), 'Setting::CACHE_KEY should not exist');
     }
 
-    /** @test */
+    #[Test]
     public function different_sites_have_different_cache_keys(): void
     {
         $siteA = Site::create(['name' => 'A', 'slug' => 'cache-a', 'status' => 'active']);
@@ -45,7 +46,7 @@ class SiteAwareCacheTest extends TestCase
         $this->assertNotEquals($keyA, $keyB);
     }
 
-    /** @test */
+    #[Test]
     public function settings_cache_is_site_scoped(): void
     {
         Site::create(['name' => 'B', 'slug' => 'setting-b', 'status' => 'active']);
@@ -63,7 +64,7 @@ class SiteAwareCacheTest extends TestCase
         $this->assertStringContainsString('site:1', SiteCacheKey::settings());
     }
 
-    /** @test */
+    #[Test]
     public function pagecache_version_is_site_scoped(): void
     {
         $this->assertStringContainsString('site:1', SiteCacheKey::pagecacheVersion());
@@ -71,7 +72,7 @@ class SiteAwareCacheTest extends TestCase
         $this->assertGreaterThanOrEqual(1, PageCache::version());
     }
 
-    /** @test */
+    #[Test]
     public function old_legacy_keys_are_documented(): void
     {
         $legacy = SiteCacheKey::legacyKeys();
@@ -84,13 +85,13 @@ class SiteAwareCacheTest extends TestCase
         $this->assertContains('pagecache:version', $legacy);
     }
 
-    /** @test */
+    #[Test]
     public function redirect_cache_key_is_site_scoped(): void
     {
         $this->assertStringContainsString('site:1', SiteCacheKey::redirectsActive());
     }
 
-    /** @test */
+    #[Test]
     public function menu_cache_keys_are_site_scoped(): void
     {
         $this->assertStringContainsString('site:1', SiteCacheKey::navTree());

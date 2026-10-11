@@ -7,6 +7,7 @@ use App\Models\Site;
 use App\Support\SiteContext;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
+use PHPUnit\Framework\Attributes\DataProvider;
 
 /**
  * STEP 10：全系统最终验收（不信任前置阶段报告，从最终 HTTP 产物重新验证）。
@@ -65,9 +66,7 @@ class FinalAcceptanceTest extends TestCase
         ];
     }
 
-    /**
-     * @dataProvider traversal
-     */
+    #[DataProvider('traversal')]
     public function test_site_traversal_with_complete_seo(string $path, bool $noindex): void
     {
         $res = $this->get($path)->assertOk();

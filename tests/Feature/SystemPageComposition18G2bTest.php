@@ -15,6 +15,7 @@ use App\Support\SiteContext;
 use Database\Seeders\SystemPageSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
+use PHPUnit\Framework\Attributes\DataProvider;
 
 /**
  * P-STEP 18G-2b — Listing + System Page Composition Closure 防回归。
@@ -102,13 +103,13 @@ class SystemPageComposition18G2bTest extends TestCase
     // A / B 系统页 200
     // ----------------------------------------------------------------
 
-    /** @dataProvider zhSystemPages */
+    #[DataProvider('zhSystemPages')]
     public function test_zh_system_pages_render_200(string $path): void
     {
         $this->get($path)->assertOk();
     }
 
-    /** @dataProvider enSystemPages */
+    #[DataProvider('enSystemPages')]
     public function test_en_system_pages_render_200(string $path): void
     {
         $this->get($path)->assertOk();

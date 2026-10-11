@@ -11,6 +11,7 @@ use App\Models\Site;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
+use PHPUnit\Framework\Attributes\Test;
 
 class SiteIdCoreTablesTest extends TestCase
 {
@@ -18,7 +19,7 @@ class SiteIdCoreTablesTest extends TestCase
 
     private array $tables = ['contents', 'categories', 'groups', 'facts', 'settings'];
 
-    /** @test */
+    #[Test]
     public function all_five_tables_have_site_id_column(): void
     {
         foreach ($this->tables as $table) {
@@ -28,7 +29,7 @@ class SiteIdCoreTablesTest extends TestCase
         }
     }
 
-    /** @test */
+    #[Test]
     public function site_id_is_not_null_on_all_five_tables(): void
     {
         foreach ($this->tables as $table) {
@@ -38,7 +39,7 @@ class SiteIdCoreTablesTest extends TestCase
         }
     }
 
-    /** @test */
+    #[Test]
     public function foreign_key_site_id_to_sites_exists_on_all_tables(): void
     {
         foreach ($this->tables as $table) {
@@ -50,7 +51,7 @@ class SiteIdCoreTablesTest extends TestCase
         }
     }
 
-    /** @test */
+    #[Test]
     public function groups_preserves_category_id_foreign_key(): void
     {
         $fks = DB::select('PRAGMA foreign_key_list(groups)');
@@ -61,7 +62,7 @@ class SiteIdCoreTablesTest extends TestCase
         $this->assertEquals('CASCADE', $catFk->on_delete);
     }
 
-    /** @test */
+    #[Test]
     public function seeded_data_belongs_to_default_site(): void
     {
         $this->seed();
@@ -81,7 +82,7 @@ class SiteIdCoreTablesTest extends TestCase
         }
     }
 
-    /** @test */
+    #[Test]
     public function unique_constraints_are_site_scoped(): void
     {
         // contents: unique(site_id, slug)
@@ -115,7 +116,7 @@ class SiteIdCoreTablesTest extends TestCase
         $this->assertEquals(2, DB::table('settings')->where('key', 'set-shared')->count());
     }
 
-    /** @test */
+    #[Test]
     public function duplicate_slug_in_same_site_is_rejected(): void
     {
         $siteA = Site::create(['name' => 'A', 'slug' => 'site-a', 'status' => 'active']);
@@ -130,7 +131,7 @@ class SiteIdCoreTablesTest extends TestCase
         ]);
     }
 
-    /** @test */
+    #[Test]
     public function groups_category_id_must_be_same_site(): void
     {
         // Create Site A with Category A
@@ -183,7 +184,7 @@ class SiteIdCoreTablesTest extends TestCase
         $this->assertCount(0, $crossRefs, 'Cross-site reference exists in database');
     }
 
-    /** @test */
+    #[Test]
     public function invalid_site_id_is_rejected_by_fk(): void
     {
         $this->expectException(\Illuminate\Database\QueryException::class);
@@ -193,7 +194,7 @@ class SiteIdCoreTablesTest extends TestCase
         ]);
     }
 
-    /** @test */
+    #[Test]
     public function model_site_relation_works(): void
     {
         $this->seed();
@@ -212,7 +213,7 @@ class SiteIdCoreTablesTest extends TestCase
         $this->assertNotNull($setting->site);
     }
 
-    /** @test */
+    #[Test]
     public function creating_event_auto_fills_site_id(): void
     {
         $cat = Category::create(['name' => 'Auto', 'slug' => 'auto-cat', 'type' => 'list']);
@@ -222,14 +223,14 @@ class SiteIdCoreTablesTest extends TestCase
         $this->assertEquals(Site::defaultId(), $fact->site_id);
     }
 
-    /** @test */
+    #[Test]
     public function foreign_key_check_has_no_violations(): void
     {
         $violations = DB::select('PRAGMA foreign_key_check');
         $this->assertCount(0, $violations);
     }
 
-    /** @test */
+    #[Test]
     public function original_indexes_are_preserved(): void
     {
         $contentIdx = DB::select('PRAGMA index_list(contents)');
@@ -261,7 +262,7 @@ class SiteIdCoreTablesTest extends TestCase
         $this->assertContains('settings_site_id_index', $names);
     }
 
-    /** @test */
+    #[Test]
     public function migration_preserves_all_seeded_data(): void
     {
         $this->seed();
@@ -285,7 +286,7 @@ class SiteIdCoreTablesTest extends TestCase
         $this->assertEquals(82, Setting::count()); // 81 default (73 + 7 analytics + theme_typography) + demo contact_hours_en
     }
 
-    /** @test */
+    #[Test]
     public function groups_unique_is_site_id_category_id_slug(): void
     {
         $siteA = Site::create(['name' => 'A', 'slug' => 'site-a2', 'status' => 'active']);

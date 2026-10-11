@@ -6,6 +6,7 @@ use App\Models\Site;
 use App\Support\SiteContext;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
+use PHPUnit\Framework\Attributes\DataProvider;
 
 /**
  * STEP 08：剩余 Controller / 页面 SEO 迁移审计与验证。
@@ -61,9 +62,7 @@ class RemainingControllerSeoTest extends TestCase
         ];
     }
 
-    /**
-     * @dataProvider fixedPages
-     */
+    #[DataProvider('fixedPages')]
     public function test_fixed_page_outputs_complete_normalized_seo_head(string $path, bool $noindex): void
     {
         $html = $this->get($path)->assertOk()->getContent();

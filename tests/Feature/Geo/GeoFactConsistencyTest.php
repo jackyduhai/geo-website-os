@@ -13,6 +13,7 @@ use App\Support\Localization\LocaleRegistry;
 use App\Support\SiteContext;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
+use PHPUnit\Framework\Attributes\DataProvider;
 
 /**
  * RC-9 D-02 ·跨出口业务事实一致性契约测试
@@ -235,9 +236,7 @@ class GeoFactConsistencyTest extends TestCase
     // 1. 核心不变量：两个出口的事实集合必须一致
     // -----------------------------------------------------------------
 
-    /**
-     * @dataProvider localeSiteProvider
-     */
+    #[DataProvider('localeSiteProvider')]
     public function test_geo_json_and_llms_txt_share_identical_business_facts(
         string $locale,
         int $siteIndex

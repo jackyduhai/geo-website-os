@@ -13,6 +13,7 @@ use App\Models\Redirect;
 use App\Support\SiteContext;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
+use PHPUnit\Framework\Attributes\Test;
 
 /**
  * Phase 5.4-G 补证：Site A/B 完整隔离测试
@@ -41,7 +42,7 @@ class SiteIsolationTest extends TestCase
         parent::tearDown();
     }
 
-    /** @test */
+    #[Test]
     public function site_a_cannot_see_site_b_content(): void
     {
         $siteA = Site::create(['name' => 'A', 'slug' => 'site-a', 'status' => 'active']);
@@ -76,7 +77,7 @@ class SiteIsolationTest extends TestCase
         });
     }
 
-    /** @test */
+    #[Test]
     public function create_in_site_a_context_auto_sets_site_id(): void
     {
         $siteA = Site::create(['name' => 'A', 'slug' => 'site-a', 'status' => 'active']);
@@ -92,7 +93,7 @@ class SiteIsolationTest extends TestCase
         });
     }
 
-    /** @test */
+    #[Test]
     public function site_a_cannot_update_site_b_content(): void
     {
         $siteA = Site::create(['name' => 'A', 'slug' => 'site-a', 'status' => 'active']);
@@ -121,7 +122,7 @@ class SiteIsolationTest extends TestCase
         $this->assertEquals('B Original', $contentB->title);
     }
 
-    /** @test */
+    #[Test]
     public function site_a_cannot_delete_site_b_content(): void
     {
         $siteA = Site::create(['name' => 'A', 'slug' => 'site-a', 'status' => 'active']);
@@ -150,7 +151,7 @@ class SiteIsolationTest extends TestCase
         ]);
     }
 
-    /** @test */
+    #[Test]
     public function category_contents_are_site_isolated(): void
     {
         $siteA = Site::create(['name' => 'A', 'slug' => 'site-a', 'status' => 'active']);
@@ -187,7 +188,7 @@ class SiteIsolationTest extends TestCase
         });
     }
 
-    /** @test */
+    #[Test]
     public function explicit_site_id_query_is_filtered_by_global_scope(): void
     {
         $siteA = Site::create(['name' => 'A', 'slug' => 'site-a', 'status' => 'active']);
@@ -212,7 +213,7 @@ class SiteIsolationTest extends TestCase
         });
     }
 
-    /** @test */
+    #[Test]
     public function settings_are_site_isolated(): void
     {
         $siteA = Site::create(['name' => 'A', 'slug' => 'site-a', 'status' => 'active']);
@@ -249,7 +250,7 @@ class SiteIsolationTest extends TestCase
         });
     }
 
-    /** @test */
+    #[Test]
     public function menus_are_site_isolated(): void
     {
         $siteA = Site::create(['name' => 'A', 'slug' => 'site-a', 'status' => 'active']);
@@ -282,7 +283,7 @@ class SiteIsolationTest extends TestCase
         });
     }
 
-    /** @test */
+    #[Test]
     public function redirects_are_site_isolated(): void
     {
         $siteA = Site::create(['name' => 'A', 'slug' => 'site-a', 'status' => 'active']);
@@ -313,7 +314,7 @@ class SiteIsolationTest extends TestCase
         });
     }
 
-    /** @test */
+    #[Test]
     public function facts_are_site_isolated(): void
     {
         $siteA = Site::create(['name' => 'A', 'slug' => 'site-a', 'status' => 'active']);

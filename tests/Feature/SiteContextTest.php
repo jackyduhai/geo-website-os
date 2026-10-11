@@ -6,6 +6,7 @@ use App\Models\Site;
 use App\Support\SiteContext;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
+use PHPUnit\Framework\Attributes\Test;
 
 /**
  * Phase 5.4-G 补证：SiteContext 生命周期与安全边界测试
@@ -26,7 +27,7 @@ class SiteContextTest extends TestCase
         parent::tearDown();
     }
 
-    /** @test */
+    #[Test]
     public function default_site_is_used_when_not_set(): void
     {
         // 创建 default site（migrate:fresh --seed 会自动创建）
@@ -34,7 +35,7 @@ class SiteContextTest extends TestCase
         $this->assertEquals(1, SiteContext::currentSiteId());
     }
 
-    /** @test */
+    #[Test]
     public function set_site_changes_context(): void
     {
         $siteA = Site::create(['name' => 'A', 'slug' => 'site-a', 'status' => 'active']);
@@ -48,7 +49,7 @@ class SiteContextTest extends TestCase
         $this->assertEquals($siteB->id, SiteContext::currentSiteId());
     }
 
-    /** @test */
+    #[Test]
     public function clear_resets_to_default(): void
     {
         $siteA = Site::create(['name' => 'A', 'slug' => 'site-a', 'status' => 'active']);
@@ -60,7 +61,7 @@ class SiteContextTest extends TestCase
         $this->assertEquals(1, SiteContext::currentSiteId());
     }
 
-    /** @test */
+    #[Test]
     public function with_site_restores_previous_context_after_callback(): void
     {
         $siteA = Site::create(['name' => 'A', 'slug' => 'site-a', 'status' => 'active']);
@@ -76,7 +77,7 @@ class SiteContextTest extends TestCase
         $this->assertEquals($siteA->id, SiteContext::currentSiteId());
     }
 
-    /** @test */
+    #[Test]
     public function with_site_restores_previous_context_on_exception(): void
     {
         $siteA = Site::create(['name' => 'A', 'slug' => 'site-a', 'status' => 'active']);
@@ -96,7 +97,7 @@ class SiteContextTest extends TestCase
         $this->assertEquals($siteA->id, SiteContext::currentSiteId());
     }
 
-    /** @test */
+    #[Test]
     public function nested_with_site_restores_correct_context(): void
     {
         $siteA = Site::create(['name' => 'A', 'slug' => 'site-a', 'status' => 'active']);
@@ -119,7 +120,7 @@ class SiteContextTest extends TestCase
         $this->assertEquals($siteA->id, SiteContext::currentSiteId());
     }
 
-    /** @test */
+    #[Test]
     public function has_site_returns_false_when_not_set(): void
     {
         SiteContext::clear();

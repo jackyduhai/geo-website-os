@@ -8,6 +8,7 @@ use App\Services\Geo\SchemaBuilder;
 use App\Support\SiteContext;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
+use PHPUnit\Framework\Attributes\DataProvider;
 
 /**
  * STEP 05：统一 Schema.org / JSON-LD 输出层。
@@ -119,9 +120,7 @@ class SchemaJsonLdTest extends TestCase
         ];
     }
 
-    /**
-     * @dataProvider entityTypeMapping
-     */
+    #[DataProvider('entityTypeMapping')]
     public function test_entity_type_mapping_is_generic(string $type, string $expectedSchemaType): void
     {
         $entity = Entity::create([

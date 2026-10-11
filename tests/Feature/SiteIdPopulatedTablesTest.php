@@ -10,6 +10,7 @@ use App\Models\Site;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
+use PHPUnit\Framework\Attributes\Test;
 
 class SiteIdPopulatedTablesTest extends TestCase
 {
@@ -17,7 +18,7 @@ class SiteIdPopulatedTablesTest extends TestCase
 
     private array $tables = ['page_blocks', 'media', 'banners', 'audit_logs'];
 
-    /** @test */
+    #[Test]
     public function all_four_tables_have_site_id_column(): void
     {
         foreach ($this->tables as $table) {
@@ -27,7 +28,7 @@ class SiteIdPopulatedTablesTest extends TestCase
         }
     }
 
-    /** @test */
+    #[Test]
     public function site_id_is_not_null_on_all_four_tables(): void
     {
         foreach ($this->tables as $table) {
@@ -37,7 +38,7 @@ class SiteIdPopulatedTablesTest extends TestCase
         }
     }
 
-    /** @test */
+    #[Test]
     public function foreign_key_site_id_to_sites_exists_on_all_tables(): void
     {
         foreach ($this->tables as $table) {
@@ -49,7 +50,7 @@ class SiteIdPopulatedTablesTest extends TestCase
         }
     }
 
-    /** @test */
+    #[Test]
     public function seeded_data_belongs_to_default_site(): void
     {
         // PageBlock is created by StructureSeeder (16 rows)
@@ -66,7 +67,7 @@ class SiteIdPopulatedTablesTest extends TestCase
         $this->assertEquals(1, $banner->site_id);
     }
 
-    /** @test */
+    #[Test]
     public function invalid_site_id_is_rejected_by_fk(): void
     {
         $this->expectException(\Illuminate\Database\QueryException::class);
@@ -80,7 +81,7 @@ class SiteIdPopulatedTablesTest extends TestCase
         ]);
     }
 
-    /** @test */
+    #[Test]
     public function site_a_can_create_page_block(): void
     {
         $siteA = Site::create(['name' => 'Site A', 'slug' => 'site-a', 'status' => 'active']);
@@ -97,7 +98,7 @@ class SiteIdPopulatedTablesTest extends TestCase
         $this->assertEquals(1, PageBlock::withoutSiteScope()->where('site_id', $siteA->id)->count());
     }
 
-    /** @test */
+    #[Test]
     public function site_b_can_create_media(): void
     {
         $siteB = Site::create(['name' => 'Site B', 'slug' => 'site-b', 'status' => 'active']);
@@ -111,7 +112,7 @@ class SiteIdPopulatedTablesTest extends TestCase
         $this->assertEquals($siteB->id, $media->site_id);
     }
 
-    /** @test */
+    #[Test]
     public function data_is_isolated_by_site_id(): void
     {
         $siteA = Site::create(['name' => 'Site A', 'slug' => 'site-a', 'status' => 'active']);
@@ -124,7 +125,7 @@ class SiteIdPopulatedTablesTest extends TestCase
         $this->assertEquals(1, Banner::withoutSiteScope()->where('site_id', $siteB->id)->count());
     }
 
-    /** @test */
+    #[Test]
     public function model_site_relation_works(): void
     {
         // PageBlock has seeded data
@@ -142,7 +143,7 @@ class SiteIdPopulatedTablesTest extends TestCase
         $this->assertEquals(1, $banner->site->id);
     }
 
-    /** @test */
+    #[Test]
     public function creating_event_auto_fills_site_id(): void
     {
         $block = PageBlock::create([
@@ -161,14 +162,14 @@ class SiteIdPopulatedTablesTest extends TestCase
         $this->assertEquals(Site::defaultId(), $log->site_id);
     }
 
-    /** @test */
+    #[Test]
     public function foreign_key_check_has_no_violations(): void
     {
         $violations = DB::select('PRAGMA foreign_key_check');
         $this->assertCount(0, $violations);
     }
 
-    /** @test */
+    #[Test]
     public function original_indexes_are_preserved(): void
     {
         $pageBlockIdx = DB::select("PRAGMA index_list(page_blocks)");
@@ -193,7 +194,7 @@ class SiteIdPopulatedTablesTest extends TestCase
         $this->assertContains('audit_logs_site_id_index', $names);
     }
 
-    /** @test */
+    #[Test]
     public function migration_preserves_existing_data(): void
     {
         // PageBlock is seeded by StructureSeeder - verify all 16 rows survived rebuild

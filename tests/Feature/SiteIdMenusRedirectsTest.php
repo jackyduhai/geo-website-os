@@ -8,12 +8,13 @@ use App\Models\Site;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
+use PHPUnit\Framework\Attributes\Test;
 
 class SiteIdMenusRedirectsTest extends TestCase
 {
     use RefreshDatabase;
 
-    /** @test */
+    #[Test]
     public function menus_and_redirects_have_site_id_column(): void
     {
         foreach (['menus', 'redirects'] as $table) {
@@ -24,7 +25,7 @@ class SiteIdMenusRedirectsTest extends TestCase
         }
     }
 
-    /** @test */
+    #[Test]
     public function foreign_key_site_id_to_sites_exists(): void
     {
         foreach (['menus', 'redirects'] as $table) {
@@ -36,7 +37,7 @@ class SiteIdMenusRedirectsTest extends TestCase
         }
     }
 
-    /** @test */
+    #[Test]
     public function menus_unique_is_site_scoped(): void
     {
         $siteA = Site::create(['name' => 'A', 'slug' => 'menu-a', 'status' => 'active']);
@@ -52,7 +53,7 @@ class SiteIdMenusRedirectsTest extends TestCase
         Menu::create(['site_id' => $siteA->id, 'label' => 'A2', 'key' => 'main', 'position' => 'main']);
     }
 
-    /** @test */
+    #[Test]
     public function redirects_unique_is_site_scoped(): void
     {
         $siteA = Site::create(['name' => 'A', 'slug' => 'redir-a', 'status' => 'active']);
@@ -68,7 +69,7 @@ class SiteIdMenusRedirectsTest extends TestCase
         Redirect::create(['site_id' => $siteA->id, 'from_path' => '/old', 'to_path' => '/dup', 'code' => 301]);
     }
 
-    /** @test */
+    #[Test]
     public function existing_menu_data_belongs_to_default_site(): void
     {
         $this->seed();
@@ -77,7 +78,7 @@ class SiteIdMenusRedirectsTest extends TestCase
         $this->assertEquals(0, $nullCount, 'menus has NULL site_id');
     }
 
-    /** @test */
+    #[Test]
     public function model_site_relation_works(): void
     {
         $menu = Menu::create(['label' => 'Test', 'position' => 'main']);
@@ -89,7 +90,7 @@ class SiteIdMenusRedirectsTest extends TestCase
         $this->assertNotNull($redirect->site);
     }
 
-    /** @test */
+    #[Test]
     public function invalid_site_id_is_rejected_by_fk(): void
     {
         $this->expectException(\Illuminate\Database\QueryException::class);
@@ -99,14 +100,14 @@ class SiteIdMenusRedirectsTest extends TestCase
         ]);
     }
 
-    /** @test */
+    #[Test]
     public function foreign_key_check_has_no_violations(): void
     {
         $violations = DB::select('PRAGMA foreign_key_check');
         $this->assertCount(0, $violations);
     }
 
-    /** @test */
+    #[Test]
     public function original_indexes_are_preserved(): void
     {
         $menuIdx = DB::select('PRAGMA index_list(menus)');

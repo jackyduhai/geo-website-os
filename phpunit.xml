@@ -1,8 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!-- failOnPhpunitDeprecation 仅针对「PHPUnit 自身的弃用」（如文档注释元数据），与
+     PHP 代码触发的弃用（failOnDeprecation，当前未启用）是不同类别，不可混用。 -->
 <phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:noNamespaceSchemaLocation="vendor/phpunit/phpunit/phpunit.xsd"
          bootstrap="vendor/autoload.php"
          colors="true"
+         failOnPhpunitDeprecation="true"
 >
     <testsuites>
         <testsuite name="Unit">

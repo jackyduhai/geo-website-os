@@ -8,6 +8,7 @@ use App\Support\SiteResolver;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;
 use Tests\TestCase;
+use PHPUnit\Framework\Attributes\Test;
 
 /**
  * Phase 5.4-H：SiteResolver 与 HTTP 生命周期测试
@@ -28,7 +29,7 @@ class SiteResolverTest extends TestCase
         parent::tearDown();
     }
 
-    /** @test */
+    #[Test]
     public function resolves_default_site_when_no_domain_match(): void
     {
         // RefreshDatabase 自动创建 default site（来自 migration seed）
@@ -40,7 +41,7 @@ class SiteResolverTest extends TestCase
         $this->assertEquals('default', $site->slug);
     }
 
-    /** @test */
+    #[Test]
     public function resolves_site_by_domain(): void
     {
         // RefreshDatabase 自动创建 default site
@@ -58,7 +59,7 @@ class SiteResolverTest extends TestCase
         $this->assertEquals($site->id, $resolved->id);
     }
 
-    /** @test */
+    #[Test]
     public function resolves_site_by_slug(): void
     {
         $site = Site::create([
@@ -75,7 +76,7 @@ class SiteResolverTest extends TestCase
         $this->assertEquals($site->id, $resolved->id);
     }
 
-    /** @test */
+    #[Test]
     public function inactive_site_is_not_resolved(): void
     {
         $site = Site::create([
@@ -93,7 +94,7 @@ class SiteResolverTest extends TestCase
         $this->assertNotEquals($site->id, $resolved->id);
     }
 
-    /** @test */
+    #[Test]
     public function resolve_and_sets_context(): void
     {
         $request = Request::create('https://example.com', 'GET');
@@ -104,7 +105,7 @@ class SiteResolverTest extends TestCase
         $this->assertEquals($site->id, SiteContext::currentSiteId());
     }
 
-    /** @test */
+    #[Test]
     public function http_middleware_sets_and_clears_context(): void
     {
         $response = $this->get('/');
@@ -113,7 +114,7 @@ class SiteResolverTest extends TestCase
         $this->assertFalse(SiteContext::hasSite());
     }
 
-    /** @test */
+    #[Test]
     public function default_site_is_used_for_requests(): void
     {
         $response = $this->get('/');

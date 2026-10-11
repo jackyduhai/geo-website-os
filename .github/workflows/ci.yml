@@ -24,7 +24,7 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php }}
-          extensions: pdo_sqlite, mbstring, openssl, tokenizer, xml, ctype, json
+          extensions: pdo_sqlite, mbstring, openssl, tokenizer, xml, ctype, json, simplexml
           coverage: none
 
       - name: Get Composer cache directory
@@ -36,7 +36,7 @@ jobs:
         with:
           path: ${{ steps.composer-cache.outputs.dir }}
           key: ${{ runner.os }}-php-${{ matrix.php }}-${{ hashFiles('**/composer.lock') }}
-          restore-keys: ${{ runner.os }}-php-${{ matrix.php }}-
+          restore-keys: ${{ runner.os }}-php-
 
       - name: Validate composer.json
         run: composer validate --strict
@@ -62,9 +62,27 @@ jobs:
 
       - name: Run tests
         # Sequential execution only. The project does not ship brianium/paratest,
-        # and the 1225/6534 baseline is validated with the stock sequential runner;
+        # and the baseline is validated with the stock sequential runner;
         # do not switch to --parallel without adding and separately validating it.
-        run: php artisan test
+        # --log-junit emits machine-readable results consumed by the count gate
+        # and (for tags) by the release job; no counts are hardcoded anywhere.
+        run: php artisan test --log-junit=storage/logs/junit.xml
+
+      - name: Verify test baseline (count gate)
+        # Anti-regression gate: the JUnit counts must EXACTLY match
+        # scripts/audit/test-baseline.json (tests/assertions, zero failures/errors/skipped).
+        # This fails CI if tests are silently deleted, not discovered, or not run.
+        # When tests are intentionally added/removed: rerun the full suite, then
+        # deliberately update test-baseline.json — see the file header for the runbook.
+        run: php scripts/audit/verify-test-baseline.php --junit=storage/logs/junit.xml
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: storage/logs/junit.xml
+          retention-days: 7
+          if-no-files-found: error
 
       - name: Smoke test - HTTP
         run: |
@@ -89,8 +107,15 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.4'
-          extensions: pdo_sqlite, mbstring, openssl, tokenizer, xml, ctype, json
+          extensions: pdo_sqlite, mbstring, openssl, tokenizer, xml, ctype, json, simplexml
           coverage: none
+
+      - name: Download test results
+        # Counts come from the test job's verified JUnit XML, not from hardcoded values.
+        uses: actions/download-artifact@v4
+        with:
+          name: test-results
+          path: test-results
 
       - name: Install production dependencies
         run: composer install --no-dev --prefer-dist --no-interaction --no-progress
@@ -113,6 +138,16 @@ jobs:
           TAG_NAME="${GITHUB_REF_NAME}"
           CHECKSUM="$(sha256sum geo-os-${TAG_NAME}.zip | awk '{print $1}')"
           sha256sum geo-os-${TAG_NAME}.zip > geo-os-${TAG_NAME}.zip.sha256
+
+          # Parse the verified JUnit XML into counts (no hardcoded test numbers).
+          php scripts/audit/verify-test-baseline.php \
+            --junit=test-results/junit.xml --no-baseline --summary=test-summary.json
+          TESTS=$(jq -r '.tests' test-summary.json)
+          ASSERTIONS=$(jq -r '.assertions' test-summary.json)
+          FAILURES=$(jq -r '.failures' test-summary.json)
+          ERRORS=$(jq -r '.errors' test-summary.json)
+          SKIPPED=$(jq -r '.skipped' test-summary.json)
+
           cat > release-manifest.json <<EOF
           {
             "version": "${TAG_NAME}",
@@ -126,10 +161,11 @@ jobs:
             "ci_run_id": "${GITHUB_RUN_ID}",
             "artifact_checksum": "sha256:${CHECKSUM}",
             "test_results": {
-              "tests": 1225,
-              "assertions": 6534,
-              "failed": 0,
-              "skipped": 0
+              "tests": ${TESTS},
+              "assertions": ${ASSERTIONS},
+              "failed": ${FAILURES},
+              "errors": ${ERRORS},
+              "skipped": ${SKIPPED}
             },
             "security": {
               "composer_validate": "PASS",
@@ -138,6 +174,12 @@ jobs:
             }
           }
           EOF
+
+          # Fail the release if the actual suite had any failure/error/skipped.
+          if [ "${FAILURES}" != "0" ] || [ "${ERRORS}" != "0" ] || [ "${SKIPPED}" != "0" ]; then
+            echo "Release blocked: test suite reported failures/errors/skipped."
+            exit 1
+          fi
 
       - name: Upload release artifact
         uses: softprops/action-gh-release@v3
