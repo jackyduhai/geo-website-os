@@ -11,6 +11,7 @@ use App\Support\PageCache;
 use App\Support\Search\SearchEngineInterface;
 use App\Support\Search\SearchQuery;
 use App\Support\Search\SearchResults;
+use App\Support\Search\DatabaseLikeEngine;
 use App\Support\Search\SqliteFtsEngine;
 use App\Support\SiteContext;
 use Database\Seeders\DefaultSettingSeeder;
@@ -145,6 +146,16 @@ class SearchProductization18HTest extends TestCase
         Setting::set('site_supported_locales', ['zh-CN', 'en']);
         Catalog::flush();
         PageCache::flush();
+    }
+
+    /**
+     * 模拟「FTS5 不可用」：删除 FTS5 虚拟表（保留普通表 search_documents）。
+     * 此时 SqliteFtsEngine::isAvailable() 为 false，容器按真实绑定逻辑回退到
+     * DatabaseLikeEngine；setUp 已清 dirty，查询前 flushDirty 不会把 FTS 表重建回来。
+     */
+    private function disableFts(): void
+    {
+        DB::statement('DROP TABLE IF EXISTS search_index');
     }
 
     // ---------- A) 引擎选择 ----------
@@ -477,5 +488,119 @@ class SearchProductization18HTest extends TestCase
         $this->assertStringContainsString('Zinc-Rich Epoxy Primer ZP-100', strip_tags($c));
         $this->assertStringContainsString('<mark>Primer</mark>', $c);
         $this->assertStringContainsString('/en/products/epoxy-primer', $c);
+    }
+
+    // ---------- J) DatabaseLikeEngine 回退（无 FTS5）----------
+
+    public function test_fallback_engine_is_selected_when_fts5_unavailable(): void
+    {
+        $this->disableFts();
+
+        $engine = app(SearchEngineInterface::class);
+        $this->assertInstanceOf(DatabaseLikeEngine::class, $engine);
+        $this->assertSame('database-like', $engine->name());
+        // 作为对照：FTS 表确实不存在。
+        $this->assertFalse(
+            (bool) DB::selectOne("SELECT 1 AS ok FROM sqlite_master WHERE name='search_index'")
+        );
+    }
+
+    public function test_fallback_finds_matches_via_like(): void
+    {
+        $this->org();
+        $this->product('epoxy-primer', '环氧富锌底漆 ZP-100', '环氧富锌底漆', '工业防腐底漆');
+        $this->disableFts();
+
+        // 标题命中。
+        $r = $this->query('底漆');
+        $this->assertGreaterThanOrEqual(1, $r->total);
+        $this->assertStringContainsString('环氧富锌底漆', $r->items[0]->title);
+
+        // 正文命中（词只出现在 body）。
+        $this->assertSame(0, $this->query('不存在的词XYZ')->total);
+        $body = $this->query('工业防腐');
+        $this->assertGreaterThanOrEqual(1, $body->total);
+    }
+
+    public function test_fallback_title_hit_ranks_before_body_hit(): void
+    {
+        $this->org();
+        $this->product('epoxy-primer', '环氧富锌底漆 ZP-100', '环氧富锌底漆', '');
+        $this->product('polyurethane', '聚氨酯面漆 PC-200', '聚氨酯面漆', '本文介绍环氧类配套');
+        $this->disableFts();
+
+        $r = $this->query('环氧');
+        $this->assertGreaterThanOrEqual(2, $r->total);
+        // 标题命中（CASE WHEN title LIKE ... THEN 0）排在正文命中（THEN 2）之前。
+        $this->assertStringContainsString('环氧富锌底漆', $r->items[0]->title);
+    }
+
+    public function test_fallback_is_isolated_by_site_and_locale(): void
+    {
+        $this->bilingual();
+        $this->org(true);
+        $p = $this->product('epoxy-primer', '环氧富锌底漆 ZP-100', '环氧富锌底漆', '');
+        $p->createTranslation('en', [
+            'slug' => 'epoxy-primer',
+            'name' => 'Zinc-Rich Epoxy Primer ZP-100',
+            'summary' => 'Zinc-rich epoxy primer',
+            'description' => 'Anti-corrosion primer',
+        ]);
+        Catalog::flush();
+        PageCache::flush();
+        $this->disableFts();
+
+        // 语言隔离：英文能搜到 primer，搜不到中文「底漆」。
+        $this->assertGreaterThanOrEqual(1, $this->query('primer', 'en')->total);
+        $this->assertSame(0, $this->query('底漆', 'en')->total);
+        $this->assertGreaterThanOrEqual(1, $this->query('底漆', 'zh-CN')->total);
+    }
+
+    public function test_fallback_type_filter_and_db_pagination(): void
+    {
+        $this->org();
+        $this->product('p1', '防护底漆甲', '防护底漆甲', '');
+        $this->product('p2', '防护底漆乙', '防护底漆乙', '');
+        $this->product('p3', '防护底漆丙', '防护底漆丙', '');
+        $this->article('know-1', '底漆选型知识', '正文介绍底漆');
+        $this->disableFts();
+
+        // 类型过滤。
+        $onlyProducts = $this->query('底漆', 'zh-CN', ['product']);
+        $this->assertGreaterThanOrEqual(3, $onlyProducts->total);
+        foreach ($onlyProducts->items as $item) {
+            $this->assertSame('product', $item->kind);
+        }
+
+        // DB 层分页：total=3，每页 2。
+        $page1 = $this->query('防护底漆', 'zh-CN', ['product'], 1, 2);
+        $this->assertSame(3, $page1->total);
+        $this->assertCount(2, $page1->items);
+        $page2 = $this->query('防护底漆', 'zh-CN', ['product'], 2, 2);
+        $this->assertCount(1, $page2->items);
+    }
+
+    public function test_fallback_empty_term_returns_empty_results(): void
+    {
+        $this->org();
+        $this->product('epoxy-primer', '环氧富锌底漆 ZP-100', '环氧富锌底漆', '');
+        $this->disableFts();
+
+        $r = $this->query('');
+        $this->assertSame(0, $r->total);
+        $this->assertSame([], $r->items);
+    }
+
+    public function test_fallback_engine_serves_http_search(): void
+    {
+        $this->org();
+        $this->product('epoxy-primer', '环氧富锌底漆 ZP-100', '环氧富锌底漆', '');
+        $this->disableFts();
+
+        // 真实 HTTP 入口：FTS 不可用时，搜索页仍由回退引擎返回结果。
+        $r = $this->get('/search?q='.urlencode('底漆'));
+        $r->assertOk();
+        $this->assertStringContainsString('环氧富锌底漆 ZP-100', strip_tags($r->getContent()));
+        $this->assertStringContainsString('/products/epoxy-primer', $r->getContent());
     }
 }
