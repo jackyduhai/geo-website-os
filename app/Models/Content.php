@@ -149,15 +149,6 @@ class Content extends Model
 
     // ---------- GEO 辅助 ----------
 
-    /** 四层结构是否完整（门禁的第一道判据） */
-    public function hasAnswerStructure(): bool
-    {
-        return trim((string) $this->geo_conclusion) !== ''
-            && trim((string) $this->geo_explanation) !== ''
-            && trim((string) $this->geo_boundary) !== ''
-            && count($this->evidenceList()) >= 2;
-    }
-
     /** 证据列表，过滤空项 */
     public function evidenceList(): array
     {

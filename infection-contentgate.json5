@@ -1,0 +1,24 @@
+{
+    "timeout": 1700,
+    "source": {
+        "directories": [
+            "app"
+        ]
+    },
+    "phpUnit": {
+        "configDir": ".",
+        "customPath": "vendor/bin/phpunit"
+    },
+    "logs": {
+        "html": "storage/coverage/infection-contentgate.html",
+        "text": "storage/coverage/infection-contentgate.txt",
+        "summary": "storage/coverage/infection-contentgate-summary.log",
+        "json": "storage/coverage/infection-contentgate.json.log",
+        "perMutator": "storage/coverage/infection-contentgate-per-mutator.md"
+    },
+    "mutators": {
+        "@default": true
+    },
+    "testFramework": "phpunit",
+    "initialTestsPhpOptions": "-d memory_limit=2G -d extension=pcov -d pcov.directory=D:\\GEO-OS-rewrite\\redact-v1\\app"
+}
