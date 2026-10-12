@@ -31,6 +31,10 @@ dist/
 /storage/sites
 /storage/settings
 
+# 覆盖率与变异测试的本地测量产物（行/分支覆盖、Infection 工件）
+# 属于可重新生成的测量结果，不入库；证据副本存放于仓库外的 *-evidence 目录。
+/storage/coverage
+
 /_shots/
 /_ref/
 

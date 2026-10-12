@@ -94,6 +94,74 @@ jobs:
           curl -sf http://127.0.0.1:8000/llms.txt > /dev/null
           curl -sf http://127.0.0.1:8000/robots.txt > /dev/null
 
+  coverage:
+    # Branch/path coverage needs Xdebug (PCOV only reports lines). Runs on Linux
+    # with Xdebug's coverage mode. Source is limited to key business dirs
+    # (phpunit-cov-branch.xml) so Xdebug instruments only those files; this is a
+    # scoped measurement, not whole-repo coverage. Non-blocking for the release
+    # gate: it produces evidence, it does not weaken the exact count gate above.
+    runs-on: ubuntu-latest
+    needs: test
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP with Xdebug
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: pdo_sqlite, mbstring, openssl, tokenizer, xml, ctype, json, simplexml
+          coverage: xdebug
+
+      - name: Get Composer cache directory
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
+
+      - name: Cache Composer dependencies
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: ${{ runner.os }}-php-cov-${{ hashFiles('**/composer.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-php-
+            ${{ runner.os }}-php-cov-
+
+      - name: Install dependencies
+        run: composer install --prefer-dist --no-interaction --no-progress
+
+      - name: Verify Xdebug is loaded in coverage mode
+        run: |
+          php -m | grep -i xdebug
+          XDEBUG_MODE=coverage php -r 'echo xdebug_info();' >/dev/null 2>&1 || true
+
+      - name: Generate branch/path coverage
+        # --path-coverage is required: without it PHPUnit reports no branch
+        # metrics even with Xdebug. Text + XML + HTML are all retained.
+        env:
+          XDEBUG_MODE: coverage
+        run: |
+          php vendor/bin/phpunit -c phpunit-cov-branch.xml --path-coverage \
+            --coverage-text=storage/logs/branch-coverage.txt \
+            --coverage-xml=storage/logs/branch-xml \
+            --coverage-html=storage/logs/branch-html
+
+      - name: Show branch coverage summary
+        run: |
+          echo "===== Branch/Path coverage (scoped key dirs) ====="
+          cat storage/logs/branch-coverage.txt
+
+      - name: Upload branch coverage artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: branch-coverage
+          path: |
+            storage/logs/branch-coverage.txt
+            storage/logs/branch-xml
+            storage/logs/branch-html
+          retention-days: 30
+          if-no-files-found: error
+
   release:
     needs: test
     if: startsWith(github.ref, 'refs/tags/v')
