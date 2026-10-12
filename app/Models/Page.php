@@ -90,9 +90,4 @@ class Page extends Model
     {
         return $query->where('is_home', true);
     }
-
-    public function isPublished(): bool
-    {
-        return $this->status === self::STATUS_PUBLISHED;
-    }
 }

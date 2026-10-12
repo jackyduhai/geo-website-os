@@ -56,22 +56,6 @@ class PageBlock extends Model implements BlockContract
         return is_array($decoded) ? $decoded : [];
     }
 
-    /** 可增删条目（能力点/车间/流程）：[['icon'=>..,'title'=>..,'text'=>..], ...] */
-    public function items(): array
-    {
-        $items = $this->cfg()['items'] ?? [];
-
-        return is_array($items) ? array_values(array_filter($items, fn ($it) => is_array($it) && ! empty($it['title']))) : [];
-    }
-
-    /** 数据来源型区块手动指定的内容 ID（空则按来源栏目取最新） */
-    public function pickedIds(): array
-    {
-        $ids = $this->cfg()['ids'] ?? [];
-
-        return is_array($ids) ? array_values(array_map('intval', array_filter($ids))) : [];
-    }
-
     public function kind(): string
     {
         return config('home_blocks.types.' . $this->type . '.kind', 'simple');
