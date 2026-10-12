@@ -161,4 +161,42 @@ class ContentGateNegativeTest extends TestCase
             '与官方口径一致的电话不应产生警告，实际：' . json_encode($result['warnings'], JSON_UNESCAPED_UNICODE)
         );
     }
+
+    public function test_configured_min_evidence_threshold_is_enforced(): void
+    {
+        // 部署方将最低证据数提高到 3，但内容只有 2 条：门禁必须按配置阈值拒绝。
+        config(['geo.gate.min_evidence' => 3]);
+
+        $content = $this->makePassableContent([
+            'geo_evidence' => [
+                ['label' => '证据一', 'value' => '值一', 'source' => '来源一'],
+                ['label' => '证据二', 'value' => '值二', 'source' => '来源二'],
+            ],
+        ]);
+
+        $this->assertPublishRejectedWith($content, '至少需 3 条');
+    }
+
+    public function test_evidence_count_at_configured_threshold_passes(): void
+    {
+        // 阈值为 3 且恰好提供 3 条完整证据：应通过（边界相等）。
+        config(['geo.gate.min_evidence' => 3]);
+
+        $content = $this->makePassableContent([
+            'geo_evidence' => [
+                ['label' => '证据一', 'value' => '值一', 'source' => '来源一'],
+                ['label' => '证据二', 'value' => '值二', 'source' => '来源二'],
+                ['label' => '证据三', 'value' => '值三', 'source' => '来源三'],
+            ],
+        ]);
+
+        $result = app(ContentGate::class)->check($content);
+        $this->assertTrue($result['passed'], '恰好达到配置阈值应通过，错误：' . json_encode($result['errors'], JSON_UNESCAPED_UNICODE));
+    }
+
+    public function test_min_evidence_accessor_reflects_config(): void
+    {
+        config(['geo.gate.min_evidence' => 4]);
+        $this->assertSame(4, app(ContentGate::class)->minEvidence());
+    }
 }

@@ -89,8 +89,9 @@ class ContentGate
 
         // ---------- 2. 证据链 ----------
         $evidence = $c->evidenceList();
-        if (count($evidence) < 2) {
-            $errors[] = sprintf('证据不足：当前 %d 条，至少需 2 条（label + value + source）', count($evidence));
+        $minEvidence = $this->minEvidence();
+        if (count($evidence) < $minEvidence) {
+            $errors[] = sprintf('证据不足：当前 %d 条，至少需 %d 条（label + value + source）', count($evidence), $minEvidence);
         } else {
             foreach ($evidence as $i => $e) {
                 if (trim((string) ($e['source'] ?? '')) === '') {
