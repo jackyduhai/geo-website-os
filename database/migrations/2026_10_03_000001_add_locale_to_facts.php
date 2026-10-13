@@ -78,11 +78,12 @@ return new class extends Migration
         }
 
         Schema::table('facts', function (Blueprint $table): void {
-            $table->dropUnique(['site_id', 'key']);
-        });
-        Schema::table('facts', function (Blueprint $table): void {
+            // 先建新唯一（site_id 前缀，可支撑 site_id 外键），再删旧唯一
             $table->unique(['site_id', 'key', 'locale'], 'facts_site_key_locale_unique');
             $table->index('translation_group', 'facts_translation_group_index');
+        });
+        Schema::table('facts', function (Blueprint $table): void {
+            $table->dropUnique(['site_id', 'key']);
         });
     }
 
@@ -99,12 +100,13 @@ return new class extends Migration
         DB::table('facts')->where('locale', '!=', 'zh-CN')->delete();
 
         if (DB::connection()->getDriverName() !== 'sqlite') {
+            // 先建旧唯一（site_id 前缀，支撑外键），再删新唯一，最后删列
+            Schema::table('facts', function (Blueprint $table): void {
+                $table->unique(['site_id', 'key']);
+            });
             Schema::table('facts', function (Blueprint $table): void {
                 $table->dropUnique(['site_id', 'key', 'locale']);
                 $table->dropIndex('facts_translation_group_index');
-            });
-            Schema::table('facts', function (Blueprint $table): void {
-                $table->unique(['site_id', 'key']);
             });
             Schema::table('facts', function (Blueprint $table): void {
                 $table->dropColumn(['locale', 'translation_group']);

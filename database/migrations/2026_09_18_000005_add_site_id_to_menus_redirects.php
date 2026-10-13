@@ -1,5 +1,6 @@
 <?php
 
+use App\Support\MigrationPortability;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
@@ -17,7 +18,7 @@ return new class extends Migration
 
         // ---- menus: rebuild to add site_id + convert unique(key) to unique(site_id, key) ----
         if (Schema::hasTable('menus')) {
-            DB::statement('PRAGMA foreign_keys = OFF');
+            MigrationPortability::disableForeignKeyChecks();
 
             // Create new table
             Schema::create('menus_new', function (Blueprint $table) {
@@ -38,24 +39,28 @@ return new class extends Migration
             });
 
             // Copy data
-            DB::statement("INSERT INTO menus_new (id, position, parent_id, label, url, category_id, target, sort, is_active, created_at, updated_at, key, parent_key, site_id)
-                SELECT id, position, parent_id, label, url, category_id, target, sort, is_active, created_at, updated_at, key, parent_key, {$defaultSiteId} FROM menus");
+            $key = MigrationPortability::quote('key');
+            DB::statement("INSERT INTO menus_new (id, position, parent_id, label, url, category_id, target, sort, is_active, created_at, updated_at, {$key}, parent_key, site_id)
+                SELECT id, position, parent_id, label, url, category_id, target, sort, is_active, created_at, updated_at, {$key}, parent_key, {$defaultSiteId} FROM menus");
 
             // Drop old table
+            $incomingFks = MigrationPortability::dropReferencingForeignKeys('menus');
             Schema::drop('menus');
             Schema::rename('menus_new', 'menus');
+            MigrationPortability::restoreReferencingForeignKeys($incomingFks);
+            MigrationPortability::resetAutoIncrement('menus');
 
             // Recreate indexes
-            DB::statement('CREATE UNIQUE INDEX menus_key_unique ON menus (site_id, key)');
+            DB::statement("CREATE UNIQUE INDEX menus_key_unique ON menus (site_id, {$key})");
             DB::statement('CREATE INDEX menus_parent_key_is_active_index ON menus (parent_key, is_active)');
             DB::statement('CREATE INDEX menus_position_is_active_sort_index ON menus (position, is_active, sort)');
 
-            DB::statement('PRAGMA foreign_keys = ON');
+            MigrationPortability::enableForeignKeyChecks();
         }
 
         // ---- redirects: rebuild to add site_id + convert unique(from_path) to unique(site_id, from_path) ----
         if (Schema::hasTable('redirects')) {
-            DB::statement('PRAGMA foreign_keys = OFF');
+            MigrationPortability::disableForeignKeyChecks();
 
             Schema::create('redirects_new', function (Blueprint $table) {
                 $table->id();
@@ -75,10 +80,11 @@ return new class extends Migration
 
             Schema::drop('redirects');
             Schema::rename('redirects_new', 'redirects');
+            MigrationPortability::resetAutoIncrement('redirects');
 
             DB::statement('CREATE UNIQUE INDEX redirects_from_path_unique ON redirects (site_id, from_path)');
 
-            DB::statement('PRAGMA foreign_keys = ON');
+            MigrationPortability::enableForeignKeyChecks();
         }
     }
 
@@ -86,7 +92,7 @@ return new class extends Migration
     {
         // ---- rollback redirects ----
         if (Schema::hasTable('redirects')) {
-            DB::statement('PRAGMA foreign_keys = OFF');
+            MigrationPortability::disableForeignKeyChecks();
 
             Schema::create('redirects_old', function (Blueprint $table) {
                 $table->id();
@@ -106,12 +112,12 @@ return new class extends Migration
             Schema::rename('redirects_old', 'redirects');
             DB::statement('CREATE UNIQUE INDEX redirects_from_path_unique ON redirects (from_path)');
 
-            DB::statement('PRAGMA foreign_keys = ON');
+            MigrationPortability::enableForeignKeyChecks();
         }
 
         // ---- rollback menus ----
         if (Schema::hasTable('menus')) {
-            DB::statement('PRAGMA foreign_keys = OFF');
+            MigrationPortability::disableForeignKeyChecks();
 
             Schema::create('menus_old', function (Blueprint $table) {
                 $table->id();
@@ -129,17 +135,18 @@ return new class extends Migration
                 $table->string('parent_key')->nullable();
             });
 
-            DB::statement('INSERT INTO menus_old (id, position, parent_id, label, url, category_id, target, sort, is_active, created_at, updated_at, key, parent_key)
-                SELECT id, position, parent_id, label, url, category_id, target, sort, is_active, created_at, updated_at, key, parent_key FROM menus');
+            $key = MigrationPortability::quote('key');
+            DB::statement("INSERT INTO menus_old (id, position, parent_id, label, url, category_id, target, sort, is_active, created_at, updated_at, {$key}, parent_key)
+                SELECT id, position, parent_id, label, url, category_id, target, sort, is_active, created_at, updated_at, {$key}, parent_key FROM menus");
 
             Schema::drop('menus');
             Schema::rename('menus_old', 'menus');
 
-            DB::statement('CREATE UNIQUE INDEX menus_key_unique ON menus (key)');
+            DB::statement("CREATE UNIQUE INDEX menus_key_unique ON menus ({$key})");
             DB::statement('CREATE INDEX menus_parent_key_is_active_index ON menus (parent_key, is_active)');
             DB::statement('CREATE INDEX menus_position_is_active_sort_index ON menus (position, is_active, sort)');
 
-            DB::statement('PRAGMA foreign_keys = ON');
+            MigrationPortability::enableForeignKeyChecks();
         }
     }
 };

@@ -18,12 +18,12 @@ use Illuminate\Support\Str;
  *   contents slug 全局唯一              → (site_id,slug,locale)
  *   seo_metas 三类 partial unique       → 索引列加入 locale
  *
- * contents 的 slug/slot 唯一约束在 SQLite 中经历史 dropColumn 重建后是无法
- * DROP INDEX 的 sqlite_autoindex，故 contents 采用「建新表 → 拷数据 → 改名」重建。
+ * SQLite 下经历史 dropColumn 重建后无法 DROP INDEX 表级约束，故 contents 采用
+ * 「建新表 → 拷数据 → 改名」重建；MySQL / PostgreSQL 可直接 ALTER + 索引增删。
  */
 return new class extends Migration
 {
-    /** contents 重建后的列（不含 id）=> 类型定义。 */
+    /** contents 重建后的列（不含 id）=> SQLite 类型定义。 */
     private array $contentColumns = [
         'site_id'           => 'INTEGER NOT NULL',
         'type'              => "VARCHAR(255) NOT NULL DEFAULT 'article'",
@@ -63,6 +63,8 @@ return new class extends Migration
 
     public function up(): void
     {
+        $driver = DB::connection()->getDriverName();
+
         // ---------------- entities ----------------
         Schema::table('entities', function (Blueprint $table) {
             $table->string('locale', 16)->default('zh-CN');
@@ -73,67 +75,67 @@ return new class extends Migration
         });
         $this->backfillGroup('entities');
 
-        // ---------------- contents（表重建） ----------------
-        $this->rebuildContents();
+        // ---------------- contents ----------------
+        $this->rebuildContents($driver);
 
         // ---------------- seo_metas ----------------
         Schema::table('seo_metas', function (Blueprint $table) {
             $table->string('locale', 16)->default('zh-CN');
         });
 
-        DB::statement('DROP INDEX IF EXISTS sites_seo_meta_unique');
-        DB::statement('DROP INDEX IF EXISTS content_seo_meta_unique');
-        DB::statement('DROP INDEX IF EXISTS entity_seo_meta_unique');
-        DB::statement(
-            'CREATE UNIQUE INDEX sites_seo_meta_unique ON seo_metas(site_id, locale) '
-            . 'WHERE content_id IS NULL AND entity_id IS NULL'
-        );
-        DB::statement(
-            'CREATE UNIQUE INDEX content_seo_meta_unique ON seo_metas(site_id, content_id, locale) '
-            . 'WHERE content_id IS NOT NULL'
-        );
-        DB::statement(
-            'CREATE UNIQUE INDEX entity_seo_meta_unique ON seo_metas(site_id, entity_id, locale) '
-            . 'WHERE entity_id IS NOT NULL'
-        );
+        if ($driver === 'mysql') {
+            $this->rebuildSeoGuardsMysql(withLocale: true);
+        } else {
+            DB::statement('DROP INDEX IF EXISTS sites_seo_meta_unique');
+            DB::statement('DROP INDEX IF EXISTS content_seo_meta_unique');
+            DB::statement('DROP INDEX IF EXISTS entity_seo_meta_unique');
+            DB::statement(
+                'CREATE UNIQUE INDEX sites_seo_meta_unique ON seo_metas(site_id, locale) '
+                . 'WHERE content_id IS NULL AND entity_id IS NULL'
+            );
+            DB::statement(
+                'CREATE UNIQUE INDEX content_seo_meta_unique ON seo_metas(site_id, content_id, locale) '
+                . 'WHERE content_id IS NOT NULL'
+            );
+            DB::statement(
+                'CREATE UNIQUE INDEX entity_seo_meta_unique ON seo_metas(site_id, entity_id, locale) '
+                . 'WHERE entity_id IS NOT NULL'
+            );
+        }
     }
 
     public function down(): void
     {
-        // seo_metas
-        DB::statement('DROP INDEX IF EXISTS sites_seo_meta_unique');
-        DB::statement('DROP INDEX IF EXISTS content_seo_meta_unique');
-        DB::statement('DROP INDEX IF EXISTS entity_seo_meta_unique');
-        DB::statement(
-            'CREATE UNIQUE INDEX sites_seo_meta_unique ON seo_metas(site_id) '
-            . 'WHERE content_id IS NULL AND entity_id IS NULL'
-        );
-        DB::statement(
-            'CREATE UNIQUE INDEX content_seo_meta_unique ON seo_metas(site_id, content_id) '
-            . 'WHERE content_id IS NOT NULL'
-        );
-        DB::statement(
-            'CREATE UNIQUE INDEX entity_seo_meta_unique ON seo_metas(site_id, entity_id) '
-            . 'WHERE entity_id IS NOT NULL'
-        );
+        $driver = DB::connection()->getDriverName();
+
+        // ---------------- seo_metas ----------------
+        if ($driver === 'mysql') {
+            $this->rebuildSeoGuardsMysql(withLocale: false);
+        } else {
+            DB::statement('DROP INDEX IF EXISTS sites_seo_meta_unique');
+            DB::statement('DROP INDEX IF EXISTS content_seo_meta_unique');
+            DB::statement('DROP INDEX IF EXISTS entity_seo_meta_unique');
+            DB::statement(
+                'CREATE UNIQUE INDEX sites_seo_meta_unique ON seo_metas(site_id) '
+                . 'WHERE content_id IS NULL AND entity_id IS NULL'
+            );
+            DB::statement(
+                'CREATE UNIQUE INDEX content_seo_meta_unique ON seo_metas(site_id, content_id) '
+                . 'WHERE content_id IS NOT NULL'
+            );
+            DB::statement(
+                'CREATE UNIQUE INDEX entity_seo_meta_unique ON seo_metas(site_id, entity_id) '
+                . 'WHERE entity_id IS NOT NULL'
+            );
+        }
         Schema::table('seo_metas', function (Blueprint $table) {
             $table->dropColumn('locale');
         });
 
-        // contents：drop 新索引、去 locale/group、恢复 slug 全局唯一
-        //
-        // ⚠️ SQLite 下 `dropUnique('名字')` 对**表级**唯一约束无效（20G-8-B 实测）。
-        // 约束是 down 的直接产物：`2026_09_17_000002` 用 `->unique()` 在 contents 上
-        // 建出的是表级约束（sqlite_autoindex_contents_N，origin=u），
-        // 而本迁移 down 里的 `dropUnique('contents_slot_unique')` / `dropUnique(
-        // 'contents_site_slug_locale_unique')` 按名找的是**命名索引**，找不到 →
-        // 报错并中断回滚链（且 Laravel 会吞掉异常、退出码仍是 0，极难发现）。
-        //
-        // 修法：contents 的 down 走**显式重建表**（与 up 的 rebuildContents() 对称），
-        // 顺带把 up 里创建的命名索引先删掉（那些是 origin=c，可以按名 DROP）。
-        $this->downSqliteContents();
+        // ---------------- contents ----------------
+        $this->rollbackContents($driver);
 
-        // entities
+        // ---------------- entities ----------------
         Schema::table('entities', function (Blueprint $table) {
             $table->dropIndex('entities_translation_group_index');
             $table->dropUnique('entities_site_type_slug_locale_unique');
@@ -142,77 +144,75 @@ return new class extends Migration
         });
     }
 
-    /** contents 建新表（slug 无全局唯一）→ 拷数据 → 改名 → 建命名索引。 */
     /**
-     * contents 的 SQLite 回滚：显式重建表，去掉 locale / translation_group，
-     * 恢复「slug 全局唯一」的上游形态。
-     *
-     * 为什么必须重建而不能用 dropUnique（20G-8-B 实测）：
-     * 本迁移的 up() 是「建新表 → 改名」，建出的唯一约束是**表级**
-     * （`sqlite_autoindex_contents_N`，origin=u）。SQLite 不支持按名DROP 表级约束，
-     * 而 `dropUnique('contents_slot_unique')` 找的是命名索引 → 报错、回滚链中断。
-     *
-     * 与 20G-6 · C-16 同一个坑的另一个面：那次的教训是「CTAS 重建会丢约束」，
-     * 所以这里**显式写出完整列定义 + 主键 + 外键 + 索引**，不做 CTAS。
-     *
-     * 保留的列 = up() 之前的形态（即无 locale / 无 translation_group），
-     * 唯一约束恢复为 up() 之前的 UNIQUE(site_id, slug) / UNIQUE(site_id, slot)
-     * （实测确认；注意不是 UNIQUE(slug)——本库是多站点，同slug 可跨站重复）。
+     * MySQL：重建 seo_metas 的三个 partial-unique 等价生成列。
+     * withLocale=true 时生成列拼接 locale（本迁移 up 之后）；false 时不拼（回滚到 2026_09_19 形态）。
      */
-    private function downSqliteContents(): void
+    private function rebuildSeoGuardsMysql(bool $withLocale): void
     {
-        // 先删命名索引（origin=c，可按名 DROP）——顺序无所谓，
-        // 因为随后整表会被 DROP 掉。
-        DB::statement('DROP INDEX IF EXISTS contents_translation_group_index');
-        DB::statement('DROP INDEX IF EXISTS contents_site_slug_locale_unique');
-
-        DB::statement('PRAGMA foreign_keys = OFF');
-        Schema::dropIfExists('contents_down');
-
-        $colDefs = [];
-        foreach ($this->contentColumns as $name => $def) {
-            // 回滚目标：去掉 locale / translation_group
-            if ($name === 'locale' || $name === 'translation_group') {
-                continue;
-            }
-            $colDefs[] = '`'.$name.'` '.$def;
+        // 先删索引
+        foreach (['sites_seo_meta_unique', 'content_seo_meta_unique', 'entity_seo_meta_unique'] as $idx) {
+            DB::statement("DROP INDEX {$idx} ON seo_metas");
         }
-        $colDefs = array_merge(['id INTEGER PRIMARY KEY AUTOINCREMENT'], $colDefs);
-        $colDefs[] = 'FOREIGN KEY (`site_id`) REFERENCES `sites`(`id`) ON DELETE RESTRICT';
-        // 唯一约束：恢复**该迁移 up 之前**的形态 —— 实测为
-        //   UNIQUE(site_id, slug) + UNIQUE(site_id, slot)
-        // ⚠️ 不能写 `UNIQUE(slug)`：本库是**多站点**系统，同一 slug 会在
-        // 多个站点各有一行（多站隔离的基线设计）。写成 UNIQUE(slug) 后，
-        // 回滚时 `INSERT INTO contents_down SELECT ...` 遇到
-        // 「A 站中文页 + A 站英文页 slug 相同」就直接唯一约束冲突 →
-        // 回滚失败（20G-8-A 实测：有数据时 FAIL，空库时却通过）。
-        $colDefs[] = 'UNIQUE(site_id, slug)';
-        $colDefs[] = 'UNIQUE(site_id, slot)';
+        // 删旧生成列（2026_09_19 建的多列版本，以及本方法可能建过的拼接版本）
+        foreach ([
+            'site_guard_site',
+            'content_guard_site', 'content_guard_id',
+            'entity_guard_site', 'entity_guard_id',
+            'site_guard', 'content_guard', 'entity_guard',
+        ] as $col) {
+            if (Schema::hasColumn('seo_metas', $col)) {
+                DB::statement("ALTER TABLE seo_metas DROP COLUMN {$col}");
+            }
+        }
 
-        DB::statement('CREATE TABLE `contents_down` ('.implode(', ', $colDefs).')');
+        if ($withLocale) {
+            DB::statement("ALTER TABLE seo_metas ADD COLUMN site_guard VARCHAR(255) GENERATED ALWAYS AS (
+                IF(content_id IS NULL AND entity_id IS NULL, CONCAT(site_id, '|', locale), NULL)) VIRTUAL");
+            DB::statement("ALTER TABLE seo_metas ADD COLUMN content_guard VARCHAR(255) GENERATED ALWAYS AS (
+                IF(content_id IS NOT NULL, CONCAT(site_id, '|', content_id, '|', locale), NULL)) VIRTUAL");
+            DB::statement("ALTER TABLE seo_metas ADD COLUMN entity_guard VARCHAR(255) GENERATED ALWAYS AS (
+                IF(entity_id IS NOT NULL, CONCAT(site_id, '|', entity_id, '|', locale), NULL)) VIRTUAL");
+        } else {
+            DB::statement("ALTER TABLE seo_metas ADD COLUMN site_guard VARCHAR(255) GENERATED ALWAYS AS (
+                IF(content_id IS NULL AND entity_id IS NULL, site_id, NULL)) VIRTUAL");
+            DB::statement("ALTER TABLE seo_metas ADD COLUMN content_guard VARCHAR(255) GENERATED ALWAYS AS (
+                IF(content_id IS NOT NULL, CONCAT(site_id, '|', content_id), NULL)) VIRTUAL");
+            DB::statement("ALTER TABLE seo_metas ADD COLUMN entity_guard VARCHAR(255) GENERATED ALWAYS AS (
+                IF(entity_id IS NOT NULL, CONCAT(site_id, '|', entity_id), NULL)) VIRTUAL");
+        }
 
-        $keepCols = array_values(array_diff(
-            array_keys($this->contentColumns),
-            ['locale', 'translation_group']
-        ));
-        $selectList = implode(', ', array_map(fn ($c) => '`'.$c.'`', $keepCols));
-
-        DB::statement('INSERT INTO `contents_down` ('.$selectList.') SELECT '.$selectList.' FROM `contents`');
-
-        DB::statement('DROP TABLE contents');
-        DB::statement('ALTER TABLE contents_down RENAME TO contents');
-
-        // 重建索引（与 rebuildContents 对称）
-        DB::statement('CREATE INDEX contents_site_id_index ON contents(site_id)');
-        DB::statement('CREATE INDEX contents_status_published_at_index ON contents(status, published_at)');
-        DB::statement('CREATE INDEX contents_type_category_id_index ON contents(type, category_id)');
-        DB::statement('CREATE INDEX contents_category_id_group_id_index ON contents(category_id, group_id)');
-        DB::statement('CREATE INDEX contents_external_id_index ON contents(external_id)');
-
-        DB::statement('PRAGMA foreign_keys = ON');
+        DB::statement('CREATE UNIQUE INDEX sites_seo_meta_unique ON seo_metas(site_guard)');
+        DB::statement('CREATE UNIQUE INDEX content_seo_meta_unique ON seo_metas(content_guard)');
+        DB::statement('CREATE UNIQUE INDEX entity_seo_meta_unique ON seo_metas(entity_guard)');
     }
 
-    private function rebuildContents(): void
+    // ───────────────────────── contents: up ─────────────────────────
+
+    private function rebuildContents(string $driver): void
+    {
+        if ($driver === 'sqlite') {
+            $this->rebuildContentsSqlite();
+            return;
+        }
+
+        // MySQL / PostgreSQL：直接 ALTER 加列，先建后删以维持 site_id 外键索引
+        Schema::table('contents', function (Blueprint $table) {
+            $table->string('locale', 16)->default('zh-CN');
+            $table->string('translation_group', 36)->nullable();
+        });
+        Schema::table('contents', function (Blueprint $table) {
+            $table->unique(['site_id', 'slug', 'locale'], 'contents_site_slug_locale_unique');
+            $table->unique(['site_id', 'slot', 'locale'], 'contents_slot_locale_unique');
+            $table->index('translation_group', 'contents_translation_group_index');
+        });
+        Schema::table('contents', function (Blueprint $table) {
+            $table->dropUnique('contents_site_id_slug_unique');
+            $table->dropUnique('contents_site_id_slot_unique');
+        });
+    }
+
+    private function rebuildContentsSqlite(): void
     {
         $temp = 'contents_new';
 
@@ -247,18 +247,85 @@ return new class extends Migration
         DB::statement('DROP TABLE contents');
         DB::statement('ALTER TABLE '.$temp.' RENAME TO contents');
 
-        // 命名索引 / 唯一
         DB::statement(
             'CREATE UNIQUE INDEX contents_site_slug_locale_unique '
             . 'ON contents(site_id, slug, locale)'
         );
-        DB::statement('CREATE UNIQUE INDEX contents_slot_unique ON contents(slot)');
+        DB::statement('CREATE UNIQUE INDEX contents_slot_locale_unique ON contents(site_id, slot, locale)');
         DB::statement('CREATE INDEX contents_site_id_index ON contents(site_id)');
         DB::statement('CREATE INDEX contents_status_published_at_index ON contents(status, published_at)');
         DB::statement('CREATE INDEX contents_type_category_id_index ON contents(type, category_id)');
         DB::statement('CREATE INDEX contents_category_id_group_id_index ON contents(category_id, group_id)');
         DB::statement('CREATE INDEX contents_external_id_index ON contents(external_id)');
         DB::statement('CREATE INDEX contents_translation_group_index ON contents(translation_group)');
+    }
+
+    // ───────────────────────── contents: down ─────────────────────────
+
+    private function rollbackContents(string $driver): void
+    {
+        if ($driver === 'sqlite') {
+            $this->rollbackContentsSqlite();
+            return;
+        }
+
+        // 先建旧索引（维持 site_id 外键索引），再删新索引，最后删列
+        Schema::table('contents', function (Blueprint $table) {
+            $table->unique(['site_id', 'slug'], 'contents_site_id_slug_unique');
+            $table->unique(['site_id', 'slot'], 'contents_site_id_slot_unique');
+        });
+        Schema::table('contents', function (Blueprint $table) {
+            $table->dropIndex('contents_translation_group_index');
+            $table->dropUnique('contents_site_slug_locale_unique');
+            $table->dropUnique('contents_slot_locale_unique');
+        });
+        Schema::table('contents', function (Blueprint $table) {
+            $table->dropColumn(['translation_group', 'locale']);
+        });
+    }
+
+    private function rollbackContentsSqlite(): void
+    {
+        DB::statement('DROP INDEX IF EXISTS contents_translation_group_index');
+        DB::statement('DROP INDEX IF EXISTS contents_site_slug_locale_unique');
+        DB::statement('DROP INDEX IF EXISTS contents_slot_locale_unique');
+
+        DB::statement('PRAGMA foreign_keys = OFF');
+        Schema::dropIfExists('contents_down');
+
+        $colDefs = [];
+        foreach ($this->contentColumns as $name => $def) {
+            if ($name === 'locale' || $name === 'translation_group') {
+                continue;
+            }
+            $colDefs[] = '`'.$name.'` '.$def;
+        }
+        $colDefs = array_merge(['id INTEGER PRIMARY KEY AUTOINCREMENT'], $colDefs);
+        $colDefs[] = 'FOREIGN KEY (`site_id`) REFERENCES `sites`(`id`) ON DELETE RESTRICT';
+        // 多站点：恢复 UNIQUE(site_id, slug) + UNIQUE(site_id, slot)，不能写 UNIQUE(slug)。
+        $colDefs[] = 'UNIQUE(site_id, slug)';
+        $colDefs[] = 'UNIQUE(site_id, slot)';
+
+        DB::statement('CREATE TABLE `contents_down` ('.implode(', ', $colDefs).')');
+
+        $keepCols = array_values(array_diff(
+            array_keys($this->contentColumns),
+            ['locale', 'translation_group']
+        ));
+        $selectList = implode(', ', array_map(fn ($c) => '`'.$c.'`', $keepCols));
+
+        DB::statement('INSERT INTO `contents_down` ('.$selectList.') SELECT '.$selectList.' FROM `contents`');
+
+        DB::statement('DROP TABLE contents');
+        DB::statement('ALTER TABLE contents_down RENAME TO contents');
+
+        DB::statement('CREATE INDEX contents_site_id_index ON contents(site_id)');
+        DB::statement('CREATE INDEX contents_status_published_at_index ON contents(status, published_at)');
+        DB::statement('CREATE INDEX contents_type_category_id_index ON contents(type, category_id)');
+        DB::statement('CREATE INDEX contents_category_id_group_id_index ON contents(category_id, group_id)');
+        DB::statement('CREATE INDEX contents_external_id_index ON contents(external_id)');
+
+        DB::statement('PRAGMA foreign_keys = ON');
     }
 
     /** 给 entities 存量行回填 translation_group（升级库）；fresh 表空，无操作。 */

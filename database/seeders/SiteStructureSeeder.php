@@ -180,7 +180,7 @@ class SiteStructureSeeder extends Seeder
                 'key'       => $item['key'],
                 'label'     => '',        // 留空：仅作可见性开关，不提供文案
                 'url'       => '/',
-                'target'    => '_self',
+                'target'    => 0, // 0=同窗（_self）；menus.target 为 tinyInteger
                 'sort'      => 0,
                 'is_active' => false,
             ]);

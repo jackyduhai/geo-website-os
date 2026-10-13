@@ -1,244 +1,42 @@
 <?php
 
+use App\Support\MigrationPortability;
 use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 /**
- * Phase 5.4-D: Core tables site_id migration
+ * Phase 5.4-D: 为 5 张核心表增加 site_id，并将唯一约束改为站点范围。
  *
- * Rebuild 5 core tables with site_id + site-scoped unique constraints:
  * - contents: UNIQUE(slug) -> UNIQUE(site_id, slug), UNIQUE(slot) -> UNIQUE(site_id, slot)
  * - categories: UNIQUE(slug) -> UNIQUE(site_id, slug)
- * - groups: UNIQUE(category_id, slug) -> UNIQUE(site_id, category_id, slug), preserves FK category_id->categories
+ * - groups: UNIQUE(category_id, slug) -> UNIQUE(site_id, category_id, slug)
  * - facts: UNIQUE(key) -> UNIQUE(site_id, key)
  * - settings: UNIQUE(key) -> UNIQUE(site_id, key)
  *
- * Uses SQLite table rebuild (required for unique constraint changes).
- * Existing data is backfilled to site_id = 1 (default site).
+ * 采用 table rebuild（唯一约束变更所需）。全程使用 Schema Blueprint 与
+ * MigrationPortability，保证 MySQL / PostgreSQL / SQLite 可移植；不手写方言 DDL。
+ * 既有数据 site_id 回填为默认站点 1。
+ *
+ * 索引时机：所有索引（含 unique）都在 drop 旧表 + rename 之后再建。否则
+ * PostgreSQL 中索引名是 schema 级的，新表与旧表同名索引会冲突（42P07）。
  */
 return new class extends Migration
 {
-    private array $tables = [
-        'contents' => [
-            'columns' => [
-                'id'              => 'INTEGER PRIMARY KEY AUTOINCREMENT',
-                'site_id'         => 'INTEGER NOT NULL',
-                'type'            => "VARCHAR(255) NOT NULL DEFAULT 'article'",
-                'category_id'     => 'INTEGER',
-                'group_id'        => 'INTEGER',
-                'title'           => 'VARCHAR(255) NOT NULL',
-                'slug'            => 'VARCHAR(255) NOT NULL',
-                'summary'         => 'TEXT',
-                'cover_id'        => 'INTEGER',
-                'body'            => 'TEXT',
-                'status'          => "VARCHAR(255) NOT NULL DEFAULT 'draft'",
-                'published_at'    => 'DATETIME',
-                'geo_conclusion'  => 'TEXT',
-                'geo_explanation' => 'TEXT',
-                'geo_evidence'    => 'TEXT',
-                'geo_boundary'    => 'TEXT',
-                'geo_faq'         => 'TEXT',
-                'geo_key_facts'   => 'TEXT',
-                'fact_refs'       => 'TEXT',
-                'owner'           => 'VARCHAR(255)',
-                'reviewed_at'     => 'DATE',
-                'review_due'      => 'DATE',
-                'source_note'     => 'VARCHAR(255)',
-                'seo_title'       => 'VARCHAR(255)',
-                'seo_desc'        => 'VARCHAR(255)',
-                'canonical'       => 'VARCHAR(255)',
-                'og_image_id'     => 'INTEGER',
-                'noindex'         => "TINYINT(1) NOT NULL DEFAULT '0'",
-                'external_id'     => 'VARCHAR(255)',
-                'external_source' => 'VARCHAR(255)',
-                'synced_at'       => 'DATETIME',
-                'content_hash'    => 'VARCHAR(255)',
-                'created_at'      => 'DATETIME',
-                'updated_at'      => 'DATETIME',
-                'deleted_at'      => 'DATETIME',
-                'lock_manual'     => "TINYINT(1) NOT NULL DEFAULT '0'",
-                'slot'            => 'VARCHAR(255)',
-            ],
-            'unique' => [
-                'contents_site_id_slug_unique' => ['site_id', 'slug'],
-                'contents_site_id_slot_unique' => ['site_id', 'slot'],
-            ],
-            'fk' => [
-                'site_id' => ['sites', 'id', 'RESTRICT'],
-            ],
-            'indexes' => [
-                'contents_external_id_index'          => ['external_id'],
-                'contents_category_id_group_id_index' => ['category_id', 'group_id'],
-                'contents_type_category_id_index'     => ['type', 'category_id'],
-                'contents_status_published_at_index'  => ['status', 'published_at'],
-                'contents_site_id_index'              => ['site_id'],
-            ],
-        ],
-        'categories' => [
-            'columns' => [
-                'id'          => 'INTEGER PRIMARY KEY AUTOINCREMENT',
-                'site_id'     => 'INTEGER NOT NULL',
-                'parent_id'   => 'INTEGER',
-                'name'        => 'VARCHAR(255) NOT NULL',
-                'slug'        => 'VARCHAR(255) NOT NULL',
-                'type'        => "VARCHAR(255) NOT NULL DEFAULT 'list'",
-                'template'    => 'VARCHAR(255)',
-                'description' => 'TEXT',
-                'icon'        => 'VARCHAR(255)',
-                'sort'        => "INTEGER NOT NULL DEFAULT '0'",
-                'is_nav'      => "TINYINT(1) NOT NULL DEFAULT '1'",
-                'is_active'   => "TINYINT(1) NOT NULL DEFAULT '1'",
-                'seo_title'   => 'VARCHAR(255)',
-                'seo_desc'    => 'VARCHAR(255)',
-                'created_at'  => 'DATETIME',
-                'updated_at'  => 'DATETIME',
-            ],
-            'unique' => [
-                'categories_site_id_slug_unique' => ['site_id', 'slug'],
-            ],
-            'fk' => [
-                'site_id' => ['sites', 'id', 'RESTRICT'],
-            ],
-            'indexes' => [
-                'categories_is_nav_is_active_index' => ['is_nav', 'is_active'],
-                'categories_parent_id_sort_index'  => ['parent_id', 'sort'],
-                'categories_site_id_index'         => ['site_id'],
-            ],
-        ],
-        'groups' => [
-            'columns' => [
-                'id'          => 'INTEGER PRIMARY KEY AUTOINCREMENT',
-                'site_id'     => 'INTEGER NOT NULL',
-                'category_id' => 'INTEGER NOT NULL',
-                'name'        => 'VARCHAR(255) NOT NULL',
-                'slug'        => 'VARCHAR(255) NOT NULL',
-                'description' => 'TEXT',
-                'sort'        => "INTEGER NOT NULL DEFAULT '0'",
-                'is_active'   => "TINYINT(1) NOT NULL DEFAULT '1'",
-                'created_at'  => 'DATETIME',
-                'updated_at'  => 'DATETIME',
-            ],
-            'unique' => [
-                'groups_site_id_category_id_slug_unique' => ['site_id', 'category_id', 'slug'],
-            ],
-            'fk' => [
-                'site_id'     => ['sites', 'id', 'RESTRICT'],
-                'category_id' => ['categories', 'id', 'CASCADE'],
-            ],
-            'indexes' => [
-                'groups_category_id_sort_index' => ['category_id', 'sort'],
-                'groups_site_id_index'          => ['site_id'],
-            ],
-        ],
-        'facts' => [
-            'columns' => [
-                'id'          => 'INTEGER PRIMARY KEY AUTOINCREMENT',
-                'site_id'     => 'INTEGER NOT NULL',
-                'key'         => 'VARCHAR(255) NOT NULL',
-                'label'       => 'VARCHAR(255) NOT NULL',
-                'value'       => 'TEXT NOT NULL',
-                'group'       => 'VARCHAR(255)',
-                'source'      => 'VARCHAR(255)',
-                'owner'       => 'VARCHAR(255)',
-                'reviewed_at' => 'DATE',
-                'review_due'  => 'DATE',
-                'is_public'   => "TINYINT(1) NOT NULL DEFAULT '1'",
-                'sort'        => "INTEGER NOT NULL DEFAULT '0'",
-                'created_at'  => 'DATETIME',
-                'updated_at'  => 'DATETIME',
-            ],
-            'unique' => [
-                'facts_site_id_key_unique' => ['site_id', 'key'],
-            ],
-            'fk' => [
-                'site_id' => ['sites', 'id', 'RESTRICT'],
-            ],
-            'indexes' => [
-                'facts_review_due_index'  => ['review_due'],
-                'facts_group_sort_index'  => ['group', 'sort'],
-                'facts_site_id_index'     => ['site_id'],
-            ],
-        ],
-        'settings' => [
-            'columns' => [
-                'id'         => 'INTEGER PRIMARY KEY AUTOINCREMENT',
-                'site_id'    => 'INTEGER NOT NULL',
-                'key'        => 'VARCHAR(255) NOT NULL',
-                'value'      => 'TEXT',
-                'group'      => "VARCHAR(255) NOT NULL DEFAULT 'general'",
-                'label'      => 'VARCHAR(255)',
-                'type'       => "VARCHAR(255) NOT NULL DEFAULT 'text'",
-                'hint'       => 'TEXT',
-                'sort'       => "INTEGER NOT NULL DEFAULT '0'",
-                'created_at' => 'DATETIME',
-                'updated_at' => 'DATETIME',
-            ],
-            'unique' => [
-                'settings_site_id_key_unique' => ['site_id', 'key'],
-            ],
-            'fk' => [
-                'site_id' => ['sites', 'id', 'RESTRICT'],
-            ],
-            'indexes' => [
-                'settings_group_sort_index' => ['group', 'sort'],
-                'settings_site_id_index'    => ['site_id'],
-            ],
-        ],
-    ];
-
     public function up(): void
     {
-        // Temporarily disable FK checks for SQLite rebuild
-        DB::statement('PRAGMA foreign_keys = OFF');
+        MigrationPortability::disableForeignKeyChecks();
 
-        $defaultSiteId = 1;
+        $this->rebuildContents();
+        $this->rebuildCategories();
+        $this->rebuildGroups();
+        $this->rebuildFacts();
+        $this->rebuildSettings();
 
-        foreach ($this->tables as $table => $config) {
-            $tempTable = $table . '_new';
+        MigrationPortability::enableForeignKeyChecks();
 
-            // 1. Build column definitions
-            $colDefs = [];
-            foreach ($config['columns'] as $col => $def) {
-                $colDefs[] = "`$col` $def";
-            }
-
-            // 2. Add unique constraints
-            foreach ($config['unique'] as $ukName => $ukCols) {
-                $colList = implode(', ', array_map(fn($c) => "`$c`", $ukCols));
-                $colDefs[] = "UNIQUE($colList)";
-            }
-
-            // 3. Add foreign keys
-            foreach ($config['fk'] as $fkCol => $fkDef) {
-                [$fkTable, $fkId, $onDelete] = $fkDef;
-                $colDefs[] = "FOREIGN KEY (`$fkCol`) REFERENCES `$fkTable`(`$fkId`) ON DELETE $onDelete";
-            }
-
-            DB::statement("CREATE TABLE `$tempTable` (" . implode(', ', $colDefs) . ")");
-
-            // 4. Copy data with site_id = default site
-            $oldCols = array_filter(array_keys($config['columns']), fn($c) => $c !== 'site_id');
-            $colList = implode(', ', array_map(fn($c) => "`$c`", $oldCols));
-            DB::statement("INSERT INTO `$tempTable` (`site_id`, $colList) SELECT $defaultSiteId, $colList FROM `$table`");
-
-            // 5. Drop old table
-            DB::statement("DROP TABLE `$table`");
-
-            // 6. Rename new table
-            DB::statement("ALTER TABLE `$tempTable` RENAME TO `$table`");
-
-            // 7. Create non-unique indexes
-            foreach ($config['indexes'] as $idxName => $idxCols) {
-                $idxColList = implode(', ', array_map(fn($c) => "`$c`", $idxCols));
-                DB::statement("CREATE INDEX `$idxName` ON `$table` ($idxColList)");
-            }
-        }
-
-        // Re-enable FK checks
-        DB::statement('PRAGMA foreign_keys = ON');
-
-        // Verify no FK violations
-        $violations = DB::select('PRAGMA foreign_key_check');
+        $violations = MigrationPortability::foreignKeyViolations();
         if (count($violations) > 0) {
             throw new \RuntimeException('FK violations after migration: ' . json_encode($violations));
         }
@@ -246,63 +44,452 @@ return new class extends Migration
 
     public function down(): void
     {
-        DB::statement('PRAGMA foreign_keys = OFF');
+        MigrationPortability::disableForeignKeyChecks();
 
-        foreach ($this->tables as $table => $config) {
-            $tempTable = $table . '_old';
+        $this->rollbackContents();
+        $this->rollbackCategories();
+        $this->rollbackGroups();
+        $this->rollbackFacts();
+        $this->rollbackSettings();
 
-            // 1. Build old column definitions (without site_id)
-            $oldCols = array_filter($config['columns'], fn($c) => $c !== 'site_id', ARRAY_FILTER_USE_KEY);
-            $colDefs = [];
-            foreach ($oldCols as $col => $def) {
-                $colDefs[] = "`$col` $def";
-            }
+        MigrationPortability::enableForeignKeyChecks();
 
-            // 2. Add original unique constraints (without site_id)
-            foreach ($config['unique'] as $ukName => $ukCols) {
-                $origCols = array_filter($ukCols, fn($c) => $c !== 'site_id');
-                if (!empty($origCols)) {
-                    $colList = implode(', ', array_map(fn($c) => "`$c`", $origCols));
-                    $colDefs[] = "UNIQUE($colList)";
-                }
-            }
-
-            // 3. Add original FKs (without site_id)
-            foreach ($config['fk'] as $fkCol => $fkDef) {
-                if ($fkCol === 'site_id') {
-                    continue;
-                }
-                [$fkTable, $fkId, $onDelete] = $fkDef;
-                $colDefs[] = "FOREIGN KEY (`$fkCol`) REFERENCES `$fkTable`(`$fkId`) ON DELETE $onDelete";
-            }
-
-            DB::statement("CREATE TABLE `$tempTable` (" . implode(', ', $colDefs) . ")");
-
-            // 4. Copy data (exclude site_id)
-            $colList = implode(', ', array_map(fn($c) => "`$c`", array_keys($oldCols)));
-            DB::statement("INSERT INTO `$tempTable` ($colList) SELECT $colList FROM `$table`");
-
-            // 5. Drop current table
-            DB::statement("DROP TABLE `$table`");
-
-            // 6. Rename
-            DB::statement("ALTER TABLE `$tempTable` RENAME TO `$table`");
-
-            // 7. Create original indexes (exclude site_id indexes)
-            foreach ($config['indexes'] as $idxName => $idxCols) {
-                if (in_array('site_id', $idxCols)) {
-                    continue;
-                }
-                $idxColList = implode(', ', array_map(fn($c) => "`$c`", $idxCols));
-                DB::statement("CREATE INDEX `$idxName` ON `$table` ($idxColList)");
-            }
-        }
-
-        DB::statement('PRAGMA foreign_keys = ON');
-
-        $violations = DB::select('PRAGMA foreign_key_check');
+        $violations = MigrationPortability::foreignKeyViolations();
         if (count($violations) > 0) {
             throw new \RuntimeException('FK violations after rollback: ' . json_encode($violations));
         }
+    }
+
+    // ── contents ───────────────────────────────────────────────────
+
+    private function contentsColumns(Blueprint $table): void
+    {
+        $table->id();
+        $table->foreignId('site_id')->constrained('sites')->restrictOnDelete();
+        $table->string('type')->default('article');
+        $table->unsignedBigInteger('category_id')->nullable();
+        $table->unsignedBigInteger('group_id')->nullable();
+        $table->string('title');
+        $table->string('slug');
+        $table->text('summary')->nullable();
+        $table->unsignedBigInteger('cover_id')->nullable();
+        $table->text('body')->nullable();
+        $table->string('status')->default('draft');
+        $table->timestamp('published_at')->nullable();
+        $table->text('geo_conclusion')->nullable();
+        $table->text('geo_explanation')->nullable();
+        $table->text('geo_evidence')->nullable();
+        $table->text('geo_boundary')->nullable();
+        $table->text('geo_faq')->nullable();
+        $table->text('geo_key_facts')->nullable();
+        $table->text('fact_refs')->nullable();
+        $table->string('owner')->nullable();
+        $table->date('reviewed_at')->nullable();
+        $table->date('review_due')->nullable();
+        $table->string('source_note')->nullable();
+        $table->string('seo_title')->nullable();
+        $table->string('seo_desc')->nullable();
+        $table->string('canonical')->nullable();
+        $table->unsignedBigInteger('og_image_id')->nullable();
+        $table->boolean('noindex')->default(false);
+        $table->string('external_id')->nullable();
+        $table->string('external_source')->nullable();
+        $table->timestamp('synced_at')->nullable();
+        $table->string('content_hash')->nullable();
+        $table->boolean('lock_manual')->default(false);
+        $table->string('slot')->nullable();
+        $table->timestamps();
+        $table->softDeletes();
+    }
+
+    private function contentsIndexes(Blueprint $table): void
+    {
+        $table->unique(['site_id', 'slug'], 'contents_site_id_slug_unique');
+        $table->unique(['site_id', 'slot'], 'contents_site_id_slot_unique');
+        $table->index('external_id', 'contents_external_id_index');
+        $table->index(['category_id', 'group_id'], 'contents_category_id_group_id_index');
+        $table->index(['type', 'category_id'], 'contents_type_category_id_index');
+        $table->index(['status', 'published_at'], 'contents_status_published_at_index');
+    }
+
+    private function rebuildContents(): void
+    {
+        Schema::create('contents_new', function (Blueprint $table) {
+            $this->contentsColumns($table);
+        });
+
+        DB::statement('INSERT INTO contents_new
+            (site_id, id, type, category_id, group_id, title, slug, summary, cover_id, body, status,
+             published_at, geo_conclusion, geo_explanation, geo_evidence, geo_boundary, geo_faq,
+             geo_key_facts, fact_refs, owner, reviewed_at, review_due, source_note, seo_title, seo_desc,
+             canonical, og_image_id, noindex, external_id, external_source, synced_at, content_hash,
+             lock_manual, slot, created_at, updated_at, deleted_at)
+            SELECT 1, id, type, category_id, group_id, title, slug, summary, cover_id, body, status,
+             published_at, geo_conclusion, geo_explanation, geo_evidence, geo_boundary, geo_faq,
+             geo_key_facts, fact_refs, owner, reviewed_at, review_due, source_note, seo_title, seo_desc,
+             canonical, og_image_id, noindex, external_id, external_source, synced_at, content_hash,
+             lock_manual, slot, created_at, updated_at, deleted_at
+            FROM contents');
+
+        $incomingFks = MigrationPortability::dropReferencingForeignKeys('contents');
+        Schema::drop('contents');
+        Schema::rename('contents_new', 'contents');
+        MigrationPortability::restoreReferencingForeignKeys($incomingFks);
+        MigrationPortability::resetAutoIncrement('contents');
+
+        Schema::table('contents', function (Blueprint $table) {
+            $this->contentsIndexes($table);
+        });
+    }
+
+    private function rollbackContents(): void
+    {
+        Schema::create('contents_old', function (Blueprint $table) {
+            $table->id();
+            $table->string('type')->default('article');
+            $table->unsignedBigInteger('category_id')->nullable();
+            $table->unsignedBigInteger('group_id')->nullable();
+            $table->string('title');
+            $table->string('slug');
+            $table->text('summary')->nullable();
+            $table->unsignedBigInteger('cover_id')->nullable();
+            $table->text('body')->nullable();
+            $table->string('status')->default('draft');
+            $table->timestamp('published_at')->nullable();
+            $table->text('geo_conclusion')->nullable();
+            $table->text('geo_explanation')->nullable();
+            $table->text('geo_evidence')->nullable();
+            $table->text('geo_boundary')->nullable();
+            $table->text('geo_faq')->nullable();
+            $table->text('geo_key_facts')->nullable();
+            $table->text('fact_refs')->nullable();
+            $table->string('owner')->nullable();
+            $table->date('reviewed_at')->nullable();
+            $table->date('review_due')->nullable();
+            $table->string('source_note')->nullable();
+            $table->string('seo_title')->nullable();
+            $table->string('seo_desc')->nullable();
+            $table->string('canonical')->nullable();
+            $table->unsignedBigInteger('og_image_id')->nullable();
+            $table->boolean('noindex')->default(false);
+            $table->string('external_id')->nullable();
+            $table->string('external_source')->nullable();
+            $table->timestamp('synced_at')->nullable();
+            $table->string('content_hash')->nullable();
+            $table->boolean('lock_manual')->default(false);
+            $table->string('slot')->nullable();
+            $table->timestamps();
+            $table->softDeletes();
+        });
+
+        DB::statement('INSERT INTO contents_old
+            (id, type, category_id, group_id, title, slug, summary, cover_id, body, status,
+             published_at, geo_conclusion, geo_explanation, geo_evidence, geo_boundary, geo_faq,
+             geo_key_facts, fact_refs, owner, reviewed_at, review_due, source_note, seo_title, seo_desc,
+             canonical, og_image_id, noindex, external_id, external_source, synced_at, content_hash,
+             lock_manual, slot, created_at, updated_at, deleted_at)
+            SELECT id, type, category_id, group_id, title, slug, summary, cover_id, body, status,
+             published_at, geo_conclusion, geo_explanation, geo_evidence, geo_boundary, geo_faq,
+             geo_key_facts, fact_refs, owner, reviewed_at, review_due, source_note, seo_title, seo_desc,
+             canonical, og_image_id, noindex, external_id, external_source, synced_at, content_hash,
+             lock_manual, slot, created_at, updated_at, deleted_at
+            FROM contents');
+
+        Schema::drop('contents');
+        Schema::rename('contents_old', 'contents');
+
+        // 回滚后恢复旧形态索引（名称由 Laravel 自动生成，旧表原索引随 drop 已删除）。
+        Schema::table('contents', function (Blueprint $table) {
+            $table->unique('slug');
+            $table->unique('slot');
+            $table->index('external_id');
+            $table->index(['category_id', 'group_id']);
+            $table->index(['type', 'category_id']);
+            $table->index(['status', 'published_at']);
+        });
+    }
+
+    // ── categories ─────────────────────────────────────────────────
+
+    private function rebuildCategories(): void
+    {
+        Schema::create('categories_new', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('site_id')->constrained('sites')->restrictOnDelete();
+            $table->unsignedBigInteger('parent_id')->nullable();
+            $table->string('name');
+            $table->string('slug');
+            $table->string('type')->default('list');
+            $table->string('template')->nullable();
+            $table->text('description')->nullable();
+            $table->string('icon')->nullable();
+            $table->unsignedInteger('sort')->default(0);
+            $table->boolean('is_nav')->default(true);
+            $table->boolean('is_active')->default(true);
+            $table->string('seo_title')->nullable();
+            $table->string('seo_desc')->nullable();
+            $table->timestamps();
+        });
+
+        DB::statement('INSERT INTO categories_new
+            (site_id, id, parent_id, name, slug, type, template, description, icon, sort,
+             is_nav, is_active, seo_title, seo_desc, created_at, updated_at)
+            SELECT 1, id, parent_id, name, slug, type, template, description, icon, sort,
+             is_nav, is_active, seo_title, seo_desc, created_at, updated_at
+            FROM categories');
+
+        $incomingFks = MigrationPortability::dropReferencingForeignKeys('categories');
+        Schema::drop('categories');
+        Schema::rename('categories_new', 'categories');
+        MigrationPortability::restoreReferencingForeignKeys($incomingFks);
+        MigrationPortability::resetAutoIncrement('categories');
+
+        Schema::table('categories', function (Blueprint $table) {
+            $table->unique(['site_id', 'slug'], 'categories_site_id_slug_unique');
+            $table->index(['is_nav', 'is_active'], 'categories_is_nav_is_active_index');
+            $table->index(['parent_id', 'sort'], 'categories_parent_id_sort_index');
+        });
+    }
+
+    private function rollbackCategories(): void
+    {
+        Schema::create('categories_old', function (Blueprint $table) {
+            $table->id();
+            $table->unsignedBigInteger('parent_id')->nullable();
+            $table->string('name');
+            $table->string('slug');
+            $table->string('type')->default('list');
+            $table->string('template')->nullable();
+            $table->text('description')->nullable();
+            $table->string('icon')->nullable();
+            $table->unsignedInteger('sort')->default(0);
+            $table->boolean('is_nav')->default(true);
+            $table->boolean('is_active')->default(true);
+            $table->string('seo_title')->nullable();
+            $table->string('seo_desc')->nullable();
+            $table->timestamps();
+        });
+
+        DB::statement('INSERT INTO categories_old
+            (id, parent_id, name, slug, type, template, description, icon, sort,
+             is_nav, is_active, seo_title, seo_desc, created_at, updated_at)
+            SELECT id, parent_id, name, slug, type, template, description, icon, sort,
+             is_nav, is_active, seo_title, seo_desc, created_at, updated_at
+            FROM categories');
+
+        Schema::drop('categories');
+        Schema::rename('categories_old', 'categories');
+
+        Schema::table('categories', function (Blueprint $table) {
+            $table->unique('slug');
+            $table->index(['is_nav', 'is_active']);
+            $table->index(['parent_id', 'sort']);
+        });
+    }
+
+    // ── groups ─────────────────────────────────────────────────────
+
+    private function rebuildGroups(): void
+    {
+        $groupsTable = MigrationPortability::quote('groups');
+        Schema::create('groups_new', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('site_id')->constrained('sites')->restrictOnDelete();
+            $table->foreignId('category_id')->constrained('categories')->cascadeOnDelete();
+            $table->string('name');
+            $table->string('slug');
+            $table->text('description')->nullable();
+            $table->unsignedInteger('sort')->default(0);
+            $table->boolean('is_active')->default(true);
+            $table->timestamps();
+        });
+
+        DB::statement("INSERT INTO groups_new
+            (site_id, id, category_id, name, slug, description, sort, is_active, created_at, updated_at)
+            SELECT 1, id, category_id, name, slug, description, sort, is_active, created_at, updated_at
+            FROM {$groupsTable}");
+
+        $incomingFks = MigrationPortability::dropReferencingForeignKeys('groups');
+        Schema::drop('groups');
+        Schema::rename('groups_new', 'groups');
+        MigrationPortability::restoreReferencingForeignKeys($incomingFks);
+        MigrationPortability::resetAutoIncrement('groups');
+
+        Schema::table('groups', function (Blueprint $table) {
+            $table->unique(['site_id', 'category_id', 'slug'], 'groups_site_category_slug_unique');
+            $table->index(['category_id', 'sort'], 'groups_category_id_sort_index');
+        });
+    }
+
+    private function rollbackGroups(): void
+    {
+        $groupsTable = MigrationPortability::quote('groups');
+        Schema::create('groups_old', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('category_id')->constrained('categories')->cascadeOnDelete();
+            $table->string('name');
+            $table->string('slug');
+            $table->text('description')->nullable();
+            $table->unsignedInteger('sort')->default(0);
+            $table->boolean('is_active')->default(true);
+            $table->timestamps();
+        });
+
+        DB::statement("INSERT INTO groups_old
+            (id, category_id, name, slug, description, sort, is_active, created_at, updated_at)
+            SELECT id, category_id, name, slug, description, sort, is_active, created_at, updated_at
+            FROM {$groupsTable}");
+
+        Schema::drop('groups');
+        Schema::rename('groups_old', 'groups');
+
+        Schema::table('groups', function (Blueprint $table) {
+            $table->unique(['category_id', 'slug']);
+            $table->index(['category_id', 'sort']);
+        });
+    }
+
+    // ── facts ──────────────────────────────────────────────────────
+
+    private function rebuildFacts(): void
+    {
+        $key = MigrationPortability::quote('key');
+        $group = MigrationPortability::quote('group');
+        Schema::create('facts_new', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('site_id')->constrained('sites')->restrictOnDelete();
+            $table->string('key');
+            $table->string('label');
+            $table->text('value');
+            $table->string('group')->nullable();
+            $table->string('source')->nullable();
+            $table->string('owner')->nullable();
+            $table->date('reviewed_at')->nullable();
+            $table->date('review_due')->nullable();
+            $table->boolean('is_public')->default(true);
+            $table->unsignedInteger('sort')->default(0);
+            $table->timestamps();
+        });
+
+        DB::statement("INSERT INTO facts_new
+            (site_id, id, {$key}, label, value, {$group}, source, owner, reviewed_at, review_due,
+             is_public, sort, created_at, updated_at)
+            SELECT 1, id, {$key}, label, value, {$group}, source, owner, reviewed_at, review_due,
+             is_public, sort, created_at, updated_at
+            FROM facts");
+
+        $incomingFks = MigrationPortability::dropReferencingForeignKeys('facts');
+        Schema::drop('facts');
+        Schema::rename('facts_new', 'facts');
+        MigrationPortability::restoreReferencingForeignKeys($incomingFks);
+        MigrationPortability::resetAutoIncrement('facts');
+
+        Schema::table('facts', function (Blueprint $table) {
+            $table->unique(['site_id', 'key'], 'facts_site_id_key_unique');
+            $table->index('review_due', 'facts_review_due_index');
+            $table->index(['group', 'sort'], 'facts_group_sort_index');
+        });
+    }
+
+    private function rollbackFacts(): void
+    {
+        $key = MigrationPortability::quote('key');
+        $group = MigrationPortability::quote('group');
+        Schema::create('facts_old', function (Blueprint $table) {
+            $table->id();
+            $table->string('key');
+            $table->string('label');
+            $table->text('value');
+            $table->string('group')->nullable();
+            $table->string('source')->nullable();
+            $table->string('owner')->nullable();
+            $table->date('reviewed_at')->nullable();
+            $table->date('review_due')->nullable();
+            $table->boolean('is_public')->default(true);
+            $table->unsignedInteger('sort')->default(0);
+            $table->timestamps();
+        });
+
+        DB::statement("INSERT INTO facts_old
+            (id, {$key}, label, value, {$group}, source, owner, reviewed_at, review_due,
+             is_public, sort, created_at, updated_at)
+            SELECT id, {$key}, label, value, {$group}, source, owner, reviewed_at, review_due,
+             is_public, sort, created_at, updated_at
+            FROM facts");
+
+        Schema::drop('facts');
+        Schema::rename('facts_old', 'facts');
+
+        Schema::table('facts', function (Blueprint $table) {
+            $table->unique('key');
+            $table->index('review_due');
+            $table->index(['group', 'sort']);
+        });
+    }
+
+    // ── settings ───────────────────────────────────────────────────
+
+    private function rebuildSettings(): void
+    {
+        $key = MigrationPortability::quote('key');
+        $group = MigrationPortability::quote('group');
+        Schema::create('settings_new', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('site_id')->constrained('sites')->restrictOnDelete();
+            $table->string('key');
+            $table->json('value')->nullable();
+            $table->string('group')->default('general');
+            $table->string('label')->nullable();
+            $table->string('type')->default('text');
+            $table->text('hint')->nullable();
+            $table->unsignedInteger('sort')->default(0);
+            $table->timestamps();
+        });
+
+        DB::statement("INSERT INTO settings_new
+            (site_id, id, {$key}, value, {$group}, label, type, hint, sort, created_at, updated_at)
+            SELECT 1, id, {$key}, value, {$group}, label, type, hint, sort, created_at, updated_at
+            FROM settings");
+
+        $incomingFks = MigrationPortability::dropReferencingForeignKeys('settings');
+        Schema::drop('settings');
+        Schema::rename('settings_new', 'settings');
+        MigrationPortability::restoreReferencingForeignKeys($incomingFks);
+        MigrationPortability::resetAutoIncrement('settings');
+
+        Schema::table('settings', function (Blueprint $table) {
+            $table->unique(['site_id', 'key'], 'settings_site_id_key_unique');
+            $table->index(['group', 'sort'], 'settings_group_sort_index');
+        });
+    }
+
+    private function rollbackSettings(): void
+    {
+        $key = MigrationPortability::quote('key');
+        $group = MigrationPortability::quote('group');
+        Schema::create('settings_old', function (Blueprint $table) {
+            $table->id();
+            $table->string('key');
+            $table->json('value')->nullable();
+            $table->string('group')->default('general');
+            $table->string('label')->nullable();
+            $table->string('type')->default('text');
+            $table->text('hint')->nullable();
+            $table->unsignedInteger('sort')->default(0);
+            $table->timestamps();
+        });
+
+        DB::statement("INSERT INTO settings_old
+            (id, {$key}, value, {$group}, label, type, hint, sort, created_at, updated_at)
+            SELECT id, {$key}, value, {$group}, label, type, hint, sort, created_at, updated_at
+            FROM settings");
+
+        Schema::drop('settings');
+        Schema::rename('settings_old', 'settings');
+
+        Schema::table('settings', function (Blueprint $table) {
+            $table->unique('key');
+            $table->index(['group', 'sort']);
+        });
     }
 };

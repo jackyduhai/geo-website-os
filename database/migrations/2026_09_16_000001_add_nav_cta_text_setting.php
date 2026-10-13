@@ -18,7 +18,10 @@ return new class extends Migration
         if (! $exists) {
             DB::table('settings')->insert([
                 'key'       => 'nav_cta_text',
-                'value'     => '获取产品方案',
+                // value 为 JSON 列（MySQL json / PostgreSQL jsonb）：经查询构造器写入需
+                // 显式 JSON 编码；模型 Setting 因有 'value'=>'json' cast 会自动编码。
+                // 否则 MySQL 报 3140 Invalid JSON text（SQLite 不校验，故此前未暴露）。
+                'value'     => json_encode('获取产品方案', JSON_UNESCAPED_UNICODE),
                 'group'     => 'general',
                 'label'     => '主 CTA 按钮文案',
                 'type'      => 'text',
