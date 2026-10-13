@@ -71,7 +71,17 @@ return new class extends Migration
             ->update(['deleted_at' => null]);
 
         if (Schema::hasColumn('contents', 'slot')) {
-            $this->downSqliteSlot();
+            $driver = DB::connection()->getDriverName();
+
+            if ($driver === 'sqlite') {
+                $this->downSqliteSlot();
+            } else {
+                // MySQL / PostgreSQL：直接删 slot 唯一索引与列，无需表重建。
+                Schema::table('contents', function (Blueprint $table) {
+                    $table->dropUnique('contents_slot_unique');
+                    $table->dropColumn('slot');
+                });
+            }
         }
 
         $this->forgetCaches();

@@ -78,8 +78,10 @@ return new class extends Migration
         }
 
         Schema::table('facts', function (Blueprint $table): void {
-            // 先建新唯一（site_id 前缀，可支撑 site_id 外键），再删旧唯一
-            $table->unique(['site_id', 'key', 'locale'], 'facts_site_key_locale_unique');
+            // 先建新唯一（site_id 前缀，可支撑 site_id 外键），再删旧唯一。
+            // 不指定显式名称：使用 Laravel 按列名推导的 facts_site_id_key_locale_unique，
+            // 与 down() 按列名 dropUnique 推导的名称保持一致。
+            $table->unique(['site_id', 'key', 'locale']);
             $table->index('translation_group', 'facts_translation_group_index');
         });
         Schema::table('facts', function (Blueprint $table): void {

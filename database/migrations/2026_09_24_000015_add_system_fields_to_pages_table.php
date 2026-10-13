@@ -48,10 +48,11 @@ return new class extends Migration
             if (Schema::hasColumn('pages', 'system_key_guard')) {
                 DB::statement('ALTER TABLE pages DROP COLUMN system_key_guard');
             }
+            DB::statement('DROP INDEX pages_system_index ON pages');
         } else {
             DB::statement('DROP INDEX IF EXISTS pages_site_systemkey_locale_unique');
+            DB::statement('DROP INDEX IF EXISTS pages_system_index');
         }
-        DB::statement('DROP INDEX IF EXISTS pages_system_index');
 
         Schema::table('pages', function (Blueprint $table) {
             $table->dropColumn(['is_system', 'system_key']);

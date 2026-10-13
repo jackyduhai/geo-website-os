@@ -136,6 +136,8 @@ return new class extends Migration
         $this->rollbackContents($driver);
 
         // ---------------- entities ----------------
+        // 同 contents：恢复非 locale 的 UNIQUE(site_id, type, slug) 前，删除非默认语言行。
+        DB::table('entities')->where('locale', '!=', 'zh-CN')->delete();
         Schema::table('entities', function (Blueprint $table) {
             $table->dropIndex('entities_translation_group_index');
             $table->dropUnique('entities_site_type_slug_locale_unique');
@@ -268,6 +270,11 @@ return new class extends Migration
             $this->rollbackContentsSqlite();
             return;
         }
+
+        // 回滚前清理非默认语言行：恢复后的 UNIQUE(site_id, slug) / UNIQUE(site_id, slot)
+        // 无法容纳同一 slug/slot 的多语言行。仅保留默认语言（zh-CN）行，与改造前
+        // 「一条内容一个 slug」的语义一致。
+        DB::table('contents')->where('locale', '!=', 'zh-CN')->delete();
 
         // 先建旧索引（维持 site_id 外键索引），再删新索引，最后删列
         Schema::table('contents', function (Blueprint $table) {

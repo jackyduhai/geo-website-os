@@ -136,17 +136,13 @@ return new class extends Migration
         $driver = DB::connection()->getDriverName();
 
         if ($driver === 'mysql') {
-            DB::statement('DROP INDEX entity_seo_meta_unique ON seo_metas');
-            DB::statement('DROP INDEX content_seo_meta_unique ON seo_metas');
-            DB::statement('DROP INDEX sites_seo_meta_unique ON seo_metas');
-            DB::statement('DROP INDEX seo_metas_canonical_index ON seo_metas');
-            DB::statement('DROP INDEX seo_metas_entity_id_index ON seo_metas');
-            DB::statement('DROP INDEX seo_metas_content_id_index ON seo_metas');
-            DB::statement('DROP INDEX seo_metas_site_id_index ON seo_metas');
+            // DROP TABLE 自动删除该表的全部索引与外键约束（含支撑 FK 的索引），
+            // 无需逐个 DROP INDEX —— 逐个删除会命中 1553（索引仍被外键需要）。
             DB::statement('DROP TABLE seo_metas');
             return;
         }
 
+        // PostgreSQL：索引名是 schema 级，先显式删除再删表。
         DB::statement('DROP INDEX IF EXISTS entity_seo_meta_unique');
         DB::statement('DROP INDEX IF EXISTS content_seo_meta_unique');
         DB::statement('DROP INDEX IF EXISTS sites_seo_meta_unique');
