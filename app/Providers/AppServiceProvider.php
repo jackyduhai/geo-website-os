@@ -25,6 +25,7 @@ use App\Support\SiteCacheKey;
 use App\Support\GeoUrlGenerator;
 use Illuminate\Routing\UrlGenerator;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
@@ -84,6 +85,19 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        /**
+         * 迁移期间（含 migrate:fresh / RefreshDatabase）在每个迁移开始前清空
+         * SiteScope 的「表资格（有 site_id）」记忆。
+         *
+         * 该记忆只缓存 TRUE；若在 migrate:fresh 删表重建之前已被旧表结构（含
+         * site_id）置为 TRUE，迁移中重建为无 site_id 的早期形态后，旧的 TRUE 会
+         * 让全局作用域误加 site_id 条件 → 迁移失败。MigrationStarted 事件仅在
+         * 迁移过程中触发，对普通 Web 请求无影响。
+         */
+        Event::listen(
+            \Illuminate\Database\Events\MigrationStarted::class,
+            static fn () => \App\Models\Scopes\SiteScope::resetRequestMemo()
+        );
         /**
          * asset() / url() 的根地址兜底（RC-11）。
          *
