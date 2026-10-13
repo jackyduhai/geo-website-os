@@ -49,6 +49,12 @@ class SiteCreationProductionParityTest extends TestCase
     {
         parent::setUp();
 
+        // 本类验证「SQLite 文件库 + FK 开启」的生产等价场景，会自建 SQLite 文件库。
+        // 非 SQLite 测试运行（MySQL/PostgreSQL）下该场景不适用，直接跳过。
+        if (DB::connection()->getDriverName() !== 'sqlite') {
+            $this->markTestSkipped('SQLite 文件库生产等价场景，仅在 SQLite 下运行');
+        }
+
         // 不用 RefreshDatabase：它按 `:memory:` 建表，与本类要验证的
         // 「文件库 + FK 开启」条件相悖。这里自己把连接切到文件库并**真实迁移**。
         $this->originalDbPath = (string) config('database.connections.sqlite.database');

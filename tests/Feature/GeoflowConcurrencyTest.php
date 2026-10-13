@@ -7,6 +7,7 @@ use App\Models\Setting;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
+use Tests\Support\SchemaInspector;
 
 /**
  * GF-CONC · GEOFlow 并发与幂等契约（20G-2 · Step 11）
@@ -67,14 +68,12 @@ class GeoflowConcurrencyTest extends TestCase
      */
     public function test_gf_conc_001_db_has_unique_constraint_on_external_id(): void
     {
-        $indexes = DB::select("SELECT name, sql FROM sqlite_master WHERE type='index' AND tbl_name='contents'");
-        $sqls = array_map(fn ($i) => (string) $i->sql, $indexes);
+        $sets = SchemaInspector::uniqueIndexColumnSets('contents');
 
-        $tableDef = DB::select("SELECT sql FROM sqlite_master WHERE type='table' AND name='contents'");
-        $tableSql = (string) ($tableDef[0]->sql ?? '');
-
-        $hasUnique = str_contains($tableSql, 'UNIQUE(site_id, external_id)')
-            || collect($sqls)->contains(fn ($s) => str_contains($s, 'external_id') && str_contains(strtoupper($s), 'UNIQUE'));
+        $hasUnique = collect($sets)->contains(
+            fn (array $cols) => in_array('site_id', $cols, true)
+                && in_array('external_id', $cols, true)
+        );
 
         $this->assertTrue(
             $hasUnique,

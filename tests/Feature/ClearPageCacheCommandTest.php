@@ -25,6 +25,9 @@ class ClearPageCacheCommandTest extends TestCase
     private Site $default;
     private Site $second;
 
+    /** 测试前各站点的原始版本号，tearDown 恢复，避免把全局版本重置污染后续测试。 */
+    private array $originalVersions = [];
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -34,12 +37,31 @@ class ClearPageCacheCommandTest extends TestCase
             'domain' => 'second.test', 'status' => 'active', 'is_default' => false,
         ]);
 
-        // PageCache 强制使用 file 存储，版本键跨测试持久；先 forget 使 version() 回到初始 1。
+        // PageCache 强制使用 file 存储，版本键跨测试持久；先记录原值，再 forget 使
+        // version() 回到初始 1，便于断言命令的 +1。
         foreach ([$this->default, $this->second] as $site) {
-            SiteContext::withSite($site, static function () {
+            SiteContext::withSite($site, function () use ($site) {
+                $this->originalVersions[$site->id] = (int) Cache::store('file')
+                    ->get(SiteCacheKey::pagecacheVersion());
                 Cache::store('file')->forget(SiteCacheKey::pagecacheVersion());
             });
         }
+    }
+
+    protected function tearDown(): void
+    {
+        // 恢复默认站点的原始版本号，保持版本号单调递增；否则版本被重置到 1/2 后，
+        // 后续测试在「被复用」的版本号上可能命中陈旧页面（测试隔离缺陷）。
+        foreach ($this->originalVersions as $siteId => $version) {
+            $site = Site::find($siteId);
+            if ($site !== null) {
+                SiteContext::withSite($site, function () use ($version) {
+                    Cache::store('file')->forever(SiteCacheKey::pagecacheVersion(), $version);
+                });
+            }
+        }
+
+        parent::tearDown();
     }
 
     private function version(Site $site): int

@@ -8,6 +8,7 @@ use App\Models\Site;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
+use Tests\Support\SchemaInspector;
 use PHPUnit\Framework\Attributes\Test;
 
 class SiteIdMenusRedirectsTest extends TestCase
@@ -18,7 +19,7 @@ class SiteIdMenusRedirectsTest extends TestCase
     public function menus_and_redirects_have_site_id_column(): void
     {
         foreach (['menus', 'redirects'] as $table) {
-            $cols = DB::select("PRAGMA table_info($table)");
+            $cols = SchemaInspector::columns($table);
             $siteCol = collect($cols)->firstWhere('name', 'site_id');
             $this->assertNotNull($siteCol, "$table missing site_id column");
             $this->assertEquals(1, $siteCol->notnull, "$table site_id should be NOT NULL");
@@ -29,7 +30,7 @@ class SiteIdMenusRedirectsTest extends TestCase
     public function foreign_key_site_id_to_sites_exists(): void
     {
         foreach (['menus', 'redirects'] as $table) {
-            $fks = DB::select("PRAGMA foreign_key_list($table)");
+            $fks = SchemaInspector::foreignKeys($table);
             $siteFk = collect($fks)->firstWhere('from', 'site_id');
             $this->assertNotNull($siteFk, "$table missing FK on site_id");
             $this->assertEquals('sites', $siteFk->table);
@@ -103,20 +104,20 @@ class SiteIdMenusRedirectsTest extends TestCase
     #[Test]
     public function foreign_key_check_has_no_violations(): void
     {
-        $violations = DB::select('PRAGMA foreign_key_check');
+        $violations = SchemaInspector::foreignKeyViolations();
         $this->assertCount(0, $violations);
     }
 
     #[Test]
     public function original_indexes_are_preserved(): void
     {
-        $menuIdx = DB::select('PRAGMA index_list(menus)');
+        $menuIdx = SchemaInspector::indexes('menus');
         $names = array_map(fn($i) => $i->name, $menuIdx);
         $this->assertContains('menus_key_unique', $names);
         $this->assertContains('menus_parent_key_is_active_index', $names);
         $this->assertContains('menus_position_is_active_sort_index', $names);
 
-        $redirIdx = DB::select('PRAGMA index_list(redirects)');
+        $redirIdx = SchemaInspector::indexes('redirects');
         $names = array_map(fn($i) => $i->name, $redirIdx);
         $this->assertContains('redirects_from_path_unique', $names);
     }

@@ -10,6 +10,7 @@ use App\Models\Site;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
+use Tests\Support\SchemaInspector;
 use PHPUnit\Framework\Attributes\Test;
 
 class SiteIdPopulatedTablesTest extends TestCase
@@ -22,7 +23,7 @@ class SiteIdPopulatedTablesTest extends TestCase
     public function all_four_tables_have_site_id_column(): void
     {
         foreach ($this->tables as $table) {
-            $cols = DB::select("PRAGMA table_info($table)");
+            $cols = SchemaInspector::columns($table);
             $siteCol = collect($cols)->firstWhere('name', 'site_id');
             $this->assertNotNull($siteCol, "$table missing site_id column");
         }
@@ -32,7 +33,7 @@ class SiteIdPopulatedTablesTest extends TestCase
     public function site_id_is_not_null_on_all_four_tables(): void
     {
         foreach ($this->tables as $table) {
-            $cols = DB::select("PRAGMA table_info($table)");
+            $cols = SchemaInspector::columns($table);
             $siteCol = collect($cols)->firstWhere('name', 'site_id');
             $this->assertEquals(1, $siteCol->notnull, "$table site_id should be NOT NULL");
         }
@@ -42,7 +43,7 @@ class SiteIdPopulatedTablesTest extends TestCase
     public function foreign_key_site_id_to_sites_exists_on_all_tables(): void
     {
         foreach ($this->tables as $table) {
-            $fks = DB::select("PRAGMA foreign_key_list($table)");
+            $fks = SchemaInspector::foreignKeys($table);
             $siteFk = collect($fks)->firstWhere('from', 'site_id');
             $this->assertNotNull($siteFk, "$table missing FK on site_id");
             $this->assertEquals('sites', $siteFk->table);
@@ -165,33 +166,50 @@ class SiteIdPopulatedTablesTest extends TestCase
     #[Test]
     public function foreign_key_check_has_no_violations(): void
     {
-        $violations = DB::select('PRAGMA foreign_key_check');
+        $violations = SchemaInspector::foreignKeyViolations();
         $this->assertCount(0, $violations);
     }
 
     #[Test]
     public function original_indexes_are_preserved(): void
     {
-        $pageBlockIdx = DB::select("PRAGMA index_list(page_blocks)");
+        $pageBlockIdx = SchemaInspector::indexes('page_blocks');
         $names = array_map(fn($i) => $i->name, $pageBlockIdx);
         $this->assertContains('page_blocks_page_is_active_sort_index', $names);
-        $this->assertContains('page_blocks_site_id_index', $names);
+        $this->assertSiteIdIndexed('page_blocks');
 
-        $mediaIdx = DB::select("PRAGMA index_list(media)");
+        $mediaIdx = SchemaInspector::indexes('media');
         $names = array_map(fn($i) => $i->name, $mediaIdx);
         $this->assertContains('media_mime_index', $names);
-        $this->assertContains('media_site_id_index', $names);
+        $this->assertSiteIdIndexed('media');
 
-        $bannerIdx = DB::select("PRAGMA index_list(banners)");
+        $bannerIdx = SchemaInspector::indexes('banners');
         $names = array_map(fn($i) => $i->name, $bannerIdx);
         $this->assertContains('banners_position_is_active_sort_index', $names);
-        $this->assertContains('banners_site_id_index', $names);
+        $this->assertSiteIdIndexed('banners');
 
-        $auditIdx = DB::select("PRAGMA index_list(audit_logs)");
+        $auditIdx = SchemaInspector::indexes('audit_logs');
         $names = array_map(fn($i) => $i->name, $auditIdx);
         $this->assertContains('audit_logs_created_at_index', $names);
         $this->assertContains('audit_logs_target_type_target_id_index', $names);
-        $this->assertContains('audit_logs_site_id_index', $names);
+        $this->assertSiteIdIndexed('audit_logs');
+    }
+
+    /**
+     * 断言存在以 site_id 为最左前缀的索引（支撑外键与按站点查询）。
+     */
+    private function assertSiteIdIndexed(string $table): void
+    {
+        foreach (SchemaInspector::indexes($table) as $index) {
+            $cols = SchemaInspector::indexColumns($table, $index->name);
+            if (isset($cols[0]) && $cols[0]->name === 'site_id') {
+                $this->addToAssertionCount(1);
+
+                return;
+            }
+        }
+
+        $this->fail("$table 缺少以 site_id 为最左前缀的索引");
     }
 
     #[Test]

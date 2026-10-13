@@ -19,6 +19,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
+use Tests\Support\SchemaInspector;
 
 /**
  * P-STEP 18H-1 — Search Productization 防回归。
@@ -163,8 +164,14 @@ class SearchProductization18HTest extends TestCase
     public function test_default_engine_is_sqlite_fts5(): void
     {
         $engine = app(SearchEngineInterface::class);
-        $this->assertInstanceOf(SqliteFtsEngine::class, $engine);
-        $this->assertSame('sqlite-fts5', $engine->name());
+
+        if (DB::connection()->getDriverName() === 'sqlite') {
+            $this->assertInstanceOf(SqliteFtsEngine::class, $engine);
+            $this->assertSame('sqlite-fts5', $engine->name());
+        } else {
+            // MySQL / PostgreSQL 无 FTS5，由 DatabaseLikeEngine 兜底
+            $this->assertInstanceOf(DatabaseLikeEngine::class, $engine);
+        }
     }
 
     // ---------- B) CJK bigram 召回 ----------
@@ -408,7 +415,10 @@ class SearchProductization18HTest extends TestCase
         // 模拟准入变更标记 dirty + 索引被破坏。
         app(\App\Support\Search\SearchIndexSync::class)->markDirty($siteId);
         DB::table('search_documents')->where('site_id', $siteId)->delete();
-        DB::statement('DELETE FROM search_index');
+        // search_index 是 SQLite FTS5 虚拟表；MySQL/PostgreSQL 不使用它。
+        if (DB::connection()->getDriverName() === 'sqlite') {
+            DB::statement('DELETE FROM search_index');
+        }
 
         // 引擎查询前 flushDirty → rebuildSite 恢复，结果正确。
         $r = $this->query('底漆');
@@ -500,9 +510,7 @@ class SearchProductization18HTest extends TestCase
         $this->assertInstanceOf(DatabaseLikeEngine::class, $engine);
         $this->assertSame('database-like', $engine->name());
         // 作为对照：FTS 表确实不存在。
-        $this->assertFalse(
-            (bool) DB::selectOne("SELECT 1 AS ok FROM sqlite_master WHERE name='search_index'")
-        );
+        $this->assertFalse(SchemaInspector::hasTable('search_index'));
     }
 
     public function test_fallback_finds_matches_via_like(): void

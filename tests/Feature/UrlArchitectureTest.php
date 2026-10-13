@@ -40,13 +40,12 @@ class UrlArchitectureTest extends TestCase
         ]);
         SiteContext::setSite($site);
 
-        \App\Models\Category::create([
-            'site_id'   => $site->id,
-            'type'      => 'list',
-            'slug'      => 'news',
-            'name'      => 'News',
-            'is_active' => true,
-        ]);
+        // firstOrCreate：避免跨用例残留的同 slug 栏目触发唯一约束（MySQL 下站点级
+        // UNIQUE(site_id, slug)）。保证本测试所需的 news 栏目存在且属性正确。
+        \App\Models\Category::firstOrCreate(
+            ['site_id' => $site->id, 'slug' => 'news'],
+            ['type' => 'list', 'name' => 'News', 'is_active' => true]
+        );
     }
 
     protected function tearDown(): void

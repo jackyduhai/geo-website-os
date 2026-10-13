@@ -32,6 +32,12 @@ class UpgradeRollbackE2ETest extends TestCase
     {
         parent::setUp();
 
+        // 本 E2E 基于 SQLite 文件备份（geo:backup / geo:rollback 仅支持 sqlite，
+        // 非 sqlite 返回 FAILURE 并要求 mysqldump/pg_dump）。MySQL/PostgreSQL 下跳过。
+        if (DB::connection()->getDriverName() !== 'sqlite') {
+            $this->markTestSkipped('Upgrade/Rollback E2E 基于 SQLite 文件备份，仅在 SQLite 下运行');
+        }
+
         // ---------- 1. 建临时 sqlite 文件库 ----------
         $this->tmpDir = sys_get_temp_dir() . '/geo-e2e-' . uniqid();
         mkdir($this->tmpDir, 0777, true);
@@ -54,13 +60,15 @@ class UpgradeRollbackE2ETest extends TestCase
 
     protected function tearDown(): void
     {
+        // 非 SQLite 下 setUp() 在初始化目录属性前即 markTestSkipped，此时这些属性未初始化；
+        // 用 null 合并/isset 守卫，避免 tearDown 访问未初始化属性把「跳过」变成「错误」。
         DB::purge('sqlite');
 
         // 注：本用例只打 /api/v1/health（不经 web PageCache 中间件），不写文件型整页缓存，
         // 因此无需 flush file store——在 Windows 上 flush 与被锁缓存文件冲突会破坏缓存目录。
 
         // 清理临时迁移目录
-        foreach (array_unique([$this->goodMigDir, $this->badMigDir]) as $rel) {
+        foreach (array_unique(array_filter([$this->goodMigDir ?? null, $this->badMigDir ?? null])) as $rel) {
             $abs = base_path($rel);
             if (is_dir($abs)) {
                 foreach (glob($abs . '/*') ?: [] as $f) {
@@ -70,7 +78,7 @@ class UpgradeRollbackE2ETest extends TestCase
             }
         }
         // 清理临时 sqlite 目录（含 -wal/-journal 残留）
-        if (is_dir($this->tmpDir)) {
+        if (isset($this->tmpDir) && is_dir($this->tmpDir)) {
             foreach (glob($this->tmpDir . '/*') ?: [] as $f) {
                 @unlink($f);
             }

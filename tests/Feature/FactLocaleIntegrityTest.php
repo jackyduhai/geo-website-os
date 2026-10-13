@@ -8,6 +8,7 @@ use App\Support\Localization\LocaleContext;
 use App\Support\SiteContext;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
+use Tests\Support\SchemaInspector;
 
 /**
  * 20G-3 · facts 行级翻译契约（FAC-001~010）
@@ -292,19 +293,9 @@ class FactLocaleIntegrityTest extends TestCase
     /** @return array<int,string> 形如 'site_id,key,locale' */
     private function uniqueColumnSets(string $table): array
     {
-        $pdo = \DB::connection()->getPdo();
-        $out = [];
-        foreach ($pdo->query('PRAGMA index_list('.$table.')') as $idx) {
-            if ((int) $idx['unique'] !== 1) {
-                continue;
-            }
-            $cols = [];
-            foreach ($pdo->query('PRAGMA index_info('.$pdo->quote($idx['name']).')') as $c) {
-                $cols[] = (string) $c['name'];
-            }
-            $out[] = implode(',', $cols);
-        }
-
-        return $out;
+        return array_map(
+            static fn (array $cols): string => implode(',', $cols),
+            SchemaInspector::uniqueIndexColumnSets($table)
+        );
     }
 }

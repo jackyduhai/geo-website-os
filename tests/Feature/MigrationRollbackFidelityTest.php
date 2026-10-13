@@ -164,6 +164,18 @@ class MigrationRollbackFidelityTest extends TestCase
         return false;
     }
 
+    /**
+     * 判断方法是否为「回退/向下」分支（含 locale 维度删除的语义）。
+     *
+     * 兼容两种命名：down...（如 downSqlite）与 rollback...（如 rollbackContentsSqlite）。
+     */
+    private function isDownBranch(string $method): bool
+    {
+        $lower = strtolower($method);
+
+        return str_starts_with($lower, 'down') || str_starts_with($lower, 'rollback');
+    }
+
     /** 剥离块注释与行注释后的可执行源码（避免断言匹配到说明文字）。 */
     private function executableCode(string $path): string
     {
@@ -175,7 +187,6 @@ class MigrationRollbackFidelityTest extends TestCase
 
         return $src;
     }
-
     /**
      * MRF-001  迁移清单基线已锁定为 61（WP-8 新增 fact_review_markers 复核状态表）。
      *
@@ -289,7 +300,7 @@ class MigrationRollbackFidelityTest extends TestCase
                  *
                  * 动态层才是这类「DDL 由数据/属性驱动」的迁移的正确验证载体。
                  */
-                if ($method === 'rebuildContents') {
+                if ($method === 'rebuildContents' || $method === 'rebuildContentsSqlite') {
                     $this->assertStringContainsString(
                         '$this->contentColumns',
                         $body,
@@ -307,7 +318,7 @@ class MigrationRollbackFidelityTest extends TestCase
                  *
                  * 故对回退分支改为断言「显式排除 i18n 列」，确保它不是漏删。
                  */
-                if (str_starts_with(strtolower($method), 'down')) {
+                if ($this->isDownBranch($method)) {
                     /**
                      * 回退分支有两种**相反**语义，不能一刀切（20G-8-B 实测）：
                      *
@@ -447,13 +458,14 @@ class MigrationRollbackFidelityTest extends TestCase
                  *
                  * 对回退分支只断言「确有恢复不含 locale 的约束」。
                  */
-                if (str_starts_with(strtolower($method), 'down')) {
+                if ($this->isDownBranch($method)) {
                     // ⚠️ 同样不能只搜词（注释会骗过），要匹配实际的 UNIQUE 声明
                     // 注意单引号字符串：'$uniques[]' 里的 $ 不会被 PHP 插值
                     $hasPlainUnique = preg_match(
                         '/UNIQUE\s*\(\s*slug\s*\)/i',
                         $body
                     ) === 1
+                        || preg_match('/UNIQUE\s*\(\s*site_id\s*,\s*slug\s*\)/i', $body) === 1
                         || preg_match('/\$uniques\[\][^;]*UNIQUE\(slug\)/i', $body) === 1
                         || preg_match("/'UNIQUE\(slug\)'/i", $body) === 1
                         || preg_match('/UNIQUE\(site_id,\s*slot\)/i', $body) === 1;
@@ -578,13 +590,12 @@ class MigrationRollbackFidelityTest extends TestCase
         /**
          * i18n 资产清单（由 i18n-schema-inventory.php 从**真实迁移后的库**产出）。
          *
-         * `contents` 刻意不在此列表里：它由 09_23_000001 以「数组驱动重建」实现，
-         * 表名在运行时拼接，静态层无法可靠识别其列声明。
-         * contents 的 i18n 契约由 MRF-004（列存在）+ MRF-005（唯一约束含 locale）
-         * 逐迁移精确锁定，比清单式断言更强，故此处不重复登记。
+         * contents 现已纳入：非 sqlite 路径以 `Schema::table('contents', ...)`
+         * 直接声明 locale（静态可识别，路径 A）；sqlite 路径仍由数组驱动重建
+         * （rebuildContentsSqlite），其 i18n 契约由 MRF-004 / MRF-005 精确锁定。
          */
         $known = [
-            'entities', 'seo_metas', 'pages',
+            'contents', 'entities', 'seo_metas', 'pages',
             'form_fields', 'form_submissions', 'search_documents',
         ];
 

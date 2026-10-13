@@ -6,6 +6,7 @@ use App\Models\Site;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
+use Tests\Support\SchemaInspector;
 
 /**
  * Site 模型基础测试
@@ -100,8 +101,8 @@ class SiteTest extends TestCase
 
     public function test_sqlite_foreign_keys_enabled(): void
     {
-        $fkEnabled = DB::selectOne('PRAGMA foreign_keys')->foreign_keys;
-        $this->assertEquals(1, $fkEnabled, 'SQLite foreign_key_constraints must be enabled in config/database.php');
+        $fkEnabled = SchemaInspector::foreignKeysEnabled();
+        $this->assertTrue($fkEnabled, '外键约束必须在当前数据库连接上启用（SQLite foreign_key_constraints / MySQL FOREIGN_KEY_CHECKS / PostgreSQL origin）');
     }
 
     public function test_site_model_has_no_business_dependency(): void

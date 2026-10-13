@@ -9,6 +9,7 @@ use App\Models\SyncLog;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
+use Tests\Support\SchemaInspector;
 
 /**
  * Phase 5.4-B: 验证3张空表（content_revisions, inquiries, sync_logs）的 site_id 迁移。
@@ -28,19 +29,19 @@ class SiteIdEmptyTablesTest extends TestCase
 
     public function test_content_revisions_has_site_id_column(): void
     {
-        $cols = collect(DB::select('PRAGMA table_info(content_revisions)'));
+        $cols = collect(SchemaInspector::columns('content_revisions'));
         $this->assertNotNull($cols->firstWhere('name', 'site_id'));
     }
 
     public function test_inquiries_has_site_id_column(): void
     {
-        $cols = collect(DB::select('PRAGMA table_info(inquiries)'));
+        $cols = collect(SchemaInspector::columns('inquiries'));
         $this->assertNotNull($cols->firstWhere('name', 'site_id'));
     }
 
     public function test_sync_logs_has_site_id_column(): void
     {
-        $cols = collect(DB::select('PRAGMA table_info(sync_logs)'));
+        $cols = collect(SchemaInspector::columns('sync_logs'));
         $this->assertNotNull($cols->firstWhere('name', 'site_id'));
     }
 
@@ -49,7 +50,7 @@ class SiteIdEmptyTablesTest extends TestCase
     public function test_site_id_is_not_null_on_all_three_tables(): void
     {
         foreach (['content_revisions', 'inquiries', 'sync_logs'] as $table) {
-            $col = collect(DB::select("PRAGMA table_info($table)"))->firstWhere('name', 'site_id');
+            $col = collect(SchemaInspector::columns($table))->firstWhere('name', 'site_id');
             $this->assertEquals(1, $col->notnull, "$table.site_id should be NOT NULL");
         }
     }
@@ -59,7 +60,7 @@ class SiteIdEmptyTablesTest extends TestCase
     public function test_foreign_key_site_id_to_sites_exists(): void
     {
         foreach (['content_revisions', 'inquiries', 'sync_logs'] as $table) {
-            $fks = DB::select("PRAGMA foreign_key_list($table)");
+            $fks = SchemaInspector::foreignKeys($table);
             $siteFk = collect($fks)->firstWhere('from', 'site_id');
             $this->assertNotNull($siteFk, "$table should have FK on site_id");
             $this->assertEquals('sites', $siteFk->table);
@@ -179,7 +180,7 @@ class SiteIdEmptyTablesTest extends TestCase
 
     public function test_foreign_key_check_has_no_violations(): void
     {
-        $violations = DB::select('PRAGMA foreign_key_check');
+        $violations = SchemaInspector::foreignKeyViolations();
         $this->assertEmpty($violations);
     }
 }

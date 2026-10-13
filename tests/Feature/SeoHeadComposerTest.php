@@ -95,7 +95,7 @@ class SeoHeadComposerTest extends TestCase
         // TD-12 后 site_name 由 Site.name 单向镜像、正常情况非空；这里直接清空底层
         // site_name（绕过镜像），人为构造后缀缺失的防御场景。
         \App\Models\Setting::withoutSiteScope()
-            ->where('key', 'site_name')->update(['value' => '']);
+            ->where('key', 'site_name')->update(['value' => json_encode('')]);
         \App\Models\Setting::flush();
         $html = $this->renderHead(['seo' => ['title' => '某内页标题']]);
 

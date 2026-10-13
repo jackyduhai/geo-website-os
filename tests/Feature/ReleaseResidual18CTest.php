@@ -251,7 +251,10 @@ class ReleaseResidual18CTest extends TestCase
     public function test_catalog_degrades_gracefully_when_entities_table_missing(): void
     {
         // fresh install 极早期 / 异常库：entities 表尚未迁移时 Catalog 必须返回空而非抛 SQL 白屏
+        // MySQL/PostgreSQL 下有表引用 entities，需先关闭外键检查才能 drop。
+        \App\Support\MigrationPortability::disableForeignKeyChecks();
         Schema::drop('entities');
+        \App\Support\MigrationPortability::enableForeignKeyChecks();
         Catalog::flush();
 
         $this->assertSame([], Catalog::company());

@@ -11,6 +11,7 @@ use App\Models\Site;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
+use Tests\Support\SchemaInspector;
 use PHPUnit\Framework\Attributes\Test;
 
 class SiteIdCoreTablesTest extends TestCase
@@ -23,7 +24,7 @@ class SiteIdCoreTablesTest extends TestCase
     public function all_five_tables_have_site_id_column(): void
     {
         foreach ($this->tables as $table) {
-            $cols = DB::select("PRAGMA table_info($table)");
+            $cols = SchemaInspector::columns($table);
             $siteCol = collect($cols)->firstWhere('name', 'site_id');
             $this->assertNotNull($siteCol, "$table missing site_id column");
         }
@@ -33,7 +34,7 @@ class SiteIdCoreTablesTest extends TestCase
     public function site_id_is_not_null_on_all_five_tables(): void
     {
         foreach ($this->tables as $table) {
-            $cols = DB::select("PRAGMA table_info($table)");
+            $cols = SchemaInspector::columns($table);
             $siteCol = collect($cols)->firstWhere('name', 'site_id');
             $this->assertEquals(1, $siteCol->notnull, "$table site_id should be NOT NULL");
         }
@@ -43,7 +44,7 @@ class SiteIdCoreTablesTest extends TestCase
     public function foreign_key_site_id_to_sites_exists_on_all_tables(): void
     {
         foreach ($this->tables as $table) {
-            $fks = DB::select("PRAGMA foreign_key_list($table)");
+            $fks = SchemaInspector::foreignKeys($table);
             $siteFk = collect($fks)->firstWhere('from', 'site_id');
             $this->assertNotNull($siteFk, "$table missing FK on site_id");
             $this->assertEquals('sites', $siteFk->table);
@@ -54,7 +55,7 @@ class SiteIdCoreTablesTest extends TestCase
     #[Test]
     public function groups_preserves_category_id_foreign_key(): void
     {
-        $fks = DB::select('PRAGMA foreign_key_list(groups)');
+        $fks = SchemaInspector::foreignKeys('groups');
         $catFk = collect($fks)->firstWhere('from', 'category_id');
         $this->assertNotNull($catFk, 'groups missing FK on category_id');
         $this->assertEquals('categories', $catFk->table);
@@ -177,7 +178,7 @@ class SiteIdCoreTablesTest extends TestCase
 
         // Verify no cross-site references exist in database
         $crossRefs = DB::select("
-            SELECT g.id FROM groups g
+            SELECT g.id FROM `groups` g
             JOIN categories c ON g.category_id = c.id
             WHERE g.site_id != c.site_id
         ");
@@ -226,40 +227,60 @@ class SiteIdCoreTablesTest extends TestCase
     #[Test]
     public function foreign_key_check_has_no_violations(): void
     {
-        $violations = DB::select('PRAGMA foreign_key_check');
+        $violations = SchemaInspector::foreignKeyViolations();
         $this->assertCount(0, $violations);
     }
 
     #[Test]
     public function original_indexes_are_preserved(): void
     {
-        $contentIdx = DB::select('PRAGMA index_list(contents)');
+        $contentIdx = SchemaInspector::indexes('contents');
         $names = array_map(fn($i) => $i->name, $contentIdx);
         $this->assertContains('contents_external_id_index', $names);
         $this->assertContains('contents_category_id_group_id_index', $names);
-        $this->assertContains('contents_site_id_index', $names);
+        $this->assertSiteIdIndexed('contents');
 
-        $catIdx = DB::select('PRAGMA index_list(categories)');
+        $catIdx = SchemaInspector::indexes('categories');
         $names = array_map(fn($i) => $i->name, $catIdx);
         $this->assertContains('categories_is_nav_is_active_index', $names);
         $this->assertContains('categories_parent_id_sort_index', $names);
-        $this->assertContains('categories_site_id_index', $names);
+        $this->assertSiteIdIndexed('categories');
 
-        $groupIdx = DB::select('PRAGMA index_list(groups)');
+        $groupIdx = SchemaInspector::indexes('groups');
         $names = array_map(fn($i) => $i->name, $groupIdx);
         $this->assertContains('groups_category_id_sort_index', $names);
-        $this->assertContains('groups_site_id_index', $names);
+        $this->assertSiteIdIndexed('groups');
 
-        $factIdx = DB::select('PRAGMA index_list(facts)');
+        $factIdx = SchemaInspector::indexes('facts');
         $names = array_map(fn($i) => $i->name, $factIdx);
         $this->assertContains('facts_review_due_index', $names);
         $this->assertContains('facts_group_sort_index', $names);
-        $this->assertContains('facts_site_id_index', $names);
+        $this->assertSiteIdIndexed('facts');
 
-        $settingIdx = DB::select('PRAGMA index_list(settings)');
+        $settingIdx = SchemaInspector::indexes('settings');
         $names = array_map(fn($i) => $i->name, $settingIdx);
         $this->assertContains('settings_group_sort_index', $names);
-        $this->assertContains('settings_site_id_index', $names);
+        $this->assertSiteIdIndexed('settings');
+    }
+
+    /**
+     * 断言存在以 site_id 为最左前缀的索引（支撑外键与按站点查询）。
+     *
+     * SQLite 上是显式的 `{table}_site_id_index`；MySQL/PostgreSQL 上通常由
+     * site_id 起头的唯一索引承担，故统一检查「某索引首列 = site_id」。
+     */
+    private function assertSiteIdIndexed(string $table): void
+    {
+        foreach (SchemaInspector::indexes($table) as $index) {
+            $cols = SchemaInspector::indexColumns($table, $index->name);
+            if (isset($cols[0]) && $cols[0]->name === 'site_id') {
+                $this->addToAssertionCount(1);
+
+                return;
+            }
+        }
+
+        $this->fail("$table 缺少以 site_id 为最左前缀的索引");
     }
 
     #[Test]

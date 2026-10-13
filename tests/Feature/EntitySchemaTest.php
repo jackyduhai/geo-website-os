@@ -9,6 +9,7 @@ use App\Support\Entities\EntityCapabilityRegistry;
 use App\Support\SiteContext;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
+use Tests\Support\SchemaInspector;
 
 class EntitySchemaTest extends TestCase
 {
@@ -228,7 +229,7 @@ class EntitySchemaTest extends TestCase
 
     public function test_foreign_key_check_has_no_violations(): void
     {
-        $violations = \DB::select('PRAGMA foreign_key_check');
+        $violations = SchemaInspector::foreignKeyViolations();
         $this->assertEmpty($violations);
     }
 

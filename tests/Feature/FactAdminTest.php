@@ -8,6 +8,7 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
+use Tests\Support\SchemaInspector;
 
 /**
  * 后台事实库管理（HTTP 层）回归。
@@ -31,7 +32,7 @@ class FactAdminTest extends TestCase
 
     public function test_facts_table_has_unit_and_source_url_columns(): void
     {
-        $cols = collect(DB::select('PRAGMA table_info(facts)'))->pluck('name')->all();
+        $cols = collect(SchemaInspector::columns('facts'))->pluck('name')->all();
         $this->assertContains('unit', $cols);
         $this->assertContains('source_url', $cols);
     }
