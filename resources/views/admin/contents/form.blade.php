@@ -407,6 +407,10 @@ document.getElementById('coverFile')?.addEventListener('change',function(e){
 document.getElementById('btnCheck')?.addEventListener('click',function(){
   var form=document.getElementById('contentForm');
   var data=new FormData(form);
+  // 编辑页表单含 @method('PUT')（_method=PUT），若一并提交会被方法伪造路由到
+  // PUT contents/{content}（update），把「check」当成内容 ID 而报错。预检是只读 POST，
+  // 这里移除 _method，确保始终命中 contents/check。
+  data.delete('_method');
   var out=document.getElementById('checkResult');
   out.innerHTML='<span class="small muted">检查中…</span>';
   fetch('{{ route('admin.contents.check') }}',{method:'POST',headers:{'X-Requested-With':'XMLHttpRequest','Accept':'application/json'},body:data})

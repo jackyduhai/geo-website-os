@@ -182,6 +182,47 @@ class ContentPublishRequirementsPanelTest extends TestCase
         $this->assertSame('draft', $content->fresh()->status);
     }
 
+    public function test_precheck_endpoint_passes_for_complete_payload_without_method_override(): void
+    {
+        // 编辑页表单含 _method=PUT；按钮 JS 会 data.delete('_method') 后以 POST 调用。
+        // 这里模拟「去掉 _method 后的完整表单」：必须命中 check 且返回通过，不落库。
+        $this->makePassableContent();
+
+        $payload = [
+            'type'            => 'article',
+            'title'           => '完整可发布内容',
+            'slug'            => 'passable-content',
+            'summary'         => '这是一份结构完整的摘要。',
+            'body'            => '正文内容。',
+            'geo_conclusion'  => '这是直接回答问题的结论。',
+            'geo_explanation' => '这是说明原因与做法的解释。',
+            'geo_boundary'    => '这是写明不适用场景与限制的边界。',
+            'ev_label'        => ['证据一', '证据二'],
+            'ev_value'        => ['值一', '值二'],
+            'ev_source'       => ['来源一', '来源二'],
+            'ev_url'          => [],
+            'owner'           => 'Administrator',
+            'reviewed_at'     => '2026-09-14',
+            'fact_refs'       => [],
+            // 故意不发送 _method（按钮 JS 已删除）。
+        ];
+
+        $this->actingAs($this->admin)
+            ->postJson('/admin/contents/check', $payload)
+            ->assertOk()
+            ->assertJsonPath('passed', true);
+    }
+
+    public function test_method_override_trap_is_known_put_routes_to_update(): void
+    {
+        // 记录方法伪造陷阱：若错误地把 _method=PUT 发到 contents/check，会被路由到
+        // PUT contents/{content}（update），把 check 当作内容 ID 而 404/绑定失败。
+        // 这正是预检按钮必须 data.delete('_method') 的原因（契约文档）。
+        $this->actingAs($this->admin)
+            ->postJson('/admin/contents/check', ['_method' => 'PUT'])
+            ->assertNotFound();
+    }
+
     public function test_requirement_spec_matches_gate_threshold(): void
     {
         config(['geo.gate.min_evidence' => 4]);
