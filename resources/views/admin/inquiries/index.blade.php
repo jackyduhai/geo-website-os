@@ -81,8 +81,8 @@
             </form>
           </details>
           <form class="form-inline" method="post" action="{{ route('admin.inquiries.destroy',$inq) }}"
-                onsubmit="return confirm('确定删除这条留言？')">@csrf @method('DELETE')
-            <button class="btn btn-sm btn-danger">删</button>
+                onsubmit="return confirm('确定删除这条留言？此操作不可恢复。')">@csrf @method('DELETE')
+            <button class="btn btn-sm btn-danger">删除留言</button>
           </form>
         </td>
       </tr>

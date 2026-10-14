@@ -148,7 +148,7 @@
                 <input type="text" name="ev_value[]" value="{{ $ev['value'] ?? '' }}" placeholder="值（如 具体数值）">
                 <input type="text" name="ev_source[]" value="{{ $ev['source'] ?? '' }}" placeholder="来源（必填，如 事实库）">
                 <input type="text" name="ev_url[]" value="{{ $ev['url'] ?? '' }}" placeholder="来源 URL（可空）">
-                <button type="button" class="btn btn-sm btn-danger del-repeat">删</button>
+                <button type="button" class="btn btn-sm btn-danger del-repeat">删除</button>
               </div>
             </div>
           @endforeach
@@ -184,7 +184,7 @@
               <div class="repeat-item faq">
                 <input type="text" name="faq_q[]" value="{{ $fq['q'] ?? '' }}" placeholder="客户高频问题">
                 <input type="text" name="faq_a[]" value="{{ $fq['a'] ?? '' }}" placeholder="直接答案">
-                <button type="button" class="btn btn-sm btn-danger del-repeat">删</button>
+                <button type="button" class="btn btn-sm btn-danger del-repeat">删除</button>
               </div>
             </div>
           @endforeach
@@ -199,7 +199,7 @@
               <div class="repeat-item kf">
                 <input type="text" name="kf_key[]" value="{{ $kf['key'] ?? '' }}" placeholder="事实名（如 年产能）">
                 <input type="text" name="kf_value[]" value="{{ $kf['value'] ?? '' }}" placeholder="事实值（如 具体数值）">
-                <button type="button" class="btn btn-sm btn-danger del-repeat">删</button>
+                <button type="button" class="btn btn-sm btn-danger del-repeat">删除</button>
               </div>
             </div>
           @endforeach
@@ -279,7 +279,7 @@
                   <option value="mention" @selected(($l['relation_type']??'')==='mention')>mention（顺带提及）</option>
                 </select>
               </td>
-              <td><button type="button" class="btn btn-sm" onclick="this.closest('tr').remove()">删</button></td>
+              <td><button type="button" class="btn btn-sm" onclick="this.closest('tr').remove()">移除关联</button></td>
             </tr>
           @endforeach
         </tbody>
@@ -295,7 +295,7 @@
             +'@foreach($entityOptions as $en)<option value="{{ $en->id }}">[{{ $en->type }}] {{ $en->name }}</option>@endforeach'
             +'</select></td>'
             +'<td><select name="entity_links['+i+'][relation_type]" form="contentForm"><option value="about">about</option><option value="mention">mention</option></select></td>'
-            +'<td><button type="button" class="btn btn-sm" onclick="this.closest(\'tr\').remove()">删</button></td>';
+            +'<td><button type="button" class="btn btn-sm" onclick="this.closest(\'tr\').remove()">移除关联</button></td>';
           tb.appendChild(tr);
         }
       </script>
@@ -388,13 +388,13 @@ document.getElementById('addEvidence')?.addEventListener('click',function(){
     '<input type="text" name="ev_value[]" placeholder="值">'+
     '<input type="text" name="ev_source[]" placeholder="来源（必填）">'+
     '<input type="text" name="ev_url[]" placeholder="来源 URL（可空）">'+
-    '<button type="button" class="btn btn-sm btn-danger del-repeat">删</button>');
+    '<button type="button" class="btn btn-sm btn-danger del-repeat">删除</button>');
 });
 document.getElementById('addFaq')?.addEventListener('click',function(){
-  addRepeat('faqWrap','<input type="text" name="faq_q[]" placeholder="问题"><input type="text" name="faq_a[]" placeholder="直接答案"><button type="button" class="btn btn-sm btn-danger del-repeat">删</button>');
+  addRepeat('faqWrap','<input type="text" name="faq_q[]" placeholder="问题"><input type="text" name="faq_a[]" placeholder="直接答案"><button type="button" class="btn btn-sm btn-danger del-repeat">删除</button>');
 });
 document.getElementById('addKf')?.addEventListener('click',function(){
-  addRepeat('kfWrap','<input type="text" name="kf_key[]" placeholder="事实名"><input type="text" name="kf_value[]" placeholder="事实值"><button type="button" class="btn btn-sm btn-danger del-repeat">删</button>');
+  addRepeat('kfWrap','<input type="text" name="kf_key[]" placeholder="事实名"><input type="text" name="kf_value[]" placeholder="事实值"><button type="button" class="btn btn-sm btn-danger del-repeat">删除</button>');
 });
 document.addEventListener('click',function(e){
   if(e.target.classList.contains('del-repeat')){ e.target.closest('.repeat-row').remove(); }

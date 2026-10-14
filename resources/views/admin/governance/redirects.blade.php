@@ -44,8 +44,8 @@
               </form>
             </details>
             <form class="form-inline" method="post" action="{{ route('admin.redirects.destroy',$r) }}"
-                  onsubmit="return confirm('删除规则？')">@csrf @method('DELETE')
-              <button class="btn btn-sm btn-danger">删</button></form>
+                  onsubmit="return confirm('删除该跳转规则？此操作不可恢复。')">@csrf @method('DELETE')
+              <button class="btn btn-sm btn-danger">删除规则</button></form>
           </td>
         </tr>
       @empty

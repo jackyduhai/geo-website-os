@@ -65,7 +65,7 @@
             <form class="form-inline" method="post" action="{{ route('admin.sites.destroy', $site) }}"
                   onsubmit="return confirm('删除站点「{{ $site->name }}」？该站仍有数据时会被系统阻止；此操作不可恢复。')">
               @csrf @method('DELETE')
-              <button class="btn btn-sm btn-danger">删</button>
+              <button class="btn btn-sm btn-danger">删除站点</button>
             </form>
           @endif
         </td>

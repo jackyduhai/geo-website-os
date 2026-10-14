@@ -30,8 +30,8 @@
           <td class="actions">
             <a class="btn btn-sm" href="{{ route('admin.categories.edit',$c) }}">编辑</a>
             <form class="form-inline" method="post" action="{{ route('admin.categories.destroy',$c) }}"
-                  onsubmit="return confirm('删除栏目？其下内容需要先迁移。')">@csrf @method('DELETE')
-              <button class="btn btn-sm btn-danger">删</button></form>
+                  onsubmit="return confirm('删除栏目？其下内容需要先迁移；此操作不可恢复。')">@csrf @method('DELETE')
+              <button class="btn btn-sm btn-danger">删除栏目</button></form>
           </td>
         </tr>
         @foreach($c->children as $ch)
@@ -47,8 +47,8 @@
             <td class="actions">
               <a class="btn btn-sm" href="{{ route('admin.categories.edit',$ch) }}">编辑</a>
               <form class="form-inline" method="post" action="{{ route('admin.categories.destroy',$ch) }}"
-                    onsubmit="return confirm('删除栏目？其下内容需要先迁移。')">@csrf @method('DELETE')
-                <button class="btn btn-sm btn-danger">删</button></form>
+                    onsubmit="return confirm('删除栏目？其下内容需要先迁移；此操作不可恢复。')">@csrf @method('DELETE')
+                <button class="btn btn-sm btn-danger">删除栏目</button></form>
             </td>
           </tr>
         @endforeach

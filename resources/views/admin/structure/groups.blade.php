@@ -61,8 +61,8 @@
           <td>@if($g->is_active)<span class="badge ok">启用</span>@else<span class="badge draft">停用</span>@endif</td>
           <td class="actions">
             <form class="form-inline" method="post" action="{{ route('admin.groups.destroy',$g) }}"
-                  onsubmit="return confirm('删除分组 {{ $g->name }}？')">@csrf @method('DELETE')
-              <button class="btn btn-sm btn-danger">删</button></form>
+                  onsubmit="return confirm('删除分组「{{ $g->name }}」？此操作不可恢复。')">@csrf @method('DELETE')
+              <button class="btn btn-sm btn-danger">删除分组</button></form>
           </td>
         </tr>
       @empty

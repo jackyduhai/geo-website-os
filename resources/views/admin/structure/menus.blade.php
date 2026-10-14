@@ -298,8 +298,8 @@
           <td>@if($m->is_active)<span class="badge ok">启用</span>@else<span class="badge draft">停用</span>@endif</td>
           <td class="actions">
             <form class="form-inline" method="post" action="{{ route('admin.menus.destroy',$m) }}"
-                  onsubmit="return confirm('{{ $m->children->isNotEmpty() ? '该菜单下还有二级子菜单，需先删除子菜单。\\n仍要尝试删除吗？' : '删除该自定义菜单项？' }}')">@csrf @method('DELETE')
-              <button class="btn btn-sm btn-danger">删</button></form>
+                  onsubmit="return confirm('{{ $m->children->isNotEmpty() ? '该菜单下还有二级子菜单，需先删除子菜单。\\n仍要尝试删除吗？' : '删除该自定义菜单项？此操作不可恢复。' }}')">@csrf @method('DELETE')
+              <button class="btn btn-sm btn-danger">删除</button></form>
           </td>
         </tr>
         {{-- 自定义一级下的二级 --}}
@@ -332,8 +332,8 @@
             <td>@if($ch->is_active)<span class="badge ok">启用</span>@else<span class="badge draft">停用</span>@endif</td>
             <td class="actions">
               <form class="form-inline" method="post" action="{{ route('admin.menus.destroy',$ch) }}"
-                    onsubmit="return confirm('删除该二级菜单项？')">@csrf @method('DELETE')
-                <button class="btn btn-sm btn-danger">删</button></form>
+                    onsubmit="return confirm('删除该二级菜单项？此操作不可恢复。')">@csrf @method('DELETE')
+                <button class="btn btn-sm btn-danger">删除</button></form>
             </td>
           </tr>
         @endforeach

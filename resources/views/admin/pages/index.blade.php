@@ -60,7 +60,7 @@
             <form class="form-inline" method="post" action="{{ route('admin.pages.destroy', $page) }}"
                   onsubmit="return confirm('删除该页面及其全部区块？此操作不可恢复。')">
               @csrf @method('DELETE')
-              <button class="btn btn-sm btn-danger">删</button>
+              <button class="btn btn-sm btn-danger">删除页面</button>
             </form>
           </td>
         </tr>

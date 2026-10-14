@@ -177,7 +177,7 @@ class ContentController extends Controller
         $content->delete();
         AuditLog::record('content.deleted', '删除内容：' . $title, [], 'content', $content->id);
 
-        return redirect()->route('admin.contents.index', 'all')->with('success', '已删除（可在回收站恢复，如需彻底删除请联系技术）');
+        return redirect()->route('admin.contents.index', 'all')->with('success', '已移入回收站，可在回收站恢复或永久删除。');
     }
 
     /**

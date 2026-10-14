@@ -47,9 +47,9 @@
           </form>
           @if($f->slug !== \App\Models\Form::DEFAULT_SLUG)
             <form class="form-inline" method="post" action="{{ route('admin.forms.destroy',$f) }}"
-                  onsubmit="return confirm('删除表单「{{ $f->name }}」？其字段定义将一并删除（历史提交保留）。')">
+                  onsubmit="return confirm('删除表单「{{ $f->name }}」？其字段定义将一并删除（历史提交保留），此操作不可恢复。')">
               @csrf @method('DELETE')
-              <button class="btn btn-sm btn-danger">删</button>
+              <button class="btn btn-sm btn-danger">删除表单</button>
             </form>
           @endif
         </td>

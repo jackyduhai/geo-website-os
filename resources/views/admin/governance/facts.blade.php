@@ -57,8 +57,8 @@
         <td class="actions">
           <a class="btn btn-sm" href="{{ route('admin.facts.edit',$a) }}">编辑</a>
           <form class="form-inline" method="post" action="{{ route('admin.facts.destroy',$a) }}"
-                onsubmit="return confirm('删除该事实？将同时删除各语言行。')">@csrf @method('DELETE')
-            <button class="btn btn-sm btn-danger">删</button></form>
+                onsubmit="return confirm('删除该事实？将连带删除所有语言行（避免「中文已删、英文仍在」的口径泄漏），此操作不可恢复。')">@csrf @method('DELETE')
+            <button class="btn btn-sm btn-danger">删除事实</button></form>
         </td>
       </tr>
     @empty

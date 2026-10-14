@@ -62,8 +62,8 @@
               <button class="btn btn-sm btn-ok">发布</button></form>
           @endif
           <form class="form-inline" method="post" action="{{ route('admin.contents.destroy',$c) }}"
-                onsubmit="return confirm('删除后进入归档（软删除），确认？')">@csrf @method('DELETE')
-            <button class="btn btn-sm btn-danger">删</button></form>
+                onsubmit="return confirm('确认将此内容移入回收站？移入后可在回收站恢复，或在回收站永久删除。')">@csrf @method('DELETE')
+            <button class="btn btn-sm btn-danger">移入回收站</button></form>
         </td>
       </tr>
     @empty

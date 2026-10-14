@@ -115,9 +115,9 @@
           <td class="actions">
             <a class="btn btn-sm" href="{{ route('admin.forms.fields.edit',[$form,$any]) }}">编辑</a>
             <form class="form-inline" method="post" action="{{ route('admin.forms.fields.destroy',[$form,$any]) }}"
-                  onsubmit="return confirm('删除字段「{{ $name }}」的所有语言版本？')">
+                  onsubmit="return confirm('删除字段「{{ $name }}」的所有语言版本？此操作不可恢复。')">
               @csrf @method('DELETE')
-              <button class="btn btn-sm btn-danger">删</button>
+              <button class="btn btn-sm btn-danger">删除字段</button>
             </form>
           </td>
         </tr>

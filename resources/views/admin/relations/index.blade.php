@@ -71,9 +71,9 @@
         <td class="actions">
           <a class="btn btn-sm" href="{{ route('admin.relations.edit',$r) }}">编辑</a>
           <form class="form-inline" method="post" action="{{ route('admin.relations.destroy',$r) }}"
-                onsubmit="return confirm('删除该实体关系？仅删除关系本身，不会删除源 / 目标实体。')">
+                onsubmit="return confirm('删除该关系？仅删除关系本身，不会删除源 / 目标实体；此操作不可恢复。')">
             @csrf @method('DELETE')
-            <button class="btn btn-sm btn-danger">删</button>
+            <button class="btn btn-sm btn-danger">删除关系</button>
           </form>
         </td>
       </tr>

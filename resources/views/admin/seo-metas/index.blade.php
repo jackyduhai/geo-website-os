@@ -114,7 +114,7 @@
           <form class="form-inline" method="post" action="{{ route('admin.seo-metas.destroy',$m) }}"
                 onsubmit="return confirm('删除该 SEO 覆盖？删除后标题 / 描述 / Canonical / OG / 抓取指令将恢复为自动解析（继承），不会删除绑定对象。')">
             @csrf @method('DELETE')
-            <button class="btn btn-sm btn-danger">删</button>
+            <button class="btn btn-sm btn-danger">删除覆盖</button>
           </form>
         </td>
       </tr>

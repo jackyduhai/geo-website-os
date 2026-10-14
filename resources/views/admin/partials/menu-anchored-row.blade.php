@@ -33,7 +33,7 @@
   <td class="small">{{ (int) $ch->sort }}</td>
   <td class="actions small">
     <form class="form-inline" method="post" action="{{ route('admin.menus.destroy', $ch) }}"
-          onsubmit="return confirm('删除该自定义菜单项？')">@csrf @method('DELETE')
-      <button class="btn btn-sm btn-danger">删</button></form>
+          onsubmit="return confirm('删除该自定义菜单项？此操作不可恢复。')">@csrf @method('DELETE')
+      <button class="btn btn-sm btn-danger">删除</button></form>
   </td>
 </tr>

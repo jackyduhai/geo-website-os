@@ -101,9 +101,9 @@
                href="{{ url('/solutions/'.$e->slug.'/') }}">前台</a>
           @endif
           <form class="form-inline" method="post" action="{{ route('admin.entities.destroy',$e) }}"
-                onsubmit="return confirm('删除实体「{{ $e->name }}」？其作为源 / 目标的关系会一并删除，此操作不可恢复。')">
+                onsubmit="return confirm('确认将实体「{{ $e->name }}」移入回收站？其作为源 / 目标的关系会一并停用；移入回收站后可恢复，或在回收站永久删除。')">
             @csrf @method('DELETE')
-            <button class="btn btn-sm btn-danger">删</button>
+            <button class="btn btn-sm btn-danger">移入回收站</button>
           </form>
         </td>
       </tr>

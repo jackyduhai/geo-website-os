@@ -137,9 +137,9 @@
             </form>
             <form class="form-inline" method="post"
                   action="{{ route('admin.pages.destroyBlock', [$page, $block]) }}"
-                  onsubmit="return confirm('删除该区块？区块引用的业务内容不会被删除。')">
+                  onsubmit="return confirm('删除该区块？区块引用的业务内容不会被删除，此操作不可恢复。')">
               @csrf @method('DELETE')
-              <button class="btn btn-sm btn-danger">删</button>
+              <button class="btn btn-sm btn-danger">删除区块</button>
             </form>
           </td>
         </tr>
