@@ -47,6 +47,11 @@ return new class extends Migration
             'created_at' => now(),
             'updated_at' => now(),
         ]);
+
+        // PostgreSQL 显式插入 id=1 不会推进 sites_id_seq 序列，后续 Site::create()
+        // 会从序列取到 1 而与已存在行冲突（23505）。MySQL/SQLite 自增列会自动对齐，
+        // resetAutoIncrement 对它们为空操作。
+        \App\Support\MigrationPortability::resetAutoIncrement('sites');
     }
 
     public function down(): void

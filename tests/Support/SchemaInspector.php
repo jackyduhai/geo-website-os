@@ -94,16 +94,27 @@ class SchemaInspector
                 [DB::getDatabaseName(), $table]
             );
         } else { // pgsql
+            // PostgreSQL 的 information_schema.KEY_COLUMN_USAGE 没有 REFERENCED_TABLE_NAME
+            // （该列是 MySQL 专有），直接查 pg_catalog.pg_constraint（contype='f'）。
+            // confdeltype / confupdtype 是动作为单字符代码：
+            // a=NO ACTION r=RESTRICT c=CASCADE n=SET NULL d=SET DEFAULT。
+            // 本库外键均为单列（site_id / content_id / category_id 等），取 conkey[1]。
             $rows = DB::select(
-                'SELECT kcu.COLUMN_NAME AS from, kcu.REFERENCED_TABLE_NAME AS ref_table,
-                        kcu.REFERENCED_COLUMN_NAME AS ref_col,
-                        rc.DELETE_RULE AS del, rc.UPDATE_RULE AS upd
-                 FROM information_schema.KEY_COLUMN_USAGE kcu
-                 JOIN information_schema.REFERENTIAL_CONSTRAINTS rc
-                   ON rc.CONSTRAINT_NAME = kcu.CONSTRAINT_NAME
-                  AND rc.CONSTRAINT_SCHEMA = kcu.TABLE_SCHEMA
-                 WHERE kcu.TABLE_SCHEMA = ? AND kcu.TABLE_NAME = ?
-                   AND kcu.REFERENCED_TABLE_NAME IS NOT NULL',
+                "SELECT a.attname AS from,
+                        clf.relname AS ref_table,
+                        af.attname AS ref_col,
+                        con.confdeltype AS del_code,
+                        con.confupdtype AS upd_code
+                 FROM pg_constraint con
+                 JOIN pg_namespace n ON n.oid = con.connamespace
+                 JOIN pg_class cl ON cl.oid = con.conrelid
+                 JOIN pg_class clf ON clf.oid = con.confrelid
+                 JOIN pg_attribute a ON a.attrelid = con.conrelid
+                    AND a.attnum = con.conkey[1]
+                 JOIN pg_attribute af ON af.attrelid = con.confrelid
+                    AND af.attnum = con.confkey[1]
+                 WHERE n.nspname = ? AND cl.relname = ? AND con.contype = 'f'
+                 ORDER BY con.conname",
                 [self::pgSchema(), $table]
             );
         }
@@ -112,8 +123,12 @@ class SchemaInspector
             'from'      => (string) ($r->from ?? $r->{'from'}),
             'table'     => (string) $r->ref_table,
             'to'        => (string) $r->ref_col,
-            'on_delete' => self::normalizeRule($r->del),
-            'on_update' => self::normalizeRule($r->upd),
+            'on_delete' => isset($r->del_code)
+                ? self::pgActionCode($r->del_code)
+                : self::normalizeRule($r->del ?? ''),
+            'on_update' => isset($r->upd_code)
+                ? self::pgActionCode($r->upd_code)
+                : self::normalizeRule($r->upd ?? ''),
         ], $rows);
     }
 
@@ -160,7 +175,7 @@ class SchemaInspector
         $driver = self::driver();
 
         if ($driver === 'sqlite') {
-            return DB::select('PRAGMA index_info('.$thisQuote($index).')');
+            return DB::select('PRAGMA index_info('.self::thisQuote($index).')');
         }
 
         if ($driver === 'mysql') {
@@ -313,6 +328,21 @@ class SchemaInspector
     private static function pgSchema(): string
     {
         return 'public';
+    }
+
+    /**
+     * PostgreSQL pg_constraint 外键动作单字符代码 → PRAGMA 风格大写短词。
+     */
+    private static function pgActionCode(string $code): string
+    {
+        return match ($code) {
+            'a' => 'NO ACTION',
+            'r' => 'RESTRICT',
+            'c' => 'CASCADE',
+            'n' => 'SET NULL',
+            'd' => 'SET DEFAULT',
+            default => strtoupper($code),
+        };
     }
 
     /**

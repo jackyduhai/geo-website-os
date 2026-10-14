@@ -68,6 +68,7 @@ return new class extends Migration
         Schema::table('page_blocks', function (Blueprint $table) {
             $table->index(['page', 'is_active', 'sort'], 'page_blocks_page_is_active_sort_index');
         });
+        MigrationPortability::ensureColumnIndexed('page_blocks', 'site_id', 'page_blocks_site_id_index');
     }
 
     private function rollbackPageBlocks(): void
@@ -130,6 +131,7 @@ return new class extends Migration
         Schema::table('media', function (Blueprint $table) {
             $table->index('mime', 'media_mime_index');
         });
+        MigrationPortability::ensureColumnIndexed('media', 'site_id', 'media_site_id_index');
     }
 
     private function rollbackMedia(): void
@@ -193,6 +195,7 @@ return new class extends Migration
         Schema::table('banners', function (Blueprint $table) {
             $table->index(['position', 'is_active', 'sort'], 'banners_position_is_active_sort_index');
         });
+        MigrationPortability::ensureColumnIndexed('banners', 'site_id', 'banners_site_id_index');
     }
 
     private function rollbackBanners(): void
@@ -254,6 +257,7 @@ return new class extends Migration
             $table->index('created_at', 'audit_logs_created_at_index');
             $table->index(['target_type', 'target_id'], 'audit_logs_target_type_target_id_index');
         });
+        MigrationPortability::ensureColumnIndexed('audit_logs', 'site_id', 'audit_logs_site_id_index');
     }
 
     private function rollbackAuditLogs(): void

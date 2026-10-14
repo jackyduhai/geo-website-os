@@ -40,17 +40,21 @@ return new class extends Migration
         //      （以及建表迁移 2026_09_14_000005 的默认命名索引）
         // 原实现只删第1 个名字，导致索引残留；而 SQLite 的 DROP COLUMN
         // 在仍有索引引用该列时会直接失败 —— 于是回滚整体报错、不可用。
-        // 因此这里按「实际存在的索引名」逐个删除，不依赖名字猜测。
+        // 按「实际存在的索引名」逐个删除，不依赖名字猜测。
+        //
+        // ⚠️ PostgreSQL：不能对「不存在的索引」发 DROP 再用 try/catch 兜底——
+        // PG 语句失败后当前事务进入 aborted（25P02），PHP 即使 catch 了异常，
+        // 事务仍无法恢复，后续 hasColumn / dropIndex 全部 25P02 失败。因此必须
+        // 先用 getIndexes() 核实索引存在，再 DROP，绝不在 PG 上触发失败语句。
+        $existing = array_column(Schema::getIndexes('menus'), 'name');
         foreach ([
             'menus_parent_key_active_index',
             'menus_parent_key_is_active_index',
         ] as $indexName) {
-            try {
+            if (in_array($indexName, $existing, true)) {
                 Schema::table('menus', function (Blueprint $table) use ($indexName) {
                     $table->dropIndex($indexName);
                 });
-            } catch (\Throwable $e) {
-                // 索引不存在（未创建或已被后续迁移改名）→ 跳过
             }
         }
 

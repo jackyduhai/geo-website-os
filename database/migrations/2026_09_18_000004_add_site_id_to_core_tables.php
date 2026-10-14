@@ -195,8 +195,10 @@ return new class extends Migration
              lock_manual, slot, created_at, updated_at, deleted_at
             FROM contents');
 
+        $incomingFks = MigrationPortability::dropReferencingForeignKeys('contents');
         Schema::drop('contents');
         Schema::rename('contents_old', 'contents');
+        MigrationPortability::restoreReferencingForeignKeys($incomingFks);
 
         // 回滚后恢复旧形态索引（名称由 Laravel 自动生成，旧表原索引随 drop 已删除）。
         Schema::table('contents', function (Blueprint $table) {
@@ -277,8 +279,10 @@ return new class extends Migration
              is_nav, is_active, seo_title, seo_desc, created_at, updated_at
             FROM categories');
 
+        $incomingFks = MigrationPortability::dropReferencingForeignKeys('categories');
         Schema::drop('categories');
         Schema::rename('categories_old', 'categories');
+        MigrationPortability::restoreReferencingForeignKeys($incomingFks);
 
         Schema::table('categories', function (Blueprint $table) {
             $table->unique('slug');
@@ -340,8 +344,10 @@ return new class extends Migration
             SELECT id, category_id, name, slug, description, sort, is_active, created_at, updated_at
             FROM {$groupsTable}");
 
+        $incomingFks = MigrationPortability::dropReferencingForeignKeys('groups');
         Schema::drop('groups');
         Schema::rename('groups_old', 'groups');
+        MigrationPortability::restoreReferencingForeignKeys($incomingFks);
 
         Schema::table('groups', function (Blueprint $table) {
             $table->unique(['category_id', 'slug']);
@@ -417,8 +423,10 @@ return new class extends Migration
              is_public, sort, created_at, updated_at
             FROM facts");
 
+        $incomingFks = MigrationPortability::dropReferencingForeignKeys('facts');
         Schema::drop('facts');
         Schema::rename('facts_old', 'facts');
+        MigrationPortability::restoreReferencingForeignKeys($incomingFks);
 
         Schema::table('facts', function (Blueprint $table) {
             $table->unique('key');
@@ -484,8 +492,10 @@ return new class extends Migration
             SELECT id, {$key}, value, {$group}, label, type, hint, sort, created_at, updated_at
             FROM settings");
 
+        $incomingFks = MigrationPortability::dropReferencingForeignKeys('settings');
         Schema::drop('settings');
         Schema::rename('settings_old', 'settings');
+        MigrationPortability::restoreReferencingForeignKeys($incomingFks);
 
         Schema::table('settings', function (Blueprint $table) {
             $table->unique('key');

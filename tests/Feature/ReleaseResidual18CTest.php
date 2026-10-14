@@ -253,6 +253,11 @@ class ReleaseResidual18CTest extends TestCase
         // fresh install 极早期 / 异常库：entities 表尚未迁移时 Catalog 必须返回空而非抛 SQL 白屏
         // MySQL/PostgreSQL 下有表引用 entities，需先关闭外键检查才能 drop。
         \App\Support\MigrationPortability::disableForeignKeyChecks();
+        // PostgreSQL：session_replication_role=replica 仅禁用触发器，仍然不允许 DROP
+        // 被其它表外键引用的表（2BP01，entity_relations / seo_metas 的 FK 仍在）。
+        // 必须先删除引用 entities 的 FK；这些 DDL 在 RefreshDatabase 事务内（PG 为
+        // 事务性 DDL），测试结束随回滚恢复。非 PG 上 dropReferencingForeignKeys 恒为空。
+        \App\Support\MigrationPortability::dropReferencingForeignKeys('entities');
         Schema::drop('entities');
         \App\Support\MigrationPortability::enableForeignKeyChecks();
         Catalog::flush();

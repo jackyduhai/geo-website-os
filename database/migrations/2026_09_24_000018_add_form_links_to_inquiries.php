@@ -27,22 +27,22 @@ return new class extends Migration
     public function down(): void
     {
         /**
-         * ⚠️ 必须用**显式索引名**，不能用 `dropUnique(['submission_id'])`（20G-8-B 实测）。
+         * ⚠️ 唯一索引必须用 **dropUnique（显式名）**，普通索引才用 dropIndex。
          *
-         * 原因：Laravel 的 `unique()` 在 SQLite 下建出的是**命名索引**
-         * `inquiries_submission_id_unique`，而 `dropUnique(['col'])` 会去找
-         * SQLite 的表级唯一约束名 `sqlite_autoindex_*`——那是 SQLite 内部命名，
-         * 无法按列名 DROP，于是回滚直接失败。
+         * 跨引擎语义不同（Phase 2D 实测）：
+         *   - PostgreSQL：`->unique()` 建出的是唯一「约束」，其支撑索引不能用
+         *     DROP INDEX 删除（2BP01，必须 DROP CONSTRAINT），故用 dropUnique。
+         *   - MySQL：dropUnique 编译为 ALTER TABLE ... DROP INDEX，等价可用。
+         *   - SQLite：dropUnique 内部委托 compileDropIndex（DROP INDEX），可用。
          *
-         * 失败被 Laravel 的异常处理器吞掉（进程退出码仍是 0），导致
-         * 「回滚链完整」表面通过、实际残留半个索引 —— 与 20G-6 · C-17
-         * （menus.parent_key删错索引名）**同款缺陷**。
+         * 早期写法曾用 dropUnique(['submission_id'])（列数组，20G-8-B 实测失败）：
+         * Laravel 在 SQLite 下按列名解析会去找表级 sqlite_autoindex_*，那是
+         * SQLite 内部命名、无法按列名 DROP。因此这里用显式约束名字符串。
          *
-         * 修法：显式 dropIndex 真实索引名，再dropColumn。
-         * 且 dropIndex 必须**先于** dropColumn（列没了索引就无从引用）。
+         * 且必须**先于** dropColumn（列没了索引就无从引用）。
          */
         Schema::table('inquiries', function (Blueprint $table) {
-            $table->dropIndex('inquiries_submission_id_unique');
+            $table->dropUnique('inquiries_submission_id_unique');
             $table->dropIndex('inquiries_form_id_index');
             $table->dropColumn(['submission_id', 'form_id', 'email']);
         });

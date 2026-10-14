@@ -103,10 +103,16 @@ class FactLocaleIntegrityTest extends TestCase
         // 同站同语言同 key → 拒绝
         $rejected = false;
         try {
-            Fact::create([
-                'key' => 'FACT-CO-001', 'label' => '重复', 'value' => 'DUP',
-                'is_public' => true, 'locale' => 'zh-CN',
-            ]);
+            // 用嵌套事务（PG 上为 SAVEPOINT）包住预期失败的写入：PostgreSQL 中一条
+            // 语句报错会让整个事务进入 aborted 状态，后续命令一律 25P02，必须先
+            // ROLLBACK TO SAVEPOINT 才能继续。DB::transaction 在闭包抛异常时自动
+            // 回滚到该保存点并恢复连接；SQLite 行为等价。
+            \DB::transaction(function () {
+                Fact::create([
+                    'key' => 'FACT-CO-001', 'label' => '重复', 'value' => 'DUP',
+                    'is_public' => true, 'locale' => 'zh-CN',
+                ]);
+            });
         } catch (\Illuminate\Database\UniqueConstraintViolationException|\PDOException) {
             $rejected = true;
         }

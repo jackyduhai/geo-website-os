@@ -76,10 +76,14 @@ class AdminEntityCrudTest extends TestCase
         ], $overrides);
     }
 
-    private function entityOnSite(Site $site, string $type, string $slug): Entity
+    private function entityOnSite(Site $site, string $type, string $slug, string $locale = 'zh-CN'): Entity
     {
+        // 必须带 locale：同一 slug 可跨语言存在（seed 中核心产品有 zh/en 两行），不加
+        // locale 过滤时跨引擎返回顺序不确定，PG 上会误取无关系的 en 行。
+        // 后台 store / seeder 权威行均为默认语言（LocaleRegistry::default() = zh-CN）。
         return Entity::withoutSiteScope()
             ->where('site_id', $site->id)->where('type', $type)->where('slug', $slug)
+            ->where('locale', $locale)
             ->firstOrFail();
     }
 
@@ -366,8 +370,13 @@ class AdminEntityCrudTest extends TestCase
         // 示例种子中核心产品同时是 produces / uses / related_to 的端点。
         // 注意：不得在 HTTP 请求外直接调用 Catalog（会在 default 上下文构建静态 memo），
         // 这里用不走 SiteContext 的查询取 B 站核心产品。
+        //
+        // 必须锁定 zh-CN 权威行：P-STEP 18F 的 en 翻译行（ensureEnglish）不复制
+        // EntityRelation，关系只挂在 zh 权威行上，en 行经 translation_group 关联。
+        // 不加 locale 过滤时，跨引擎无 ORDER BY 的结果顺序不确定（SQLite 先返回 zh、
+        // PostgreSQL 先返回 en），会在 PG 上误取无关系的 en 行而断言失败。
         $core = Entity::withoutSiteScope()
-            ->where('site_id', $b->id)->where('type', 'product')->get()
+            ->where('site_id', $b->id)->where('type', 'product')->where('locale', 'zh-CN')->get()
             ->first(fn ($e) => ($e->metadata['core'] ?? false) === true);
         $this->assertNotNull($core);
         $product = $this->entityOnSite($b, 'product', $core->slug);

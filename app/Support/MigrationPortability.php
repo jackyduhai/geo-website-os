@@ -189,6 +189,128 @@ class MigrationPortability
         )");
     }
 
+    /**
+     * 删除一个唯一对象（约束 或 唯一索引），并按是否存在处理。
+     *
+     * PostgreSQL 上 Laravel 的 `$table->unique(...)` 建「唯一约束」，但裸
+     * `CREATE UNIQUE INDEX` 建「独立唯一索引」；二者同名时，DROP CONSTRAINT 对
+     * 独立索引失败（42704），DROP INDEX 对约束失败（2BP01）。本方法查
+     * pg_constraint 判定真实类型后分别删除；对象不存在时为 no-op，避免在 PG
+     * 上触发失败语句把事务置为 aborted。
+     *
+     * MySQL / SQLite 无约束/索引之分，统一用 dropUnique（SQLite 内部委托 DROP INDEX）。
+     */
+    public static function dropUniqueObjectIfExists(string $table, string $indexName): void
+    {
+        $driver = DB::connection()->getDriverName();
+
+        if ($driver === 'pgsql') {
+            $isConstraint = DB::select(
+                "SELECT 1 FROM pg_constraint con
+                 JOIN pg_class c ON c.oid = con.conrelid
+                 JOIN pg_namespace n ON n.oid = con.connamespace
+                 WHERE con.conname = ? AND c.relname = ?
+                   AND n.nspname = ANY(current_schemas(false))",
+                [$indexName, $table]
+            );
+
+            if ($isConstraint) {
+                \Illuminate\Support\Facades\Schema::table($table, function (\Illuminate\Database\Schema\Blueprint $t) use ($indexName) {
+                    $t->dropUnique($indexName);
+                });
+            } else {
+                // 仅当同名「独立索引」存在时才 DROP（pg_index 关联索引关系）。
+                $indexExists = DB::select(
+                    "SELECT 1
+                     FROM pg_index x
+                     JOIN pg_class c ON c.oid = x.indexrelid
+                     JOIN pg_namespace n ON n.oid = c.relnamespace
+                     WHERE c.relname = ?
+                       AND n.nspname = ANY(current_schemas(false))",
+                    [$indexName]
+                );
+                if ($indexExists) {
+                    \Illuminate\Support\Facades\Schema::table($table, function (\Illuminate\Database\Schema\Blueprint $t) use ($indexName) {
+                        $t->dropIndex($indexName);
+                    });
+                }
+            }
+        } else {
+            // MySQL / SQLite：只在索引存在时删除（避免对不存在对象发语句）。
+            $existing = array_column(\Illuminate\Support\Facades\Schema::getIndexes($table), 'name');
+            if (in_array($indexName, $existing, true)) {
+                \Illuminate\Support\Facades\Schema::table($table, function (\Illuminate\Database\Schema\Blueprint $t) use ($indexName) {
+                    $t->dropUnique($indexName);
+                });
+            }
+        }
+    }
+
+    /**
+     * 确保存在以指定列为最左前缀的索引（支撑外键与按列过滤）。
+     *
+     * MySQL / PostgreSQL 的外键会自动建立可用索引，SQLite 不会为外键建索引。
+     * 本方法按驱动检查是否已有以该列为最左前缀的索引，仅在缺失时才显式创建，
+     * 从而避免在 MySQL / PostgreSQL 上产生重复索引。
+     */
+    public static function ensureColumnIndexed(string $table, string $column, string $indexName): void
+    {
+        if (in_array($column, static::leftmostIndexedColumns($table), true)) {
+            return;
+        }
+
+        \Illuminate\Support\Facades\Schema::table(
+            $table,
+            fn (\Illuminate\Database\Schema\Blueprint $t) => $t->index($column, $indexName)
+        );
+    }
+
+    /**
+     * 返回该表中作为「某个索引最左列」的列名集合。
+     *
+     * @return array<int, string>
+     */
+    public static function leftmostIndexedColumns(string $table): array
+    {
+        $driver = DB::connection()->getDriverName();
+
+        if ($driver === 'sqlite') {
+            $columns = [];
+            foreach (DB::select('PRAGMA index_list(' . static::quote($table) . ')') as $index) {
+                $cols = DB::select('PRAGMA index_info(' . static::quote($index->name) . ')');
+                if (isset($cols[0]->name)) {
+                    $columns[] = $cols[0]->name;
+                }
+            }
+
+            return $columns;
+        }
+
+        if ($driver === 'mysql') {
+            $rows = DB::select(
+                'SELECT COLUMN_NAME AS col FROM information_schema.STATISTICS
+                 WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND SEQ_IN_INDEX = 1',
+                [$table]
+            );
+
+            return array_map(static fn ($r) => $r->col, $rows);
+        }
+
+        // pgsql
+        $rows = DB::select(
+            "SELECT a.attname AS col
+             FROM pg_index x
+             JOIN pg_class i ON i.oid = x.indexrelid
+             JOIN pg_class t ON t.oid = x.indrelid
+             JOIN pg_namespace n ON n.oid = t.relnamespace
+             JOIN pg_attribute a ON a.attrelid = t.oid AND a.attnum = x.indkey[0]
+             WHERE n.nspname = ANY (current_schemas(false)) AND t.relname = ?",
+            [$table]
+        );
+
+        return array_map(static fn ($r) => $r->col, $rows);
+    }
+
     /** @return string[] */
     private static function fkToggleStatements(bool $enable): array
     {

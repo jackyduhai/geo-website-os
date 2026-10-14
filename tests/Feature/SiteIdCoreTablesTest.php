@@ -177,8 +177,10 @@ class SiteIdCoreTablesTest extends TestCase
         $this->assertEquals($groupCountBefore, Group::count(), 'Failed cross-site attempt left partial data');
 
         // Verify no cross-site references exist in database
-        $crossRefs = DB::select("
-            SELECT g.id FROM `groups` g
+        // Verify no cross-site references exist in database
+        $groups = \App\Support\MigrationPortability::quote('groups');
+        $crossRefs = DB::select(
+            "SELECT g.id FROM {$groups} g
             JOIN categories c ON g.category_id = c.id
             WHERE g.site_id != c.site_id
         ");

@@ -321,6 +321,12 @@ return new class extends Migration
         ));
         $selectList = implode(', ', array_map(fn ($c) => '`'.$c.'`', $keepCols));
 
+        // 与非 sqlite 回滚一致：恢复后的 UNIQUE(site_id, slug) / UNIQUE(site_id, slot)
+        // 无法容纳同一 slug/slot 的多语言行，必须先删除非默认语言（!= zh-CN）行，
+        // 仅保留默认语言行，与改造前「一条内容一个 slug」语义一致。此前缺这一步，
+        // 含 en 翻译的种子数据在回滚时触发 UNIQUE(site_id, slug) 冲突（23000）。
+        DB::table('contents')->where('locale', '!=', 'zh-CN')->delete();
+
         DB::statement('INSERT INTO `contents_down` ('.$selectList.') SELECT '.$selectList.' FROM `contents`');
 
         DB::statement('DROP TABLE contents');
