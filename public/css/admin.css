@@ -741,3 +741,26 @@ th .size-tag{font-weight:400}
   .tpl-struct-row{flex-direction:column;gap:2px}
   .tpl-k{flex:none}
 }
+
+/* ==========================================================================
+   内容编辑页 · 发布要求常驻面板（publish-req）
+   ========================================================================== */
+.publish-req-card{border-color:var(--brand-line);background:var(--brand-soft)}
+.publish-req-card h2{display:flex;align-items:center;gap:8px;border-bottom-color:var(--brand-line)}
+.publish-req-summary{margin:0 0 10px;font-size:13.5px;color:var(--ink-2);line-height:1.7}
+.publish-req-check{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+.publish-req-details{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-sm);padding:10px 12px}
+.publish-req-details > summary{cursor:pointer;list-style:none}
+.publish-req-details > summary::-webkit-details-marker{display:none}
+.publish-req-details[open] > summary{margin-bottom:6px}
+.publish-req-group{margin-top:8px}
+.publish-req-group-title{font-size:13px;font-weight:600;color:var(--ink-2);margin-bottom:4px}
+.publish-req-group ul{list-style:none;margin:0;padding:0}
+.publish-req-group li{display:flex;align-items:flex-start;gap:8px;font-size:13px;line-height:1.6;color:var(--ink-3);padding:2px 0}
+.level-tag{flex:none;font-size:11px;font-weight:600;border-radius:999px;padding:1px 8px;line-height:1.7;margin-top:1px}
+.level-tag.must{background:var(--err-bg);color:var(--err)}
+.level-tag.should{background:var(--warn-bg);color:var(--warn)}
+.publish-req-notes{margin:8px 0 0;line-height:1.6}
+.publish-req-inline{margin:0 0 10px;font-size:12.5px;color:var(--brand-dark);background:var(--brand-soft);
+  border:1px solid var(--brand-line);border-radius:var(--radius-sm);padding:6px 10px}
+

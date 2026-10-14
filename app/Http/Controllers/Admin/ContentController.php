@@ -382,6 +382,9 @@ class ContentController extends Controller
             'categories'  => Category::with('children')->whereNull('parent_id')->orderBy('sort')->get(),
             'groups'      => Group::with('category')->orderBy('sort')->get(),
             'facts'       => Fact::orderBy('sort')->get(),
+            // 发布要求展示规格：动态值（证据数量、GEOFlow 强制开关）由 ContentGate 从
+            // 实际配置产出，Blade 不再硬编码。发布裁决仍以 check() 为准。
+            'publishSpec' => app(ContentGate::class)->requirementSpec(),
             // 18R-2c：标签（站点级）+ 可关联实体（产品/服务/组织/主题）
             'tags'             => \App\Models\Tag::orderBy('name')->get(),
             'selectedTagIds'   => $anchor->exists ? $anchor->tags()->pluck('tags.id')->all() : [],

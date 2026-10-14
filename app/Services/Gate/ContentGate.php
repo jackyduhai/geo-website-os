@@ -67,6 +67,111 @@ class ContentGate
     }
 
     /**
+     * 发布要求「展示规格」（解释性清单）。
+     *
+     * 重要：本方法只是展示规格，不是发布裁决；唯一的发布裁决仍是 check()。
+     * 它把 check() 的阻断条件与警告整理成运营可读的清单，动态值（证据数量、
+     * GEOFlow 强制开关）在运行时从同一配置读取，避免前端再写一套数字。
+     * 注意展示文案与 check() 是分别手写的，仍存在漂移可能，由
+     * {@see \Tests\Feature\ContentPublishRequirementsPanelTest} 契约测试保证一致。
+     *
+     * 关于强制模式：
+     * - 后台手动发布（本页面）始终强制——ContentController::publish() 不通过即拒绝，
+     *   没有降级开关；
+     * - isEnforced() 仅作用于 GEOFlow 推送路径（见 GeoflowSync）。
+     *
+     * @return array{
+     *   enforced: bool,
+     *   min_evidence: int,
+     *   summary: string,
+     *   manual_note: string,
+     *   geoflow_note: string,
+     *   groups: array<int, array{title: string, items: array<int, array{level: string, text: string}>}>
+     * }
+     */
+    public function requirementSpec(): array
+    {
+        $n = $this->minEvidence();
+        $enforced = $this->isEnforced();
+
+        $must = static fn (string $t): array => ['level' => 'must', 'text' => $t];
+        $should = static fn (string $t): array => ['level' => 'should', 'text' => $t];
+
+        $groups = [
+            [
+                'title' => 'A. 四层结构（必须）',
+                'items' => [
+                    $must('结论：一段话直接回答“是什么 / 给谁 / 解决什么”，作为答案块首段'),
+                    $must('解释：说明为什么、怎么做，包含关键实体与参数（工艺 / 规格 / 参数 / 产能 / 交付）'),
+                    $must('证据：参数 / 事实至少 ' . $n . ' 条，每条需含“参数名 + 值 + 来源”'),
+                    $must('边界：写明不适用场景、限制条件或客观边界'),
+                    $should('FAQ：补充客户高频问题与直接答案，发布后生成 FAQPage 结构化数据'),
+                ],
+            ],
+            [
+                'title' => 'B. 证据链（必须）',
+                'items' => [
+                    $must('证据（参数 / 事实）至少 ' . $n . ' 条'),
+                    $must('每条证据的“来源”必填；也可勾选事实库条目，对外值以事实库为准'),
+                ],
+            ],
+            [
+                'title' => 'C. 治理字段（必须）',
+                'items' => [
+                    $must('责任人（owner）：对本页内容真实性负责的部门或姓名'),
+                    $must('最后复核日期（reviewed_at）：内容事实最近一次核对的日期'),
+                ],
+            ],
+            [
+                'title' => 'D. 基础字段（必须 / 建议）',
+                'items' => [
+                    $must('标题不能为空'),
+                    $must('slug（网址标识）不能为空，且为小写字母、数字、连字符'),
+                    $should('标题建议不超过 60 字，避免被搜索结果截断'),
+                    $should('建议填写摘要，用于列表页与 meta description；留空将退化为正文首段'),
+                ],
+            ],
+            [
+                'title' => 'E. 文本合规（命中即拒）',
+                'items' => array_values(array_filter([
+                    $must('不含极限词 / 绝对化表述（如“第一”“最”“国家级”“世界级”“100%”等）'),
+                    count(self::BANNED_COMPARISON) > 0
+                        ? $must('不含他方品牌对标表述（已配置 ' . count(self::BANNED_COMPARISON) . ' 项禁用品牌）')
+                        : null,
+                    $must('不含“XX 同款”式他方品牌对标表述'),
+                    count(self::CONFLICT_VALUES) > 0
+                        ? $must('不含已知事实口径冲突（已配置 ' . count(self::CONFLICT_VALUES) . ' 项）')
+                        : null,
+                    $must('不含占位符（如【待提供】、TODO、TBD）'),
+                ])),
+            ],
+            [
+                'title' => 'F. 引用（必须 / 建议）',
+                'items' => [
+                    $must('事实引用（fact_refs）须指向真实存在的事实'),
+                    $must('语义引用（entity_refs）的实体必须存在'),
+                    $should('引用草稿 / 已删除 / noindex 实体仅警告，不阻断发布'),
+                ],
+            ],
+            [
+                'title' => 'G. 电话一致性（建议确认）',
+                'items' => [
+                    $should('文中电话应与官方口径一致；出现其他电话仅作警告，请确认是否为业务号'),
+                ],
+            ],
+        ];
+
+        return [
+            'enforced'     => $enforced,
+            'min_evidence' => $n,
+            'summary'      => '发布要求：四层内容齐全 · 证据不少于 ' . $n . ' 条且每条有来源 · 责任人与复核日期齐全 · 标题和网址标识合规',
+            'manual_note'  => '本页面手动发布：门禁未通过即拒绝，无降级开关。',
+            'geoflow_note' => 'GEOFlow 自动推送：当前为「' . ($enforced ? '强制校验，未通过即拒绝' : '降级为警告，不阻断') . '」。',
+            'groups'       => $groups,
+        ];
+    }
+
+    /**
      * 执行全量校验
      *
      * @return array{passed:bool, errors:array, warnings:array}

@@ -69,6 +69,34 @@
 <div class="editor-layout">
   {{-- ============ 主栏 ============ --}}
   <div class="editor-main">
+    {{-- ============ 发布要求（常驻面板） ============ --}}
+    <div class="card publish-req-card">
+      <h2>发布要求 <span class="badge ok">手动发布强制校验</span></h2>
+      <p class="publish-req-summary">{{ $publishSpec['summary'] }}</p>
+      <div class="publish-req-check">
+        <button type="button" class="btn btn-sm" id="btnCheck">门禁预检（即时核对，不保存）</button>
+        <span id="checkResult"></span>
+      </div>
+      <details class="publish-req-details" open>
+        <summary class="small muted">查看完整发布要求（A–G，可收起）</summary>
+        @foreach($publishSpec['groups'] as $group)
+          <div class="publish-req-group">
+            <div class="publish-req-group-title">{{ $group['title'] }}</div>
+            <ul>
+              @foreach($group['items'] as $item)
+                <li class="publish-req-{{ $item['level'] }}">
+                  <span class="level-tag {{ $item['level'] }}">{{ $item['level'] === 'must' ? '必须' : '建议' }}</span>
+                  <span>{{ $item['text'] }}</span>
+                </li>
+              @endforeach
+            </ul>
+          </div>
+        @endforeach
+        <p class="small muted publish-req-notes">{{ $publishSpec['manual_note'] }} {{ $publishSpec['geoflow_note'] }}</p>
+        <p class="small muted publish-req-notes">本清单仅说明发布条件；是否通过以「门禁预检」与发布时的实际校验为准。</p>
+      </details>
+    </div>
+
     <div class="card">
       <h2>基础信息</h2>
       <div class="form-row">
@@ -96,7 +124,8 @@
 
     {{-- ============ GEO 四层 ============ --}}
     <div class="card">
-      <h2><span class="label-with-tip">GEO 四层答案结构 <x-admin-tip type="help" text="让 AI 能准确复述：结论 → 解释 → 证据 → 边界，并配 FAQ。四层为发布门禁必填项。"/></span></h2>
+      <h2>GEO 四层答案结构</h2>
+      <p class="publish-req-inline">结论、解释、证据、边界四层均为发布必填，缺一项无法发布；建议同时补充 FAQ。</p>
 
       <div class="geo-layer">
         <h3><span class="label-with-tip">① 结论层 <x-admin-tip text="一段话直接回答“是什么 / 给谁 / 解决什么”，作为答案块首段。"/></span></h3>
@@ -109,7 +138,8 @@
       </div>
 
       <div class="geo-layer">
-        <h3><span class="label-with-tip">③ 证据层 <x-admin-tip type="warning" text="参数 / 事实至少 2 条，且每条必须填写来源；也可直接勾选下方事实库条目。"/></span></h3>
+        <h3>③ 证据层</h3>
+        <p class="publish-req-inline">证据（参数 / 事实）至少 {{ $publishSpec['min_evidence'] }} 条，每条必填来源（详见顶部「发布要求」）。</p>
         <div id="evidenceWrap">
           @foreach($evRows as $ev)
             <div class="repeat-row">
@@ -312,7 +342,6 @@
 
     <div class="save-bar">
       <button class="btn btn-primary" type="submit">保存</button>
-      <button type="button" class="btn" id="btnCheck">门禁预检</button>
       <div class="save-spacer"></div>
       @if($isDefault && $content->exists)
         @if($content->status==='published')
@@ -322,7 +351,6 @@
         @endif
         <a class="btn btn-sm" href="{{ route('admin.contents.revisions',$content) }}">版本记录</a>
       @endif
-      <span id="checkResult"></span>
       <div>
         @if($content->status==='published')<span class="badge published">已发布</span>
         @elseif($content->status==='archived')<span class="badge archived">已归档</span>
