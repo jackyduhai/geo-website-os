@@ -12,6 +12,7 @@ use App\Models\Inquiry;
 use App\Models\Menu;
 use App\Models\Page;
 use App\Models\Redirect;
+use App\Models\Site;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -147,15 +148,23 @@ class AdminDangerousActionsCopyTest extends TestCase
         $this->actingAs($this->admin)
             ->get(route('admin.forms.index'))
             ->assertOk()
-            ->assertSee('删除表单', false);
+            ->assertSee('删除表单', false)
+            ->assertSee('删除表单「UX 审计表单」？其字段定义将一并删除（历史提交保留），此操作不可恢复。', false);
     }
 
-    public function test_sites_page_uses_delete_site_label(): void
+    public function test_sites_page_uses_delete_site_label_for_non_default(): void
     {
+        // 默认站点无删除按钮；新建一个非默认站点，其行内才出现「删除站点」
+        Site::create([
+            'name' => 'Site B', 'slug' => 'site-b', 'domain' => 'b.test',
+            'status' => 'active', 'is_default' => false,
+        ]);
+
         $this->actingAs($this->admin)
             ->get(route('admin.sites.index'))
             ->assertOk()
-            ->assertSee('删除站点', false);
+            ->assertSee('删除站点', false)
+            ->assertSee('删除站点「Site B」？该站仍有数据时会被系统阻止；此操作不可恢复。', false);
     }
 
     public function test_pages_page_uses_delete_page_label(): void
@@ -195,7 +204,8 @@ class AdminDangerousActionsCopyTest extends TestCase
         $this->actingAs($this->admin)
             ->get(route('admin.redirects.index'))
             ->assertOk()
-            ->assertSee('删除规则', false);
+            ->assertSee('删除规则', false)
+            ->assertSee('删除该跳转规则？此操作不可恢复。', false);
     }
 
     public function test_menus_page_uses_delete_label(): void
@@ -222,6 +232,7 @@ class AdminDangerousActionsCopyTest extends TestCase
         $this->actingAs($this->admin)
             ->get(route('admin.inquiries.index'))
             ->assertOk()
-            ->assertSee('删除留言', false);
+            ->assertSee('删除留言', false)
+            ->assertSee('确定删除这条留言？此操作不可恢复。', false);
     }
 }
