@@ -1,6 +1,6 @@
 @extends('admin.layout')
 @section('title','主题管理')
-@section('page-desc','主题是文件资源（resources/themes/{目录}），这里只做发现、预览与按站点激活，不提供上传或在线编辑。激活态按站点独立保存：顶部切换到哪个站点，激活就作用于哪个站点，各站互不影响。预览仅在新窗口临时渲染，不会改变当前激活主题。')
+@section('page-desc','主题是文件资源（resources/themes/{目录}），这里只做发现、预览与按站点激活；激活态按站点独立保存，顶部切换到哪个站点，激活就作用于哪个站点，各站互不影响。')
 
 @section('content')
 @if(!empty($invalid))
@@ -82,6 +82,7 @@
   <ul class="small" style="line-height:1.9;margin:0;padding-left:18px;">
     <li>主题通过同名视图覆盖（如 site/home、layouts/site）工作，未覆盖的视图自动回退到基础视图。</li>
     <li>激活是原子操作：目标主题清单缺失 / 无效时直接拒绝，不会留下「半激活」状态。</li>
+    <li><strong>预览</strong>：仅在新窗口临时渲染，不会改变当前激活主题。</li>
     <li>主题文件的安装、升级与删除通过文件部署 / Theme SDK 完成，后台不写文件，以避免服务器写文件安全面。</li>
     <li>主题配色 Token 的细粒度设置归「站点设置 → 外观与主题」，本页负责整主题的选择与预览。</li>
   </ul>

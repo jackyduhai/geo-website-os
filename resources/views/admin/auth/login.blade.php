@@ -33,7 +33,7 @@ $biP16 = file_exists(public_path($bi.'favicon_16.png'))   ? $bi.'favicon_16.png'
     <img class="login-logo" src="{{ asset('img/logo-icon.png') }}" alt="{{ $loginCompanyName }}">
   @endif
   <div class="login-brand">{{ $loginCompanyName }}</div>
-  <div class="login-sub">多站点 GEO 内容管理系统</div>
+  <div class="login-sub">GEO Website OS · 多站点内容管理后台</div>
 
   @if(session('error'))<div class="login-alert">{{ session('error') }}</div>@endif
   @if($errors->any())

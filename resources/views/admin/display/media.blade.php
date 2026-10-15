@@ -44,12 +44,12 @@
           <div class="small muted">@if($m->width){{ $m->width }} × {{ $m->height }} · @endif{{ round($m->size/1024) }}KB</div>
           <form method="post" action="{{ route('admin.media.update',$m) }}">
             @csrf @method('PUT')
-            <input type="text" name="alt" value="{{ $m->alt }}" placeholder="alt 描述">
-            <input type="text" name="title" value="{{ $m->title }}" placeholder="title（可空）">
+            <input type="text" name="alt" value="{{ $m->alt }}" placeholder="替代文本（alt，无障碍 / SEO）">
+            <input type="text" name="title" value="{{ $m->title }}" placeholder="标题（可空）">
             <button class="btn btn-sm btn-primary">保存信息</button>
           </form>
           <form method="post" action="{{ route('admin.media.destroy',$m) }}"
-                onsubmit="return confirm('删除该文件？')">@csrf @method('DELETE')
+                onsubmit="return confirm('删除该文件？若被页面 / 内容 / 实体 / 站点设置等引用，系统将阻止删除；无引用时删除后不可恢复。')">@csrf @method('DELETE')
             <button class="btn btn-sm btn-danger">删除文件</button>
           </form>
           <div class="mono small muted media-url">{{ $m->url() }}</div>

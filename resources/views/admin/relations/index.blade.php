@@ -1,6 +1,6 @@
 @extends('admin.layout')
 @section('title','实体关系')
-@section('page-desc','关系是知识图谱的有向边：源实体 ──关系类型──▶ 目标实体。仅可在同一站点的实体之间建立；关系本身没有发布状态，只有当源、目标实体均已发布时，该关系才会出现在 /geo.json 机器可读图谱中。')
+@section('page-desc','关系是知识图谱的有向边：源实体 ──关系类型──▶ 目标实体，仅可在同一站点的实体之间建立。')
 
 @section('page-actions')
   <div class="btn-row">

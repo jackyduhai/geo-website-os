@@ -1,6 +1,6 @@
 @extends('admin.layout')
 @section('title','实体与图谱')
-@section('page-desc','实体是 GEO 知识图谱与前台目录的正式资源：组织、产品、服务、人物、地点、主题。对外的产品 / 服务在此生产并发布后，由前台 /products、/solutions 及 Schema / GEO / Sitemap 统一呈现；内容（文章 / 单页）与实体相互独立。')
+@section('page-desc','实体是 GEO 知识图谱与前台目录的正式资源：组织、产品、服务、人物、地点、主题、客户案例、下载资料。')
 
 @section('page-actions')
   <div class="btn-row">

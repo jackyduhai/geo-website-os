@@ -1,6 +1,6 @@
 @extends('admin.layout')
 @section('title','表单管理')
-@section('page-desc','产品化表单：管理员可不改 PHP 创建 Contact / Demo / Download / Appointment 等不同字段的表单。表单提交后保存为完整 Submission，并投影为「客户留言」；字段支持中文 / English 两语言。')
+@section('page-desc','产品化表单：不改 PHP 即可创建 Contact / Demo / Download / Appointment 等不同字段的表单，字段支持中文 / English 两语言。')
 
 @section('page-actions')
   <div class="btn-row">

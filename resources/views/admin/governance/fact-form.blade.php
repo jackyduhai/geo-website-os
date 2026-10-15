@@ -4,7 +4,7 @@
 
 @section('content')
 <div class="alert alert-warn">
-  Fact 用于 <strong>GEO 知识图谱（geo.json / AI 理解）</strong>，修改 Fact 不会直接改变网站前台页面显示的公司名称等内容；前台公司名、联系方式等请在「站点设置」中修改。
+  事实用于 <strong>GEO 知识图谱（geo.json / AI 理解）</strong>，修改事实不会直接改变网站前台页面显示的公司名称等内容；前台公司名、联系方式等请在「站点设置」中修改。
 </div>
 
 @if($fact->exists)
