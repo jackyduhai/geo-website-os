@@ -1,10 +1,10 @@
 {
-  "_comment": "GEO-OS 全量测试基线（权威计数）。由全量测试在 PHP 8.4 + sqlite :memory: 下实测得到（Windows 单进程会在约 311 例处挂起，本项目按 35 个独立进程分批执行并合并 JUnit，结果与 CI 顺序执行口径一致）。任何测试/断言的有意增删，都必须先重新执行全量回归，再有意更新本文件；CI 计数门禁会对实际结果与本基线做精确比对，防止测试数量意外减少或测试未被发现。后台文案第 2 批：回收站用词与危险操作按钮——内容/实体为软删（可恢复），统一为「移入回收站」并纠正实体列表误写的「不可恢复」；永久删除类按钮改明确动作名、消除单字「删」；新增 AdminDangerousActionsCopyTest 14 用例，并将站点/表单/跳转/留言断言加强为唯一确认文案（含新建第二站点验证删除按钮）。最终计数 1596/8233（断言较初版 +4，来自加强断言）。",
-  "commit": "3984b401decb96140fe666bf47c60ceff6ad10c7",
-  "command": "php artisan test（Windows 下分批执行后合并 JUnit）",
+  "_comment": "GEO-OS 全量测试基线（权威计数）。由全量测试在 PHP 8.4 + sqlite :memory: 下实测得到（Windows 单进程会在约 311 例处挂起，本项目按分批独立进程执行并合并 JUnit，结果与 CI 顺序执行口径一致）。任何测试/断言的有意增删，都必须先重新执行全量回归，再有意更新本文件；CI 计数门禁会对实际结果与本基线做精确比对，防止测试数量意外减少或测试未被发现。OPEN-2 修复：ContentController hydrate() 剔除 tag_ids/entity_links 非表字段（syncRelations 从 request 取数），修复 update/翻译保存 no such column: entity_links 的 500；store() 默认语言 anchor 保存后补调 syncRelations，修复新建内容关联不落库。新增 Open2ContentRelationPersistenceTest 10 用例/55 断言，覆盖 update 新增/替换/清空、store 带关系/无关系/多值、翻译隔离、移除关联不删主记录及原始 500 回归。最终计数 1606/8288（1596+10 tests，8233+55 assertions）。",
+  "commit": "da0203f467920988180046ad17b8f822e54a1ff6",
+  "command": "php artisan test（Windows 下分批独立进程执行后合并 JUnit）",
   "environment": "PHP 8.4 / PHPUnit 11.5 / sqlite :memory:",
-  "tests": 1596,
-  "assertions": 8233,
+  "tests": 1606,
+  "assertions": 8288,
   "failures": 0,
   "errors": 0,
   "skipped": 0
