@@ -104,6 +104,9 @@ class ContentController extends Controller
         $content->status = 'draft';
         $content->content_hash = $content->computeHash();
         $content->save();
+        // 关系仅挂在默认语言 anchor 上；syncRelations() 内部含语言守卫。
+        // 新建草稿保存后必须同步标签/实体关联，否则 store 路径的关联输入永远不会落库（OPEN-2）。
+        $this->syncRelations($content, $request);
 
         $this->snapshot($content, '创建草稿');
         AuditLog::record('content.created', '创建内容：' . $content->title, [], 'content', $content->id);
@@ -519,6 +522,10 @@ class ContentController extends Controller
 
         // 封面图：直接上传即入媒体库并关联；勾选移除则清空。未上传也未移除时保持原封面。
         unset($data['cover_file'], $data['cover_remove']); // 非数据表字段，禁止进入 fill
+        // 标签/实体关联是透视关系输入，由 syncRelations() 直接从 $request 读取并同步，
+        // 不是 contents 表列；必须从可 fill 数据中剔除，否则 save() 会拼入不存在的列触发 500。
+        // 关系同步不依赖 $data，此处 unset 不影响关联持久化（OPEN-2）。
+        unset($data['tag_ids'], $data['entity_links']);
         if ($request->boolean('cover_remove')) {
             $data['cover_id'] = null;
         }
