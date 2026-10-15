@@ -1,10 +1,10 @@
 {
-  "_comment": "GEO-OS 全量测试基线（权威计数）。由全量测试在 PHP 8.4 + sqlite :memory: 下实测得到（Windows 单进程会在约 311 例处挂起，本项目按分批独立进程执行并合并 JUnit，结果与 CI 顺序执行口径一致）。任何测试/断言的有意增删，都必须先重新执行全量回归，再有意更新本文件；CI 计数门禁会对实际结果与本基线做精确比对，防止测试数量意外减少或测试未被发现。Batch 3 工作包 B3-1（内容/实体表单术语）：仅后台展示层中文化——内容表单关联实体区块标题据实改为产品/服务/组织/主题（C006），实体下拉类型前缀与 about/mention 关系选项在服务端行与 JS 动态行同源中文化（C005/C008，value 保持英文枚举），内容类型标签（G3），实体表单纬度/经度（C009）、产品导语（C010）、资料类型 option（C011/G3，value 保持英文）、三处媒体下拉改为 alt→original_name→basename 显示（C013，value 仍为媒体 id）。新增 Batch3FormTerminologyTest 10 用例/55 断言，逐处断言受控英文 value 不变并覆盖保存链路。最终计数 1616/8343（1606+10 tests，8288+55 assertions）。",
-  "commit": "d1665ffe27199a82ea4a5e2d87e7a5af14f1e958",
-  "command": "php artisan test（Windows 下分批独立进程执行后合并 JUnit，含 Feature 顶层、Feature/Admin、Feature/Geo 子目录与 Unit）",
+  "_comment": "GEO-OS 全量测试基线（权威计数）。由全量测试在 PHP 8.4 + sqlite :memory: 下实测得到（Windows 单进程会在约 311 例处挂起，本项目按分批独立进程执行并合并 JUnit，结果与 CI 顺序执行口径一致；收集须递归覆盖 Feature/Admin、Feature/Geo 子目录并识别 #[Test] 属性）。任何测试/断言的有意增删，都必须先重新执行全量回归，再有意更新本文件；CI 计数门禁会对实际结果与本基线做精确比对，防止测试数量意外减少或测试未被发现。B3-1（内容/实体表单术语）：内容表单关联实体区块标题、实体下拉类型前缀、about/mention、内容类型、纬度/经度、产品导语、资料类型、媒体下拉显示中文化（受控英文 value 全部不变），Batch3FormTerminologyTest 10 用例/55 断言。B3-2（列表去重 + 操作反馈）：实体/关系/表单/主题/插件/模板六个列表 page-desc 精简为定位句、重复机制信息唯一下沉底部说明卡（C012/C049、C015、C017、C030、C031、C032；站点列表 C020 经核对审计夸大、现状即符合故保留），媒体删除确认预告引用阻断（C034，后端阻断逻辑不变）、媒体 alt/title 占位中文化（B3-DISC-2）、事实两处告警 Fact→事实（C038）、登录副标题与 title 统一产品称谓（C045）；新增 Batch3ListFeedbackTest 11 用例/84 断言，逐页断言被下沉规则仍在且全页唯一、后端行为不变。最终计数 1627/8427（1616+11 tests，8343+84 assertions）。",
+  "commit": "28f80adb575607efe7b95c40aa4917a34b477c31",
+  "command": "php artisan test（Windows 下分批独立进程执行后合并 JUnit，递归覆盖 Feature 顶层、Feature/Admin、Feature/Geo 子目录与 Unit）",
   "environment": "PHP 8.4 / PHPUnit 11.5 / sqlite :memory:",
-  "tests": 1616,
-  "assertions": 8343,
+  "tests": 1627,
+  "assertions": 8427,
   "failures": 0,
   "errors": 0,
   "skipped": 0
