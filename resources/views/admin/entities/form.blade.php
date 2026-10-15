@@ -12,6 +12,15 @@
   use App\Support\Localization\LocaleRegistry;
   $isDefault = $transLocale === LocaleRegistry::default();
   $localeLabels = ['zh-CN' => '中文', 'en' => 'English'];
+  // B3-1（C011 / G3 资料类型）：下载资料类型展示中文，提交 value 仍为英文枚举
+  // （校验白名单见 EntityController::rules，in:datasheet,manual,certificate,whitepaper,brochure）。
+  $assetTypeLabels = [
+      'datasheet'   => '数据手册',
+      'manual'      => '使用手册',
+      'certificate' => '资质证书',
+      'whitepaper'  => '白皮书',
+      'brochure'    => '宣传册',
+  ];
 @endphp
 @section('title', $entity->exists ? '编辑实体：'.$entity->name : '新建'.$typeLabel)
 @section('page-desc','实体是 GEO 知识图谱与前台目录的正式资源。带 * 为必填；slug 为小写字母 / 数字 / 连字符，同站点下同类型唯一。保存后类型不可修改。')
@@ -124,7 +133,7 @@
                  placeholder="留空 = 平铺">
           @error('meta_line')<div class="field-err">{{ $message }}</div>@enderror
         </div>
-        <div class="form-row"><label>产品导语（tagline）</label>
+        <div class="form-row"><label>产品导语（一句话卖点）</label>
           <input type="text" name="meta_tagline" value="{{ old('meta_tagline', $meta['tagline'] ?? '') }}" maxlength="255"
                  placeholder="留空则回退到摘要">
           @error('meta_tagline')<div class="field-err">{{ $message }}</div>@enderror
@@ -171,11 +180,11 @@
         @error('loc_address')<div class="field-err">{{ $message }}</div>@enderror
       </div>
       <div class="form-grid">
-        <div class="form-row"><label>纬度 latitude</label>
+        <div class="form-row"><label>纬度</label>
           <input type="text" name="loc_latitude" value="{{ old('loc_latitude', $meta['latitude'] ?? '') }}" placeholder="-90 ~ 90">
           @error('loc_latitude')<div class="field-err">{{ $message }}</div>@enderror
         </div>
-        <div class="form-row"><label>经度 longitude</label>
+        <div class="form-row"><label>经度</label>
           <input type="text" name="loc_longitude" value="{{ old('loc_longitude', $meta['longitude'] ?? '') }}" placeholder="-180 ~ 180">
           @error('loc_longitude')<div class="field-err">{{ $message }}</div>@enderror
         </div>
@@ -234,15 +243,15 @@
           <select name="asset_media_id" class="select">
             <option value="">— 选择文件 —</option>
             @foreach(($mediaDocs ?? []) as $m)
-              <option value="{{ $m->id }}" @selected((string) old('asset_media_id', $meta['media_id'] ?? '') === (string) $m->id)>{{ basename($m->path) }}</option>
+              <option value="{{ $m->id }}" @selected((string) old('asset_media_id', $meta['media_id'] ?? '') === (string) $m->id)>{{ $m->alt ?: ($m->original_name ?: basename($m->path)) }}</option>
             @endforeach
           </select>
           @error('asset_media_id')<div class="field-err">{{ $message }}</div>@enderror
         </div>
         <div class="form-row"><label>资料类型</label>
           <select name="asset_type" class="select">
-            @foreach(['datasheet','manual','certificate','whitepaper','brochure'] as $tOpt)
-              <option value="{{ $tOpt }}" @selected(old('asset_type', $meta['type'] ?? '') === $tOpt)>{{ $tOpt }}</option>
+            @foreach($assetTypeLabels as $tOpt => $tLabel)
+              <option value="{{ $tOpt }}" @selected(old('asset_type', $meta['type'] ?? '') === $tOpt)>{{ $tLabel }}（{{ $tOpt }}）</option>
             @endforeach
           </select>
           @error('asset_type')<div class="field-err">{{ $message }}</div>@enderror
@@ -267,7 +276,7 @@
         <select name="card_image" class="select">
           <option value="">— 不更换 —</option>
           @foreach($mediaImages as $m)
-            <option value="{{ $m->id }}">{{ basename($m->path) }}</option>
+            <option value="{{ $m->id }}">{{ $m->alt ?: ($m->original_name ?: basename($m->path)) }}</option>
           @endforeach
         </select>
         @if(!empty($meta['image']))
@@ -280,7 +289,7 @@
         <select name="og_image" class="select">
           <option value="">— 默认（站点 Logo）—</option>
           @foreach($mediaImages as $m)
-            <option value="{{ $m->id }}" @selected((string) old('og_image', $meta['og_image'] ?? '') === (string) $m->id)>{{ basename($m->path) }}</option>
+            <option value="{{ $m->id }}" @selected((string) old('og_image', $meta['og_image'] ?? '') === (string) $m->id)>{{ $m->alt ?: ($m->original_name ?: basename($m->path)) }}</option>
           @endforeach
         </select>
         @if(!empty($meta['og_image']))

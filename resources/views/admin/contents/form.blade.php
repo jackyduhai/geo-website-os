@@ -34,6 +34,8 @@
   use App\Support\Localization\LocaleRegistry;
   $isDefault = $transLocale === LocaleRegistry::default();
   $localeLabels = ['zh-CN' => '中文', 'en' => 'English'];
+  // B3-1（C008）：实体类型中文名唯一事实源（config/entities.php），服务端行与 JS 动态行同源。
+  $entityTypeLabels = \App\Support\Entities\EntityCapabilityRegistry::labels();
 @endphp
 
 @section('content')
@@ -104,7 +106,7 @@
         <input type="text" name="title" value="{{ old('title',$content->title) }}" required>
       </div>
       <div class="form-grid">
-        <div class="form-row"><label><span class="label-with-tip">类型 <span class="req">*</span><x-admin-tip text="文章 / 新闻、单页两类；产品 / 服务 / 组织等目录资源请在「实体与图谱」中维护。保存后类型不可修改。"/></span></label>
+        <div class="form-row"><label><span class="label-with-tip">内容类型 <span class="req">*</span><x-admin-tip text="文章 / 新闻、单页两类；产品 / 服务 / 组织等目录资源请在「实体与图谱」中维护。保存后类型不可修改。"/></span></label>
           <select name="type" @if($content->exists) disabled @endif>
             @foreach(['article'=>'文章 / 新闻','page'=>'单页'] as $vk=>$vn)
               <option value="{{ $vk }}" @selected(old('type',$content->type)===$vk)>{{ $vn }}</option>
@@ -257,7 +259,7 @@
         <div class="hint">站点级标签；同一条目各语言共享同一标签。</div>
       </div>
     </div>
-    <div class="form-row"><label>关联实体（Product / Industry / Scenario）</label>
+    <div class="form-row"><label>关联实体（产品 / 服务 / 组织 / 主题）</label>
       <table class="table">
         <thead><tr><th>实体</th><th>关系</th><th>移除</th></tr></thead>
         <tbody id="entityLinks">
@@ -268,15 +270,15 @@
                   <option value="">— 选择 —</option>
                   @foreach($entityOptions as $en)
                     <option value="{{ $en->id }}" @selected((string)($l['entity_id']??'')==(string)$en->id)>
-                      [{{ $en->type }}] {{ $en->name }}
+                      {{ $entityTypeLabels[$en->type] ?? $en->type }} · {{ $en->name }}
                     </option>
                   @endforeach
                 </select>
               </td>
               <td>
                 <select name="entity_links[{{ $i }}][relation_type]" form="contentForm">
-                  <option value="about" @selected(($l['relation_type']??'')==='about')>about（核心产品/行业/场景）</option>
-                  <option value="mention" @selected(($l['relation_type']??'')==='mention')>mention（顺带提及）</option>
+                  <option value="about" @selected(($l['relation_type']??'')==='about')>about 核心关联（正文主角）</option>
+                  <option value="mention" @selected(($l['relation_type']??'')==='mention')>mention 顺带提及</option>
                 </select>
               </td>
               <td><button type="button" class="btn btn-sm" onclick="this.closest('tr').remove()">移除关联</button></td>
@@ -292,9 +294,9 @@
           var i=tb.children.length;
           var tr=document.createElement('tr');
           tr.innerHTML='<td><select name="entity_links['+i+'][entity_id]" form="contentForm"><option value="">— 选择 —</option>'
-            +'@foreach($entityOptions as $en)<option value="{{ $en->id }}">[{{ $en->type }}] {{ $en->name }}</option>@endforeach'
+            +'@foreach($entityOptions as $en)<option value="{{ $en->id }}">{{ $entityTypeLabels[$en->type] ?? $en->type }} · {{ $en->name }}</option>@endforeach'
             +'</select></td>'
-            +'<td><select name="entity_links['+i+'][relation_type]" form="contentForm"><option value="about">about</option><option value="mention">mention</option></select></td>'
+            +'<td><select name="entity_links['+i+'][relation_type]" form="contentForm"><option value="about">about 核心关联（正文主角）</option><option value="mention">mention 顺带提及</option></select></td>'
             +'<td><button type="button" class="btn btn-sm" onclick="this.closest(\'tr\').remove()">移除关联</button></td>';
           tb.appendChild(tr);
         }
