@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
+use App\Models\Media;
 use App\Models\Page;
 use App\Models\PageBlock;
 use App\Support\Blocks\BlockRegistry;
@@ -18,6 +19,7 @@ use App\Support\SiteContext;
 use App\Support\Templates\TemplateRegistry;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
@@ -236,8 +238,42 @@ class PageController extends Controller
     {
         $this->assertBelongs($page, $block);
         $type = BlockRegistry::get($block->type);
+        $cfg = array_merge($type->defaultContent, $block->cfg());
 
-        return view('admin.pages.block_form', compact('page', 'block', 'type'));
+        // C026 媒体选择器：仅向区块编辑视图注入当前站点媒体（最近 24 个图片 +
+        // 本区块已引用媒体兜底，去重）。不改变保存行为 / 路由 / 权限；Media 的
+        // 全局 SiteScope 保证“已选兜底”同样按当前站点隔离，不会凭 ID 跨站读取。
+        $mediaPicker = $this->blockMediaPicker($type, $cfg);
+
+        return view('admin.pages.block_form', compact('page', 'block', 'type', 'mediaPicker'));
+    }
+
+    /**
+     * C026：区块媒体选择器所需媒体集合（只用于视图展示，不做写入 / 不提供 AJAX 端点）。
+     *
+     * 收集本区块声明的顶层 media 字段已引用 ID（兜底回显），再并入当前站点最近
+     * 24 个图片，去重后保持“已选优先、其余按最新”。两次查询均受 Media 全局
+     * SiteScope 约束，跨站 ID 不会被读出。
+     *
+     * @param  array<string,mixed>  $cfg
+     */
+    protected function blockMediaPicker(BlockType $type, array $cfg): Collection
+    {
+        $selectedIds = collect($type->fields)
+            ->where('type', 'media')
+            ->pluck('key')
+            ->map(fn ($k) => isset($cfg[$k]) && $cfg[$k] !== '' && $cfg[$k] !== null
+                ? (int) $cfg[$k]
+                : null)
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+
+        $selected = $selectedIds ? Media::whereIn('id', $selectedIds)->get() : collect();
+        $recent = Media::where('mime', 'like', 'image/%')->latest()->limit(24)->get();
+
+        return $selected->concat($recent)->unique('id')->values();
     }
 
     public function updateBlock(Page $page, PageBlock $block, Request $request): RedirectResponse
