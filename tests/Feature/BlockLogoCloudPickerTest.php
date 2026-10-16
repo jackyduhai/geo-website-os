@@ -22,8 +22,9 @@ use Tests\TestCase;
  * C026b 为每一行复用 C026 共享弹窗，加入选择 / 清除按钮与 40px 行内缩略图。
  *
  * 不可变契约（本测试守护）：
- *  - 提交字段名仍为 field[items][ri][media_id]，存储合同不变：非空→int；
- *  - 不改 extractItems / 引用扫描 / 删除阻断 / 前台渲染；
+ *  - 提交字段名仍为 field[items][ri][media_id]，存储合同：非空→int、清空→null；
+ *  - 方案 B（仅 logo_cloud）：清除媒体只把 media_id 置 null 并保留同一行其他有意义字段，
+ *    整行（媒体 + 其他字段）全空才省略；引用扫描 / 删除阻断 / 前台渲染 / 其他区块语义不变；
  *  - 动态行模板 proto-items 内的 media 单元格与已有行同构（__IDX__ 占位）；
  *  - 每行操作只影响所属行，不串行、不串值；
  *  - 媒体集合按当前站点隔离，items 已选兜底也不得跨站读取；
@@ -239,8 +240,9 @@ class BlockLogoCloudPickerTest extends TestCase
         $this->assertStringNotContainsString('data-media-id="' . $foreign->id . '"', $html);
     }
 
-    // 7) 多行保存：每行 media_id 独立落整数、不串值；引用扫描逐行识别；清除首列空行被既有规则剔除。
-    public function test_multiple_rows_persist_distinct_integer_ids_and_scan_finds_each(): void
+    // 7) 方案 B 多行契约：各行 media_id 独立落整数；清除某行媒体（name 保留）只把 media_id 置 null、
+    //    保留该行与 name；引用扫描对 null 放行该媒体但继续保护其他行；重新选择后恢复整数与引用。
+    public function test_multiple_rows_persist_distinct_ids_clear_keeps_row_and_reselect_restores(): void
     {
         $page = $this->makePage('c026b-save');
         $m1 = $this->makeImage('logo-row-1.jpg');
@@ -270,9 +272,8 @@ class BlockLogoCloudPickerTest extends TestCase
         $this->assertTrue(MediaReferenceScanner::hasReferences($m1));
         $this->assertTrue(MediaReferenceScanner::hasReferences($m2));
 
-        // 清除第一行 Logo（首列 media_id 为空，name 保留）：按既有 extractItems 空行规则
-        // 该行被整体跳过（logo_cloud 首列即 media_id，无 Logo 的行前台本就不渲染）；
-        // 第二行保持不变。
+        // 清除第一行媒体（media_id 空）但保留名称：方案 B 下该行保留、media_id 严格为 null、
+        // 名称不丢；第二行保持不变、不串值。
         $this->actingAs($this->admin)->put(route('admin.pages.updateBlock', [$page, $block]), [
             'field' => [
                 'title' => '合作伙伴',
@@ -282,14 +283,110 @@ class BlockLogoCloudPickerTest extends TestCase
                 ],
             ],
         ])->assertRedirect();
+
         $after = PageBlock::find($block->id)->cfg();
-        $this->assertCount(1, $after['items']);
-        $this->assertSame($m2->id, $after['items'][0]['media_id']);
-        // 被清除的 m1 不再被本区块引用。
+        $this->assertCount(2, $after['items']);
+        $this->assertNull($after['items'][0]['media_id']);
+        $this->assertSame('甲', $after['items'][0]['name']);
+        $this->assertSame($m2->id, $after['items'][1]['media_id']);
+        $this->assertIsInt($after['items'][1]['media_id']);
+        $this->assertSame('乙', $after['items'][1]['name']);
+
+        // media_id=null 不被引用扫描识别为有效媒体：m1 放行（可删除）；m2 继续受保护。
         $this->assertFalse(MediaReferenceScanner::hasReferences($m1));
+        $this->assertTrue(MediaReferenceScanner::hasReferences($m2));
+
+        // 重新选择媒体：第一行恢复整数 ID，引用扫描重新保护 m1。
+        $this->actingAs($this->admin)->put(route('admin.pages.updateBlock', [$page, $block]), [
+            'field' => [
+                'title' => '合作伙伴',
+                'items' => [
+                    ['media_id' => (string) $m1->id, 'name' => '甲'],
+                    ['media_id' => (string) $m2->id, 'name' => '乙'],
+                ],
+            ],
+        ])->assertRedirect();
+        $reselected = PageBlock::find($block->id)->cfg();
+        $this->assertSame($m1->id, $reselected['items'][0]['media_id']);
+        $this->assertIsInt($reselected['items'][0]['media_id']);
+        $this->assertSame('甲', $reselected['items'][0]['name']);
+        $this->assertTrue(MediaReferenceScanner::hasReferences($m1));
     }
 
-    // 8) 行内选择 / 清除按钮 type=button 且无 name，不会成为提交字段或意外提交。
+    // 8) 方案 B：媒体与所有非媒体字段都为空（含纯空白名称）的行被省略，避免空壳数据。
+    public function test_fully_empty_rows_are_omitted_even_under_keep_rule(): void
+    {
+        $page = $this->makePage('c026b-empty-row');
+        $keep = $this->makeImage('logo-keep.jpg');
+        $block = $this->makeBlock($page, 'logo_cloud');
+
+        $this->actingAs($this->admin)->put(route('admin.pages.updateBlock', [$page, $block]), [
+            'field' => [
+                'title' => '合作伙伴',
+                'items' => [
+                    ['media_id' => '', 'name' => ''],
+                    ['media_id' => (string) $keep->id, 'name' => '保留'],
+                    ['media_id' => '', 'name' => '   '],
+                ],
+            ],
+        ])->assertRedirect();
+
+        $saved = PageBlock::find($block->id)->cfg();
+        $this->assertCount(1, $saved['items']);
+        $this->assertSame($keep->id, $saved['items'][0]['media_id']);
+        $this->assertSame('保留', $saved['items'][0]['name']);
+    }
+
+    // 9) 方案 B：清除媒体但保留名称的行仍在配置 JSON 中，但前台不渲染坏图 / 空 Logo（只渲染有效媒体）。
+    public function test_frontend_skips_rows_with_null_media_and_renders_valid_logo(): void
+    {
+        $page = $this->makePage('c026b-front');
+        $valid = $this->makeImage('logo-valid.jpg');
+        $block = $this->makeBlock($page, 'logo_cloud', [
+            'title' => '合作伙伴',
+            'items' => [
+                ['media_id' => $valid->id, 'name' => '有效客户'],
+                ['media_id' => null, 'name' => '仅留名称'],
+            ],
+        ]);
+
+        $resp = $this->get('/' . $page->slug);
+        $resp->assertOk();
+        $html = $resp->getContent();
+
+        // 有效 Logo 正常渲染（文件名出现在 <img src>）。
+        $this->assertStringContainsString('logo-valid.jpg', $html);
+        $this->assertStringContainsString('alt="有效客户"', $html);
+        // 无媒体的行不产生 <img>、不暴露其名称（仅持久化保留）。
+        $this->assertStringNotContainsString('alt="仅留名称"', $html);
+        $this->assertSame(1, substr_count($html, 'logo-cloud'));
+    }
+
+    // 10) 方案 B 局部性：faq（首字段 q）等其他重复行区块仍按“首字段为空即跳过”，
+    //     只有答案而无问题的行被剔除，不因方案 B 而被保留。
+    public function test_other_repeat_blocks_keep_first_field_empty_skip_semantics(): void
+    {
+        $page = $this->makePage('c026b-faq');
+        $block = $this->makeBlock($page, 'faq');
+
+        $this->actingAs($this->admin)->put(route('admin.pages.updateBlock', [$page, $block]), [
+            'field' => [
+                'title' => '常见问题',
+                'subtitle' => '',
+                'items' => [
+                    ['q' => '', 'a' => '只有答案没有问题，应被跳过'],
+                    ['q' => '问题二', 'a' => '答案二'],
+                ],
+            ],
+        ])->assertRedirect();
+
+        $saved = PageBlock::find($block->id)->cfg();
+        $this->assertCount(1, $saved['items']);
+        $this->assertSame('问题二', $saved['items'][0]['q']);
+        $this->assertSame('答案二', $saved['items'][0]['a']);
+    }
+
+    // 11) 行内选择 / 清除按钮 type=button 且无 name，不会成为提交字段或意外提交。
     public function test_row_buttons_are_type_button_and_not_named(): void
     {
         $page = $this->makePage('c026b-btns');
@@ -307,7 +404,7 @@ class BlockLogoCloudPickerTest extends TestCase
         }
     }
 
-    // 9) 其他含 items 的区块（feature_grid/stats/faq/testimonial）不渲染媒体选择器。
+    // 12) 其他含 items 的区块（feature_grid/stats/faq/testimonial）不渲染媒体选择器。
     public function test_other_repeat_blocks_do_not_render_media_picker(): void
     {
         $page = $this->makePage('c026b-other');

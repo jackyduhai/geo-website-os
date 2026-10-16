@@ -466,7 +466,7 @@ class PageController extends Controller
                     : (str_contains((string) $raw, '.') ? (float) $raw : (int) $raw),
                 'media'    => ($raw === null || $raw === '') ? null : (int) $raw,
                 'text', 'select', 'textarea', 'markdown' => (string) ($raw ?? ''),
-                'items'    => $this->extractItems((array) ($raw ?? []), $f['item_fields'] ?? []),
+                'items'    => $this->extractItems((array) ($raw ?? []), $f['item_fields'] ?? [], $type->type),
                 'buttons'  => $this->extractButtons((array) ($raw ?? [])),
                 'source'   => $this->extractSource((array) ($raw ?? [])),
                 default    => $raw,
@@ -476,8 +476,14 @@ class PageController extends Controller
         return $cfg;
     }
 
-    protected function extractItems(array $rows, array $itemFields): array
+    protected function extractItems(array $rows, array $itemFields, string $blockType = ''): array
     {
+        // C026b 方案 B（仅 logo_cloud）：媒体引用可独立清空。清除媒体只把 media_id 置 null，
+        // 只要该行仍有其他有意义字段（按字段定义遍历、排除媒体列后判断，如 name），就保留该行；
+        // 只有整行（媒体 + 所有非媒体字段）均为空时才省略。其他重复行区块维持原有的
+        // “首字段为空即整行跳过”过滤语义，不在此全局改变（feature_grid/stats/faq/testimonial）。
+        $keepRowWithoutMedia = $blockType === 'logo_cloud';
+
         $out = [];
         foreach ($rows as $row) {
             if (! is_array($row)) {
@@ -493,11 +499,34 @@ class PageController extends Controller
                     default    => trim((string) ($row[$k] ?? '')),
                 };
             }
-            // 空行：首个字段为空则跳过
-            $first = $itemFields[0]['key'] ?? null;
-            if ($first && trim((string) ($entry[$first] ?? '')) === '') {
-                continue;
+
+            if ($keepRowWithoutMedia) {
+                // 按字段类型判断该行是否仍有任何有意义数据：media/number 非 null、
+                // checkbox 为真、其余文本列 trim 后非空。不硬编码某个字段名。
+                $meaningful = false;
+                foreach ($itemFields as $f) {
+                    $v = $entry[$f['key']] ?? null;
+                    $hasValue = match ($f['type']) {
+                        'media', 'number' => $v !== null,
+                        'checkbox'       => $v === true,
+                        default          => trim((string) $v) !== '',
+                    };
+                    if ($hasValue) {
+                        $meaningful = true;
+                        break;
+                    }
+                }
+                if (! $meaningful) {
+                    continue;
+                }
+            } else {
+                // 空行：首个字段为空则跳过（其他重复行区块维持原行为）。
+                $first = $itemFields[0]['key'] ?? null;
+                if ($first && trim((string) ($entry[$first] ?? '')) === '') {
+                    continue;
+                }
             }
+
             $out[] = $entry;
         }
 
