@@ -76,7 +76,7 @@ class SetupWizardTest extends TestCase
     {
         $this->useFreshSite();
         $page = $this->actingAs($this->super)->get(route('admin.wizard'))->assertOk();
-        $page->assertSee('Setup 引导');
+        $page->assertSee('初始化引导');
         // 「跳过」链接可达且指向 dashboard
         $page->assertSee('跳过');
         $page->assertSee(route('admin.dashboard'), false);
@@ -202,5 +202,110 @@ class SetupWizardTest extends TestCase
         $this->actingAs($this->super)->post(route('admin.wizard.save', 6), [])
             ->assertRedirect(route('admin.dashboard'));
         $this->assertSame('true', $this->setting('wizard_completed'));
+    }
+
+    /**
+     * B5-WIZ · W1/W2：标题与 Slogan 字段中文化（提交字段名 slogan 保持不变）。
+     */
+    public function test_wizard_title_and_slogan_label_are_localized(): void
+    {
+        $this->useFreshSite();
+
+        // W1：页面标题中文化，不再出现中英混杂的 “Setup 引导”。
+        $step1 = $this->actingAs($this->super)->get(route('admin.wizard', ['step' => 1]))->assertOk();
+        $step1->assertSee('初始化引导');
+        $step1->assertDontSee('Setup 引导');
+
+        // W2：Slogan 字段显示中文标签，但输入控件的 name 仍为 slogan（提交契约不变）。
+        $step2 = $this->actingAs($this->super)->get(route('admin.wizard', ['step' => 2]))->assertOk();
+        $step2->assertSee('品牌口号（Slogan）');
+        $step2->assertSee('name="slogan"', false);
+    }
+
+    /**
+     * B5-WIZ · W3（α′）：行业模板偏好下拉显示中文，但 option value / 提交值 / 存储值保持英文 key，
+     * 且向导不应用模板（仅写偏好）。
+     */
+    public function test_step5_template_options_show_chinese_but_keep_english_values(): void
+    {
+        $this->useFreshSite();
+
+        $page = $this->actingAs($this->super)->get(route('admin.wizard', ['step' => 5]))->assertOk();
+        $page->assertSee('行业模板偏好');
+        $page->assertSee('本项仅记录模板偏好，不会在初始化向导中应用模板');
+        // 中文显示名（业务定稿）
+        $page->assertSee('通用');
+        $page->assertSee('制造业');
+        $page->assertSee('软件服务（SaaS）');
+        $page->assertSee('品牌电商');
+        // 四个 option 的 value 仍是受控英文 key
+        foreach (['default', 'manufacturing', 'saas', 'commerce'] as $key) {
+            $page->assertSee('value="' . $key . '"', false);
+        }
+
+        // 提交 saas 后，存储值仍是英文 key（契约不变）；向导不激活/不应用模板。
+        $this->actingAs($this->super)->post(route('admin.wizard.save', 5), [
+            'template' => 'saas',
+        ])->assertRedirect(route('admin.wizard', ['step' => 6]));
+        $this->assertSame('saas', $this->setting('wizard_template'));
+        $this->assertSame('', \App\Support\Templates\TemplatePackageManager::active());
+    }
+
+    /**
+     * B5-WIZ · W4：直接落在某一步时，进度条呈现已完成/当前/未到三态；
+     * 已完成步骤可通过现有 GET 链接回看，未到步骤不可点击。
+     */
+    public function test_progress_three_states_when_landing_directly_on_a_step(): void
+    {
+        $this->useFreshSite();
+
+        $page = $this->actingAs($this->super)->get(route('admin.wizard', ['step' => 3]))->assertOk();
+
+        // 三态 class 与当前步标记
+        $page->assertSee('wizard-step-done', false);
+        $page->assertSee('wizard-step-current', false);
+        $page->assertSee('wizard-step-todo', false);
+        $page->assertSee('aria-current="step"', false);
+
+        // 已完成步骤 1、2 是回看链接
+        $page->assertSee(route('admin.wizard', ['step' => 1]), false);
+        $page->assertSee(route('admin.wizard', ['step' => 2]), false);
+        // 未到步骤 4、5、6 不提供链接（不可点击）
+        $page->assertDontSee(route('admin.wizard', ['step' => 4]), false);
+        $page->assertDontSee(route('admin.wizard', ['step' => 5]), false);
+        $page->assertDontSee(route('admin.wizard', ['step' => 6]), false);
+
+        // 直接访问说明型步骤（step4）与发布步（step6）也能正常渲染
+        $this->actingAs($this->super)->get(route('admin.wizard', ['step' => 4]))->assertOk()
+            ->assertSee('自动把已创建的产品挂到 Organization');
+        $this->actingAs($this->super)->get(route('admin.wizard', ['step' => 6]))->assertOk()
+            ->assertSee('完成并发布');
+    }
+
+    /**
+     * B5-WIZ · W4：回看较早步骤时，已越过的步骤仍显示“已完成”，当前进度不回退；
+     * 页面给出回看提示并可一键返回当前进度步骤。
+     */
+    public function test_reviewing_earlier_step_keeps_later_steps_completed(): void
+    {
+        $this->useFreshSite();
+
+        // 先到达第 5 步
+        $this->actingAs($this->super)->get(route('admin.wizard', ['step' => 5]))->assertOk();
+        // 回看第 2 步
+        $page = $this->actingAs($this->super)->get(route('admin.wizard', ['step' => 2]))->assertOk();
+
+        // 当前在第 2 步
+        $page->assertSee('aria-current="step"', false);
+        // 已越过的 3/4/5 步仍显示已完成（可回看），不被误判为“未到”
+        $page->assertSee(route('admin.wizard', ['step' => 3]), false);
+        $page->assertSee(route('admin.wizard', ['step' => 4]), false);
+        $page->assertSee(route('admin.wizard', ['step' => 5]), false);
+        // 仅第 6 步尚未到达
+        $page->assertDontSee(route('admin.wizard', ['step' => 6]), false);
+        // 回看提示与“返回当前进度”链接（回到第 5 步）
+        $page->assertSee('你正在回看第 2 步');
+        $page->assertSee('返回当前进度：第 5 步');
+        $page->assertSee(route('admin.wizard', ['step' => 5]), false);
     }
 }
