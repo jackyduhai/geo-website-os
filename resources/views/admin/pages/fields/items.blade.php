@@ -15,6 +15,7 @@
         @include('admin.pages._item_cells', [
           'key' => $key, 'ri' => $ri,
           'itemFields' => $itemFields, 'val' => $rowItem,
+          'mediaPicker' => $mediaPicker ?? collect(),
         ])
         <td>
           <button type="button" class="btn btn-sm btn-danger"
@@ -29,6 +30,7 @@
     @include('admin.pages._item_cells', [
       'key' => $key, 'ri' => '__IDX__',
       'itemFields' => $itemFields, 'val' => [],
+      'mediaPicker' => $mediaPicker ?? collect(),
     ])
     <td>
       <button type="button" class="btn btn-sm btn-danger"

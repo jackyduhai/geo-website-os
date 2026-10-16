@@ -60,6 +60,13 @@
   .media-picker-item:hover { border-color:var(--primary,#2563eb); box-shadow:0 0 0 1px var(--primary,#2563eb); }
   .media-picker-item .media-picker-thumb { width:100%; height:96px; }
   .media-picker-item .media-picker-name { font-size:12px; word-break:break-all; }
+  /* C026b：重复行（logo_cloud items[].media_id）紧凑媒体单元格 */
+  .media-picker-cell { display:flex; flex-direction:column; gap:6px; }
+  .media-picker-cell-row { display:flex; flex-wrap:nowrap; gap:4px; align-items:center; }
+  .media-picker-cell-row .media-picker-input { width:72px; }
+  .media-picker-cell-preview { display:block; }
+  .media-picker-cell-preview .media-picker-preview-card { margin-top:0; padding:4px; gap:6px; }
+  .media-picker-thumb-sm { width:40px; height:40px; flex:0 0 auto; }
 </style>
 
 <dialog id="media-picker-dialog" class="media-picker-dialog" aria-label="选择媒体">
@@ -115,28 +122,33 @@
     document.querySelector('.source-picked-' + key).style.display = mode === 'picked' ? '' : 'none';
   }
 
-  // ===== C026 媒体选择器（纯前端：只把所选媒体的数字 ID 回填进既有数字输入，
-  // 不发起任何请求、不改变字段名或提交值；清除即置空，后端空值转 null） =====
+  // ===== C026 / C026b 媒体选择器（纯前端：只把所选媒体的数字 ID 回填进既有数字输入，
+  // 不发起任何请求、不改变字段名或提交值；清除即置空，后端空值转 null）。
+  // 同时支持顶层字段（.media-picker-field，#media-input-<key>）与 C026b 重复行
+  // （.media-picker-cell，每个 logo_cloud 行一个）。点击按钮时用最近的绑定容器
+  // （closest）定位目标输入与预览，因此 addRepeat 动态克隆出来的新行无需单独绑定，
+  // 每行操作只影响所属行，不会串值。 =====
   (function () {
     const dialog = document.getElementById('media-picker-dialog');
-    let currentKey = null;
+    let currentHolder = null;
 
-    function openPicker(key) {
-      currentKey = key;
-      if (!dialog) return;
+    function holderInput(holder) {
+      return holder ? holder.querySelector('input.media-picker-input') : null;
+    }
+    function holderPreview(holder) {
+      return holder ? holder.querySelector('[data-media-preview]') : null;
+    }
+
+    function openPicker(holder) {
+      currentHolder = holder;
+      if (!dialog || !holder) return;
       if (typeof dialog.showModal === 'function') dialog.showModal();
       else dialog.setAttribute('open', '');
     }
     function closePicker() { if (dialog && dialog.open) dialog.close(); }
 
-    // 用 DOM API 构建预览（文件名等经 textContent 写入，避免 innerHTML 拼接带来的 XSS）。
-    function setPreview(key, item) {
-      const box = document.getElementById('media-preview-' + key);
-      if (!box) return;
-      box.innerHTML = '';
-      const input = document.getElementById('media-input-' + key);
-      const id = item ? item.getAttribute('data-media-id') : (input ? input.value : '');
-      if (!id) return;
+    // 用 DOM API 构建预览卡片（文件名等经 textContent 写入，避免 innerHTML 拼接带来的 XSS）。
+    function buildCard(item, id) {
       const card = document.createElement('span');
       card.className = 'media-picker-preview-card';
       const thumb = document.createElement('span');
@@ -163,29 +175,53 @@
       meta.appendChild(name);
       meta.appendChild(idLine);
       card.appendChild(meta);
-      box.appendChild(card);
+      return card;
     }
-    function clearPicker(key) {
-      const input = document.getElementById('media-input-' + key);
-      if (input) input.value = '';
-      setPreview(key, null);
+    function setPreview(holder, item) {
+      const box = holderPreview(holder);
+      if (!box) return;
+      box.innerHTML = '';
+      const input = holderInput(holder);
+      const id = item ? item.getAttribute('data-media-id') : (input ? input.value : '');
+      if (!id) return;
+      box.appendChild(buildCard(item, id));
+    }
+    function notifyInput(input) {
+      if (!input) return;
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+    function clearHolder(holder) {
+      const input = holderInput(holder);
+      if (input) { input.value = ''; notifyInput(input); }
+      const box = holderPreview(holder);
+      if (box) box.innerHTML = '';
     }
 
     document.addEventListener('click', function (e) {
       const openBtn = e.target.closest('[data-media-open]');
-      if (openBtn) { e.preventDefault(); openPicker(openBtn.getAttribute('data-media-open')); return; }
+      if (openBtn) {
+        e.preventDefault();
+        openPicker(openBtn.closest('.media-picker-field, .media-picker-cell'));
+        return;
+      }
       const clearBtn = e.target.closest('[data-media-clear]');
-      if (clearBtn) { e.preventDefault(); clearPicker(clearBtn.getAttribute('data-media-clear')); return; }
+      if (clearBtn) {
+        e.preventDefault();
+        clearHolder(clearBtn.closest('.media-picker-field, .media-picker-cell'));
+        return;
+      }
       const closeBtn = e.target.closest('[data-media-close]');
       if (closeBtn) { e.preventDefault(); closePicker(); return; }
       if (dialog && dialog.contains(e.target)) {
         const item = e.target.closest('[data-media-id]');
-        if (item && currentKey) {
+        if (item && currentHolder) {
           e.preventDefault();
-          const input = document.getElementById('media-input-' + currentKey);
+          const input = holderInput(currentHolder);
           if (input) {
             input.value = item.getAttribute('data-media-id');
-            setPreview(currentKey, item);
+            notifyInput(input);
+            setPreview(currentHolder, item);
           }
           closePicker();
         }

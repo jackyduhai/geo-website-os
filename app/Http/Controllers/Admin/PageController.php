@@ -251,9 +251,10 @@ class PageController extends Controller
     /**
      * C026：区块媒体选择器所需媒体集合（只用于视图展示，不做写入 / 不提供 AJAX 端点）。
      *
-     * 收集本区块声明的顶层 media 字段已引用 ID（兜底回显），再并入当前站点最近
-     * 24 个图片，去重后保持“已选优先、其余按最新”。两次查询均受 Media 全局
-     * SiteScope 约束，跨站 ID 不会被读出。
+     * 收集本区块声明的顶层 media 字段已引用 ID（兜底回显），以及 C026b 中
+     * type=items 重复行 item_fields 内 type=media 的已选 ID（如 logo_cloud 的
+     * items[].media_id），再并入当前站点最近 24 个图片，去重后保持“已选优先、
+     * 其余按最新”。所有查询均受 Media 全局 SiteScope 约束，跨站 ID 不会被读出。
      *
      * @param  array<string,mixed>  $cfg
      */
@@ -265,10 +266,28 @@ class PageController extends Controller
             ->map(fn ($k) => isset($cfg[$k]) && $cfg[$k] !== '' && $cfg[$k] !== null
                 ? (int) $cfg[$k]
                 : null)
-            ->filter()
-            ->unique()
-            ->values()
-            ->all();
+            ->filter();
+
+        // C026b：重复行（items）内 type=media 的子字段已选 ID 兜底（仅 logo_cloud 使用）。
+        foreach (collect($type->fields)->where('type', 'items') as $f) {
+            $itemKey = $f['key'];
+            $mediaSubKeys = collect($f['item_fields'] ?? [])->where('type', 'media')->pluck('key')->all();
+            if ($mediaSubKeys === [] || ! is_array($cfg[$itemKey] ?? null)) {
+                continue;
+            }
+            foreach ($cfg[$itemKey] as $row) {
+                if (! is_array($row)) {
+                    continue;
+                }
+                foreach ($mediaSubKeys as $subKey) {
+                    if (isset($row[$subKey]) && $row[$subKey] !== '' && $row[$subKey] !== null) {
+                        $selectedIds->push((int) $row[$subKey]);
+                    }
+                }
+            }
+        }
+
+        $selectedIds = $selectedIds->unique()->values()->all();
 
         $selected = $selectedIds ? Media::whereIn('id', $selectedIds)->get() : collect();
         $recent = Media::where('mime', 'like', 'image/%')->latest()->limit(24)->get();

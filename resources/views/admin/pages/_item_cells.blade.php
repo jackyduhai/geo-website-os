@@ -12,6 +12,40 @@
         @break
 
       @case('media')
+        @php
+          // C026b：重复行（logo_cloud items[].media_id）媒体选择单元格。仍以原数字输入
+          // 承载提交值（name=field[items][ri][media_id]，空→null、非空→int 的合同不变），
+          // 选择/清除仅辅助回填，复用区块表单共享弹窗；40px 行内缩略图仅做已选回显。
+          $mediaCellId = ($sv === null || $sv === '') ? null : (int) $sv;
+          $mediaCell = ($mediaCellId !== null && isset($mediaPicker))
+              ? $mediaPicker->firstWhere('id', $mediaCellId)
+              : null;
+        @endphp
+        <div class="media-picker-cell" data-media-bound>
+          <div class="media-picker-cell-row">
+            <input type="number" name="{{ $iname }}" class="select media-picker-input"
+                   value="{{ $mediaCellId ?? '' }}" inputmode="numeric">
+            <button type="button" class="btn btn-sm" data-media-open>选择</button>
+            <button type="button" class="btn btn-sm" data-media-clear>清除</button>
+          </div>
+          <div class="media-picker-cell-preview media-picker-preview" data-media-preview>
+            @if($mediaCell)
+              <span class="media-picker-preview-card">
+                @if($mediaCell->isImage())
+                  <img class="media-picker-thumb media-picker-thumb-sm" src="{{ $mediaCell->url() }}" alt="{{ $mediaCell->alt ?? '' }}">
+                @else
+                  <span class="media-picker-thumb media-picker-thumb-sm mono small">{{ $mediaCell->mime }}</span>
+                @endif
+                <span class="media-picker-meta">
+                  <span class="media-picker-name">{{ $mediaCell->original_name }}</span>
+                  <span class="small muted">ID {{ $mediaCell->id }}</span>
+                </span>
+              </span>
+            @endif
+          </div>
+        </div>
+        @break
+
       @case('number')
         <input type="number" name="{{ $iname }}" class="select w-90" value="{{ $sv }}">
         @break
