@@ -50,7 +50,7 @@ class DefaultSettingSeeder extends Seeder
             // 关键：出厂不得把默认色 / 圆角等显式写入站点设置，否则它们会被当成「站点显式定制」，
             // 永远压过激活主题（行业预设 / example）的视觉种子。留空后：用户后台改的值最高，
             // 激活主题种子次之，ThemePalette DEFAULTS（品牌蓝 / 蓝灰点缀 / 圆角 10）兜底。
-            ['theme_primary',      '', 'theme', '品牌主色（Brand Seed）', 'color', '留空使用激活主题或系统默认；填写后一个基色自动派生悬停 / 浅底 / 反白 / 首屏渐变，并保证对比度达标', 10],
+            ['theme_primary',      '', 'theme', '品牌主色', 'color', 'Brand Seed（品牌种子色）：由一个基色自动派生整套配色。留空使用激活主题或系统默认；填写后自动派生悬停 / 浅底 / 反白 / 首屏渐变，并保证对比度达标', 10],
             ['theme_primary_dark', '', 'theme', '主色（深 · 高级）', 'color', '留空则按品牌主色自动派生；仅在需要覆盖悬停色时填写', 20],
             ['theme_accent',       '', 'theme', '辅色（Accent 点缀）', 'color', '留空使用激活主题或系统默认；仅用于标签 / 数据强调等小面积点缀，不承担按钮与链接，CTA 由品牌色派生', 30],
             ['theme_bg',           '', 'theme', '页面底色', 'color', '留空使用激活主题或系统默认', 40],
@@ -61,7 +61,7 @@ class DefaultSettingSeeder extends Seeder
             ['theme_container',    '', 'theme', '内容区最大宽度（px）', 'number', '留空使用系统默认（1200）；范围 800–2400', 90],
             ['theme_density',      '', 'theme', '排版密度', 'text', '留空使用系统默认（comfortable）；可选 comfortable（宽松）/ compact（紧凑）；行业预设会自动设置', 92],
             ['theme_shadow',       '', 'theme', '阴影质感', 'text', '留空使用系统默认（flat）；可选 flat（去盒子化）/ soft（柔和投影）；行业预设会自动设置', 94],
-            ['theme_typography',   'standard', 'theme', '排版气质（Typography Profile）', 'select', 'standard 标准 / compact 紧凑（信息密集，工业·企业）/ editorial 编辑感（大留白，SaaS·品牌）；切换后字号 scale 与行高整体变化', 93],
+            ['theme_typography',   'standard', 'theme', '排版气质', 'select', 'Typography Profile（字号 / 行高气质预设）：standard 标准 / compact 紧凑（信息密集，工业·企业）/ editorial 编辑感（大留白，SaaS·品牌）；切换后字号 scale 与行高整体变化', 93],
             ['theme_color_mode',   'light', 'theme', '默认外观模式', 'select', '前台默认外观：light 浅色 / dark 深色 / system 跟随访客系统；访客仍可用右上角按钮自行切换并记忆', 95],
             ['theme_allow_dark',   '1', 'theme', '允许深色模式', 'bool', '开启后前台支持浅色 / 深色切换；关闭则强制浅色且不显示外观切换按钮', 96],
             ['theme_font',         '',     'theme', '自定义字体', 'text', '留空使用激活主题或系统字体栈', 100],
@@ -124,12 +124,12 @@ class DefaultSettingSeeder extends Seeder
 
             // ---------- Analytics / 统计转化（默认全部关闭、第三方 ID 留空；Site-scoped） ----------
             ['analytics_ga4_enabled', '0', 'analytics', '启用 Google Analytics 4', 'bool', '默认关闭；开启需填写 Measurement ID，且访客同意后才加载', 10],
-            ['analytics_ga4_id',      '', 'analytics', 'GA4 Measurement ID', 'text', '格式 G-XXXXXX；启用 GA4 时必填', 20],
+            ['analytics_ga4_id',      '', 'analytics', 'GA4 衡量 ID（Measurement ID）', 'text', 'Google Analytics 4 衡量 ID，格式 G-XXXXXX；启用 GA4 时必填', 20],
             ['analytics_gtm_enabled', '0', 'analytics', '启用 Google Tag Manager', 'bool', '默认关闭；开启需填写 Container ID', 30],
-            ['analytics_gtm_id',      '', 'analytics', 'GTM Container ID', 'text', '格式 GTM-XXXXXX；启用 GTM 时必填；容器代码自动带 CSP nonce', 40],
+            ['analytics_gtm_id',      '', 'analytics', 'GTM 容器 ID（Container ID）', 'text', 'Google Tag Manager 容器 ID，格式 GTM-XXXXXX；启用 GTM 时必填；容器代码自动带内容安全策略 CSP nonce', 40],
             ['analytics_meta_enabled','0', 'analytics', '启用 Meta Pixel', 'bool', '默认关闭；开启需填写 Pixel ID', 50],
-            ['analytics_meta_id',     '', 'analytics', 'Meta Pixel ID', 'text', '纯数字；启用 Meta Pixel 时必填', 60],
-            ['analytics_consent_required', '1', 'analytics', '统计需访客同意', 'bool', '开启后未同意前不加载任何第三方统计脚本、不发第三方请求（Basic Consent Mode）', 70],
+            ['analytics_meta_id',     '', 'analytics', 'Meta Pixel ID（像素 ID）', 'text', '纯数字；启用 Meta Pixel 时必填', 60],
+            ['analytics_consent_required', '1', 'analytics', '统计需访客同意', 'bool', '开启后未同意前不加载任何第三方统计脚本、不发第三方请求（基础同意模式 Basic Consent Mode）', 70],
 
             // ---------- 外部对接（接收推送完整可用；主动拉取未实现，相关键已 RETIRE） ----------
             ['sync_geoflow_enabled',  '0', 'sync', '启用外部内容推送接收', 'bool', '关闭时接口仍返回但拒绝写入', 10],

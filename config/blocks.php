@@ -16,6 +16,18 @@
  * 生成 HTML；不在 DB 存任意 Blade / HTML / PHP。
  */
 
+// 特性网格图标下拉：key 是前台 site/_icon.blade.php 的渲染白名单（受控英文枚举，
+// 提交值不可改），显示名复用全站统一图标库 config/icons.php（单一事实源，不另造译名）。
+$iconNames = require __DIR__.'/icons.php';
+$featureGridIconKeys = [
+    'sparkle', 'shield', 'sliders', 'package', 'gear', 'check', 'award',
+    'clock', 'users', 'truck', 'leaf', 'flask', 'beaker', 'chart', 'star', 'doc', 'default',
+];
+$featureGridIcons = [];
+foreach ($featureGridIconKeys as $iconKey) {
+    $featureGridIcons[$iconKey] = $iconNames[$iconKey] ?? $iconKey;
+}
+
 return [
 
     'types' => [
@@ -96,10 +108,7 @@ return [
                 ['key' => 'subtitle', 'label' => '副标题', 'type' => 'text'],
                 ['key' => 'columns', 'label' => '每行数量（2-4）', 'type' => 'number'],
                 ['key' => 'items', 'label' => '特性条目', 'type' => 'items', 'item_fields' => [
-                    ['key' => 'icon', 'label' => '图标', 'type' => 'select', 'options' => [
-                        'sparkle', 'shield', 'sliders', 'package', 'gear', 'check', 'award',
-                        'clock', 'users', 'truck', 'leaf', 'flask', 'beaker', 'chart', 'star', 'doc', 'default',
-                    ]],
+                    ['key' => 'icon', 'label' => '图标', 'type' => 'select', 'options' => $featureGridIcons],
                     ['key' => 'title', 'label' => '标题', 'type' => 'text'],
                     ['key' => 'text', 'label' => '说明', 'type' => 'text'],
                 ]],
@@ -225,7 +234,7 @@ return [
                 ['key' => 'title', 'label' => '标题（H2）', 'type' => 'text'],
                 ['key' => 'subtitle', 'label' => '副标题', 'type' => 'text'],
                 ['key' => 'limit', 'label' => '最多显示（0=不限）', 'type' => 'number'],
-                ['key' => 'source', 'label' => '数据来源', 'type' => 'source',
+                ['key' => 'source', 'label' => '数据来源方式', 'type' => 'source',
                     'entity' => 'product', 'modes' => ['all', 'line', 'picked', 'current', 'related']],
             ],
             'default' => ['title' => '', 'subtitle' => '', 'limit' => 6,
@@ -242,7 +251,7 @@ return [
                 ['key' => 'title', 'label' => '标题（H2）', 'type' => 'text'],
                 ['key' => 'subtitle', 'label' => '副标题', 'type' => 'text'],
                 ['key' => 'limit', 'label' => '最多显示（0=不限）', 'type' => 'number'],
-                ['key' => 'source', 'label' => '数据来源', 'type' => 'source',
+                ['key' => 'source', 'label' => '数据来源方式', 'type' => 'source',
                     'entity' => 'service', 'modes' => ['all', 'picked', 'related']],
             ],
             'default' => ['title' => '', 'subtitle' => '', 'limit' => 6,
@@ -260,7 +269,7 @@ return [
                 ['key' => 'subtitle', 'label' => '副标题', 'type' => 'text'],
                 ['key' => 'category_id', 'label' => '栏目 ID（留空=全部栏目）', 'type' => 'number'],
                 ['key' => 'limit', 'label' => '最多显示（0=不限）', 'type' => 'number'],
-                ['key' => 'source', 'label' => '数据来源', 'type' => 'source',
+                ['key' => 'source', 'label' => '数据来源方式', 'type' => 'source',
                     'entity' => 'content', 'modes' => ['latest', 'picked', 'current']],
             ],
             'default' => ['title' => '', 'subtitle' => '', 'category_id' => null, 'limit' => 6,

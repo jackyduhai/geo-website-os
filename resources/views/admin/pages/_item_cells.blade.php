@@ -18,8 +18,14 @@
 
       @case('select')
         <select name="{{ $iname }}" class="select">
-          @foreach($sf['options'] as $opt)
-            <option value="{{ $opt }}" @selected((string) $sv === (string) $opt)>{{ $opt }}</option>
+          @foreach($sf['options'] as $optionValue => $optionLabel)
+            {{-- 索引数组时元素值即提交值；关联数组时 key 为受控英文提交值、值为中文显示（同 fields/select）。 --}}
+            @php
+              if (is_int($optionValue)) {
+                  $optionValue = $optionLabel;
+              }
+            @endphp
+            <option value="{{ $optionValue }}" @selected((string) $sv === (string) $optionValue)>{{ $optionLabel }}</option>
           @endforeach
         </select>
         @break

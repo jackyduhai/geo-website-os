@@ -47,17 +47,17 @@
         <h3>{{ $loc === 'zh-CN' ? '中文（zh-CN）' : 'English（en）' }}</h3>
         <div class="form-grid">
           <div class="form-row">
-            <label>label</label>
+            <label>字段标签 label</label>
             <input type="text" name="translations[{{ $loc }}][label]"
                    value="{{ old('translations.'.$loc.'.label', $val($loc,'label')) }}" maxlength="160">
           </div>
           <div class="form-row">
-            <label>placeholder</label>
+            <label>占位提示 placeholder</label>
             <input type="text" name="translations[{{ $loc }}][placeholder]"
                    value="{{ old('translations.'.$loc.'.placeholder', $val($loc,'placeholder')) }}" maxlength="160">
           </div>
           <div class="form-row">
-            <label>帮助说明（help text）</label>
+            <label>帮助说明 help text</label>
             <input type="text" name="translations[{{ $loc }}][help_text]"
                    value="{{ old('translations.'.$loc.'.help_text', $val($loc,'help_text')) }}" maxlength="255">
           </div>
