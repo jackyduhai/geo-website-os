@@ -242,4 +242,113 @@ class SiteManagementTest extends TestCase
             ->assertSee('AAA Default Only Article')
             ->assertDontSee('BBB Beta Only Article');
     }
+
+    // =============================================================
+    // SW-1：站点切换后固定落地站点无关的仪表盘，不再 back() 回旧站 URL
+    // =============================================================
+
+    public function test_switch_lands_on_dashboard_even_when_referer_is_old_site_edit_url(): void
+    {
+        $siteB = Site::create(['name' => 'Site B', 'slug' => 'site-b', 'domain' => 'b.test', 'status' => 'active']);
+        $bContent = SiteContext::withSite($siteB, function () {
+            return Content::create([
+                'title' => 'B Only Edit Me', 'slug' => 'b-only-edit', 'type' => 'article', 'status' => 'published',
+            ]);
+        });
+
+        // 先切到 B，模拟超管正停留在 B 站内容编辑页
+        $this->actingAs($this->super)->post(route('admin.sites.switch'), ['site_id' => $siteB->id]);
+        $bEditUrl = route('admin.contents.edit', $bContent);
+
+        // 从 B 站编辑页切回默认站（referer 指向旧站编辑 URL）：必须落仪表盘，而非 back() 回旧 URL
+        $this->actingAs($this->super)->from($bEditUrl)
+            ->post(route('admin.sites.switch'), ['site_id' => $this->default->id])
+            ->assertRedirect(route('admin.dashboard'));
+
+        $this->assertSame($this->default->slug, session('admin_site_slug'));
+
+        // 仪表盘可访问且展示明确的切换成功反馈
+        $this->actingAs($this->super)->get(route('admin.dashboard'))
+            ->assertOk()
+            ->assertSee('当前管理站点：' . $this->default->name);
+
+        // 跨站访问隔离不放宽：默认站上下文访问 B 站编辑 URL 仍 404
+        $this->actingAs($this->super)->get($bEditUrl)->assertNotFound();
+    }
+
+    public function test_switch_redirects_to_dashboard_and_shows_success_feedback(): void
+    {
+        $siteB = Site::create(['name' => 'Site B', 'slug' => 'site-b', 'domain' => 'b.test', 'status' => 'active']);
+
+        $this->actingAs($this->super)->post(route('admin.sites.switch'), ['site_id' => $siteB->id])
+            ->assertRedirect(route('admin.dashboard'));
+
+        $this->assertSame('site-b', session('admin_site_slug'));
+        $this->actingAs($this->super)->get(route('admin.dashboard'))
+            ->assertOk()
+            ->assertSee('当前管理站点：Site B');
+    }
+
+    public function test_switch_to_inactive_site_is_allowed_and_lands_dashboard(): void
+    {
+        // 停用站点仍须可被后台管理（SetAdminSiteContext 按 slug 查、不限 status）
+        $siteB = Site::create([
+            'name' => 'Inactive B', 'slug' => 'inactive-b', 'domain' => 'ib.test',
+            'status' => Site::STATUS_INACTIVE,
+        ]);
+
+        $this->actingAs($this->super)->post(route('admin.sites.switch'), ['site_id' => $siteB->id])
+            ->assertRedirect(route('admin.dashboard'));
+
+        $this->assertSame('inactive-b', session('admin_site_slug'));
+        $this->actingAs($this->super)->get(route('admin.dashboard'))->assertOk();
+    }
+
+    public function test_switch_requires_site_id(): void
+    {
+        $this->actingAs($this->super)->post(route('admin.sites.switch'), [])
+            ->assertSessionHasErrors('site_id');
+
+        $this->assertEmpty(session('admin_site_slug'));
+    }
+
+    public function test_switch_rejects_nonexistent_site_id(): void
+    {
+        $this->actingAs($this->super)->post(route('admin.sites.switch'), ['site_id' => 999999])
+            ->assertSessionHasErrors('site_id');
+
+        $this->assertEmpty(session('admin_site_slug'));
+    }
+
+    public function test_switcher_renders_unsaved_form_guard_for_super_admin_with_multiple_sites(): void
+    {
+        Site::create(['name' => 'Site B', 'slug' => 'site-b', 'domain' => 'b.test', 'status' => 'active']);
+
+        $html = $this->actingAs($this->super)->get(route('admin.dashboard'))->assertOk()->getContent();
+
+        $this->assertStringContainsString('site-switch-form', $html);
+        $this->assertStringContainsString('id="adminSiteSwitch"', $html);
+        $this->assertStringContainsString('adminSiteSwitchGuard', $html);
+        $this->assertStringContainsString('未保存的修改', $html);
+        // 不再在选站点时无条件直接提交（已交由守卫，先确认丢弃修改）
+        $this->assertStringNotContainsString('onchange="this.form.submit()"', $html);
+    }
+
+    public function test_switcher_hidden_for_non_super_admin(): void
+    {
+        Site::create(['name' => 'Site B', 'slug' => 'site-b', 'domain' => 'b.test', 'status' => 'active']);
+
+        $html = $this->actingAs($this->plain)->get(route('admin.dashboard'))->assertOk()->getContent();
+
+        $this->assertStringNotContainsString('id="adminSiteSwitch"', $html);
+        $this->assertStringNotContainsString('class="site-switch-form"', $html);
+    }
+
+    public function test_switcher_hidden_when_only_one_site(): void
+    {
+        $html = $this->actingAs($this->super)->get(route('admin.dashboard'))->assertOk()->getContent();
+
+        $this->assertStringNotContainsString('id="adminSiteSwitch"', $html);
+        $this->assertStringNotContainsString('class="site-switch-form"', $html);
+    }
 }

@@ -225,7 +225,12 @@ class SiteController extends Controller
         SiteContext::setSite($site);
         RequestScopedState::reapply();
 
-        return back()->with('success', '当前管理站点：' . $site->name);
+        // SW-1：固定落地到站点无关的仪表盘，而不是 back() 回来源页。来源页可能是
+        // 旧站点的详情/编辑 URL（绑定旧站资源 id），在新站点 SiteScope 下会触发跨站 404，
+        // 既看不到成功反馈，也可能让用户误以为切换失败。仪表盘不绑定任何资源 id，在任意
+        // 站点上下文（含 inactive / 空站点）都可访问，并经 admin layout 展示成功提示。
+        // 跨站访问控制本身不变：旧站 URL 仍由 SiteScope + 路由绑定拒绝（404）。
+        return redirect()->route('admin.dashboard')->with('success', '当前管理站点：' . $site->name);
     }
 
     /**

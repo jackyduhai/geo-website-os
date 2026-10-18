@@ -137,7 +137,7 @@ $biP16  = file_exists(public_path($bi.'favicon_16.png'))  ? $bi.'favicon_16.png'
             @csrf
             <label class="site-switch-label" for="adminSiteSwitch">管理站点</label>
             <select name="site_id" id="adminSiteSwitch" class="site-switch-select"
-                    onchange="this.form.submit()" title="切换当前后台管理的站点">
+                    onchange="return adminSiteSwitchGuard(this)" title="切换当前后台管理的站点">
               @foreach($adminSites as $s)
                 <option value="{{ $s->id }}" @selected($s->slug === $currentAdminSiteSlug)>{{ $s->name }}</option>
               @endforeach
@@ -200,6 +200,33 @@ $biP16  = file_exists(public_path($bi.'favicon_16.png'))  ? $bi.'favicon_16.png'
   document.addEventListener('focusin',function(e){ if(e.target.closest&&e.target.closest('.tip')) clampTips(); },true);
   document.addEventListener('touchstart',function(e){ var t=e.target.closest&&e.target.closest('.tip'); if(t) clampTips(); },true);
   window.addEventListener('resize',clampTips);
+})();
+// SW-1：顶部站点切换器守卫。切换站点会整页跳转到仪表盘；若当前业务表单有未保存修改，
+// 先确认，取消则把下拉还原为当前站点、不提交。切换器自身表单不计入“脏表单”。
+(function(){
+  var sel=document.getElementById('adminSiteSwitch');
+  if(!sel) return;
+  var dirty=false;
+  function mark(e){
+    var t=e.target;
+    if(!t || !t.closest) return;
+    var f=t.closest('form');
+    if(f && !f.classList.contains('site-switch-form')){ dirty=true; }
+  }
+  document.addEventListener('input', mark, true);
+  document.addEventListener('change', mark, true);
+  window.adminSiteSwitchGuard=function(selectEl){
+    if(dirty){
+      var ok=window.confirm('当前页面有未保存的修改，切换站点将离开本页并丢弃这些修改。是否继续？');
+      if(!ok){
+        var marked=selectEl.querySelector('option[selected]');
+        if(marked){ selectEl.value=marked.value; }
+        return false;
+      }
+    }
+    selectEl.form.submit();
+    return false;
+  };
 })();
 </script>
 </body>
