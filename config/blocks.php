@@ -9,6 +9,8 @@
  * 字段 type（供 Admin 动态编辑器）：
  *   text 单行 | textarea 多行 | markdown Markdown 正文 | number 数字 |
  *   select 下拉（options） | checkbox 布尔 | media 媒体 ID（配媒体库） |
+ *   icon 图标选择网格（options 同 select：key 为 site/_icon 白名单英文枚举、
+ *        值为中文显示名；行内隐藏原生 select 承载提交值，弹窗可视化选择，见 block_form） |
  *   items 可增删条目（item_fields 定义每行） | buttons 按钮列表 |
  *   source 数据源（entity + modes，grid 类）。
  *
@@ -108,7 +110,7 @@ return [
                 ['key' => 'subtitle', 'label' => '副标题', 'type' => 'text'],
                 ['key' => 'columns', 'label' => '每行数量（2-4）', 'type' => 'number'],
                 ['key' => 'items', 'label' => '特性条目', 'type' => 'items', 'item_fields' => [
-                    ['key' => 'icon', 'label' => '图标', 'type' => 'select', 'options' => $featureGridIcons],
+                    ['key' => 'icon', 'label' => '图标', 'type' => 'icon', 'options' => $featureGridIcons],
                     ['key' => 'title', 'label' => '标题', 'type' => 'text'],
                     ['key' => 'text', 'label' => '说明', 'type' => 'text'],
                 ]],

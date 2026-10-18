@@ -64,6 +64,40 @@
         </select>
         @break
 
+      @case('icon')
+        @php
+          // C047：重复行（feature_grid items[].icon）可视化图标选择单元格。
+          // 仍以原生 <select> 承载提交值（name=field[items][ri][icon]，英文 key 原样 trim 落库，
+          // 17 个 option 的英文 value/中文 label 与 B3-3 契约保持一致），仅视觉隐藏；
+          // 点击「选择图标」打开 block_form 的共享图标网格弹窗，点选后回填该 select 并更新行内预览。
+          // 无已保存值时，行内预览取第一个选项（与浏览器对无 selected 的 select 默认提交首个 option 一致）。
+          $iconOpts = $sf['options'] ?? [];
+          $iconVal = (string) $sv;
+          if (! array_key_exists($iconVal, $iconOpts)) {
+              $firstIconKey = array_key_first($iconOpts);
+              $iconVal = $firstIconKey === null ? '' : (string) $firstIconKey;
+          }
+          $iconValLabel = $iconOpts[$iconVal] ?? $iconVal;
+        @endphp
+        <div class="icon-picker-cell" data-icon-bound>
+          <select name="{{ $iname }}" class="icon-picker-select" data-icon-select aria-label="图标">
+            @foreach($sf['options'] as $optionValue => $optionLabel)
+              @php
+                if (is_int($optionValue)) {
+                    $optionValue = $optionLabel;
+                }
+              @endphp
+              <option value="{{ $optionValue }}" @selected((string) $sv === (string) $optionValue)>{{ $optionLabel }}</option>
+            @endforeach
+          </select>
+          <span class="icon-picker-current" data-icon-current>
+            <span class="icon-picker-glyph">@include('site._icon', ['name' => $iconVal, 'size' => 22])</span>
+            <span class="icon-picker-current-label" data-icon-label>{{ $iconValLabel }}</span>
+          </span>
+          <button type="button" class="btn btn-sm" data-icon-open>选择图标</button>
+        </div>
+        @break
+
       @case('textarea')
         <textarea name="{{ $iname }}" class="textarea" rows="2">{{ $sv }}</textarea>
         @break
