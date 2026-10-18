@@ -465,7 +465,10 @@ class PageController extends Controller
                     ? null
                     : (str_contains((string) $raw, '.') ? (float) $raw : (int) $raw),
                 'media'    => ($raw === null || $raw === '') ? null : (int) $raw,
-                'text', 'select', 'textarea', 'markdown' => (string) ($raw ?? ''),
+                'text', 'textarea', 'markdown' => (string) ($raw ?? ''),
+                // D-1：select 提交值必须落在服务端字段声明的 options 白名单内；
+                // 非法 / 空 / 缺失值归一到权威默认，避免伪造 POST 污染持久化配置。
+                'select'   => $this->normalizeSelectValue((string) ($raw ?? ''), $f, $type),
                 'items'    => $this->extractItems((array) ($raw ?? []), $f['item_fields'] ?? [], $type->type),
                 'buttons'  => $this->extractButtons((array) ($raw ?? [])),
                 'source'   => $this->extractSource((array) ($raw ?? [])),
@@ -474,6 +477,45 @@ class PageController extends Controller
         }
 
         return $cfg;
+    }
+
+    /**
+     * D-1：select 字段服务端白名单归一化（输入层纵深防御）。
+     *
+     * 合法取值只来自 BlockType 字段声明的 options（config/blocks.php，服务端权威），
+     * 不信任客户端提交的 label 或任意字符串；解析规则与 fields/select.blade.php
+     * 完全一致——关联数组（[key=>label]）取 key，索引数组（['a','b']）取元素值。
+     *
+     * 任何不在白名单内的值（空、缺失、伪造的非空字符串 / 中文 label 等）都归一到
+     * 权威默认值：defaultContent 中该字段若为合法值则用它，否则取 options 首项，
+     * 从而保证非法 POST 不会污染持久化区块配置（与 setVariant 的 fail-closed 口径一致）。
+     * 字段未声明 options 时不做限制（防御性直通，不影响其它字段类型）。
+     *
+     * @param  array<string,mixed>  $field
+     */
+    protected function normalizeSelectValue(string $value, array $field, BlockType $type): string
+    {
+        $allowed = [];
+        foreach ((array) ($field['options'] ?? []) as $optionValue => $optionLabel) {
+            // 关联数组 key 为受控英文提交值；索引数组（is_int 下标）元素值即提交值。
+            $allowed[] = (string) (is_int($optionValue) ? $optionLabel : $optionValue);
+        }
+
+        if ($allowed === []) {
+            return $value;
+        }
+
+        if (in_array($value, $allowed, true)) {
+            return $value;
+        }
+
+        $key = (string) ($field['key'] ?? '');
+        $default = (string) ($type->defaultContent[$key] ?? '');
+        if ($default !== '' && in_array($default, $allowed, true)) {
+            return $default;
+        }
+
+        return $allowed[0];
     }
 
     protected function extractItems(array $rows, array $itemFields, string $blockType = ''): array
