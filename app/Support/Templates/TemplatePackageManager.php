@@ -221,19 +221,31 @@ class TemplatePackageManager
         return self::$activeMemo = $active;
     }
 
-    /** 激活模板包（写站点设置、注册包模板、清页面缓存）。 */
-    public static function activate(string $id): bool
+    /**
+     * 预置当前请求的激活态记忆（事务内 marker 写入后调用，使 register() 立即生效）。
+     * 注意：激活的编排（锁/事务/缓存/审计）已统一到 TemplateActivationService，
+     * 本类不再提供会提前写 marker、提前 flush 的 activate()。
+     */
+    public static function primeActiveMemo(string $id): void
     {
-        if (! self::exists($id)) {
-            return false;
+        self::$activeMemo = $id;
+    }
+
+    /**
+     * 激活事务回滚后恢复进程内状态：把激活态记忆与包模板注册恢复到
+     * 「写 marker 前」的旧包（无旧包则清空）。
+     * 数据库回滚不会自动撤销 PHP 静态属性，故必须显式恢复。
+     */
+    public static function restoreActive(string $previousId): void
+    {
+        if ($previousId !== '' && self::exists($previousId)) {
+            self::$activeMemo = $previousId;
+        } else {
+            // 无旧包或旧包已失效：置空记忆，register() 会清空包模板注册。
+            self::$activeMemo = '';
         }
 
-        Setting::set(self::SETTINGS_KEY, $id);
-        self::$activeMemo = $id;
         self::register();
-        PageCache::flush();
-
-        return true;
     }
 
     /** 停用当前模板包（保留文件，仅清除激活态与包模板注册）。 */
@@ -246,35 +258,81 @@ class TemplatePackageManager
     }
 
     /**
-     * 注册激活包的包级模板（幂等、失败安全）。
-     * 环境未就绪 / 包无效时安全跳过，不阻塞应用引导。
+     * 注册激活包的包级模板（幂等）。
+     * 返回 true=注册完成（含「无激活包」或「仅含配方、无 template.json 的合法包」）；
+     * 返回 false=激活包本应注册却失败，包括：
+     *   - template.json 存在但 JSON 不可解析；
+     *   - template.json 缺少 definitions、definitions 为空、或结构无效（键非空字符串、
+     *     值必须为数组对象）；
+     *   - 注册过程抛异常。
+     *
+     * 契约：只要提供了 template.json，就必须声明非空、结构有效的 definitions；
+     * 纯配方包不应创建 template.json（无此文件即视为合法的「无包级模板」）。
+     *
+     * 引导阶段（AppServiceProvider）可忽略返回值保持 fail-safe；显式激活由
+     * TemplateActivationService 检查返回值，失败即整体回滚（R12）。
      */
-    public static function register(): void
+    public static function register(): bool
     {
         try {
             TemplateRegistry::flushPacks();
 
             $active = self::active();
             if ($active === '') {
-                return;
+                return true;
             }
 
             $templateFile = self::basePath() . '/' . $active . '/template.json';
             if (! is_file($templateFile)) {
-                return;
+                // 仅含配方/主题、无包级模板定义的合法包（如 saas-pro）：无需注册。
+                return true;
             }
 
             $templatePack = json_decode((string) file_get_contents($templateFile), true);
-            $definitions = is_array($templatePack)
-                ? (array) ($templatePack['definitions'] ?? [])
-                : [];
+            if (! is_array($templatePack)) {
+                // template.json 存在但不可解析：激活包无法完成注册。
+                self::$activeMemo = null;
 
-            if ($definitions !== []) {
-                TemplateRegistry::registerPack($active, $definitions);
+                return false;
             }
+
+            // 契约：只要包提供了 template.json，就必须给出非空、结构有效的
+            // definitions；缺定义 / 空定义 / 非对象定义均视为无效包，拒绝激活。
+            // 纯配方包（无 template.json）在上方 is_file() 分支已合法返回。
+            if (! self::definitionsValid($templatePack['definitions'] ?? null)) {
+                self::$activeMemo = null;
+
+                return false;
+            }
+
+            // 注册过程抛异常（含 registerPack 内部）由外层 catch 兜底返回 false。
+            TemplateRegistry::registerPack($active, (array) $templatePack['definitions']);
+
+            return true;
         } catch (\Throwable) {
             self::$activeMemo = null;
+
+            return false;
         }
+    }
+
+    /**
+     * 校验 template.json 的 definitions：必须是非空数组（对象），每个模板键为
+     * 非空字符串、其值为数组（模板配置对象）。
+     */
+    private static function definitionsValid(mixed $definitions): bool
+    {
+        if (! is_array($definitions) || $definitions === []) {
+            return false;
+        }
+
+        foreach ($definitions as $key => $cfg) {
+            if (! is_string($key) || $key === '' || ! is_array($cfg)) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /**

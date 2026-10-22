@@ -3,7 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Support\CliSiteContext;
-use App\Support\Templates\RecipeApplier;
+use App\Support\Templates\TemplateActivationService;
 use App\Support\Templates\TemplatePackageManager;
 use App\Support\Templates\TemplateRecipeValidator;
 use Illuminate\Console\Command;
@@ -61,28 +61,28 @@ class TemplateActivate extends Command
             return self::FAILURE;
         }
 
-        if (! TemplatePackageManager::activate($pack)) {
-            $this->error("Failed to activate template pack: {$pack}");
+        $only = trim((string) $this->option('recipe'));
+        $onlyRecipes = $only !== ''
+            ? array_map('trim', explode(',', $only))
+            : null;
+
+        try {
+            $result = TemplateActivationService::activate($site, $pack, $onlyRecipes);
+        } catch (\Throwable $e) {
+            $this->error("Template activation failed and was rolled back: {$e->getMessage()}");
 
             return self::FAILURE;
         }
+
         $this->info("Activated template pack: {$pack}");
 
-        $recipes = TemplatePackageManager::recipes($pack);
-        $only = trim((string) $this->option('recipe'));
-        if ($only !== '') {
-            $keys = array_flip(array_map('trim', explode(',', $only)));
-            $recipes = array_intersect_key($recipes, $keys);
-        }
-
-        if ($recipes === []) {
+        if ($result['recipes'] === []) {
             $this->warn('No recipes to apply.');
 
             return self::SUCCESS;
         }
 
-        foreach ($recipes as $key => $recipe) {
-            $r = RecipeApplier::apply($site, $pack, $recipe);
+        foreach ($result['recipes'] as $key => $r) {
             $this->line(sprintf(
                 '  recipe [%-10s] pages=%d created=%d updated=%d deleted=%d locales=%s',
                 $key,
@@ -92,6 +92,11 @@ class TemplateActivate extends Command
                 $r['deleted'],
                 implode(',', $r['locales'])
             ));
+        }
+
+        // 数据库已提交；仅当缓存失效未完成时提示恢复（不会误报为回滚）。
+        if (($result['cache'] ?? 'completed') !== 'completed') {
+            $this->warn('Cache invalidation pending; run pagecache:recover-invalidations or wait for the TTL.');
         }
 
         return self::SUCCESS;

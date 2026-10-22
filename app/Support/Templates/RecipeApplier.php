@@ -7,7 +7,6 @@ use App\Models\PageBlock;
 use App\Models\Setting;
 use App\Models\Site;
 use App\Support\Localization\LocaleRegistry;
-use App\Support\PageCache;
 use App\Support\Render\SystemPageRenderContext;
 use App\Support\SiteContext;
 use Illuminate\Support\Collection;
@@ -62,7 +61,7 @@ class RecipeApplier
                 $report['locales'][] = $locale;
             }
 
-            PageCache::flush();
+            // 缓存失效统一推迟到 TemplateActivationService 的事务提交之后（不在事务内 flush）。
 
             return $report;
         });
@@ -212,6 +211,12 @@ class RecipeApplier
             static fn (PageBlock $pb) => ($pb->cfg()['_recipe'] ?? '') === $marker
         )->values();
 
+        // 本配方实际占用的槽位——接管（清理其它包受管块）只在这些槽位内进行。
+        $targetSlots = array_values(array_unique(array_map(
+            static fn ($b) => (string) $b['slot'],
+            $blocks
+        )));
+
         foreach ($blocks as $index => $b) {
             $slot = (string) $b['slot'];
             $content = self::resolveContent((array) ($b['content'] ?? []), $locale);
@@ -265,6 +270,18 @@ class RecipeApplier
         foreach ($managed as $pb) {
             $key = $pb->slot . ':' . (int) ($pb->cfg()['_recipe_index'] ?? -1);
             if (! in_array($key, $validKeys, true)) {
+                $pb->delete();
+                $report['deleted']++;
+            }
+        }
+
+        // 接管：仅删除「能可靠识别为其它包/配方受管块」且位于本配方目标槽位的区块。
+        // 手动块（无 _recipe）与 sort=99 哨兵一律保留；非目标槽位不动（页面保留策略）。
+        foreach ($existing as $pb) {
+            $recipeTag = (string) ($pb->cfg()['_recipe'] ?? '');
+            if ($recipeTag !== ''
+                && $recipeTag !== $marker
+                && in_array($pb->slot, $targetSlots, true)) {
                 $pb->delete();
                 $report['deleted']++;
             }

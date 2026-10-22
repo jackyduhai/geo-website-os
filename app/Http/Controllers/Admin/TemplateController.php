@@ -8,7 +8,7 @@ use App\Models\Setting;
 use App\Models\Site;
 use App\Support\SiteContext;
 use App\Support\SystemAuthorization;
-use App\Support\Templates\RecipeApplier;
+use App\Support\Templates\TemplateActivationService;
 use App\Support\Templates\TemplateDefaultsInstaller;
 use App\Support\Templates\TemplatePackageManager;
 use App\Support\Templates\TemplatePreviewSite;
@@ -59,21 +59,25 @@ class TemplateController extends Controller
             abort(500);
         }
 
-        if (! TemplatePackageManager::activate($pack)) {
+        try {
+            $result = TemplateActivationService::activate($site, $pack);
+        } catch (\Throwable $e) {
             return redirect()->route('admin.templates.index')
-                ->with('error', '模板激活失败：包清单无效或已缺失，激活态未改变。');
+                ->with('error', "模板激活失败：{$pack}（激活已回滚，站点状态未改变）。");
         }
 
         $summary = [];
-        foreach (TemplatePackageManager::recipes($pack) as $key => $recipe) {
-            $r = RecipeApplier::apply($site, $pack, $recipe);
+        foreach ($result['recipes'] as $key => $r) {
             $summary[] = "{$key}（页面 {$r['pages']} / 新增 {$r['created']}）";
         }
 
-        AuditLog::record('template.activate', "激活模板包：{$pack}", [], 'Setting');
+        $message = "已为当前站点激活模板包「{$pack}」并应用配方：" . implode('；', $summary) . '。';
+        // 数据库已提交；仅当缓存失效尚未完成时提示（不会误报为回滚）。
+        if (($result['cache'] ?? 'completed') !== 'completed') {
+            $message .= '页面缓存正在后台刷新，若短暂看到旧内容会自动恢复（也可运行 pagecache:recover-invalidations）。';
+        }
 
-        return redirect()->route('admin.templates.index')
-            ->with('success', "已为当前站点激活模板包「{$pack}」并应用配方：" . implode('；', $summary) . '。');
+        return redirect()->route('admin.templates.index')->with('success', $message);
     }
 
     /** 独立显式落地建议默认值（settings / menus / SEO），空值才写、不覆盖已有配置。 */

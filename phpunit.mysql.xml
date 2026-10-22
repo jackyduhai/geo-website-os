@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  独立 MySQL 测试配置（方案丙：独立实例 MySQLNV_C）。
+  - 仅连接本机回环独立实例 127.0.0.1:3307 的独立测试库 geo_os_nv_c；
+    不覆盖、不影响默认 SQLite 配置 phpunit.xml。
+  - 用法：php vendor/bin/phpunit -c phpunit.mysql.xml
+  - 密码安全：本文件【不包含】DB_PASSWORD。运行前在同一个 PowerShell 会话里通过环境变量注入，
+    密码只在内存中，不写回本文件、不写入脚本/日志/聊天，例如：
+        $env:DB_PASSWORD = '<geo_os_nv_c_test 的密码>'
+        php vendor/bin/phpunit -c phpunit.mysql.xml
+    用完关闭该窗口或执行 Remove-Item Env:DB_PASSWORD 清理。
+  - 范围：这是“单进程 MySQL 连接”的基础配置；真实多进程 NV-1/2/3 并发复现所需的
+    迁移/事务隔离/多进程编排策略，由后续 harness 设计稿单独决定，不在本文件处理。
+  - 除数据库连接外，bootstrap、testsuites、source、failOnPhpunitDeprecation 与
+    其余环境变量均与 phpunit.xml 保持一致。
+-->
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="vendor/phpunit/phpunit/phpunit.xsd"
+         bootstrap="vendor/autoload.php"
+         colors="true"
+         failOnPhpunitDeprecation="true"
+>
+    <testsuites>
+        <testsuite name="Unit">
+            <directory>tests/Unit</directory>
+        </testsuite>
+        <testsuite name="Feature">
+            <directory>tests/Feature</directory>
+        </testsuite>
+    </testsuites>
+    <source>
+        <include>
+            <directory>app</directory>
+        </include>
+    </source>
+    <php>
+        <env name="APP_ENV" value="testing"/>
+        <env name="APP_MAINTENANCE_DRIVER" value="file"/>
+        <env name="APP_LOCALE" value="zh-CN"/>
+        <env name="APP_FALLBACK_LOCALE" value="zh-CN"/>
+        <env name="BCRYPT_ROUNDS" value="4"/>
+        <env name="BROADCAST_CONNECTION" value="null"/>
+        <env name="CACHE_STORE" value="array"/>
+        <env name="DB_CONNECTION" value="mysql"/>
+        <env name="DB_HOST" value="127.0.0.1"/>
+        <env name="DB_PORT" value="3307"/>
+        <env name="DB_DATABASE" value="geo_os_nv_c"/>
+        <env name="DB_USERNAME" value="geo_os_nv_c_test"/>
+        <!-- DB_PASSWORD 故意不写死：运行时从 shell 环境变量 DB_PASSWORD 注入（见文件头注释）。 -->
+        <env name="MAIL_MAILER" value="array"/>
+        <env name="QUEUE_CONNECTION" value="sync"/>
+        <env name="SESSION_DRIVER" value="array"/>
+        <env name="PULSE_ENABLED" value="false"/>
+        <env name="TELESCOPE_ENABLED" value="false"/>
+        <env name="NIGHTWATCH_ENABLED" value="false"/>
+    </php>
+</phpunit>

@@ -9,7 +9,7 @@ use App\Models\Setting;
 use App\Models\Site;
 use App\Support\Catalog;
 use App\Support\PageCache;
-use App\Support\Templates\RecipeApplier;
+use App\Support\Templates\TemplateActivationService;
 use App\Support\Templates\TemplateManifestValidator;
 use App\Support\Templates\TemplatePackageManager;
 use App\Support\Templates\TemplateRegistry;
@@ -59,14 +59,15 @@ class TemplatePackage18L3aTest extends TestCase
         parent::tearDown();
     }
 
-    /** 激活包并应用一个配方，返回统计。 */
+    /** 经统一激活服务应用单个配方（锁+事务+审计），返回该配方统计。 */
     private function applyRecipe(string $key): array
     {
-        TemplatePackageManager::activate(self::PACK);
-        $recipe = TemplatePackageManager::recipe(self::PACK, $key);
-        $this->assertNotNull($recipe, "配方不存在：{$key}");
+        $this->assertNotNull(
+            TemplatePackageManager::recipe(self::PACK, $key),
+            "配方不存在：{$key}"
+        );
 
-        return RecipeApplier::apply($this->site, self::PACK, $recipe);
+        return TemplateActivationService::activate($this->site, self::PACK, [$key])['recipes'][$key];
     }
 
     private function homePage(string $locale): Page
@@ -165,7 +166,7 @@ class TemplatePackage18L3aTest extends TestCase
 
     public function test_activate_registers_pack_templates_and_deactivate_removes(): void
     {
-        $this->assertTrue(TemplatePackageManager::activate(self::PACK));
+        TemplateActivationService::activate($this->site, self::PACK);
         $this->assertSame(self::PACK, TemplatePackageManager::active());
         $this->assertTrue(TemplateRegistry::has('mfg-home'));
         $this->assertTrue(TemplateRegistry::has('mfg-landing'));
