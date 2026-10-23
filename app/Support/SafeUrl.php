@@ -30,6 +30,16 @@ final class SafeUrl
     public const DANGEROUS_SCHEMES = ['javascript', 'vbscript', 'data', 'file'];
 
     /**
+     * 回环主机（始终解析为「本机」）。
+     *
+     * 指向这些主机的绝对 URL 永远不可能是有意义的跨站外链：在非本机访问
+     * （127.0.0.1、真实域名）时，`http://localhost/...` 会指向访客自己的机器，
+     * 即演示/种子内容里最常见的坏链。因此这类主机一律按同源处理，
+     * 降级为根相对路径。精确匹配主机，`localhost.evil.com` 之类不在此列。
+     */
+    public const LOOPBACK_HOSTS = ['localhost', '127.0.0.1', '::1'];
+
+    /**
      * 判定 URL 是否安全（保存 / 校验 / 渲染通用）。
      */
     public static function isSafe(?string $url): bool
@@ -91,20 +101,26 @@ final class SafeUrl
         }
 
         $parts = parse_url($url);
-        $host  = strtolower((string) ($parts['host'] ?? ''));
+        // parse_url 对 IPv6 字面量保留方括号（如 "[::1]"），统一去除以便比较。
+        $host  = trim(strtolower((string) ($parts['host'] ?? '')), '[]');
         if ($host === '') {
             return $url;
         }
 
         // 当前请求的 origin
-        $currentHost = strtolower((string) request()->getHost());
+        $currentHost = trim(strtolower((string) request()->getHost()), '[]');
         if ($currentHost === '') {
-            $currentHost = strtolower((string) parse_url((string) config('app.url'), PHP_URL_HOST));
+            $currentHost = trim(strtolower((string) parse_url((string) config('app.url'), PHP_URL_HOST)), '[]');
         }
 
         // APP_URL 的 host 也要视作同源（部署时改过 APP_URL 但历史内容仍是旧值）
-        $appHost = strtolower((string) parse_url((string) config('app.url'), PHP_URL_HOST));
-        $isSameOrigin = $host === $currentHost || $host === $appHost;
+        $appHost = trim(strtolower((string) parse_url((string) config('app.url'), PHP_URL_HOST)), '[]');
+        // 回环主机（localhost/127.0.0.1/::1）一律视作同源，覆盖种子内容里
+        // 写死的 http://localhost/... 在换域名/换端口后变成坏链的情况。
+        $isLoopback = in_array($host, self::LOOPBACK_HOSTS, true);
+        $isSameOrigin = $isLoopback
+            || $host === $currentHost
+            || $host === $appHost;
 
         if (! $isSameOrigin) {
             return $url;                       // 外部链接，不动

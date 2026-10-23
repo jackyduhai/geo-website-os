@@ -91,4 +91,41 @@ class SafeUrlTest extends TestCase
     {
         $this->assertSame('/products/', SafeUrl::validate('/products/'));
     }
+
+    /**
+     * relativize() 主机判定：回环主机、同源、跨站、端口与形似域名边界。
+     */
+    public function test_relativize_host_matching_boundaries(): void
+    {
+        // 模拟真实部署：APP_URL 与当前请求主机都不是 localhost，种子内容却写死 localhost
+        config(['app.url' => 'http://127.0.0.1:8001']);
+        request()->headers->set('HOST', '127.0.0.1:8001');
+
+        // 回环主机（含端口差异）一律降级为根相对路径
+        $this->assertSame('/products/', SafeUrl::relativize('http://localhost/products/'));
+        $this->assertSame('/products/', SafeUrl::relativize('http://localhost:9000/products/'));
+        $this->assertSame('/x/', SafeUrl::relativize('http://127.0.0.1/x/'));
+        $this->assertSame('/x/', SafeUrl::relativize('http://[::1]/x/'));
+
+        // 保留 query / fragment；根路径归一为 /
+        $this->assertSame('/contact/?a=1#top', SafeUrl::relativize('http://localhost/contact/?a=1#top'));
+        $this->assertSame('/', SafeUrl::relativize('http://localhost'));
+
+        // 与 APP_URL 同源（非回环）也降级
+        $this->assertSame('/products/', SafeUrl::relativize('http://127.0.0.1:8001/products/'));
+
+        // 真正的跨站外链保持原样
+        $this->assertSame('http://example.com/x', SafeUrl::relativize('http://example.com/x'));
+        $this->assertSame('https://github.com/a/b', SafeUrl::relativize('https://github.com/a/b'));
+
+        // 形似回环主机的域名不得误判为同源
+        $this->assertSame('http://localhost.evil.com/x', SafeUrl::relativize('http://localhost.evil.com/x'));
+    }
+
+    public function test_sanitize_relativizes_loopback_on_output(): void
+    {
+        config(['app.url' => 'http://127.0.0.1:8001']);
+        request()->headers->set('HOST', '127.0.0.1:8001');
+        $this->assertSame('/products/', SafeUrl::sanitize('http://localhost/products/'));
+    }
 }
