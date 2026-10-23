@@ -45,8 +45,16 @@ return new class extends Migration
         });
 
         Schema::table('entities', function (Blueprint $table) {
-            $table->string('active_slug', 128)->nullable()
-                ->storedAs('(CASE WHEN deleted_at IS NULL THEN slug ELSE NULL END)');
+            // SQLite 无法对「含外键且已有数据行」的表直接 ALTER ADD 一个 STORED
+            // 生成列（升级路径报错 cannot add a STORED column）；VIRTUAL 生成列可直接
+            // 加入，且唯一索引语义与软删（active_slug=NULL）行为一致。
+            // MySQL/PostgreSQL 仍用 STORED（PG17 之前不支持 VIRTUAL 生成列）。
+            $activeSlug = $table->string('active_slug', 128)->nullable();
+            if (DB::connection()->getDriverName() === 'sqlite') {
+                $activeSlug->virtualAs('(CASE WHEN deleted_at IS NULL THEN slug ELSE NULL END)');
+            } else {
+                $activeSlug->storedAs('(CASE WHEN deleted_at IS NULL THEN slug ELSE NULL END)');
+            }
             $table->unique(['site_id', 'type', 'locale', 'active_slug'], 'entities_active_slug_unique');
         });
     }
