@@ -6,9 +6,12 @@ use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
 use App\Models\Fact;
 use App\Support\Localization\LocaleRegistry;
+use App\Support\SiteContext;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 /**
@@ -78,7 +81,12 @@ class FactController extends Controller
         $data = $this->validateData($request);
         $data['translation_group'] = Fact::groupForKey($data['key']);
 
-        $fact = Fact::create($data);
+        try {
+            $fact = Fact::create($data);
+        } catch (UniqueConstraintViolationException $e) {
+            // 并发下预检通过但仍触发唯一约束：转换为字段错误，不返回未处理 500。
+            return back()->withInput()->withErrors(['key' => '该 key 已存在，请更换或直接编辑已有事实']);
+        }
         Fact::flushMemo();
         AuditLog::record('fact.created', '新增事实：'.$fact->label, [], 'fact', $fact->id);
 
@@ -104,7 +112,11 @@ class FactController extends Controller
      */
     public function update(Request $request, Fact $fact): RedirectResponse
     {
-        $fact->update($this->validateData($request));
+        try {
+            $fact->update($this->validateData($request, $fact));
+        } catch (UniqueConstraintViolationException $e) {
+            return back()->withInput()->withErrors(['key' => '该 key 已存在，请更换或直接编辑已有事实']);
+        }
         Fact::flushMemo();
         AuditLog::record('fact.updated', '更新事实：'.$fact->label, [], 'fact', $fact->id);
 
@@ -133,9 +145,11 @@ class FactController extends Controller
             return back()->with('error', '该语言的事实行已存在，请直接编辑');
         }
 
+        // F4-FINDING-01C：空值经框架中间件转为 null，facts.value 为 NOT NULL，
+        // 待补翻译统一归一为空字符串落库（与 store/update 口径一致），避免 500。
         $row = $fact->createTranslation($data['locale'], [
             'label' => $data['label'],
-            'value' => $data['value'] ?? null,
+            'value' => $data['value'] ?? '',
         ]);
         Fact::flushMemo();
         AuditLog::record(
@@ -162,11 +176,27 @@ class FactController extends Controller
         return back()->with('success', '事实已删除（含各语言行）');
     }
 
-    protected function validateData(Request $request): array
+    protected function validateData(Request $request, ?Fact $fact = null): array
     {
+        $locale = $request->input('locale') ?: LocaleRegistry::default();
+        $siteId = SiteContext::currentSiteId();
+
+        // 唯一约束落在 (site_id, key, locale)；更新时忽略当前行。
+        $uniqueKey = Rule::unique('facts', 'key')
+            ->where(fn ($query) => $query->where('site_id', $siteId)->where('locale', $locale));
+        if ($fact !== null) {
+            $uniqueKey->ignore($fact->id);
+        }
+
         $data = $request->validate([
             'group'       => ['required', 'string', 'max:40'],
-            'key'         => ['required', 'string', 'max:80'],
+            'key'         => [
+                'required', 'string', 'max:80',
+                // 合法 key：字母/数字开头，仅含字母、数字、下划线、连字符
+                // （兼容 FACT-COMPANY-001 与 lower_key 两类既有 key）。
+                'regex:/^[A-Za-z0-9][A-Za-z0-9_-]*$/',
+                $uniqueKey,
+            ],
             'label'       => ['required', 'string', 'max:120'],
             'value'       => ['nullable', 'string'],
             'unit'        => ['nullable', 'string', 'max:20'],
@@ -181,7 +211,22 @@ class FactController extends Controller
 
         $data['is_public'] = $request->boolean('is_public');
         $data['sort'] = $data['sort'] ?? 0;
-        $data['locale'] = $data['locale'] ?? LocaleRegistry::default();
+        $data['locale'] = $locale;
+
+        // 框架全局 ConvertEmptyStringsToNull 会把空文本转成 null；facts.value 为
+        // NOT NULL，待补事实统一以空字符串落库。
+        $data['value'] = $data['value'] ?? '';
+
+        // F4-FINDING-01A 发布门禁：空值事实不具备发布资格，服务端强制不公开，
+        // 不依赖前端取消勾选。锚点（默认语言）保存后由 Translatable 的共享列
+        // 同步把 is_public=false 同步到各语言行。
+        if (trim($data['value']) === '') {
+            $data['is_public'] = false;
+
+            if ($request->boolean('is_public')) {
+                $request->session()->flash('warning', '空值事实不能公开，已自动设为待补（不对外输出）。');
+            }
+        }
 
         return $data;
     }

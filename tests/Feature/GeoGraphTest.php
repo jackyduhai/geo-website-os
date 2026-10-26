@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Entity;
 use App\Models\EntityRelation;
 use App\Models\Fact;
+use App\Models\Setting;
 use App\Models\Site;
 use App\Support\SiteContext;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -80,6 +81,42 @@ class GeoGraphTest extends TestCase
         $row = $graph['facts'][array_search('FACT-TEST-001', $keys, true)];
         $this->assertSame('Business License', $row['source']);
         $this->assertSame('2026-01-01', $row['reviewed_at']);
+    }
+
+    // F4-FINDING-01B · 即使 is_public=true，空值事实也不得输出到 geo.json（输出层兜底）
+    public function test_empty_value_public_fact_is_excluded_from_graph(): void
+    {
+        Fact::create([
+            'key' => 'FACT-GEO-BLANK', 'label' => 'Blank', 'value' => '',
+            'group' => 'company', 'is_public' => true,
+        ]);
+
+        $keys = array_column($this->graph()['facts'], 'key');
+        $this->assertNotContains('FACT-GEO-BLANK', $keys);
+    }
+
+    // F4-FINDING-01B · 逐语言缺译：默认语言有值应输出，空翻译在该语言图谱中被排除
+    public function test_empty_translation_is_excluded_from_localized_graph(): void
+    {
+        Setting::set('site_supported_locales', ['zh-CN', 'en']);
+
+        $grp = Fact::groupForKey('FACT-GEO-LOC');
+        Fact::create([
+            'site_id' => $this->site->id, 'key' => 'FACT-GEO-LOC', 'label' => 'Loc',
+            'value' => '中文值', 'group' => 'company', 'locale' => 'zh-CN',
+            'translation_group' => $grp, 'is_public' => true,
+        ]);
+        Fact::create([
+            'site_id' => $this->site->id, 'key' => 'FACT-GEO-LOC', 'label' => 'Loc',
+            'value' => '', 'group' => 'company', 'locale' => 'en',
+            'translation_group' => $grp, 'is_public' => true,
+        ]);
+
+        $zhKeys = array_column($this->get('/geo.json')->assertOk()->json()['facts'], 'key');
+        $enKeys = array_column($this->get('/en/geo.json')->assertOk()->json()['facts'], 'key');
+
+        $this->assertContains('FACT-GEO-LOC', $zhKeys, '有值的默认语言行应输出');
+        $this->assertNotContains('FACT-GEO-LOC', $enKeys, '空翻译不应在该语言图谱输出');
     }
 
     public function test_entities_use_resolver_seo_and_relations_are_explicit_only(): void

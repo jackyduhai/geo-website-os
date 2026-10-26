@@ -155,6 +155,7 @@ $biP16  = file_exists(public_path($bi.'favicon_16.png'))  ? $bi.'favicon_16.png'
 
     <main class="content">
       @if(session('success'))<div class="alert alert-success">{{ session('success') }}</div>@endif
+      @if(session('warning'))<div class="alert alert-warn">{{ session('warning') }}</div>@endif
       @if(session('error'))<div class="alert alert-error">{{ session('error') }}</div>@endif
       @if($errors->any())
         <div class="alert alert-error">

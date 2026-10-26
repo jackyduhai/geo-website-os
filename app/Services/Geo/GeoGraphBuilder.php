@@ -101,7 +101,12 @@ class GeoGraphBuilder
     {
         $locale ??= LocaleContext::current();
 
-        return Fact::publicRows($locale)->map(fn ($f) => [
+        // F4-FINDING-01B：is_public 是跨语言共享列，无法表达「整条公开但某语言
+        // 缺译」。故在输出层再按 trim(value) 过滤空值/空翻译，与 llms.txt 的
+        // businessFactLines 空值判定保持一致，避免 geo.json 输出 "value": ""。
+        return Fact::publicRows($locale)
+            ->filter(fn ($f) => trim((string) $f->value) !== '')
+            ->map(fn ($f) => [
             'key'         => $f->key,
             // 标签优先取共享契约 {@see FactLabels}，与 llms.txt 出口同源 ——
             // 否则同一条事实在两个 AI 出口标签不同，AI 无法对齐（RC-9 D-02）。
