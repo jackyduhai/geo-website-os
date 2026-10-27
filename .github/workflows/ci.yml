@@ -199,6 +199,24 @@ jobs:
             if (config("database.default") !== "pgsql") { exit(1); }
           '
 
+      - name: Ensure application role can create objects in public schema
+        # postgres:16 镜像会把 POSTGRES_USER 同时建成库属主与超级用户，
+        # 正常情况下 public schema 的 CREATE 权限是现成的。
+        # 这里仍显式授予并打印结果：一旦镜像行为或账号配置变化，
+        # 后续步骤会以一句 "permission denied for schema public" (42501) 失败，
+        # 极难定位；本步骤把该失败模式前置成一行明确输出。
+        run: |
+          php -r '
+            require "vendor/autoload.php";
+            $app = require "bootstrap/app.php";
+            $app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+            $user = config("database.connections.pgsql.username");
+            $ident = chr(34) . str_replace(chr(34), chr(34) . chr(34), $user) . chr(34);
+            Illuminate\Support\Facades\DB::statement("GRANT ALL ON SCHEMA public TO " . $ident);
+            Illuminate\Support\Facades\DB::statement("ALTER SCHEMA public OWNER TO " . $ident);
+            printf("public schema granted to %s%s", $user, PHP_EOL);
+          '
+
       - name: Migrate empty database
         run: php artisan migrate --force
 
