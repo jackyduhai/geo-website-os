@@ -3,7 +3,6 @@
 namespace App\Models;
 
 use App\Support\SiteCacheKey;
-use Illuminate\Database\Eloquent\Model;
 use App\Support\BelongsToSite;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Cache;
@@ -15,7 +14,7 @@ use Illuminate\Support\Facades\Schema;
  * 「可自定义样式」的落点：主题色、字体、容器宽度、联系方式、备案号等
  * 全部存这里，后台改完即时生效，不需要改代码也不需要重新部署。
  */
-class Setting extends Model
+class Setting extends BaseModel
 {
     use BelongsToSite;
 

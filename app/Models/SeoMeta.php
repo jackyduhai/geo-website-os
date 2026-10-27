@@ -3,10 +3,9 @@
 namespace App\Models;
 
 use App\Support\BelongsToSite;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class SeoMeta extends Model
+class SeoMeta extends BaseModel
 {
     use BelongsToSite;
 

@@ -6,7 +6,6 @@ use App\Support\BelongsToSite;
 use App\Support\Localization\LocaleContext;
 use App\Support\Localization\LocaleRegistry;
 use App\Support\Translatable;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 
 /**
@@ -36,7 +35,7 @@ use Illuminate\Support\Collection;
  * 缺翻译时宁可少一条事实，也不回退到另一语言 ——
  * GEO 场景下「英文站点输出中文事实」是数据污染，不是优雅降级。
  */
-class Fact extends Model
+class Fact extends BaseModel
 {
     use BelongsToSite, Translatable;
 

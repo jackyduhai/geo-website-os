@@ -4,7 +4,6 @@ namespace App\Models;
 
 use App\Support\BelongsToSite;
 use App\Support\Translatable;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
@@ -22,7 +21,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
  * 两行（locale 不同，slug 可不同）；template / is_home / status 为跨语言共享列，
  * 由默认语言权威行单向同步。
  */
-class Page extends Model
+class Page extends BaseModel
 {
     use BelongsToSite, Translatable;
 

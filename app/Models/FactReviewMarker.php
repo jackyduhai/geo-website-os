@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use App\Support\BelongsToSite;
 
@@ -19,7 +18,7 @@ use App\Support\BelongsToSite;
  *  - 没有 fact_entity_refs，不声称能自动定位受影响的具体 Fact；
  *  - 人工复核完成后将 status 置为 resolved（并写 resolved_at）。
  */
-class FactReviewMarker extends Model
+class FactReviewMarker extends BaseModel
 {
     use BelongsToSite;
 

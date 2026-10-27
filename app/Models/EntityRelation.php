@@ -2,13 +2,12 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use App\Support\BelongsToSite;
 use App\Support\PageCache;
 use Illuminate\Support\Facades\Schema;
 
-class EntityRelation extends Model
+class EntityRelation extends BaseModel
 {
     use BelongsToSite;
 

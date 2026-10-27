@@ -2,14 +2,13 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use App\Support\BelongsToSite;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
  * 客户留言/询盘
  */
-class Inquiry extends Model
+class Inquiry extends BaseModel
 {
     use BelongsToSite;
     protected $guarded = [];

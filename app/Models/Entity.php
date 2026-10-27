@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -14,7 +13,7 @@ use App\Support\PageCache;
 use App\Support\TombstoneResolver;
 use App\Support\Translatable;
 
-class Entity extends Model
+class Entity extends BaseModel
 {
     use SoftDeletes, BelongsToSite, Translatable;
 

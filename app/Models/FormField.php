@@ -3,7 +3,6 @@
 namespace App\Models;
 
 use App\Support\BelongsToSite;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
@@ -15,7 +14,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  *
  * type 取值由 FieldTypeRegistry 裁决；options 供 select/radio/checkbox。
  */
-class FormField extends Model
+class FormField extends BaseModel
 {
     use BelongsToSite;
 

@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use App\Support\BelongsToSite;
 
@@ -16,7 +15,7 @@ use App\Support\BelongsToSite;
  *  - 仅作身份判定，不复活实体、不进入 PKS、不充当发现面 / 审计证据；
  *  - 跨站隔离由 BelongsToSite 的 SiteScope 与 (site_id, entity_id) 唯一索引共同保证。
  */
-class EntityTombstone extends Model
+class EntityTombstone extends BaseModel
 {
     use BelongsToSite;
 

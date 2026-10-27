@@ -95,6 +95,7 @@ MySQL 与 PostgreSQL 走普通索引路径，**没有**这些表。属引擎差�
 | SQLite `DEFERRED` 事务 | 「先读后写」升级写锁**不走** `busy_timeout`，直接 `SQLITE_BUSY`（`database is locked`） | SQLite 连接使用 `transaction_mode=IMMEDIATE` + `busy_timeout`（可用 `DB_TRANSACTION_MODE` / `DB_BUSY_TIMEOUT` 覆盖） |
 | PostgreSQL 唯一冲突 | 23505 之后**整个事务被置为 aborted**，后续语句一律 `25P02 current transaction is aborted` | 唯一冲突必须抛出事务外的信号（`UniqueContentConflict`），在新事务里 reload 赢家；**不能**在同一事务内继续执行 SQL |
 | MySQL InnoDB 对拍升级 | 多连接同时向同一 UNIQUE 索引插入，先取共享锁做唯一性检查再同时升级为排他锁 → `1213 Deadlock` | 事务失败按 SQLSTATE `40001` / `40P01` 有限重试（`GeoflowSync::isRetryableTransactionFailure()`，最多 3 次，退避 20ms×次数） |
+| PostgreSQL 整型列字面量 | `where "id" = check` 触发严格类型转换，抛 `SQLSTATE 22P02 invalid input syntax for type bigint` → **500**；SQLite / MySQL 只是查不到 → **404** | 整型主键的路由隐式绑定**在进入数据库之前**判定：片段不是合法整数字面量即按「未找到」处理（`App\Support\GuardsNumericRouteBinding`，挂在 `App\Models\BaseModel` 上）。判定文法复刻 PG 的 `bigint` 输入规则（可选符号 + 十进制数字 + 允许首尾空白 + 不溢出），**不用** `filter_var(FILTER_VALIDATE_INT)`（后者会误拒 `'010'` / `' 10'` / `'+10'`） |
 
 > 这三条在 SQLite 上**不会暴露**（SQLite / MySQL 的约束失败后事务仍可用），
 > 是真实并发缺陷被 SQLite 基线掩盖的典型形态。跨库验证因此是必需的。

@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use App\Support\BelongsToSite;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -13,7 +12,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * 与栏目的关系：默认导航直接由 categories.is_nav 生成；
  * 需要额外链接或调整顺序时，用本表覆盖。
  */
-class Menu extends Model
+class Menu extends BaseModel
 {
     use BelongsToSite;
     protected $guarded = [];

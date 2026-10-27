@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use App\Support\BelongsToSite;
 use App\Support\PublicUrl;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -10,7 +9,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 /**
  * 媒体文件
  */
-class Media extends Model
+class Media extends BaseModel
 {
     use BelongsToSite;
     protected $guarded = [];

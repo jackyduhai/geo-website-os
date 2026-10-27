@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Schema;
 use App\Support\PageCache;
 use App\Support\SiteContext;
@@ -19,7 +18,7 @@ use Throwable;
  * - 不允许出现业务绑定方法（如 getXxxSite() 形式的硬编码）
  * - default site 通过 slug='default' 或 id=1 识别
  */
-class Site extends Model
+class Site extends BaseModel
 {
     protected $guarded = [];
 

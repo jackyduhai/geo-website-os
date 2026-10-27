@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -24,7 +23,7 @@ use Illuminate\Support\Str;
  *   结论 → 解释 → 证据 → 边界
  * 这样既能保证 AI 提取的稳定性，也能让答案块成为 DOM 首个区块，方便人扫读。
  */
-class Content extends Model
+class Content extends BaseModel
 {
     use SoftDeletes, BelongsToSite, Translatable;
 

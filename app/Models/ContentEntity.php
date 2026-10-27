@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use App\Support\BelongsToSite;
 
@@ -10,7 +9,7 @@ use App\Support\BelongsToSite;
  * Content ↔ Entity 类型化关系（18R-2c）。
  * relation_type: about（核心产品/行业/场景）/ mention（顺带提及）。
  */
-class ContentEntity extends Model
+class ContentEntity extends BaseModel
 {
     use BelongsToSite;
 

@@ -10,7 +10,8 @@
 ## 0. 一句话结论
 
 本轮在三种真实数据库上把 GEO OS 的**迁移、安装、结构、并发、升级、备份恢复**全部跑通，
-并修掉 **4 个被 SQLite 基线掩盖的真实缺陷**（其中 3 个是生产代码缺陷、1 个是跨库语义漂移）。
+并修掉 **5 个被 SQLite 基线掩盖的真实缺陷**（4 个生产代码缺陷 + 1 个跨库语义漂移），
+另修掉 **2 个测试基础设施缺陷**（并行回归共用工作树导致互相破坏；升级演练脚本未真正切换数据库）。
 候选版本在 **SQLite / PostgreSQL 8.0+ / MySQL 8.4** 三库上的行为已实测一致，
 但 **CI 流水线尚未取得新证据**（推送冻结），且 **MySQL 尚无持续门禁**。
 
@@ -26,6 +27,8 @@
 | `app/Services/Sync/UniqueContentConflict.php` | **新建**。信号异常，承载冲突时的 `$attributes` 与 `$externalId` | 把「唯一键冲突」的处理从事务内移到事务外 |
 | `app/Services/Sync/GeoflowSync.php` | 唯一冲突改为抛 `UniqueContentConflict`；新增 `resolveConcurrentDuplicate()`（新事务 + `lockForUpdate` reload 赢家）；新增 `isRetryableTransactionFailure()` + 最多 3 次事务重试 | ① PG 在 23505 后把事务置为 aborted，原「同事务 reload 赢家」在 PG 上**必然失败**，在 SQLite/MySQL 上却能通过；② MySQL InnoDB 的「对拍升级死锁」（1213）未处理，直接 500 |
 | `config/database.php` | SQLite 连接项改为 env 可覆盖，新增 `DB_TRANSACTION_MODE`（默认 DEFERRED） | SQLite `DEFERRED` 事务「先读后写」升级写锁不走 `busy_timeout`，直接 `SQLITE_BUSY` |
+| `app/Support/GuardsNumericRouteBinding.php` | **新建**。整型主键的路由隐式绑定守卫：URL 片段不是合法整数字面量时，在查询之前判定「未找到」 | 见 §3.5。PG 会对非法字面量抛 `22P02` → **500**，SQLite / MySQL 只是查不到 → **404**；同一请求在不同库返回不同状态码 |
+| `app/Models/BaseModel.php` | **新建**。业务模型统一基类，承载上述守卫；26 个 Eloquent 模型改为继承它（`User` 继承 `Authenticatable`，不在范围内） | 一处根治，避免逐个模型重复；改动经 `route:list` 与全量回归核验 |
 
 ### 1.2 迁移（1 个）
 
@@ -47,6 +50,7 @@
 | `phpunit.pgsql.xml`（新） | 独立 PostgreSQL 配置，含 `PgsqlCore` 门禁子集 |
 | `phpunit.mysql.xml`（改） | 指向本轮验证实例 |
 | `tests/Feature/FactValidationTest.php`（改） | 修复 PG 上的断言不可达问题（见 §3.4） |
+| `tests/Feature/RouteBindingGuardTest.php`（新） | 绑定守卫回归：三库各 24 个用例（阳性对照 8 + 阴性对照 14 + HTTP 端到端 + 非整型主键不受影响），见 §3.5 的变异测试 |
 | `tests/Feature/MigrationRollbackFidelityTest.php`（改） | 迁移清单基线 61 → 62 |
 | `config/cache.php`（改） | file store 路径支持 `CACHE_FILE_PATH` 覆盖（默认不变），用于并行测试隔离 |
 
@@ -118,6 +122,67 @@
 已核查三个捕获唯一冲突的控制器位置均为「catch 后立即 return」，
 且项目无请求级事务中间件，**生产路径不受影响**。
 修法：在冲突行写入之后建立 SAVEPOINT，断言前 `ROLLBACK TO SAVEPOINT` 恢复事务。
+
+### 3.5 PG 把非数字路由片段变成 500（**生产缺陷**，跨库状态码漂移）
+
+- **现象**：`POST /admin/contents/check` 携带 `_method=PUT` 时，方法覆写后命中
+  `PUT /admin/contents/{content}`；`{content}` = 字面量 `check`。
+  - SQLite / MySQL：`where id = 'check'` 只是查不到 → **404**（与项目契约一致）
+  - PostgreSQL：`where "id" = check` 触发类型转换，抛 `SQLSTATE 22P02
+    invalid input syntax for type bigint: "check"` → **500**
+- **根因**：Laravel 的隐式路由绑定把 URL 片段**原样**送进查询；PG 对整型列的
+  字面量做严格类型转换，SQLite / MySQL 宽松处理。同一个请求在不同数据库返回
+  不同状态码，且 PG 侧是 500（把参数校验失败升级成了服务端错误）。
+- **修法**：在**模型绑定层**做根因修复（`GuardsNumericRouteBinding`）——
+  主键为整型时，片段不是合法整数字面量即判定「未找到」，**不进数据库**。
+  - 判定文法逐条复刻 PG 的 `bigint` 输入规则：可选正负号 + 十进制数字 + 允许首尾空白 +
+    不得溢出 `bigint`。**刻意不用** `filter_var(FILTER_VALIDATE_INT)`：
+    后者会拒绝 `'010'` / `' 10'` / `'+10'`，而这三个字面量在 PG 与 MySQL 上都能
+    正常解析为 10 —— 用它会把「三库一致」改成「三库都不一致」。
+  - 只对 `keyType = int` 且未显式指定绑定字段时生效，字符串主键模型不受影响。
+- **先证伪的方案**：曾先尝试在**路由层**加 `whereNumber()`（76 条路由全部加数值约束，
+  经 `route:list` 前后对比确认 0 增删 / 0 action 变更 / 0 URI 变更），
+  但结果是 **405**（路由不匹配降级为方法不允许）而非契约要求的 **404** → **方案作废并回滚**，
+  改为在绑定层修。这一段保留在此，说明「路由层约束 ≠ 与既有契约等价」。
+- **证据**：
+  - 阳性对照（修复前）：PG 上复现出 `22P02` 与 `where "id" = check`。
+  - 修复后：三库同一请求均为 **404**。
+  - 守卫探针 `probe-binding-guard.php` 在 SQLite / PG / MySQL 上各 **21/21** 一致
+    （7 项阳性对照 + 14 项阴性对照，0 异常）。
+  - 自动化回归 `RouteBindingGuardTest` 三库各 **24/24** 通过。
+  - **变异测试证明有牙齿**：① 移除守卫 → PG 上 12 个用例 error（`22P02` 复现）；
+    ② 把判定改成过宽的 `/^\d+$/` → 4 个用例失败（`'011'` / `'+11'` / `' 11 '` 被误拒，
+    阳性对照捕获）。
+
+### 3.6 两个**测试基础设施**缺陷（非生产缺陷，但会污染结论）
+
+#### 3.6.1 并行回归共用同一工作树 → 互相删除对方的临时插件目录
+
+- **现象**：三套回归（SQLite / PG / MySQL）并行时，PG 出现间歇性失败与挂起，
+  MySQL 出现级联 error，SQLite 侥幸全绿。
+- **根因**：`run-test-batches.sh` 对**同一份排序文件列表**做等长切分，
+  三套回归的 batch-001 文件集合**完全相同**；而
+  `AdminPluginCrudTest::setUp()/tearDown()` 会创建并
+  `forceDeleteDir(base_path('plugins/depchild'))`。三个进程在同一工作树上
+  互相删除对方的临时插件目录 → `PluginManager::exists()` 的 glob 结果在请求之间
+  发生变化 → `enable()` 命中 `abort(404)`。
+- **证据**：`AdminPluginCrudTest` 单独在 PG 上跑 10/10 通过；在并发批次里报
+  `Expected 201/301/302/303/307/308 but received 404`（`AdminPluginCrudTest.php:216`）。
+- **修法**：`run-test-batches.sh` 增加 `REPO_ROOT` 覆盖，三套回归各用**独立工作树副本**
+  （`GEO-OS-security-upgrade` / `-pg` / `-my`），彻底隔离 `base_path('plugins')` 与
+  `storage/` 下的共享文件状态；输出目录与文件缓存目录依旧各自独立。
+- **影响面声明**：在共用工作树期间取得的批次结果（sqlite-v14 / pgsql-v15 / mysql-v15）
+  **不能作为证据**，已全部作废并在独立副本上重跑（v16）。
+
+#### 3.6.2 升级/回滚演练脚本未真正切换数据库
+
+- **现象**：`verify-upgrade-rollback.php` 读到的 argv 未配置连接，SQLite / MySQL 两路演练
+  实际都落到默认 SQLite 连接，两个进程并发写同一个 SQLite 文件 →
+  `database disk image is malformed`。
+- **修法**：显式 `config([...])` + `DB::purge($driver)`，并把 `actual_driver` /
+  `actual_database` 写进报告，让「演练跑在哪个库上」成为可断言的事实。
+- **附带的去硬编码**：工具路径改为 `PG_DUMP` / `PSQL` / `MYSQLDUMP` / `MYSQL`
+  环境变量 → PATH → Windows 常见安装目录 → 明确异常，脚本不再绑定本机路径。
 
 ---
 
@@ -223,6 +288,26 @@ worker 忙等至该时刻后同时进入业务操作。
 | 6 | **`content_entity` / `content_tag` / `pages` 三表在三库上均未设外键** | 既有设计现状（三库一致，非漂移），本次未改动 |
 | 7 | **收紧迁移会持有写锁**（MySQL `ALTER TABLE` / PG `DROP INDEX`），大表需停写窗口 | 运维约束（已写入升级说明） |
 | 8 | 本机 14 核并行跑三套回归，**耗时显著长于单跑**，测试总时长不可直接外推到 CI | 说明项 |
+| 9 | **本机 PostgreSQL 临时实例不稳定**：autovacuum 进程曾在 `VACUUM public.contents` 时 PANIC（`could not open file "pg_wal/000000010000000000000022": Permission denied`，exception `0xC0000409`），导致整个实例崩溃恢复，期间所有连接报 `the database system is in recovery mode` | **环境限制**，与产品代码无关；已在该临时实例上关闭 `autovacuum` 后重跑。**结论：凡在该实例崩溃窗口内取得的 PG 结果一律作废重跑**；这也意味着「PG 上出现过挂起 / 级联失败」不能作为产品缺陷的证据 |
+
+---
+
+## 7.1 关于「PG 上曾经挂起」的结论修正
+
+本轮早期观察到 PG 回归挂起（`idle in transaction` 持锁 5 分钟、另一会话
+`insert into facts` 卡在 `Lock/transactionid`），以及 MySQL 上从某个用例起级联 error。
+**这两项的根因本次未取得结论性证据**，已知事实如下：
+
+- 挂起点附近的用例（`AdminSeoMetaCrudTest::test_guest_is_redirected_from_seo_admin`）
+  单独跑、以及所在类单独跑均通过；
+- 排查期间确认过一个**与之无关、但同样会污染结果**的缺陷：三套回归共用同一工作树
+  （见 §3.6.1），该缺陷已修复并作废了相关批次；
+- PG 实例本身在本轮发生过一次 autovacuum PANIC 导致的崩溃恢复（见 §7 第 9 项），
+  崩溃窗口内所有连接都会失败。
+
+因此：**不得把「PG 上出现过挂起」写入产品缺陷结论**。修掉 §3.6.1 并重跑后，
+若挂起/级联失败在独立工作树 + 稳定实例上复现，再作为独立问题立项。
+当前状态记入 §9 门禁表。
 
 ---
 
@@ -240,8 +325,13 @@ php scripts/audit/verify-upgrade-rollback.php <driver> <host> <port> <db> <user>
 
 # 全量回归（Windows 必须分批独立进程）
 bash run-test-batches.sh <phpunit-config> <out-dir> <label> [chunk]
-# 并行跑多套时必须隔离文件缓存：
-#   CACHE_FILE_PATH=<独立目录> CACHE_FILE_LOCK_PATH=<独立目录>
+
+# 并行跑多套时**必须**同时隔离三样东西，缺一都会得到不可信的计数：
+#   1. 工作树：REPO_ROOT=<独立副本>   —— 部分测试会增删 base_path('plugins/<slug>')
+#   2. 文件缓存：CACHE_FILE_PATH / CACHE_FILE_LOCK_PATH=<独立目录>
+#      —— PageCache 强制 file store，版本计数器跨进程共享
+#   3. 输出目录：<out-dir> 各自独立（脚本内置 PID 互斥锁，重复启动会拒绝）
+REPO_ROOT=/path/to/copy-pg DB_CONNECTION=pgsql ... bash run-test-batches.sh phpunit.pgsql.xml out/pgsql pgsql 40
 ```
 
 ---

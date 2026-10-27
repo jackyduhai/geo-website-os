@@ -3,7 +3,6 @@
 namespace App\Models;
 
 use App\Support\BelongsToSite;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
@@ -17,7 +16,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  *
  * 视觉不由 Form 负责（Theme + Component + FormReference block）。
  */
-class Form extends Model
+class Form extends BaseModel
 {
     use BelongsToSite;
 

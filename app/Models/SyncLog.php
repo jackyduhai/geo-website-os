@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use App\Support\BelongsToSite;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -12,7 +11,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * 每条推送都留痕：新建 / 更新 / 跳过 / 冲突 / 拒绝，含原始报文。
  * 出问题时先看这里，不用翻服务器日志。
  */
-class SyncLog extends Model
+class SyncLog extends BaseModel
 {
     use BelongsToSite;
     protected $guarded = [];

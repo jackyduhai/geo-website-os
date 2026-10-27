@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use App\Support\BelongsToSite;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -11,7 +10,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  *
  * 现站改造后会有一批 URL 变化，全部走这里，避免权重丢失。
  */
-class Redirect extends Model
+class Redirect extends BaseModel
 {
     use BelongsToSite;
     protected $guarded = [];

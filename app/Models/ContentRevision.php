@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use App\Support\BelongsToSite;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -11,7 +10,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  *
  * 人工修改前自动存一份，GEOFlow 推送覆盖时也留痕，便于回溯。
  */
-class ContentRevision extends Model
+class ContentRevision extends BaseModel
 {
     use BelongsToSite;
     protected $guarded = [];

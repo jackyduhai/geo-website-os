@@ -3,7 +3,6 @@
 namespace App\Models;
 
 use App\Support\BelongsToSite;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
@@ -13,7 +12,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
  * payload(JSON) 保存全部业务字段原始结构；归因列记录首次落地 / 外部来源 / UTM /
  * 设备（服务端 UA）。Inquiry 由其投影（inquiry()），字段有限也不丢数据。
  */
-class FormSubmission extends Model
+class FormSubmission extends BaseModel
 {
     use BelongsToSite;
 

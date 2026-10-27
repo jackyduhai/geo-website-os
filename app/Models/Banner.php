@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use App\Support\BelongsToSite;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -11,7 +10,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  *
  * position 区分投放位置（首页顶部、栏目顶部等），后台可自定义。
  */
-class Banner extends Model
+class Banner extends BaseModel
 {
     use BelongsToSite;
     protected $guarded = [];

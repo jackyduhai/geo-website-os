@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use App\Support\BelongsToSite;
@@ -12,7 +11,7 @@ use Illuminate\Support\Facades\Schema;
 /**
  * 栏目
  */
-class Category extends Model
+class Category extends BaseModel
 {
     use BelongsToSite;
 
