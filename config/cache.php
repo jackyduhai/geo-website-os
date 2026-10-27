@@ -49,8 +49,14 @@ return [
 
         'file' => [
             'driver' => 'file',
-            'path' => storage_path('framework/cache/data'),
-            'lock_path' => storage_path('framework/cache/data'),
+            // 路径默认不变。允许用环境变量指向别处的原因：PageCache 强制使用
+            // file store（不跟随 CACHE_STORE），而它的「版本计数器」是全局共享的。
+            // 并行跑多套测试时，若几个进程共用同一个目录，彼此的缓存失效会互相
+            // 冲刷，导致与缓存相关的用例出现**假失败**（表现为 HIT→MISS、
+            // 版本号 1→2 的断言错位）。给每个并行进程一份独立目录即可根治。
+            // 生产环境不设置该变量，行为与之前完全一致。
+            'path' => env('CACHE_FILE_PATH', storage_path('framework/cache/data')),
+            'lock_path' => env('CACHE_FILE_LOCK_PATH', storage_path('framework/cache/data')),
         ],
 
         'memcached' => [

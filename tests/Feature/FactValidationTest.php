@@ -95,6 +95,19 @@ class FactValidationTest extends TestCase
                 'created_at'        => $now,
                 'updated_at'        => $now,
             ]);
+
+            // V1.4（跨库）：PostgreSQL 在唯一约束冲突（23505）后会把**整个事务**
+            // 置为 aborted，此后任何语句都抛 25P02；SQLite / MySQL 只中止该语句，
+            // 事务仍可用。因此下面的计数断言在 SQLite / MySQL 上通过、在 PostgreSQL
+            // 上直接报错——断言根本没跑到，等于该行为在 PG 上从未被验证。
+            //
+            // 这里在「冲突行写入之后、模型 INSERT 之前」建立一个 SAVEPOINT：
+            //   · 请求的 INSERT 冲突失败后，测试用 ROLLBACK TO SAVEPOINT 把事务
+            //     恢复成可用状态（PG 的 ROLLBACK TO SAVEPOINT 是从错误中恢复的
+            //     正规手段）；
+            //   · 冲突行写在 SAVEPOINT **之前**，因此不会随回滚丢失，
+            //     计数断言的语义（1 行 = 并发写入的那行）保持不变。
+            \DB::beginTransaction();
         });
 
         $before = Fact::withoutSiteScope()->where('key', 'RACE-KEY')->count();
@@ -107,6 +120,13 @@ class FactValidationTest extends TestCase
                 'value' => 'v',
             ])
             ->assertSessionHasErrors('key');
+
+        // 恢复被 PostgreSQL 置为 aborted 的事务（见 saving 钩子内的说明）。
+        // 事务层级 > 1 说明钩子确实建立了 SAVEPOINT；若请求根本没走到 INSERT
+        // （例如校验提前拒绝），层级仍为 1，此时不做任何回滚。
+        if (\DB::transactionLevel() > 1) {
+            \DB::rollBack();
+        }
 
         // 仅存在并发插入的 1 行，失败请求未产生额外记录。
         $this->assertEquals(

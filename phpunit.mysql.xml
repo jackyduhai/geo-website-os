@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
   独立 MySQL 测试配置（方案丙：独立实例 MySQLNV_C）。
-  - 仅连接本机回环独立实例 127.0.0.1:3307 的独立测试库 geo_os_nv_c；
+  - 仅连接本机回环独立实例 127.0.0.1:3308 的独立测试库 geo_os_nv_d；
     不覆盖、不影响默认 SQLite 配置 phpunit.xml。
   - 用法：php vendor/bin/phpunit -c phpunit.mysql.xml
   - 密码安全：本文件【不包含】DB_PASSWORD。运行前在同一个 PowerShell 会话里通过环境变量注入，
     密码只在内存中，不写回本文件、不写入脚本/日志/聊天，例如：
-        $env:DB_PASSWORD = '<geo_os_nv_c_test 的密码>'
+        $env:DB_PASSWORD = '<geo_os_nv_d_test 的密码>'
         php vendor/bin/phpunit -c phpunit.mysql.xml
     用完关闭该窗口或执行 Remove-Item Env:DB_PASSWORD 清理。
   - 范围：这是“单进程 MySQL 连接”的基础配置；真实多进程 NV-1/2/3 并发复现所需的
@@ -43,9 +43,9 @@
         <env name="CACHE_STORE" value="array"/>
         <env name="DB_CONNECTION" value="mysql"/>
         <env name="DB_HOST" value="127.0.0.1"/>
-        <env name="DB_PORT" value="3307"/>
-        <env name="DB_DATABASE" value="geo_os_nv_c"/>
-        <env name="DB_USERNAME" value="geo_os_nv_c_test"/>
+        <env name="DB_PORT" value="3308"/>
+        <env name="DB_DATABASE" value="geo_os_nv_d"/>
+        <env name="DB_USERNAME" value="geo_os_nv_d_test"/>
         <!-- DB_PASSWORD 故意不写死：运行时从 shell 环境变量 DB_PASSWORD 注入（见文件头注释）。 -->
         <env name="MAIL_MAILER" value="array"/>
         <env name="QUEUE_CONNECTION" value="sync"/>

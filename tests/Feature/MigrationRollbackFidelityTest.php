@@ -188,20 +188,25 @@ class MigrationRollbackFidelityTest extends TestCase
         return $src;
     }
     /**
-     * MRF-001  迁移清单基线已锁定为 61（WP-8 新增 fact_review_markers 复核状态表）。
+     * MRF-001  迁移清单基线已锁定为 62（V1.4 新增 contents.slot 站点级唯一约束收紧迁移）。
      *
-     * 旧基线是 60（WP-7 新增 media.delete_failed_at 列）。数量变化本身不是问题，但**必须有人知道它变了**，
+     * 旧基线是 61（WP-8 新增 fact_review_markers 复核状态表）。数量变化本身不是问题，但**必须有人知道它变了**，
      * 否则旧报告的迁移结论会被静默沿用。WP-8 已对新迁移做独立库 up→down 往返验证
      * （UP 建 fact_review_markers 表 / DOWN dropTable，见 docs/audit/20G/e2e/migration-roundtrip.php，41 PASS）。
+     *
+     * V1.4 · B（2026-10-27）：新增 2026_10_27_000001_tighten_contents_slot_unique_to_site_scope，
+     * 把 MySQL / PostgreSQL 的 contents_slot_locale_unique (site_id, slot, locale)
+     * 收紧为站点级 UNIQUE(site_id, slot)，与 SQLite 现状及 MRF-006 契约对齐。
+     * 该迁移已在 SQLite / MySQL 8.4 / PostgreSQL 16.10 三库实测 up→down→up 往返通过。
      */
     public function test_mrf_001_migration_inventory_is_known(): void
     {
         $count = count(glob(database_path('migrations/*.php')) ?: []);
 
         $this->assertSame(
-            61,
+            62,
             $count,
-            "MRF-001 失败：迁移数为 {$count}，与已验证基线 61 不符。"
+            "MRF-001 失败：迁移数为 {$count}，与已验证基线 62 不符。"
             .'若确实新增/删除迁移，必须重跑 docs/audit/20G/e2e/migration-roundtrip.php '
             .'并更新本常量。'
         );

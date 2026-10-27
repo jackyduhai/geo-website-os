@@ -94,14 +94,216 @@ jobs:
           curl -sf http://127.0.0.1:8000/llms.txt > /dev/null
           curl -sf http://127.0.0.1:8000/robots.txt > /dev/null
 
+  pgsql:
+    # PostgreSQL 16 兼容性门禁。
+    #
+    # 覆盖授权单 V1.4 · B 的四个必测项：
+    #   1) 空库迁移（migrate）—— 61→62 个迁移在 PostgreSQL 上必须能全量跑通；
+    #   2) 安装器（geo:install）—— 安装流程必须在 PG 上可用；
+    #   3) 核心回归（PgsqlCore testsuite）—— 纯逻辑 + 跨库结构一致性 + 真实并发
+    #      + 核心业务在 PG 上的行为必须与 SQLite 一致；
+    #   4) 结构断言（DatabaseStructureParityTest）—— 唯一约束 / 外键 / 表存在性
+    #      的跨库一致性由该用例锁定。
+    #
+    # 失败诊断：迁移或安装失败时，后续 step 仍会执行「Collect PostgreSQL
+    # diagnostics」，打印实际生效的连接配置、迁移记录数与表清单，避免只看到
+    # 一句红叉而无从下手。
+    name: PostgreSQL 16
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: geo_os_ci
+          POSTGRES_PASSWORD: geo_os_ci_pwd
+          POSTGRES_DB: geo_os_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+
+    # 这些变量通过 job 级 env 注入到进程环境。phpunit.pgsql.xml 里的同名 <env>
+    # 均声明 force="false"，PHPUnit 11 不会用文件里的本地默认值覆盖已存在的
+    # 环境变量，因此这里无需额外改写配置文件。
+    env:
+      DB_CONNECTION: pgsql
+      DB_HOST: 127.0.0.1
+      DB_PORT: 5432
+      DB_DATABASE: geo_os_ci
+      DB_USERNAME: geo_os_ci
+      DB_PASSWORD: geo_os_ci_pwd
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: pdo_sqlite, pdo_pgsql, mbstring, openssl, tokenizer, xml, ctype, json, simplexml
+          coverage: none
+
+      - name: Get Composer cache directory
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
+
+      - name: Cache Composer dependencies
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: ${{ runner.os }}-php-8.4-pg-${{ hashFiles('**/composer.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-php-
+            ${{ runner.os }}-php-pg-
+
+      - name: Validate composer.json
+        run: composer validate --strict
+
+      - name: Install dependencies
+        run: composer install --prefer-dist --no-interaction --no-progress
+
+      - name: Check platform requirements
+        run: composer check-platform-reqs
+
+      - name: Run security audit
+        run: composer audit
+
+      - name: Prepare application
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+          php artisan config:clear
+
+      - name: Verify effective database connection
+        # 打印实际生效的配置，避免「以为连的是 PG 其实连的是 SQLite」这类误判。
+        run: |
+          php -r '
+            require "vendor/autoload.php";
+            $app = require "bootstrap/app.php";
+            $app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+            printf(
+              "default=%s driver=%s host=%s port=%s database=%s user=%s%s",
+              config("database.default"),
+              config("database.connections.pgsql.driver"),
+              config("database.connections.pgsql.host"),
+              config("database.connections.pgsql.port"),
+              config("database.connections.pgsql.database"),
+              config("database.connections.pgsql.username"),
+              PHP_EOL
+            );
+            if (config("database.default") !== "pgsql") { exit(1); }
+          '
+
+      - name: Migrate empty database
+        run: php artisan migrate --force
+
+      - name: Run installer
+        run: php artisan geo:install --no-interaction
+
+      - name: Run PostgreSQL core regression
+        # PgsqlCore testsuite：见 phpunit.pgsql.xml 文件头注释（选它的理由与口径）。
+        # --log-junit 产出机器可读结果，供下一步零失败校验与 artifact 使用。
+        run: |
+          php vendor/bin/phpunit -c phpunit.pgsql.xml \
+            --testsuite PgsqlCore \
+            --log-junit=storage/logs/junit-pgsql.xml
+
+      - name: Verify PostgreSQL regression results (zero-failure gate)
+        # PostgreSQL 门禁口径：**不允许** failures / errors / skipped。
+        # 计数基线不与 SQLite 的 test-baseline.json 比对 —— 两者是不同的测试子集，
+        # 直接比对会把「子集差异」误判为「测试丢失」。这里只做零失败判定，
+        # 并把实际计数打进日志作为证据。
+        run: |
+          php scripts/audit/verify-test-baseline.php \
+            --junit=storage/logs/junit-pgsql.xml \
+            --no-baseline --summary=storage/logs/pgsql-summary.json
+          php -r '
+            $s = json_decode(file_get_contents("storage/logs/pgsql-summary.json"), true);
+            printf(
+              "pgsql core regression: tests=%s assertions=%s failures=%s errors=%s skipped=%s%s",
+              $s["tests"], $s["assertions"], $s["failures"], $s["errors"], $s["skipped"], PHP_EOL
+            );
+            if ($s["failures"] != 0 || $s["errors"] != 0 || $s["skipped"] != 0) {
+              fwrite(STDERR, "PostgreSQL regression gate failed." . PHP_EOL);
+              exit(1);
+            }
+          '
+
+      - name: Upload PostgreSQL test results
+        uses: actions/upload-artifact@v4
+        with:
+          name: pgsql-test-results
+          path: storage/logs/junit-pgsql.xml
+          retention-days: 7
+          if-no-files-found: error
+
+      - name: Collect PostgreSQL diagnostics
+        # always()：迁移 / 安装 / 回归任一步失败都要留下现场，而不是只留一句红叉。
+        if: always()
+        run: |
+          echo "===== effective config ====="
+          php -r '
+            require "vendor/autoload.php";
+            $app = require "bootstrap/app.php";
+            $app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+            print_r(config("database.connections.pgsql"));
+          ' || true
+          echo "===== migration status ====="
+          php artisan migrate:status || true
+          echo "===== tables ====="
+          php -r '
+            require "vendor/autoload.php";
+            $app = require "bootstrap/app.php";
+            $app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+            $rows = Illuminate\Support\Facades\DB::select(
+              "SELECT table_name FROM information_schema.tables
+               WHERE table_schema = current_schema() ORDER BY table_name"
+            );
+            foreach ($rows as $r) { echo "  ", $r->table_name, PHP_EOL; }
+          ' || true
+
   coverage:
     # Branch/path coverage needs Xdebug (PCOV only reports lines). Runs on Linux
     # with Xdebug's coverage mode. Source is limited to key business dirs
     # (phpunit-cov-branch.xml) so Xdebug instruments only those files; this is a
     # scoped measurement, not whole-repo coverage. Non-blocking for the release
     # gate: it produces evidence, it does not weaken the exact count gate above.
+    #
+    # ── 2026-10-27 · V1.4 · F：卡住问题的核实与处置 ─────────────────────────
+    # 现象：CI run 40452884719（sha b0da0e72）的 test job 全绿（05:01→05:09，
+    #       8 分钟），coverage job 却从 05:09:28Z 起一直卡在
+    #       「Generate branch/path coverage」，超过 4 小时仍未结束。
+    # 核实结论（不是死锁、不是环境缺失、不是配置写错）：
+    #   · 卡住的是唯一一步需要 Xdebug + --path-coverage 的步骤；
+    #     同一 commit 的非覆盖执行 8 分钟跑完 1714 个用例，说明代码与依赖正常。
+    #   · --path-coverage 的算法开销是「每个测试 × 每个被插桩文件」级别地计算
+    #     路径差集；app/Models 下有大量声明式模型文件，被插桩文件数一多，
+    #     这项开销就会被测试数放大到小时级。这是**成本问题**，不是故障。
+    #   · 该 job 此前**没有 timeout-minutes**，GitHub 默认 360 分钟（6 小时），
+    #     因此「卡住」会长时间占用 runner，且不会给出任何诊断信息。
+    # 处置（不删门禁、不伪造成功）：
+    #   1) 显式 timeout-minutes: 45 —— 把无限挂起收敛成一次「可预期的失败 +
+    #      可读的日志」，失败原因不再是「还在跑」而是「超时」。
+    #   2) path coverage 的插桩范围收窄到业务判定层
+    #      （app/Services/Gate、app/Services/Cache、app/Http/Middleware），
+    #      移出 app/Models —— 后者是声明式数据搬运层（属性/关系/scope），
+    #      分支度量价值低而插桩成本高。这一步针对的是上面的成本根因。
+    #      仍产出分支/路径覆盖率，测量范围在产物与日志里显式说明。
+    #   3) job 级 continue-on-error: true —— 落实注释里既有的「非发布门禁」
+    #      语义：覆盖率是证据，不是发布闸门。job 结论仍如实显示为 failure，
+    #      不伪造成功；发布门禁由 test job 的精确计数门禁与 release job 承担。
+    #   未验证项（如实记录）：本机无 Xdebug/PCOV，path coverage 的实际耗时
+    #   无法在本地复现实测，45 分钟是保守上限；真正的耗时收敛需要一次
+    #   Linux runner 上的实测 run 验证。
     runs-on: ubuntu-latest
     needs: test
+    timeout-minutes: 45
+    continue-on-error: true
 
     steps:
       - name: Checkout
@@ -138,6 +340,9 @@ jobs:
       - name: Generate branch/path coverage
         # --path-coverage is required: without it PHPUnit reports no branch
         # metrics even with Xdebug. Text + XML + HTML are all retained.
+        # The scoped <source> set lives in phpunit-cov-branch.xml; app/Models is
+        # excluded there because it is declarative data-mapping code whose
+        # path-coverage cost scales with the test count (see job comment).
         env:
           XDEBUG_MODE: coverage
         run: |
@@ -147,9 +352,10 @@ jobs:
             --coverage-html=storage/logs/branch-html
 
       - name: Show branch coverage summary
+        if: always()
         run: |
           echo "===== Branch/Path coverage (scoped key dirs) ====="
-          cat storage/logs/branch-coverage.txt
+          cat storage/logs/branch-coverage.txt 2>/dev/null || echo "(coverage output unavailable)"
 
       - name: Upload branch coverage artifacts
         uses: actions/upload-artifact@v4

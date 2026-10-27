@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  独立 PostgreSQL 测试配置。
+
+  - 连接本机回环 PostgreSQL 16.10 隔离实例 127.0.0.1:5433 的独立测试库
+    geo_os_v14；不覆盖、不影响默认 SQLite 配置 phpunit.xml。
+  - 用法：php vendor/bin/phpunit -c phpunit.pgsql.xml
+  - 密码安全：本文件【不包含】DB_PASSWORD。运行前在同一个 shell 会话里通过环境
+    变量注入，密码只在内存中，不写回本文件、不写入脚本/日志/聊天：
+        export DB_PASSWORD='<geo_os_v14_test 的密码>'
+        php vendor/bin/phpunit -c phpunit.pgsql.xml
+    用完执行 `unset DB_PASSWORD` 清理。
+  - 注意：本机 PHP 的 php.ini 默认未启用 pdo_pgsql。若 php -m 中没有 pdo_pgsql，
+    需启用（php.ini 的 extension=pdo_pgsql 行）或用
+    `php -d extension=pdo_pgsql vendor/bin/phpunit -c phpunit.pgsql.xml`。
+  - 除数据库连接外，bootstrap、testsuites、source、failOnPhpunitDeprecation 与
+    其余环境变量均与 phpunit.xml 保持一致。
+
+  CI 覆盖语义（重要）
+    下面 DB_* 的 <env> 全部显式声明 force="false"。PHPUnit 11 的语义是：
+      · putenv：仅当 force=true 或该变量在环境中不存在时才写入；
+      · $_ENV ：仅当 force=true 或 $_ENV 中不存在该键时才写入。
+    因此**已存在的进程环境变量不会被本文件覆盖**。CI 的 pgsql job 用
+    job 级 env 注入 DB_HOST=127.0.0.1 / DB_PORT=5432 / DB_DATABASE=... /
+    DB_USERNAME=... / DB_PASSWORD=...，这些值优先于本文件的本地默认值，
+    同一个文件既服务于本地隔离实例，也服务于 CI 的 postgres:16 服务容器。
+
+  testsuites
+    Unit / Feature：与 phpunit.xml 一致的全量套件（本地或专用 runner 跑全量用）。
+    PgsqlCore：CI 使用的核心回归子集 —— 纯逻辑单元测试 + 跨库结构一致性断言 +
+    真实多进程并发验证 + 关键业务回归。选它是因为全量套件在 PostgreSQL 上
+    耗时显著高于 SQLite，CI 需要一个稳定、可预期时长的门禁子集；
+    全量 PostgreSQL 回归由本地隔离实例定期执行并留证。
+
+  ⚠️ 关于「套件重叠」提示
+    PgsqlCore 故意包含 Unit / Feature 中的一部分文件，因此当**不带
+    testsuite 参数**直接跑本配置时，PHPUnit 会提示
+    "Cannot add file X to test suite PgsqlCore as it was already added to
+    test suite Unit / Feature"。这是**预期行为，不是失败**：
+      · CI 与本项目的全量 runner 都用 testsuite 参数指定 PgsqlCore
+        （或直接传文件路径），只加载一个套件，不产生该提示；
+      · 本地跑 PostgreSQL 全量回归用分批 runner（逐批传文件路径），同样不产生。
+    提示只在「不指定 testsuite 也不指定文件」这一种用法下出现。
+-->
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="vendor/phpunit/phpunit/phpunit.xsd"
+         bootstrap="vendor/autoload.php"
+         colors="true"
+         failOnPhpunitDeprecation="true"
+>
+    <testsuites>
+        <testsuite name="Unit">
+            <directory>tests/Unit</directory>
+        </testsuite>
+        <testsuite name="Feature">
+            <directory>tests/Feature</directory>
+        </testsuite>
+        <testsuite name="PgsqlCore">
+            <!-- 纯逻辑：与数据库无关，跨库行为必须一致 -->
+            <directory>tests/Unit</directory>
+            <!-- 跨库结构一致性断言（唯一约束 / 外键 / 表存在性） -->
+            <file>tests/Feature/DatabaseStructureParityTest.php</file>
+            <!-- 真实多进程并发验证（独立进程 + 独立连接 + 竞争窗口证据） -->
+            <directory>tests/Feature/Concurrency</directory>
+            <!-- 核心业务回归：内容 / 实体 / 事实 / 站点 / GEOFlow 幂等 / 迁移回滚保真 -->
+            <file>tests/Feature/ContentLifecycleTest.php</file>
+            <file>tests/Feature/EntityLifecycleMatrixTest.php</file>
+            <file>tests/Feature/FactValidationTest.php</file>
+            <file>tests/Feature/SiteManagementTest.php</file>
+            <file>tests/Feature/GeoflowApiTest.php</file>
+            <file>tests/Feature/MigrationRollbackFidelityTest.php</file>
+        </testsuite>
+    </testsuites>
+    <source>
+        <include>
+            <directory>app</directory>
+        </include>
+    </source>
+    <php>
+        <env name="APP_ENV" value="testing"/>
+        <env name="APP_MAINTENANCE_DRIVER" value="file"/>
+        <env name="APP_LOCALE" value="zh-CN"/>
+        <env name="APP_FALLBACK_LOCALE" value="zh-CN"/>
+        <env name="BCRYPT_ROUNDS" value="4"/>
+        <env name="BROADCAST_CONNECTION" value="null"/>
+        <env name="CACHE_STORE" value="array"/>
+        <env name="DB_CONNECTION" value="pgsql" force="false"/>
+        <env name="DB_HOST" value="127.0.0.1" force="false"/>
+        <env name="DB_PORT" value="5433" force="false"/>
+        <env name="DB_DATABASE" value="geo_os_v14" force="false"/>
+        <env name="DB_USERNAME" value="geo_os_v14_test" force="false"/>
+        <!-- DB_PASSWORD 故意不写死：运行时从 shell 环境变量 DB_PASSWORD 注入（见文件头注释）。 -->
+        <env name="MAIL_MAILER" value="array"/>
+        <env name="QUEUE_CONNECTION" value="sync"/>
+        <env name="SESSION_DRIVER" value="array"/>
+        <env name="PULSE_ENABLED" value="false"/>
+        <env name="TELESCOPE_ENABLED" value="false"/>
+        <env name="NIGHTWATCH_ENABLED" value="false"/>
+    </php>
+</phpunit>

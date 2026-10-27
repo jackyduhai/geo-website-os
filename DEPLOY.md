@@ -1,13 +1,18 @@
 # GEO Website OS · 生产部署与运维手册（云端 / 宝塔 / Nginx + PHP-FPM）
 
-> 适用：Laravel 12 + PHP 8.4+ + SQLite（可换 MySQL），前台为 Blade SSR + 整页静态化缓存，后台 CMS。
+> 适用：Laravel 12 + PHP 8.4+ + SQLite（可换 PostgreSQL 16 / MySQL 8.4），前台为 Blade SSR + 整页静态化缓存，后台 CMS。
 > 本机开发用 `php artisan serve`；**生产环境务必用 Nginx + PHP-FPM**，不要用内置服务器对外。
+>
+> **数据库支持矩阵与升级 / 备份 / 恢复流程见
+> [`docs/operations/database-support-and-recovery.md`](docs/operations/database-support-and-recovery.md)**，
+> 本文只覆盖部署动作本身。三种驱动的支持状态不同（SQLite / PostgreSQL 有 CI 门禁，
+> MySQL 目前只有实测、无 CI 门禁），选型前请先看那份矩阵。
 
 ---
 
 ## 1. 环境要求
 
-- PHP 8.4 及以上，扩展：`mbstring、openssl、tokenizer、xml、ctype、json、fileinfo、gd（或 imagick）、pdo_sqlite`（换 MySQL 则 `pdo_mysql`）、`bcmath、zip`（建议）。
+- PHP 8.4 及以上，扩展：`mbstring、openssl、tokenizer、xml、ctype、json、fileinfo、gd（或 imagick）、pdo_sqlite`（换 PostgreSQL 则加 `pdo_pgsql`，换 MySQL 则加 `pdo_mysql`）、`bcmath、zip`（建议）。
 - Nginx（1.20+）；Composer 2；可选 Supervisor（队列）。
 - 目录可写：`storage/`、`bootstrap/cache/`；上传目录 `storage/app/public/`（通过 `public/storage` 软链对外）。
 
@@ -198,9 +203,20 @@ curl -I http://127.0.0.1:8010/        # 首次 X-Page-Cache: MISS，再次 HIT
 
 ## 8. 备份与回滚
 
-- **必须备份**：`database/database.sqlite`（或 MySQL 库）、`storage/app/public/`（上传图片）、`.env`。
+- **必须备份**：`database/database.sqlite`（或 PostgreSQL / MySQL 库）、`storage/app/public/`（上传图片）、`.env`。
 - 建议每日定时备份数据库与上传目录，保留最近 7–14 份。
 - 回滚：还原代码 + 还原数据库/上传目录，执行第 5 节缓存命令并 `page-cache:clear`。
+
+> 三种驱动的**原生**备份 / 恢复 / 回滚命令不同（SQLite 用文件复制或 `geo:backup`，
+> PostgreSQL 用 `pg_dump` / `psql`，MySQL 用 `mysqldump` / `mysql`），
+> 逐条命令与验证方式见
+> [`docs/operations/database-support-and-recovery.md`](docs/operations/database-support-and-recovery.md) 第 5 节。
+>
+> ⚠️ **升级前必读**：从 v1.0.0（56 个迁移）升级到候选版本（62 个迁移）时，
+> `2026_10_27_000001_tighten_contents_slot_unique_to_site_scope` 会把
+> MySQL / PostgreSQL 上 `contents` 的 slot 唯一约束**收紧**为站点级。
+> 若库里已存在「同站同 slot、不同 locale」的多行内容，该迁移会**中止并报错**
+> （不会自动删数据）。请先按矩阵文档第 4 节的排查 SQL 确认无冲突再升级。
 
 ---
 

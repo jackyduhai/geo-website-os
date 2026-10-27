@@ -22,7 +22,24 @@ It is designed for the generative-search era: alongside traditional SEO (canonic
 - PHP **8.4+** (with `pdo_sqlite`, `mbstring`, `openssl`, `tokenizer`, `xml`, `ctype`, `json`, GD recommended)
 - [Composer](https://getcomposer.org/) 2.x
 - Node.js 20+ / npm (only for building front-end assets)
-- SQLite (default, zero-config) or any Laravel-supported database
+- A database. See the support matrix below — the driver decides which PHP extension you need.
+
+### Database support
+
+Support is claimed per driver, and every claim below is backed by an executed
+test, not by configuration alone. The full matrix, the physical differences
+between the drivers, and the upgrade / backup / restore procedures live in
+[`docs/operations/database-support-and-recovery.md`](docs/operations/database-support-and-recovery.md).
+
+| Driver | Version | Status | What the claim covers |
+| --- | --- | --- | --- |
+| SQLite | bundled with PHP 8.4 | **Supported** | Default, zero-config. Empty-database migration, installer, full regression suite with an exact test-count gate in CI, upgrade / rollback / backup-restore drill. |
+| PostgreSQL | 16.x | **Supported** | Same migration set, installer, cross-database structure parity assertions, real multi-process concurrency suite, and a dedicated CI job that runs the core regression against `postgres:16`. |
+| MySQL | 8.0+ (validated on 8.4) | **Candidate** | Migrations, installer, structure parity assertions and the concurrency suite have been executed against a real MySQL 8.4 server. There is **no MySQL CI gate yet**, so MySQL is not part of the release-blocking pipeline — treat it as validated but not continuously enforced. |
+
+> **Scope note.** "Supported" means the driver is exercised by an automated
+> gate that fails the build when it breaks. It is not a claim that every
+> combination of extension version, locale and collation has been verified.
 
 ## Quick start
 

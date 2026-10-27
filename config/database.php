@@ -37,10 +37,15 @@ return [
             'database' => env('DB_DATABASE', database_path('database.sqlite')),
             'prefix' => '',
             'foreign_key_constraints' => env('DB_FOREIGN_KEYS', true),
-            'busy_timeout' => null,
-            'journal_mode' => null,
-            'synchronous' => null,
-            'transaction_mode' => 'DEFERRED',
+            // SQLite 部署调优项：
+            //   DB_TRANSACTION_MODE=IMMEDIATE 事务一开始就申请写锁。DEFERRED 事务
+            //   在「先读后写」升级为写锁时不会走 busy_timeout 等待，而是立刻返回
+            //   SQLITE_BUSY（"database is locked"），并发写入场景必须用 IMMEDIATE。
+            //   DB_BUSY_TIMEOUT 毫秒；DB_JOURNAL_MODE=WAL 允许读写并行。
+            'busy_timeout' => env('DB_BUSY_TIMEOUT'),
+            'journal_mode' => env('DB_JOURNAL_MODE'),
+            'synchronous' => env('DB_SYNCHRONOUS'),
+            'transaction_mode' => env('DB_TRANSACTION_MODE', 'DEFERRED'),
         ],
 
         'mysql' => [

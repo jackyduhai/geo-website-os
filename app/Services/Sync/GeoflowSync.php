@@ -45,6 +45,18 @@ class GeoflowSync
     public const ACTION_UNPUBLISH = 'unpublish';
     public const ACTION_CONFLICT = 'conflict';
 
+    /**
+     * 事务级可重试失败的最大重试次数。
+     *
+     * 死锁（MySQL 1213 / PostgreSQL 40001）、锁等待超时（1205）与 SQLite 的
+     * "database is locked" 都是可重试的数据库级失败：引擎已回滚事务，重试
+     * 整个事务是安全的。3 次足以在 4 路并发下收敛到唯一赢家。
+     */
+    protected const MAX_TRANSACTION_ATTEMPTS = 3;
+
+    /** 重试退避基数（微秒），按尝试次数线性增长。 */
+    protected const TRANSACTION_RETRY_BACKOFF_US = 20000;
+
     public function __construct(protected ContentGate $gate)
     {
     }
@@ -290,6 +302,22 @@ class GeoflowSync
      */
     public function upsert(array $payload): array
     {
+        return $this->performUpsert($payload, 0);
+    }
+
+    /**
+     * upsert 的实际实现，可带重试次数。
+     *
+     * V1.4：并发重复投递在 MySQL 上会触发 InnoDB 的「对拍升级死锁」——多个
+     * 连接同时向同一条 UNIQUE 索引插入，先各自拿到共享锁做唯一性检查，随后
+     * 都要升级为排他锁，互相等待，形成 1213 Deadlock。InnoDB 会回滚其中
+     * 一个事务并把死锁报告给应用。这类失败是**可重试**的：事务已被引擎回滚，
+     * 业务层必须重试整个事务，而不是把 500 抛给上游。
+     *
+     * @param  array<string, mixed>  $payload
+     */
+    protected function performUpsert(array $payload, int $attempt): array
+    {
         $externalId = trim((string) ($payload['external_id'] ?? ''));
 
         // C-2：写入能力总开关。放在最前，未开启时任何写入口都拒绝。
@@ -308,225 +336,284 @@ class GeoflowSync
 
         $externalId = $normalized['external_id'];
 
-        return DB::transaction(function () use ($payload, $normalized, $externalId) {
-            $existing = Content::where('external_id', $externalId)->lockForUpdate()->first();
+        // V1.4：唯一约束冲突必须在一个【全新的】事务里解决。
+        // PostgreSQL 在 23505 之后把当前事务置为 aborted，同事务内无法再执行
+        // 任何语句；SQLite / MySQL 不会，因此原实现（冲突后同事务 reload）
+        // 在 PostgreSQL 上必然失败，却能在 SQLite / MySQL 上通过——典型的
+        // 「跨库被掩盖」缺陷。此处把冲突信号抛出，由事务外的新事务接手。
+        try {
+            return DB::transaction(function () use ($payload, $normalized, $externalId) {
+                $existing = Content::where('external_id', $externalId)->lockForUpdate()->first();
 
-            // Step 4-5：合并 + 解析派生默认值，得到「最终将要落库的状态」。
-            // 必须在算hash 之前完成：否则 auto_publish 补的 published_at
-            // 不在 hash 输入里，同一 payload 第二次推送必然 hash 不同 → 误判 changed
-            // → 每次推送都写 revision + synclog，同步噪音永不收敛。
-            $resolved = $this->resolveFinalPersistedState($normalized, $existing);
-            $attributes = $resolved['attributes'];
+                // Step 4-5：合并 + 解析派生默认值，得到「最终将要落库的状态」。
+                // 必须在算hash 之前完成：否则 auto_publish 补的 published_at
+                // 不在 hash 输入里，同一 payload 第二次推送必然 hash 不同 → 误判 changed
+                // → 每次推送都写 revision + synclog，同步噪音永不收敛。
+                $resolved = $this->resolveFinalPersistedState($normalized, $existing);
+                $attributes = $resolved['attributes'];
 
-            if (! empty($attributes['slug'])) {
-                $attributes['slug'] = \Illuminate\Support\Str::slug((string) $attributes['slug']);
-            }
-
-            // 新建时 slug 必需（中文标题无法自动转写）
-            if (! $existing && empty($attributes['slug'])) {
-                return $this->reject($externalId, '新建内容必须提供合法 slug（小写英文/连字符）', $payload, 422, 'validation');
-            }
-
-            // slug 站内唯一预检（与 DB UNIQUE(site_id, slug, locale) 同口径）：
-            // 撞唯一索引会以 SQL 500收场，这里提前给 422。
-            //
-            // ⚠️ 必须带 locale 维度（C-19 · RC-5 发现）：
-            //   20G-3 把行级翻译模型引入 contents 后，DB 约束已是
-            //   `UNIQUE(site_id, slug, locale)`，后台 ContentController 的
-            //   `Rule::unique('contents','slug')` 也已带 `where('locale', ...)`。
-            //   但此处仍是站点级单维判断 → GEOFlow（AI 内容管道的**主入口**）
-            //   无法发布 zh/en 同 slug 的双语内容，而后台与 DB 层都允许。
-            //   同一slug 的另一语言行不是「冲突」，只是**不同语言维度的另一篇内容**。
-            if (! empty($attributes['slug'])) {
-                $conflictLocale = $attributes['locale']
-                    ?? \App\Support\Localization\LocaleContext::current();
-                $conflict = Content::where('slug', $attributes['slug'])
-                    ->where('locale', $conflictLocale)
-                    ->when($existing, fn ($q) => $q->where('id', '!=', $existing->id))
-                    ->first();
-                if ($conflict) {
-                    return $this->reject($externalId, "slug 冲突：已被本站内容 #{$conflict->id}（{$conflict->slug}）占用", $payload, 422, 'validation');
+                if (! empty($attributes['slug'])) {
+                    $attributes['slug'] = \Illuminate\Support\Str::slug((string) $attributes['slug']);
                 }
-            }
 
-            // 幂等：指纹作用在最终落库状态上（Step 6-7）。
-            // 必须 clone 后 fill，而不是 new Content(原始属性)：
-            // 后者会把库内 JSON 字符串二次编码，cast 解一次后仍是字符串。
-            $projected = $existing ? clone $existing : new Content();
-            $projected->fill($attributes);
-            $incomingHash = $projected->computeHash();
+                // 新建时 slug 必需（中文标题无法自动转写）
+                if (! $existing && empty($attributes['slug'])) {
+                    return $this->reject($externalId, '新建内容必须提供合法 slug（小写英文/连字符）', $payload, 422, 'validation');
+                }
 
-            if ($existing && $incomingHash === $existing->content_hash) {
-                SyncLog::write('in', 'skip', [
-                    'external_id' => $externalId, 'content_id' => $existing->id,
-                    'status' => 'ok', 'message' => '内容指纹未变化，跳过', 'payload' => $payload,
-                ]);
-
-                return [
-                    'ok' => true, 'action' => self::ACTION_SKIP, 'status' => 200,
-                    'content' => $existing, 'code' => 'ok', 'changed_fields' => [],
-                    'message' => '内容未变化',
-                ];
-            }
-
-            // 人工锁定：内容有变化时不覆盖，只记录冲突等人处理
-            if ($existing && $existing->lock_manual) {
-                SyncLog::write('in', 'conflict', [
-                    'external_id' => $externalId, 'content_id' => $existing->id,
-                    'status' => 'warn', 'message' => '上游内容与人工修改版本冲突，保留人工版本，待人工裁决', 'payload' => $payload,
-                ]);
-
-                return [
-                    'ok' => false, 'action' => 'conflict', 'code' => 'conflict',
-                    'status' => 409, 'content' => $existing, 'errors' => [],
-                    'message' => '该内容已被人工修改并锁定，未覆盖；请在后台人工合并',
-                ];
-            }
-
-            // 门禁（与后台手动发布同一套规则）
-            // 门禁（与后台手动发布同一套规则）
-            $candidate = $existing ? clone $existing : new Content();
-            $candidate->fill($attributes);
-            $candidate->status = 'published';
-            $result = $this->gate->check($candidate);
-
-            if (! $result['passed'] && $this->gate->isEnforced()) {
-                return $this->reject($externalId, '未通过 GEO 门禁，已拒绝写入', $payload, 422, 'reject', $result['errors']);
-            }
-
-            // 非强制模式：错误降级为警告（与后台发布同一开关，不留宽松后门分叉）
-            $gateWarnings = $result['warnings'];
-            if (! $result['passed']) {
-                $gateWarnings = array_merge($gateWarnings, array_map(fn ($e) => '[门禁未强制] '.$e, $result['errors']));
-            }
-
-            // status / published_at 已在 resolveFinalPersistedState() 中落定，
-            // 此处只补系统生成字段（不参与 hash）。
-            $attributes['status'] = $resolved['derived']['status'];
-            $attributes['external_source'] = 'geoflow';
-            $attributes['synced_at'] = now();
-
-            // changed_fields：本次真正变动的受管字段，供上游对账（C-4 配套）
-            $hashable = ContentFieldContract::hashableFields();
-            $changedFields = $existing
-                ? array_values(array_filter(
-                    $hashable,
-                    fn ($f) => $existing->getAttribute($f) != ($attributes[$f] ?? $existing->getAttribute($f))
-                ))
-                : $hashable;
-
-            if ($existing) {
-                $existing->fill($attributes);
-                $existing->content_hash = $existing->computeHash();
-                $existing->save();
-                $content = $existing;
-                $action = self::ACTION_UPDATE;
-            } else {
-                // C-4 并发兜底（Step 11）：DB 唯一约束只保证「第二个最终失败」，
-                // 业务层必须把失败翻译成契约内结果，而不是让 QueryException 冒泡成 500。
+                // slug 站内唯一预检（与 DB UNIQUE(site_id, slug, locale) 同口径）：
+                // 撞唯一索引会以 SQL 500收场，这里提前给 422。
                 //
-                // 注意：唯一键冲突 ≠ 幂等命中。冲突后必须 reload 并比较
-                // canonical hash：payload 相同才是幂等 skip；不同则说明
-                // 两个并发推送携带了不同内容，应走 update/conflict 语义。
-                try {
-                    $content = new Content($attributes);
-                    $content->external_id = $externalId;
-                    $content->content_hash = $content->computeHash();
-                    $content->save();
-                    $action = self::ACTION_CREATE;
-                } catch (\Illuminate\Database\QueryException $e) {
-                    if (! $this->isUniqueViolation($e)) {
-                        throw $e;
+                // ⚠️ 必须带 locale 维度（C-19 · RC-5 发现）：
+                //   20G-3 把行级翻译模型引入 contents 后，DB 约束已是
+                //   `UNIQUE(site_id, slug, locale)`，后台 ContentController 的
+                //   `Rule::unique('contents','slug')` 也已带 `where('locale', ...)`。
+                //   但此处仍是站点级单维判断 → GEOFlow（AI 内容管道的**主入口**）
+                //   无法发布 zh/en 同 slug 的双语内容，而后台与 DB 层都允许。
+                //   同一slug 的另一语言行不是「冲突」，只是**不同语言维度的另一篇内容**。
+                if (! empty($attributes['slug'])) {
+                    $conflictLocale = $attributes['locale']
+                        ?? \App\Support\Localization\LocaleContext::current();
+                    $conflict = Content::where('slug', $attributes['slug'])
+                        ->where('locale', $conflictLocale)
+                        ->when($existing, fn ($q) => $q->where('id', '!=', $existing->id))
+                        ->first();
+                    if ($conflict) {
+                        return $this->reject($externalId, "slug 冲突：已被本站内容 #{$conflict->id}（{$conflict->slug}）占用", $payload, 422, 'validation');
                     }
+                }
 
-                    $winner = Content::where('external_id', $externalId)->lockForUpdate()->first();
+                // 幂等：指纹作用在最终落库状态上（Step 6-7）。
+                // 必须 clone 后 fill，而不是 new Content(原始属性)：
+                // 后者会把库内 JSON 字符串二次编码，cast 解一次后仍是字符串。
+                $projected = $existing ? clone $existing : new Content();
+                $projected->fill($attributes);
+                $incomingHash = $projected->computeHash();
 
-                    // reload 后重算：这次针对的是「已落库的真实状态」
-                    $replay = $winner ? clone $winner : new Content();
-                    $replay->fill($attributes);
-                    $replayHash = $replay->computeHash();
-                    $sameAsWinner = $winner && $replayHash === $winner->content_hash;
-
-                    if ($sameAsWinner) {
-                        SyncLog::write('in', 'skip', [
-                            'external_id' => $externalId, 'content_id' => $winner->id,
-                            'status' => 'warn',
-                            'message' => '并发重复推送，命中唯一约束且内容一致，按幂等处理',
-                            'payload' => $payload,
-                        ]);
-
-                        return [
-                            'ok' => true, 'action' => self::ACTION_SKIP, 'code' => 'ok', 'status' => 200,
-                            'content' => $winner, 'changed_fields' => [],
-                            'message' => '并发重复推送，内容已存在且一致',
-                        ];
-                    }
-
-                    // 内容不同：不能静默skip。若赢家已被人工锁定 → conflict；
-                    // 否则按 update 处理（保持与 upsert 主路径一致）。
-                    if ($winner?->lock_manual) {
-                        SyncLog::write('in', 'conflict', [
-                            'external_id' => $externalId, 'content_id' => $winner->id,
-                            'status' => 'warn',
-                            'message' => '并发推送内容不一致，且目标已被人工锁定，保留人工版本',
-                            'payload' => $payload,
-                        ]);
-
-                        return [
-                            'ok' => false, 'action' => 'conflict', 'code' => 'conflict', 'status' => 409,
-                            'content' => $winner, 'errors' => [],
-                            'message' => '并发推送内容不一致，且该内容已被人工锁定，未覆盖',
-                        ];
-                    }
-
-                    $winner->fill($attributes);
-                    $winner->content_hash = $winner->computeHash();
-                    $winner->save();
-                    ContentRevision::create([
-                        'content_id' => $winner->id,
-                        'user_id'    => null,
-                        'note'       => 'GEOFlow 并发更新',
-                        'snapshot'   => $winner->only(ContentFieldContract::revisionableFields()),
-                    ]);
-                    SyncLog::write('in', 'updated', [
-                        'external_id' => $externalId, 'content_id' => $winner->id,
-                        'status' => 'warn',
-                        'message' => '并发推送内容不一致，已按后到者更新',
-                        'payload' => $payload,
+                if ($existing && $incomingHash === $existing->content_hash) {
+                    SyncLog::write('in', 'skip', [
+                        'external_id' => $externalId, 'content_id' => $existing->id,
+                        'status' => 'ok', 'message' => '内容指纹未变化，跳过', 'payload' => $payload,
                     ]);
 
                     return [
-                        'ok' => true, 'action' => self::ACTION_UPDATE, 'code' => 'ok', 'status' => 200,
-                        'content' => $winner, 'changed_fields' => $hashable,
-                        'warnings' => $gateWarnings,
-                        'message' => '并发推送，已更新既有内容',
+                        'ok' => true, 'action' => self::ACTION_SKIP, 'status' => 200,
+                        'content' => $existing, 'code' => 'ok', 'changed_fields' => [],
+                        'message' => '内容未变化',
                     ];
                 }
+
+                // 人工锁定：内容有变化时不覆盖，只记录冲突等人处理
+                if ($existing && $existing->lock_manual) {
+                    SyncLog::write('in', 'conflict', [
+                        'external_id' => $externalId, 'content_id' => $existing->id,
+                        'status' => 'warn', 'message' => '上游内容与人工修改版本冲突，保留人工版本，待人工裁决', 'payload' => $payload,
+                    ]);
+
+                    return [
+                        'ok' => false, 'action' => 'conflict', 'code' => 'conflict',
+                        'status' => 409, 'content' => $existing, 'errors' => [],
+                        'message' => '该内容已被人工修改并锁定，未覆盖；请在后台人工合并',
+                    ];
+                }
+
+                // 门禁（与后台手动发布同一套规则）
+                // 门禁（与后台手动发布同一套规则）
+                $candidate = $existing ? clone $existing : new Content();
+                $candidate->fill($attributes);
+                $candidate->status = 'published';
+                $result = $this->gate->check($candidate);
+
+                if (! $result['passed'] && $this->gate->isEnforced()) {
+                    return $this->reject($externalId, '未通过 GEO 门禁，已拒绝写入', $payload, 422, 'reject', $result['errors']);
+                }
+
+                // 非强制模式：错误降级为警告（与后台发布同一开关，不留宽松后门分叉）
+                $gateWarnings = $result['warnings'];
+                if (! $result['passed']) {
+                    $gateWarnings = array_merge($gateWarnings, array_map(fn ($e) => '[门禁未强制] '.$e, $result['errors']));
+                }
+
+                // status / published_at 已在 resolveFinalPersistedState() 中落定，
+                // 此处只补系统生成字段（不参与 hash）。
+                $attributes['status'] = $resolved['derived']['status'];
+                $attributes['external_source'] = 'geoflow';
+                $attributes['synced_at'] = now();
+
+                // changed_fields：本次真正变动的受管字段，供上游对账（C-4 配套）
+                $hashable = ContentFieldContract::hashableFields();
+                $changedFields = $existing
+                    ? array_values(array_filter(
+                        $hashable,
+                        fn ($f) => $existing->getAttribute($f) != ($attributes[$f] ?? $existing->getAttribute($f))
+                    ))
+                    : $hashable;
+
+                if ($existing) {
+                    $existing->fill($attributes);
+                    $existing->content_hash = $existing->computeHash();
+                    $existing->save();
+                    $content = $existing;
+                    $action = self::ACTION_UPDATE;
+                } else {
+                    // C-4 并发兜底（Step 11）：DB 唯一约束只保证「第二个最终失败」，
+                    // 业务层必须把失败翻译成契约内结果，而不是让 QueryException 冒泡成 500。
+                    //
+                    // 注意：唯一键冲突 ≠ 幂等命中。冲突后必须 reload 并比较
+                    // canonical hash：payload 相同才是幂等 skip；不同则说明
+                    // 两个并发推送携带了不同内容，应走 update/conflict 语义。
+                    //
+                    // V1.4：这里【不】在当前事务内继续执行 SQL。PostgreSQL 在唯一
+                    // 约束冲突后会把整个事务置为 aborted（25P02），同事务内的 reload
+                    // 必然失败；SQLite / MySQL 因为约束失败后事务仍可用而掩盖了这个
+                    // 缺陷。改为抛出 UniqueContentConflict，由事务外的新事务处理。
+                    try {
+                        $content = new Content($attributes);
+                        $content->external_id = $externalId;
+                        $content->content_hash = $content->computeHash();
+                        $content->save();
+                        $action = self::ACTION_CREATE;
+                    } catch (\Illuminate\Database\QueryException $e) {
+                        if (! $this->isUniqueViolation($e)) {
+                            throw $e;
+                        }
+
+                        throw new UniqueContentConflict($attributes, $externalId);
+                    }
+                }
+
+                ContentRevision::create([
+                    'content_id' => $content->id,
+                    'user_id'    => null,
+                    'note'       => 'GEOFlow 推送' . ($action === self::ACTION_CREATE ? '新建' : '更新'),
+                    'snapshot'   => $content->only(ContentFieldContract::revisionableFields()),
+                ]);
+
+                $willPublish = ($resolved['derived']['status'] ?? 'draft') === 'published';
+
+                SyncLog::write('in', $action, [
+                    'external_id' => $externalId, 'content_id' => $content->id,
+                    'status' => 'ok',
+                    'message' => $willPublish ? '门禁通过，已发布' : '门禁通过，进入草稿待人工发布',
+                    'payload' => $payload,
+                ]);
+
+                return [
+                    'ok' => true, 'action' => $action, 'code' => 'ok', 'status' => 200,
+                    'content' => $content,
+                    'external_id' => $externalId,
+                    'warnings' => $gateWarnings,
+                    'changed_fields' => $changedFields,
+                    'message' => $willPublish ? '已接收并发布' : '已接收，存为草稿待人工发布',
+                ];
+            });
+        } catch (UniqueContentConflict $conflict) {
+            return $this->resolveConcurrentDuplicate($conflict, $payload);
+        } catch (\Illuminate\Database\QueryException $e) {
+            // 死锁 / 序列化失败 / 锁等待超时：引擎已经回滚了本事务，属于
+            // 可重试的数据库级失败。重试整个事务即可收敛到唯一赢家；
+            // 超过上限则原样抛出，避免无限重试掩盖真实问题。
+            if ($attempt < self::MAX_TRANSACTION_ATTEMPTS && $this->isRetryableTransactionFailure($e)) {
+                $attempt++;
+                usleep(self::TRANSACTION_RETRY_BACKOFF_US * $attempt);
+
+                return $this->performUpsert($payload, $attempt);
             }
 
+            throw $e;
+        }
+    }
+
+    /**
+     * 在新事务里解决并发重复投递。
+     *
+     * 事务语义：调用方的事务已经回滚，这里开一个全新的事务，因此能重新读取
+     * 到赢家已经提交的行（PostgreSQL READ COMMITTED 下拿到新快照）。
+     *
+     * 不变量（I2）：唯一键冲突 ≠ 幂等命中。必须 reload 赢家并比较 canonical
+     * hash —— 内容相同才是幂等 skip；内容不同则走 update / conflict，绝不盲跳。
+     *
+     * @param  array<string, mixed>  $payload
+     * @return array<string, mixed>
+     */
+    protected function resolveConcurrentDuplicate(UniqueContentConflict $conflict, array $payload): array
+    {
+        $externalId = $conflict->externalId;
+        $attributes = $conflict->attributes;
+        $hashable = ContentFieldContract::hashableFields();
+
+        return DB::transaction(function () use ($externalId, $attributes, $hashable, $payload) {
+            $winner = Content::where('external_id', $externalId)->lockForUpdate()->first();
+
+            // reload 后重算：这次针对的是「已落库的真实状态」
+            $replay = $winner ? clone $winner : new Content();
+            $replay->fill($attributes);
+            $replayHash = $replay->computeHash();
+            $sameAsWinner = $winner && $replayHash === $winner->content_hash;
+
+            if ($sameAsWinner) {
+                SyncLog::write('in', 'skip', [
+                    'external_id' => $externalId, 'content_id' => $winner->id,
+                    'status' => 'warn',
+                    'message' => '并发重复推送，命中唯一约束且内容一致，按幂等处理',
+                    'payload' => $payload,
+                ]);
+
+                return [
+                    'ok' => true, 'action' => self::ACTION_SKIP, 'code' => 'ok', 'status' => 200,
+                    'content' => $winner, 'changed_fields' => [],
+                    'message' => '并发重复推送，内容已存在且一致',
+                ];
+            }
+
+            // 内容不同：不能静默skip。若赢家已被人工锁定 → conflict；
+            // 否则按 update 处理（保持与 upsert 主路径一致）。
+            if ($winner?->lock_manual) {
+                SyncLog::write('in', 'conflict', [
+                    'external_id' => $externalId, 'content_id' => $winner->id,
+                    'status' => 'warn',
+                    'message' => '并发推送内容不一致，且目标已被人工锁定，保留人工版本',
+                    'payload' => $payload,
+                ]);
+
+                return [
+                    'ok' => false, 'action' => 'conflict', 'code' => 'conflict', 'status' => 409,
+                    'content' => $winner, 'errors' => [],
+                    'message' => '并发推送内容不一致，且该内容已被人工锁定，未覆盖',
+                ];
+            }
+
+            // 门禁与主路径同口径（并发更新同样要过门禁）。
+            $candidate = $winner ? clone $winner : new Content();
+            $candidate->fill($attributes);
+            $candidate->status = 'published';
+            $gateResult = $this->gate->check($candidate);
+            $gateWarnings = $gateResult['warnings'];
+            if (! $gateResult['passed']) {
+                $gateWarnings = array_merge($gateWarnings, array_map(fn ($e) => '[门禁未强制] '.$e, $gateResult['errors']));
+            }
+
+            $winner->fill($attributes);
+            $winner->content_hash = $winner->computeHash();
+            $winner->save();
             ContentRevision::create([
-                'content_id' => $content->id,
+                'content_id' => $winner->id,
                 'user_id'    => null,
-                'note'       => 'GEOFlow 推送' . ($action === self::ACTION_CREATE ? '新建' : '更新'),
-                'snapshot'   => $content->only(ContentFieldContract::revisionableFields()),
+                'note'       => 'GEOFlow 并发更新',
+                'snapshot'   => $winner->only(ContentFieldContract::revisionableFields()),
             ]);
-
-            $willPublish = ($resolved['derived']['status'] ?? 'draft') === 'published';
-
-            SyncLog::write('in', $action, [
-                'external_id' => $externalId, 'content_id' => $content->id,
-                'status' => 'ok',
-                'message' => $willPublish ? '门禁通过，已发布' : '门禁通过，进入草稿待人工发布',
+            SyncLog::write('in', 'updated', [
+                'external_id' => $externalId, 'content_id' => $winner->id,
+                'status' => 'warn',
+                'message' => '并发推送内容不一致，已按后到者更新',
                 'payload' => $payload,
             ]);
 
             return [
-                'ok' => true, 'action' => $action, 'code' => 'ok', 'status' => 200,
-                'content' => $content,
-                'external_id' => $externalId,
+                'ok' => true, 'action' => self::ACTION_UPDATE, 'code' => 'ok', 'status' => 200,
+                'content' => $winner, 'changed_fields' => $hashable,
                 'warnings' => $gateWarnings,
-                'changed_fields' => $changedFields,
-                'message' => $willPublish ? '已接收并发布' : '已接收，存为草稿待人工发布',
+                'message' => '并发推送，已更新既有内容',
             ];
         });
     }
@@ -538,6 +625,33 @@ class GeoflowSync
 
         return str_contains($message, 'unique')
             || str_contains($message, 'duplicate');
+    }
+
+    /**
+     * 判断 QueryException 是否为「事务级可重试失败」。
+     *
+     * 覆盖：
+     *   MySQL      1213 Deadlock found when trying to get lock（SQLSTATE 40001）
+     *   MySQL      1205 Lock wait timeout exceeded
+     *   PostgreSQL 40001 serialization_failure / 40P01 deadlock_detected
+     *   SQLite     "database is locked"（写锁竞争）
+     *
+     * 这些失败都意味着「事务已被引擎回滚」，重试整个事务是安全的，且是
+     * 收敛到唯一赢家的标准做法。
+     */
+    protected function isRetryableTransactionFailure(\Illuminate\Database\QueryException $e): bool
+    {
+        $sqlState = (string) $e->getCode();
+        $message = strtolower($e->getMessage());
+
+        if (in_array($sqlState, ['40001', '40P01'], true)) {
+            return true;
+        }
+
+        return str_contains($message, 'deadlock found')
+            || str_contains($message, 'lock wait timeout')
+            || str_contains($message, 'database is locked')
+            || str_contains($message, 'could not serialize access');
     }
 
     /**

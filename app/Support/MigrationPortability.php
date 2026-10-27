@@ -13,7 +13,11 @@ use Illuminate\Support\Facades\DB;
  * - 外键检查开关：
  *     sqlite : PRAGMA foreign_keys = OFF/ON
  *     mysql  : SET FOREIGN_KEY_CHECKS = 0/1
- *     pgsql  : SET session_replication_role = replica/origin（需超级用户）
+ *     pgsql  : 无会话级开关（no-op）。SET session_replication_role 需要超级用户
+ *              （PGC_SUSET，普通应用账户报 42501），且并不能解除「被引用的表
+ *              不能被 drop」（2BP01）——该依赖由引用方 FK 约束本身强制。
+ *              PostgreSQL 上的正确做法是 dropReferencingForeignKeys() /
+ *              restoreReferencingForeignKeys()，table rebuild 迁移已在使用。
  * - 外键违规核查：sqlite 用 PRAGMA foreign_key_check；其余引擎在重建后由
  *     外键约束本身保证，且数据复制保留原 ID，故返回空（无法用单一内置语句等价）。
  */
@@ -319,7 +323,18 @@ class MigrationPortability
         return match ($driver) {
             'sqlite' => ['PRAGMA foreign_keys = ' . ($enable ? 'ON' : 'OFF')],
             'mysql'  => ['SET FOREIGN_KEY_CHECKS = ' . ($enable ? '1' : '0')],
-            'pgsql'  => ['SET session_replication_role = ' . ($enable ? "'origin'" : "'replica'")],
+            // PostgreSQL: there is no session-level FK toggle.
+            //   SET session_replication_role is PGC_SUSET, so an ordinary
+            //   application role gets 42501 "permission denied to set
+            //   parameter" (it is not grantable via GRANT SET ON PARAMETER).
+            //   And even with superuser it does NOT help here: dropping a
+            //   table that other tables reference fails with 2BP01 because the
+            //   dependency comes from the referencing FK constraint itself,
+            //   not from the trigger that session_replication_role disables.
+            //   The correct PostgreSQL mechanism is
+            //   dropReferencingForeignKeys() / restoreReferencingForeignKeys(),
+            //   which every table-rebuild migration already uses.
+            'pgsql'  => [],
             default  => [],
         };
     }
