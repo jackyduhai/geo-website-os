@@ -10,8 +10,10 @@
 ## 0. 一句话结论
 
 本轮在三种真实数据库上把 GEO OS 的**迁移、安装、结构、并发、升级、备份恢复**全部跑通，
-并修掉 **5 个被 SQLite 基线掩盖的真实缺陷**（4 个生产代码缺陷 + 1 个跨库语义漂移），
+并修掉 **7 个被 SQLite 基线掩盖的真实缺陷**（6 个生产代码缺陷 + 1 个跨库语义漂移），
 另修掉 **2 个测试基础设施缺陷**（并行回归共用工作树导致互相破坏；升级演练脚本未真正切换数据库）。
+其中最后两个缺陷（事实「编辑」路径的语言语义与共享列广播）**与数据库无关**，
+是被 PG 与 SQLite/MySQL 的**返回行序差异**照出来的，属既有代码里的静默缺陷。
 候选版本在 **SQLite / PostgreSQL 8.0+ / MySQL 8.4** 三库上的行为已实测一致，
 但 **CI 流水线尚未取得新证据**（推送冻结），且 **MySQL 尚无持续门禁**。
 
@@ -19,7 +21,7 @@
 
 ## 1. 变更清单
 
-### 1.1 生产代码（4 处）
+### 1.1 生产代码（5 处）
 
 | 文件 | 改动 | 原因 |
 | --- | --- | --- |
@@ -29,6 +31,7 @@
 | `config/database.php` | SQLite 连接项改为 env 可覆盖，新增 `DB_TRANSACTION_MODE`（默认 DEFERRED） | SQLite `DEFERRED` 事务「先读后写」升级写锁不走 `busy_timeout`，直接 `SQLITE_BUSY` |
 | `app/Support/GuardsNumericRouteBinding.php` | **新建**。整型主键的路由隐式绑定守卫：URL 片段不是合法整数字面量时，在查询之前判定「未找到」 | 见 §3.5。PG 会对非法字面量抛 `22P02` → **500**，SQLite / MySQL 只是查不到 → **404**；同一请求在不同库返回不同状态码 |
 | `app/Models/BaseModel.php` | **新建**。业务模型统一基类，承载上述守卫；26 个 Eloquent 模型改为继承它（`User` 继承 `Authenticatable`，不在范围内） | 一处根治，避免逐个模型重复；改动经 `route:list` 与全量回归核验 |
+| `app/Http/Controllers/Admin/FactController.php` | 更新路径的语言**沿用该行自身 locale**（不再「缺省即默认语言」），并显式 `unset($data['locale'])`；新增 `sharedAnchorFor()`，非权威行编辑时把**共享列写入路由到默认语言权威行**，由权威行广播到其余语言行 | 见 §3.7。缺陷六：编辑非默认语言行必然撞 `facts_site_id_key_locale_unique` → 静默失败并误报「key 已占用」；缺陷七：共享列只写当前行 → 中英文发布资格分裂 |
 
 ### 1.2 迁移（1 个）
 
@@ -36,7 +39,7 @@
 | --- | --- |
 | `database/migrations/2026_10_27_000001_tighten_contents_slot_unique_to_site_scope.php` | 把 `contents.slot` 唯一约束在三库上统一为**站点级** `UNIQUE(site_id, slot)`。收紧前先探测存量冲突，**存在冲突即中止报错**，绝不静默删改数据 |
 
-### 1.3 测试与工具（6 个新增 / 3 个修改）
+### 1.3 测试与工具（7 个新增 / 3 个修改）
 
 | 文件 | 说明 |
 | --- | --- |
@@ -51,6 +54,7 @@
 | `phpunit.mysql.xml`（改） | 指向本轮验证实例 |
 | `tests/Feature/FactValidationTest.php`（改） | 修复 PG 上的断言不可达问题（见 §3.4） |
 | `tests/Feature/RouteBindingGuardTest.php`（新） | 绑定守卫回归：三库各 24 个用例（阳性对照 8 + 阴性对照 14 + HTTP 端到端 + 非整型主键不受影响），见 §3.5 的变异测试 |
+| `tests/Feature/FactLocaleUpdateTest.php`（新） | 事实编辑路径回归：5 个用例全部显式按 locale 取行，不依赖行序；覆盖「编辑不改语言」「编辑真正落库」「共享列广播到全部语言行」「空值门禁在非权威行同样生效并广播」，见 §3.7 的变异测试 |
 | `tests/Feature/MigrationRollbackFidelityTest.php`（改） | 迁移清单基线 61 → 62 |
 | `config/cache.php`（改） | file store 路径支持 `CACHE_FILE_PATH` 覆盖（默认不变），用于并行测试隔离 |
 
@@ -76,7 +80,7 @@
 
 ---
 
-## 3. 本轮修掉的 4 个真实缺陷
+## 3. 本轮修掉的 7 个真实缺陷
 
 ### 3.1 PG 迁移因外键开关权限失败（生产缺陷）
 
@@ -184,6 +188,74 @@
 - **附带的去硬编码**：工具路径改为 `PG_DUMP` / `PSQL` / `MYSQLDUMP` / `MYSQL`
   环境变量 → PATH → Windows 常见安装目录 → 明确异常，脚本不再绑定本机路径。
 
+### 3.7 事实「编辑」路径的两个生产缺陷（与数据库无关，由**行序差异**暴露）
+
+本轮在 PG 批次中出现 1 个失败用例（`FactValidationTest::test_empty_value_on_update_is_forced_unpublished`）。
+它在 SQLite / MySQL 上通过、在 PG 上失败，且**单独复跑又通过**。追到根后发现：
+**缺陷本身三库共有**，只是各库的返回行序不同，暴露时机不同。
+
+#### 3.7.1 缺陷六：编辑非默认语言的事实行必然失败，且被伪装成「key 已占用」
+
+- **现象**：后台编辑一条英文事实（locale=en），提交后返回 302，页面提示
+  「该 key 已存在，请更换或直接编辑已有事实」，**改动一行未落库**。
+- **根因**：
+  1. 编辑态表单**不渲染语言选择器**（`fact-form.blade.php` 的 `<select name="locale">`
+     只在新增态出现），请求体里根本没有 `locale`；
+  2. `FactController::validateData()` 用
+     `$locale = $request->input('locale') ?: LocaleRegistry::default()` 解析语言，
+     于是把「缺省」理解成「改成默认语言 zh-CN」；
+  3. 更新语句要把 en 行改成 zh-CN，撞上唯一索引
+     `facts_site_id_key_locale_unique(site_id, key, locale)`；
+  4. `UniqueConstraintViolationException` 被 catch，转成「key 已占用」的字段错误。
+- **为什么三库表现不同**：缺陷与数据库无关，但「`where key = ?` 先返回哪一行」由数据库决定。
+  同一份数据下，PG 的计划器可能走 `(site_id, key, locale)` 索引扫描，
+  `'en' < 'zh-CN'` 字典序让**英文行先返回**；SQLite / MySQL 在该数据分布下先返回
+  权威行，于是「先撞约束」的对象不同，一个报错一个通过。
+  **结论**：行序不是原因，是缺陷的触发条件；把它归因于「PG 的问题」是错误结论。
+- **修法**：
+  - 更新路径的语言**沿用该行自身的 locale**（`$fact->locale`），
+    请求里带了合法 locale 才采纳；新建路径仍用请求 locale，缺省默认语言。
+  - 更新时显式 `unset($data['locale'])`，与 `ContentController::update()` 的既有模式一致：
+    **编辑只改内容，不改语言**；补录另一种语言走 `storeTranslation()`。
+- **证据**：
+  - 修复前（PG 隔离库复现）：`PUT /admin/facts/{en_row}` → 302 + `errors: ["key 已被占用。"]`，
+    `facts` 两行**逐字段未变**；直接改 locale 的裸 SQL 抛
+    `SQLSTATE[23505] Unique violation: duplicate key value violates unique constraint "facts_site_id_key_locale_unique"`。
+  - 修复后：同一请求 302 且 `errors: []`，en 行 `value` / `label` 落库、`locale` 仍为 `en`。
+
+#### 3.7.2 缺陷七：共享列在非权威行「假生效」，跨语言发布资格分裂
+
+- **现象**：修好缺陷六后暴露出来。表单明确写着「共享属性（对所有语言生效）」，
+  但在**英文行**上取消「对外公开」后，中文行仍是 `is_public=true`。
+- **根因**：`is_public` / `group` / `key` / `unit` 等属 `Fact::$sharedTranslatableColumns`，
+  语义上以**默认语言权威行**为准；`Translatable::syncSharedColumns()` 也只在权威行
+  保存后单向广播。但 `FactController::update()` 直接把整份数据写进**当前行**，
+  而 `saved` 事件只在 `locale === 默认语言` 时触发广播 → 非权威行的共享列写入
+  **既不生效、也不报错**。
+- **后果**：同一条事实在中英文站点的对外输出口径不一致（中文站仍输出、
+  英文站不输出），发布资格出现跨语言分裂。这类缺陷不会报错，只会在
+  GEO 输出里表现为「同一事实两个站点不一致」，比崩溃更难发现。
+- **修法**：更新非权威行时，把**共享列的写入路由到权威行**，由权威行保存后经
+  `syncSharedColumns()` 广播到其余语言行；翻译列（`label` / `value`）仍只写当前行。
+  找不到权威行时回退到当前行，不阻断编辑。
+- **证据**：
+  - 修复前（仅修缺陷六后）：`zh is_public=true | en is_public=false | 分裂=YES`。
+  - 修复后：同一操作 → `zh is_public=false | en is_public=false | 分裂=no`。
+  - 空值发布门禁（清空 value 却仍勾选公开 → 强制不公开）在非权威行上同样生效并广播，
+    权威行同步下架，避免中文站继续对外输出空事实。
+
+#### 3.7.3 回归测试与变异测试
+
+- 新增 `tests/Feature/FactLocaleUpdateTest.php`（5 个用例），**全部显式按 locale 取行**，
+  不依赖 `where(key)->firstOrFail()` 的返回顺序（修复前的失败正是由行序触发的）。
+- 三库结果一致：SQLite 5/5、PostgreSQL 5/5、MySQL 5/5。
+- **变异测试证明有牙齿**（在 PG 上实测）：
+  - 变异 A：把 locale 解析改回旧的「缺省即默认语言」 → **5 个用例中 4 个失败**
+    （失败信息正是 `errors: ["key 已被占用。"]`），权威行编辑用例仍通过（阳性对照）。
+  - 变异 B：移除共享列到权威行的路由 → **2 个广播用例失败**，
+    定位到「中文行 `is_public=true` / 英文行 `is_public=false`」的分裂现场。
+  - 两轮变异分别只打中各自对应的用例，说明断言位置精确，没有「一枪打一片」的假牙齿。
+
 ---
 
 ## 4. 真实并发验证（P0）
@@ -289,6 +361,7 @@ worker 忙等至该时刻后同时进入业务操作。
 | 7 | **收紧迁移会持有写锁**（MySQL `ALTER TABLE` / PG `DROP INDEX`），大表需停写窗口 | 运维约束（已写入升级说明） |
 | 8 | 本机 14 核并行跑三套回归，**耗时显著长于单跑**，测试总时长不可直接外推到 CI | 说明项 |
 | 9 | **本机 PostgreSQL 临时实例不稳定**：autovacuum 进程曾在 `VACUUM public.contents` 时 PANIC（`could not open file "pg_wal/000000010000000000000022": Permission denied`，exception `0xC0000409`），导致整个实例崩溃恢复，期间所有连接报 `the database system is in recovery mode` | **环境限制**，与产品代码无关；已在该临时实例上关闭 `autovacuum` 后重跑。**结论：凡在该实例崩溃窗口内取得的 PG 结果一律作废重跑**；这也意味着「PG 上出现过挂起 / 级联失败」不能作为产品缺陷的证据 |
+| 10 | **两处能力只在 SQLite 下验证**：`SiteCreationProductionParityTest`（7 例）与 `UpgradeRollbackE2ETest`（2 例）在源码里显式 `markTestSkipped`（依赖 SQLite 文件库备份与生产等价场景），因此 PG / MySQL 上这 9 例**必然跳过**，SQLite 为 0 跳过 | **覆盖缺口（设计使然，非失败）**：站点创建生产等价与升级/回滚 E2E 在 PG / MySQL 上尚无证据；这两条路径在 PG / MySQL 的行为需要单独设计用例后才能验证 |
 
 ---
 
@@ -325,6 +398,9 @@ php scripts/audit/verify-upgrade-rollback.php <driver> <host> <port> <db> <user>
 
 # 全量回归（Windows 必须分批独立进程）
 bash run-test-batches.sh <phpunit-config> <out-dir> <label> [chunk]
+
+# 事实编辑路径回归（三库通用，见 §3.7）
+php vendor/bin/phpunit -c phpunit.pgsql.xml --no-coverage tests/Feature/FactLocaleUpdateTest.php
 
 # 并行跑多套时**必须**同时隔离三样东西，缺一都会得到不可信的计数：
 #   1. 工作树：REPO_ROOT=<独立副本>   —— 部分测试会增删 base_path('plugins/<slug>')

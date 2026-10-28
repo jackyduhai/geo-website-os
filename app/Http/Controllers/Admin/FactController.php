@@ -106,14 +106,42 @@ class FactController extends Controller
     /**
      * 更新：单条语言行。
      *
+     * 语言不可改：编辑态表单不提供语言选择器，语言由行自身承载，
+     * 补录另一种语言走 storeTranslation（见上）。
+     *
      * 共享列（is_public / group / sort / source / owner / reviewed_at /
-     * review_due / unit / source_url / key）由 Translatable 的
-     * `syncSharedColumns()` 从默认语言权威行单向同步，此处不重复处理。
+     * review_due / unit / source_url / key）以默认语言权威行为准：
+     * 编辑非权威行时，共享列写入路由到权威行，由权威行保存后经
+     * Translatable 的 `syncSharedColumns()` 单向广播到其余语言行。
      */
     public function update(Request $request, Fact $fact): RedirectResponse
     {
         try {
-            $fact->update($this->validateData($request, $fact));
+            $data = $this->validateData($request, $fact);
+
+            // 语言不可在编辑中更改：validateData 在更新路径已把 locale
+            // 解析为该行自身的 locale，此处显式剔除，杜绝把非默认语言行
+            // 改成默认语言（会撞 facts_site_id_key_locale_unique）。
+            unset($data['locale']);
+
+            $anchor = $this->sharedAnchorFor($fact);
+
+            if ($anchor->getKey() !== $fact->getKey()) {
+                // 非权威行：共享列写权威行，翻译列只写当前行。
+                $sharedCols = array_flip(Fact::sharedTranslatableColumns());
+                $sharedData = array_intersect_key($data, $sharedCols);
+                $rowData = array_diff_key($data, $sharedCols);
+
+                if ($sharedData !== []) {
+                    $anchor->update($sharedData);   // saved → syncSharedColumns 广播
+                }
+                if ($rowData !== []) {
+                    $fact->update($rowData);
+                }
+                $fact->refresh();                  // 广播已改写当前行共享列
+            } else {
+                $fact->update($data);
+            }
         } catch (UniqueConstraintViolationException $e) {
             return back()->withInput()->withErrors(['key' => '该 key 已存在，请更换或直接编辑已有事实']);
         }
@@ -176,9 +204,37 @@ class FactController extends Controller
         return back()->with('success', '事实已删除（含各语言行）');
     }
 
+    /**
+     * 取共享列的权威行（默认语言行）。
+     *
+     * 事实的共享列（is_public / group / key / unit / …）以默认语言权威行为准。
+     * 编辑非权威行时，共享列的写入必须落到权威行，否则会出现
+     * 「中文行仍公开、英文行已取消公开」的跨语言发布资格分裂：
+     * 中英文站点对同一条事实给出不同的对外输出口径。
+     *
+     * 找不到权威行时回退到当前行（数据异常场景，不阻断编辑）。
+     */
+    protected function sharedAnchorFor(Fact $fact): Fact
+    {
+        $default = LocaleRegistry::default();
+
+        if ($fact->locale === $default) {
+            return $fact;
+        }
+
+        return $fact->translation($default) ?? $fact;
+    }
+
     protected function validateData(Request $request, ?Fact $fact = null): array
     {
-        $locale = $request->input('locale') ?: LocaleRegistry::default();
+        // 更新既有行：语言沿用该行自身。
+        // 编辑态表单不渲染语言选择器，请求里没有 locale；若回落默认语言，
+        // 非默认语言行会被改成默认语言，撞 facts_site_id_key_locale_unique
+        // → 编辑静默失败（唯一约束异常被转成「key 已占用」的错误提示）。
+        // 新建：请求语言，缺省为默认语言。
+        $locale = $fact !== null
+            ? $fact->locale
+            : ($request->input('locale') ?: LocaleRegistry::default());
         $siteId = SiteContext::currentSiteId();
 
         // 唯一约束落在 (site_id, key, locale)；更新时忽略当前行。
