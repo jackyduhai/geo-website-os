@@ -304,17 +304,25 @@
 
 ### 3.9 三库断言数差异的逐项归因（无不明差异）
 
-v17 三库全量用例数**完全一致（1755）**、零失败零错误；断言数
-SQLite 9365 / MySQL 9315 / PostgreSQL 9263。逐项归因，**全部有据可查**：
+v18 三库全量**用例数完全一致（1761）**、零失败零错误；
+**PostgreSQL 与 MySQL 逐用例完全一致**（含断言数）。
+断言数 SQLite 9470 / PostgreSQL 9365 / MySQL 9365，差 **105**，逐项归因如下
+（用合并后的 JUnit XML 逐用例比对得出，**归因闭合到个位**）：
 
-| 差异来源 | 影响 | 性质 |
+| 差异来源 | 断言差 | 性质 |
 | --- | --- | --- |
-| `SiteCreationProductionParityTest`（7 例）+ `UpgradeRollbackE2ETest`（2 例）在 PG / MySQL 上被 `markTestSkipped` | SQLite 多 100 个断言 | **设计使然**（依赖 SQLite 文件库备份与生产等价场景），非失败。覆盖缺口见 §7 第 10 项 |
-| `search_index` 是 **SQLite FTS5 虚拟表**，迁移 `2026_09_24_000016` 明确只在 SQLite 编译 FTS5 时创建 | SQLite 多 1 张表、多 1 张站点私有表 → 多 4 个断言 | **设计使然**，PG / MySQL 无 FTS5，由 `DatabaseLikeEngine` 兜底 |
-| `SearchProductization18HTest::test_default_engine_is_sqlite_fts5` 按驱动分支断言 | SQLite 2 个断言、PG / MySQL 1 个 | **设计使然**（断言引擎类型） |
+| `SiteCreationProductionParityTest`（7 例，合计 49）+ `UpgradeRollbackE2ETest`（2 例，合计 51）在 PG / MySQL 上被 `markTestSkipped` | **100** | **设计使然**（依赖 SQLite 文件库备份与生产等价场景），非失败。覆盖缺口见 §7 第 10 项 |
+| `CurrentDatabaseTablesTest::test_site_scoped_tables_all_have_site_id_column` | 2 | SQLite 多 1 张站点私有表（`search_index`），每表 2 个断言 |
+| `CurrentDatabaseTablesTest::test_table_names_contain_no_schema_qualifier` | 1 | SQLite 多 1 张表（`search_index`），每表 1 个断言 |
+| `SearchProductization18HTest::test_default_engine_is_sqlite_fts5` | 1 | 按驱动分支断言（SQLite 2 个、PG / MySQL 1 个） |
+| `TemplateLivePreviewTest::test_discard_removes_all_owned_rows` | 1 | SQLite 多扫 1 张 `search_index`（FTS5 虚拟表） |
 
-结论：**三库之间不存在「不明断言数差异」**。所有差异都能指到具体用例与具体成因，
-这是「跨库行为一致」的硬证据，而不是靠「大概差不多」。
+**`search_index` 是 SQLite FTS5 虚拟表**：迁移 `2026_09_24_000016` 明确只在 SQLite
+编译了 FTS5 时创建，PG / MySQL 无 FTS5，由 `DatabaseLikeEngine` 兜底 → **设计使然**。
+
+结论：**三库之间不存在「不明断言数差异」，也不存在「不明用例数差异」**。
+所有差异都能指到具体用例与具体成因，这是「跨库行为一致」的硬证据，
+而不是靠「大概差不多」。
 
 ---
 
@@ -476,8 +484,9 @@ REPO_ROOT=/path/to/copy-pg DB_CONNECTION=pgsql ... bash run-test-batches.sh phpu
 
 | 门禁 | 状态 | 阻断项 |
 | --- | --- | --- |
-| SQLite 全量 + 精确计数门禁 | 需按本轮新增用例更新基线后复跑确认 | 基线计数待最终实测值落定 |
-| PostgreSQL 核心回归（零失败） | 本地等价命令已通过；**CI 首次运行未验证** | CI 未跑 |
+| SQLite 全量 + 精确计数门禁 | **v18 已实测通过**：1761 tests / 9470 assertions / 0 failures / 0 errors / 0 skipped（退出码 0），基线已按实测值更新 | 基线已落定；**CI 仍需复跑确认** |
+| PostgreSQL 全量回归（零失败） | **v18 本地全量实测通过**：1761 tests / 9365 assertions / 0 failures / 0 errors / 9 skipped（9 例为设计性跳过，见 §7 第 10 项）。与 MySQL 逐用例完全一致 | **CI 首次运行未验证** |
+| MySQL 全量回归（零失败） | **v18 本地全量实测通过**：1761 tests / 9365 assertions / 0 failures / 0 errors / 9 skipped。与 PostgreSQL 逐用例完全一致 | **无持续门禁**（仅本机实测） |
 | `composer audit` | **本地实测通过**（当前基线 b0da0e7 的 lock 已是 `symfony/http-foundation v7.4.19`，`composer audit` 返回「No security vulnerability advisories found」，退出码 0）。上一轮 CI run `40280021433`（提交 3f971e1）的失败**已由该基线修复** | **仍需 CI 确认**：未取得 b0da0e7 上的流水线证据 |
 | 覆盖率 | 非阻断（`continue-on-error`） | 阈值待实测校准 |
 | 合并到 `main` / tag / 发布 | **冻结**（未授权） | — |

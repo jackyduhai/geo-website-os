@@ -144,6 +144,27 @@ SQLite 的 `id INTEGER PRIMARY KEY AUTOINCREMENT` 是 rowid 别名，
 3. 跨库回归里凡涉及「多行同 key」「多语言」「多币种」的断言，必须**显式定位行**，
    不允许依赖 `first()` / `firstOrFail()` 的返回顺序。
 
+### 2.7 框架 API 的三驱动口径差异（写跨库代码前必读）
+
+Laravel 的若干常用 API 在三个驱动上的语义**并不相同**，直接使用会出现
+「在 SQLite 上验证过就以为没问题」的隐患。本项目已实测的清单：
+
+| API | SQLite | PostgreSQL | MySQL |
+| --- | --- | --- | --- |
+| `Schema::getTableListing()` / `getTables()` | `pragma_table_list`，只当前库，排除 `sqlite_%` | 只含 `current_schema()` | **返回同实例内所有数据库的表**，元素带库名前缀（`db.table`），同名表重复 |
+| `Schema::getTableListing()` 元素形态 | 裸表名 | 裸表名 | `schema_qualified_name`（带库名） |
+| 整型列收到非数字字面量 | 查不到 → 404 | 抛 `22P02` → 500 | 查不到 → 404 |
+| FTS5 虚拟表 `search_index` | 存在（迁移按 FTS5 可用性创建） | 不存在 | 不存在 |
+| 空字符串 | 框架全局 `ConvertEmptyStringsToNull` → `null` | 同左 | 同左 |
+
+**本项目的收敛口径**：
+
+- 需要「当前库的表清单」时，一律用 `App\Support\Database\CurrentDatabaseTables`，
+  **不要**直接调 `Schema::getTableListing()`。它返回裸表名、去重、且只解析到当前连接。
+- 需要「整型主键的路由绑定」时，不要在路由层加 `whereNumber()`（会得到 405 而不是 404），
+  用 `App\Models\BaseModel` 携带的 `GuardsNumericRouteBinding`。
+- FTS5 专属表要判断存在性（`sqlite_master` 查询）后再用，不能假定存在。
+
 ---
 
 ## 3. 安装
