@@ -319,6 +319,18 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
 
+    # 最小权限声明（2026-10-28，阶段 B-1）。
+    # 仓库默认 workflow token 是只读，发布作业要创建 Release 并上传资产就必须显式提权。
+    # 提权只在本作业生效，test / pgsql 仍是默认只读，没有为了发布方便给全局放开。
+    #
+    # contents: write —— 创建 Release、上传 zip / sha256 / manifest。
+    # actions: read   —— 下载 test 作业的 test-results artifact。
+    #   这一条容易漏：一旦写了 permissions，未列出的作用域一律变成 none，
+    #   actions/download-artifact 会因 actions: none 直接 403。
+    permissions:
+      contents: write
+      actions: read
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
