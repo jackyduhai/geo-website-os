@@ -350,6 +350,19 @@ jobs:
       - name: Install dependencies
         run: composer install --prefer-dist --no-interaction --no-progress
 
+      - name: Prepare application
+        # 与 test / pgsql 作业一致：应用实例需要 .env 与 APP_KEY 才能启动。
+        # 缺这两项时，任何走 HTTP 的用例都会在 EncryptCookies 处抛
+        # 「No application encryption key has been specified」并计为 error
+        # （本地阴性探针：APP_KEY 置空跑 AdminCategoryCrudTest，10 用例 10 error；
+        # 阳性对照同一用例 10/10 通过）。覆盖率作业此前没有这一步，
+        # 解析障碍修掉之后它会紧接着在这里失败，故一并补齐。
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+          touch database/database.sqlite
+          php artisan migrate --force
+
       - name: Verify Xdebug is loaded in coverage mode
         run: |
           php -m | grep -i xdebug
