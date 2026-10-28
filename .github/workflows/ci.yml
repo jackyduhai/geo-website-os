@@ -234,12 +234,17 @@ jobs:
       - name: Verify PostgreSQL regression results (zero-failure gate)
         # PostgreSQL 门禁口径：**不允许** failures / errors / skipped。
         # 计数基线不与 SQLite 的 test-baseline.json 比对 —— 两者是不同的测试子集，
-        # 直接比对会把「子集差异」误判为「测试丢失」。这里只做零失败判定，
-        # 并把实际计数打进日志作为证据。
+        # 直接比对会把「子集差异」误判为「测试丢失」，因此用下限而不是相等。
+        #
+        # --min-tests=170（2026-10-28）：补上「零失败但没有测试」的漏洞。
+        # 只判 failures/errors/skipped 全为 0 时，一个什么都没跑的空 XML 也能通过，
+        # 门禁会给出假绿。本轮远端实测 PgsqlCore 为 174 例，下限设在 170，
+        # 留出正常增删余量，同时挡住「套件没被发现 / 没执行」。
         run: |
           php scripts/audit/verify-test-baseline.php \
             --junit=storage/logs/junit-pgsql.xml \
-            --no-baseline --summary=storage/logs/pgsql-summary.json
+            --no-baseline --min-tests=170 \
+            --summary=storage/logs/pgsql-summary.json
           php -r '
             $s = json_decode(file_get_contents("storage/logs/pgsql-summary.json"), true);
             printf(
@@ -285,122 +290,28 @@ jobs:
             foreach ($rows as $r) { echo "  ", $r->table_name, PHP_EOL; }
           ' || true
 
-  coverage:
-    # Branch/path coverage needs Xdebug (PCOV only reports lines). Runs on Linux
-    # with Xdebug's coverage mode. Source is limited to key business dirs
-    # (phpunit-cov-branch.xml) so Xdebug instruments only those files; this is a
-    # scoped measurement, not whole-repo coverage. Non-blocking for the release
-    # gate: it produces evidence, it does not weaken the exact count gate above.
-    #
-    # ── 2026-10-27 · V1.4 · F：卡住问题的核实与处置 ─────────────────────────
-    # 现象：CI run 40452884719（sha b0da0e72）的 test job 全绿（05:01→05:09，
-    #       8 分钟），coverage job 却从 05:09:28Z 起一直卡在
-    #       「Generate branch/path coverage」，超过 4 小时仍未结束。
-    # 核实结论（不是死锁、不是环境缺失、不是配置写错）：
-    #   · 卡住的是唯一一步需要 Xdebug + --path-coverage 的步骤；
-    #     同一 commit 的非覆盖执行 8 分钟跑完 1714 个用例，说明代码与依赖正常。
-    #   · --path-coverage 的算法开销是「每个测试 × 每个被插桩文件」级别地计算
-    #     路径差集；app/Models 下有大量声明式模型文件，被插桩文件数一多，
-    #     这项开销就会被测试数放大到小时级。这是**成本问题**，不是故障。
-    #   · 该 job 此前**没有 timeout-minutes**，GitHub 默认 360 分钟（6 小时），
-    #     因此「卡住」会长时间占用 runner，且不会给出任何诊断信息。
-    # 处置（不删门禁、不伪造成功）：
-    #   1) 显式 timeout-minutes: 45 —— 把无限挂起收敛成一次「可预期的失败 +
-    #      可读的日志」，失败原因不再是「还在跑」而是「超时」。
-    #   2) path coverage 的插桩范围收窄到业务判定层
-    #      （app/Services/Gate、app/Services/Cache、app/Http/Middleware），
-    #      移出 app/Models —— 后者是声明式数据搬运层（属性/关系/scope），
-    #      分支度量价值低而插桩成本高。这一步针对的是上面的成本根因。
-    #      仍产出分支/路径覆盖率，测量范围在产物与日志里显式说明。
-    #   3) job 级 continue-on-error: true —— 落实注释里既有的「非发布门禁」
-    #      语义：覆盖率是证据，不是发布闸门。job 结论仍如实显示为 failure，
-    #      不伪造成功；发布门禁由 test job 的精确计数门禁与 release job 承担。
-    #   未验证项（如实记录）：本机无 Xdebug/PCOV，path coverage 的实际耗时
-    #   无法在本地复现实测，45 分钟是保守上限；真正的耗时收敛需要一次
-    #   Linux runner 上的实测 run 验证。
-    runs-on: ubuntu-latest
-    needs: test
-    timeout-minutes: 45
-    continue-on-error: true
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup PHP with Xdebug
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: '8.4'
-          extensions: pdo_sqlite, mbstring, openssl, tokenizer, xml, ctype, json, simplexml
-          coverage: xdebug
-
-      - name: Get Composer cache directory
-        id: composer-cache
-        run: echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
-
-      - name: Cache Composer dependencies
-        uses: actions/cache@v4
-        with:
-          path: ${{ steps.composer-cache.outputs.dir }}
-          key: ${{ runner.os }}-php-cov-${{ hashFiles('**/composer.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-php-
-            ${{ runner.os }}-php-cov-
-
-      - name: Install dependencies
-        run: composer install --prefer-dist --no-interaction --no-progress
-
-      - name: Prepare application
-        # 与 test / pgsql 作业一致：应用实例需要 .env 与 APP_KEY 才能启动。
-        # 缺这两项时，任何走 HTTP 的用例都会在 EncryptCookies 处抛
-        # 「No application encryption key has been specified」并计为 error
-        # （本地阴性探针：APP_KEY 置空跑 AdminCategoryCrudTest，10 用例 10 error；
-        # 阳性对照同一用例 10/10 通过）。覆盖率作业此前没有这一步，
-        # 解析障碍修掉之后它会紧接着在这里失败，故一并补齐。
-        run: |
-          cp .env.example .env
-          php artisan key:generate
-          touch database/database.sqlite
-          php artisan migrate --force
-
-      - name: Verify Xdebug is loaded in coverage mode
-        run: |
-          php -m | grep -i xdebug
-          XDEBUG_MODE=coverage php -r 'echo xdebug_info();' >/dev/null 2>&1 || true
-
-      - name: Generate branch/path coverage
-        # --path-coverage is required: without it PHPUnit reports no branch
-        # metrics even with Xdebug. Text + XML + HTML are all retained.
-        # The scoped <source> set lives in phpunit-cov-branch.xml; app/Models is
-        # excluded there because it is declarative data-mapping code whose
-        # path-coverage cost scales with the test count (see job comment).
-        env:
-          XDEBUG_MODE: coverage
-        run: |
-          php vendor/bin/phpunit -c phpunit-cov-branch.xml --path-coverage \
-            --coverage-text=storage/logs/branch-coverage.txt \
-            --coverage-xml=storage/logs/branch-xml \
-            --coverage-html=storage/logs/branch-html
-
-      - name: Show branch coverage summary
-        if: always()
-        run: |
-          echo "===== Branch/Path coverage (scoped key dirs) ====="
-          cat storage/logs/branch-coverage.txt 2>/dev/null || echo "(coverage output unavailable)"
-
-      - name: Upload branch coverage artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: branch-coverage
-          path: |
-            storage/logs/branch-coverage.txt
-            storage/logs/branch-xml
-            storage/logs/branch-html
-          retention-days: 30
-          if-no-files-found: error
+  # ── 覆盖率作业的迁移说明（2026-10-28，V1.4 远端验收）─────────────────────
+  # coverage 作业已从本文件移出，改由 .github/workflows/coverage.yml 独立承担。
+  # 迁移原因（有远端实测证据，不是主观取舍）：
+  #   run 40659217487 中，coverage 作业补齐 .env/APP_KEY 后进入真正的
+  #   Generate branch/path coverage，跑到 job 级 timeout-minutes 45 上限被终止
+  #   （注解原文：The job has exceeded the maximum execution time of 45m0s），
+  #   作业结论是 cancelled，而 cancelled 不被 continue-on-error 吸收，
+  #   会把整条 workflow 一起拖成 cancelled。也就是说这个作业留在主链上时，
+  #   既不产出覆盖率，又让每次推送都没有绿灯可用。
+  # 迁移口径：
+  #   · 覆盖率仍是测量项，仍用 --path-coverage 与 phpunit-cov-branch.xml，
+  #     测量范围与判定口径未改，不是删除门禁；
+  #   · 它从来不是发布门禁（原本就是 continue-on-error），发布门禁是 test 的
+  #     精确计数门禁与 pgsql 的零失败门禁，这两项留在本文件；
+  #   · 独立后可用 workflow_dispatch 与定时触发，预算放宽到 180 分钟，
+  #     不再占用每次推送的关键路径。
+  # 首次实测结论待 coverage.yml 在默认分支可用后补齐（本轮无远端运行证据）。
 
   release:
-    needs: test
+    # pgsql 纳入发布门禁：PostgreSQL 作为正式支持数据库时，它的门禁失败
+    # 不得放行发布产物。此前只依赖 test，会出现在 PG 红的情况下照旧构建发布。
+    needs: [test, pgsql]
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
 

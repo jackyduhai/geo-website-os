@@ -1,0 +1,102 @@
+name: Coverage
+
+# 分支/路径覆盖率测量（独立质量任务，不是发布门禁）
+#
+# 为什么单独一条工作流（2026-10-28，V1.4 远端验收，有实测证据）：
+#   · 该测量需要 Xdebug + --path-coverage，成本是「每个测试 × 每个被插桩文件」
+#     级别的路径差集计算。在主链 ci.yml 里跑时，run 40659217487 的 coverage
+#     作业跑到 job 级 timeout-minutes 45 上限被终止（注解：The job has exceeded
+#     the maximum execution time of 45m0s），结论 cancelled。
+#   · cancelled 不被 continue-on-error 吸收，会把整条 workflow 拖成 cancelled，
+#     导致每次推送都没有绿灯可用，而覆盖率本身又一条数据都没产出。
+#   · 因此把它移出主链：预算放宽到 180 分钟，只在手动触发与定时任务里跑，
+#     不占用推送与 PR 的关键路径。
+#
+# 口径不变：仍是 --path-coverage + phpunit-cov-branch.xml，测量范围（Gate /
+# Cache / Middleware + 两个 Support 类）与主链时期完全一致，不是删除门禁。
+# 它的产物是证据，不是闸门；发布闸门是 ci.yml 里 test 的精确计数门禁与
+# pgsql 的零失败 + 数量下限于门禁。
+
+on:
+  workflow_dispatch:
+  schedule:
+    # 每天 02:00（北京时间）跑一次，测量结果留在 Actions 里供趋势对照。
+    # 注意：schedule 只在默认分支上生效。
+    - cron: '0 18 * * *'
+
+jobs:
+  coverage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP with Xdebug
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: pdo_sqlite, mbstring, openssl, tokenizer, xml, ctype, json, simplexml
+          coverage: xdebug
+
+      - name: Get Composer cache directory
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
+
+      - name: Cache Composer dependencies
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: ${{ runner.os }}-php-cov-${{ hashFiles('**/composer.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-php-
+            ${{ runner.os }}-php-cov-
+
+      - name: Install dependencies
+        run: composer install --prefer-dist --no-interaction --no-progress
+
+      - name: Prepare application
+        # 与 ci.yml 的 test / pgsql 作业保持一致：没有 .env 就没有 APP_KEY，
+        # 走 HTTP 的用例会在 EncryptCookies 处抛异常并计为 error。
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+          touch database/database.sqlite
+          php artisan migrate --force
+
+      - name: Verify Xdebug is loaded in coverage mode
+        run: |
+          php -m | grep -i xdebug
+          XDEBUG_MODE=coverage php -r 'echo xdebug_info();' >/dev/null 2>&1 || true
+
+      - name: Generate branch/path coverage
+        env:
+          XDEBUG_MODE: coverage
+        run: |
+          echo "coverage start: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          php vendor/bin/phpunit -c phpunit-cov-branch.xml --path-coverage \
+            --coverage-text=storage/logs/branch-coverage.txt \
+            --coverage-xml=storage/logs/branch-xml \
+            --coverage-html=storage/logs/branch-html
+          echo "coverage end:   $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
+      - name: Show branch coverage summary
+        if: always()
+        run: |
+          echo "===== Branch/Path coverage (scoped key dirs) ====="
+          cat storage/logs/branch-coverage.txt 2>/dev/null || echo "(coverage output unavailable)"
+
+      - name: Upload branch coverage artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: branch-coverage
+          path: |
+            storage/logs/branch-coverage.txt
+            storage/logs/branch-xml
+            storage/logs/branch-html
+          retention-days: 30
+          # warn 而不是 error：这是测量任务，部分产物也比因为一个缺失目录而
+          # 丢掉全部证据要好。
+          if-no-files-found: warn

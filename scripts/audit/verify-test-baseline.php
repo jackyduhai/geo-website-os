@@ -33,6 +33,16 @@
  *   php scripts/audit/verify-test-baseline.php --junit=... --summary=test-summary.json \
  *       --no-baseline
  *
+ *   # 无基线场景（如 PostgreSQL 子集）加测试数量下限，防止空跑假绿
+ *   php scripts/audit/verify-test-baseline.php --junit=... --no-baseline --min-tests=170
+ *
+ * --min-tests 的存在理由：
+ *   --no-baseline 模式下原本只导出计数，是否零失败由调用方另行判定。若套件因
+ *   未被发现、路径写错、环境缺失而「一条都没跑」，JUnit XML 里 tests=0 且
+ *   failures/errors/skipped 全为 0，调用方的零失败判定会把这种空跑判成通过。
+ *   下限把「没跑」与「跑了且全过」区分开。下限值由该套件的实测规模决定，
+ *   不等于精确比对，允许正常的测试增删。
+ *
  * 维护说明（重要）：
  *  1) 增加 / 删除 / 重命名测试，或改变断言行数后，先跑 `php artisan test`
  *     （建议同时 --log-junit=storage/logs/junit.xml）。
@@ -51,12 +61,21 @@ $opts = [
     'baseline'  => dirname(__FILE__) . '/test-baseline.json',
     'summary'   => null,
     'no-baseline' => false,
+    'min-tests' => null,
 ];
 foreach ($argv as $a) {
     if (str_starts_with($a, '--junit='))    $opts['junit'] = substr($a, 8);
     if (str_starts_with($a, '--baseline=')) $opts['baseline'] = substr($a, 11);
     if (str_starts_with($a, '--summary='))  $opts['summary'] = substr($a, 10);
     if ($a === '--no-baseline')             $opts['no-baseline'] = true;
+    if (str_starts_with($a, '--min-tests=')) {
+        $rawMin = substr($a, 12);
+        if (! ctype_digit($rawMin)) {
+            fwrite(STDERR, "[error] --min-tests 需要整数，收到：{$rawMin}\n");
+            exit(2);
+        }
+        $opts['min-tests'] = (int) $rawMin;
+    }
 }
 
 if ($opts['junit'] === null || ! is_file($opts['junit'])) {
@@ -94,6 +113,19 @@ if ($opts['summary'] !== null) {
     }
     $enc = json_encode($actual, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
     file_put_contents($opts['summary'], $enc . "\n");
+}
+
+// ---------------------------------------------------------------------------
+// 可选：测试数量下限（适用于 --no-baseline 的子集门禁）
+// ---------------------------------------------------------------------------
+if ($opts['min-tests'] !== null) {
+    $min = $opts['min-tests'];
+    if ($actual['tests'] < $min) {
+        fwrite(STDERR, "[FAIL] 实际执行用例数 {$actual['tests']} 低于下限 {$min}："
+            . "空跑、套件未被发现或路径写错都会落到这里。\n");
+        exit(1);
+    }
+    echo "[min-tests] actual={$actual['tests']} >= floor={$min} OK\n";
 }
 
 // ---------------------------------------------------------------------------
