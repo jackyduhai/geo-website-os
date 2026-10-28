@@ -236,14 +236,18 @@ jobs:
         # 计数基线不与 SQLite 的 test-baseline.json 比对 —— 两者是不同的测试子集，
         # 直接比对会把「子集差异」误判为「测试丢失」，因此用下限而不是相等。
         #
-        # --min-tests=170（2026-10-28）：补上「零失败但没有测试」的漏洞。
+        # --min-tests=174（2026-10-28）：补上「零失败但没有测试」的漏洞。
         # 只判 failures/errors/skipped 全为 0 时，一个什么都没跑的空 XML 也能通过，
-        # 门禁会给出假绿。本轮远端实测 PgsqlCore 为 174 例，下限设在 170，
-        # 留出正常增删余量，同时挡住「套件没被发现 / 没执行」。
+        # 门禁会给出假绿。下限取实测值，不做降额留白：
+        #   phpunit -c phpunit.pgsql.xml --testsuite PgsqlCore --list-tests  → 174 条
+        #   （tests/Unit 全目录 + Concurrency 全目录 + 9 个守护文件；
+        #     JUnit 用例数与之一致，RouteBindingGuardTest 实测 24 方法 / 24 testcase）
+        # 语义：新增用例照常通过，删除、改名漏收集、路径写错导致少收，都会红；
+        # 确有意的缩减必须先改这个数字，属于显式决策而不是静默流失。
         run: |
           php scripts/audit/verify-test-baseline.php \
             --junit=storage/logs/junit-pgsql.xml \
-            --no-baseline --min-tests=170 \
+            --no-baseline --min-tests=174 \
             --summary=storage/logs/pgsql-summary.json
           php -r '
             $s = json_decode(file_get_contents("storage/logs/pgsql-summary.json"), true);
