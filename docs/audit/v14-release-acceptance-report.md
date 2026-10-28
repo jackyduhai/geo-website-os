@@ -28,9 +28,9 @@
 | 项 | 值 |
 | --- | --- |
 | 分支 | `feature/v1.4-db-compat` |
-| HEAD | `034aa05`（`ci(pgsql): include this round's three guard suites in the PgsqlCore gate`） |
+| HEAD | 最后一个**含代码或配置变更**的提交是 `034aa05`（`ci(pgsql): include this round's three guard suites in the PgsqlCore gate`）；其后仅追加本报告与运维文档提交 |
 | 工作区 | **干净**（`git status --short` 无输出） |
-| 领先 main | 8 个提交 |
+| 领先 main | 8 个提交（其中 6 个含代码 / 配置 / 迁移变更，2 个为文档与基线） |
 | 与 main 的文件差异 | 63 个文件，`+5270 / -297`（`+63` 行为验收期补强，见下） |
 
 提交序列（自底向上）：
