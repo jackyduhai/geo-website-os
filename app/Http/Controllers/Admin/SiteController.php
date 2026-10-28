@@ -5,13 +5,13 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
 use App\Models\Site;
+use App\Support\Database\CurrentDatabaseTables;
 use App\Support\PageCache;
 use App\Support\RequestScopedState;
 use App\Support\SiteContext;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
 
@@ -391,17 +391,10 @@ class SiteController extends Controller
     {
         $counts = [];
 
-        foreach (Schema::getTableListing() as $listed) {
-            // SQLite 的 getTableListing() 可能返回 schema 限定名（如 main.settings），
-            // 统一取裸表名后再比对 / 查询，否则白名单与计数都会失配。
-            $table = \Illuminate\Support\Str::afterLast($listed, '.');
-
+        foreach (CurrentDatabaseTables::siteScoped() as $table) {
             if ($table === 'sites'
                 || in_array($table, self::SYSTEM_TABLES, true)
                 || in_array($table, self::CONFIG_TABLES, true)) {
-                continue;
-            }
-            if (! Schema::hasColumn($table, 'site_id')) {
                 continue;
             }
 

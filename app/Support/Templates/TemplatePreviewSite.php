@@ -3,6 +3,7 @@
 namespace App\Support\Templates;
 
 use App\Models\Site;
+use App\Support\Database\CurrentDatabaseTables;
 use App\Support\PageCache;
 use App\Support\SiteContext;
 use Database\Seeders\BlankHomepageSeeder;
@@ -11,8 +12,6 @@ use Database\Seeders\DefaultSettingSeeder;
 use Database\Seeders\SiteStructureSeeder;
 use Database\Seeders\SystemPageSeeder;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
-use Illuminate\Support\Str;
 
 /**
  * 模板预览站（RC-11 G）。
@@ -205,14 +204,9 @@ final class TemplatePreviewSite
             // 动态发现「带 site_id 的表」而不是硬编码表名 ——
             // 与 SiteController::resourceCounts() 同一口径，
             // 将来新增业务表无需改动这里。
-            foreach (Schema::getTableListing() as $listed) {
-                $table = Str::afterLast($listed, '.');
-
+            foreach (CurrentDatabaseTables::siteScoped() as $table) {
                 if ($table === 'sites' || $table === 'settings') {
                     continue;       // settings 随站点最后处理（FK RESTRICT）
-                }
-                if (! Schema::hasColumn($table, 'site_id')) {
-                    continue;
                 }
 
                 DB::table($table)->where('site_id', $site->id)->delete();

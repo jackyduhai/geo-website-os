@@ -130,11 +130,9 @@ class TemplateLivePreviewTest extends TestCase
             '预览站本身应被删除'
         );
 
-        foreach (\Illuminate\Support\Facades\Schema::getTableListing() as $listed) {
-            $table = \Illuminate\Support\Str::afterLast($listed, '.');
-            if ($table === 'sites' || ! \Illuminate\Support\Facades\Schema::hasColumn($table, 'site_id')) {
-                continue;
-            }
+        // 与生产代码（TemplatePreviewSite::discard）共用同一口径，
+        // 保证「回收逻辑」与「验证残留」扫描的是同一批表。
+        foreach (\App\Support\Database\CurrentDatabaseTables::siteScoped() as $table) {
             $left = \Illuminate\Support\Facades\DB::table($table)->where('site_id', $pid)->count();
             $this->assertSame(0, $left, "表 {$table} 仍残留 {$left} 行");
         }

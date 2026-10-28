@@ -10,18 +10,21 @@
 ## 0. 一句话结论
 
 本轮在三种真实数据库上把 GEO OS 的**迁移、安装、结构、并发、升级、备份恢复**全部跑通，
-并修掉 **7 个被 SQLite 基线掩盖的真实缺陷**（6 个生产代码缺陷 + 1 个跨库语义漂移），
+并修掉 **8 个被 SQLite 基线掩盖的真实缺陷**（7 个生产代码缺陷 + 1 个跨库语义漂移），
 另修掉 **2 个测试基础设施缺陷**（并行回归共用工作树导致互相破坏；升级演练脚本未真正切换数据库）。
 其中最后两个缺陷（事实「编辑」路径的语言语义与共享列广播）**与数据库无关**，
-是被 PG 与 SQLite/MySQL 的**返回行序差异**照出来的，属既有代码里的静默缺陷。
+是被 PG 与 SQLite/MySQL 的**返回行序差异**照出来的，属既有代码里的静默缺陷；
+第 8 个（MySQL 上「当前库表清单」跨库返回）是**框架层行为差异**，
+旧代码功能正确，但存在性能浪费与跨库误删的隐患，已做收敛加固。
 候选版本在 **SQLite / PostgreSQL 8.0+ / MySQL 8.4** 三库上的行为已实测一致，
+三库全量**用例数完全相同**、断言数差异逐项可归因（见 §3.9）；
 但 **CI 流水线尚未取得新证据**（推送冻结），且 **MySQL 尚无持续门禁**。
 
 ---
 
 ## 1. 变更清单
 
-### 1.1 生产代码（5 处）
+### 1.1 生产代码（6 处）
 
 | 文件 | 改动 | 原因 |
 | --- | --- | --- |
@@ -32,6 +35,9 @@
 | `app/Support/GuardsNumericRouteBinding.php` | **新建**。整型主键的路由隐式绑定守卫：URL 片段不是合法整数字面量时，在查询之前判定「未找到」 | 见 §3.5。PG 会对非法字面量抛 `22P02` → **500**，SQLite / MySQL 只是查不到 → **404**；同一请求在不同库返回不同状态码 |
 | `app/Models/BaseModel.php` | **新建**。业务模型统一基类，承载上述守卫；26 个 Eloquent 模型改为继承它（`User` 继承 `Authenticatable`，不在范围内） | 一处根治，避免逐个模型重复；改动经 `route:list` 与全量回归核验 |
 | `app/Http/Controllers/Admin/FactController.php` | 更新路径的语言**沿用该行自身 locale**（不再「缺省即默认语言」），并显式 `unset($data['locale'])`；新增 `sharedAnchorFor()`，非权威行编辑时把**共享列写入路由到默认语言权威行**，由权威行广播到其余语言行 | 见 §3.7。缺陷六：编辑非默认语言行必然撞 `facts_site_id_key_locale_unique` → 静默失败并误报「key 已占用」；缺陷七：共享列只写当前行 → 中英文发布资格分裂 |
+| `app/Support/Database/CurrentDatabaseTables.php` | **新建**。当前库的裸表名清单（去重、已排序）与「带 `site_id` 列」的站点私有表清单 | 见 §3.8。Laravel 的 `Schema::getTableListing()` 在 MySQL 上返回**同实例所有数据库**的表（带库名前缀），SQLite / PG 只返回当前库。旧代码靠 `Str::afterLast('.')` 取裸名兜底（功能正确，但属巧合式安全），MySQL 上还要重复扫 N 倍 |
+| `app/Http/Controllers/Admin/SiteController.php` | `resourceCounts()` 改用 `CurrentDatabaseTables::siteScoped()`，不再自行拼裸表名 | 见 §3.8，统一口径并消除跨库限定名 |
+| `app/Support/Templates/TemplatePreviewSite.php` | `discard()` 改用 `CurrentDatabaseTables::siteScoped()`，不再自行拼裸表名 | 见 §3.8。回收逻辑与验证侧测试共用同一 helper |
 
 ### 1.2 迁移（1 个）
 
@@ -39,7 +45,7 @@
 | --- | --- |
 | `database/migrations/2026_10_27_000001_tighten_contents_slot_unique_to_site_scope.php` | 把 `contents.slot` 唯一约束在三库上统一为**站点级** `UNIQUE(site_id, slot)`。收紧前先探测存量冲突，**存在冲突即中止报错**，绝不静默删改数据 |
 
-### 1.3 测试与工具（7 个新增 / 3 个修改）
+### 1.3 测试与工具（9 个新增 / 4 个修改）
 
 | 文件 | 说明 |
 | --- | --- |
@@ -55,6 +61,8 @@
 | `tests/Feature/FactValidationTest.php`（改） | 修复 PG 上的断言不可达问题（见 §3.4） |
 | `tests/Feature/RouteBindingGuardTest.php`（新） | 绑定守卫回归：三库各 24 个用例（阳性对照 8 + 阴性对照 14 + HTTP 端到端 + 非整型主键不受影响），见 §3.5 的变异测试 |
 | `tests/Feature/FactLocaleUpdateTest.php`（新） | 事实编辑路径回归：5 个用例全部显式按 locale 取行，不依赖行序；覆盖「编辑不改语言」「编辑真正落库」「共享列广播到全部语言行」「空值门禁在非权威行同样生效并广播」，见 §3.7 的变异测试 |
+| `tests/Feature/CurrentDatabaseTablesTest.php`（新） | 当前库表清单口径回归：6 个用例（无 schema 限定名、无重复、不遗漏、站点私有表可查询、核心表被识别、`sites` 表不在私有表清单），见 §3.8 的变异测试 |
+| `tests/Feature/TemplateLivePreviewTest.php`（改） | 残留扫描改用 `CurrentDatabaseTables::siteScoped()`，与生产回收逻辑同源；修正了 MySQL 上断言数虚高 52 的问题 |
 | `tests/Feature/MigrationRollbackFidelityTest.php`（改） | 迁移清单基线 61 → 62 |
 | `config/cache.php`（改） | file store 路径支持 `CACHE_FILE_PATH` 覆盖（默认不变），用于并行测试隔离 |
 
@@ -80,7 +88,7 @@
 
 ---
 
-## 3. 本轮修掉的 7 个真实缺陷
+## 3. 本轮修掉的 8 个真实缺陷
 
 ### 3.1 PG 迁移因外键开关权限失败（生产缺陷）
 
@@ -255,6 +263,58 @@
   - 变异 B：移除共享列到权威行的路由 → **2 个广播用例失败**，
     定位到「中文行 `is_public=true` / 英文行 `is_public=false`」的分裂现场。
   - 两轮变异分别只打中各自对应的用例，说明断言位置精确，没有「一枪打一片」的假牙齿。
+
+### 3.8 缺陷八：MySQL 上「当前库表清单」跨库返回（框架行为差异 + 跨库误删引信）
+
+- **现象**：站点删除保护（`SiteController::resourceCounts`）与预览站回收
+  （`TemplatePreviewSite::discard`）都要「动态发现带 `site_id` 的表」。
+  这段扫描在 MySQL 上返回 **111 项**，而 SQLite / PostgreSQL 返回 **37 项**；
+  连带 `TemplateLivePreviewTest::test_discard_removes_all_owned_rows` 的断言数
+  在 MySQL 上是 **80**、PostgreSQL **28**、SQLite **29**。
+- **根因（框架层）**：Laravel 的 `Schema::getTableListing()` 在三个驱动上的口径不同：
+  - SQLite：`pragma_table_list` → 只含当前库（`main`）且排除 `sqlite_%`；
+  - PostgreSQL：`compileSchemaWhereClause(null)` → 只含 `current_schema()`；
+  - MySQL：`MySqlGrammar::compileTables(null)` **不加 schema 过滤** → 返回
+    **同一实例内所有数据库**的表，元素形如 `geo_os_nv_d.contents`、
+    `geo_os_drill.contents`，同名表按库重复出现。
+- **定性**：**旧代码功能是正确的**，没有造成数据损坏或跨库删除。
+  两处调用点都先 `Str::afterLast($listed, '.')` 取裸表名再操作，
+  `DB::table('contents')` 只解析到当前连接的库。但仍有两层问题：
+  1. **性能**：MySQL 上「逐表扫描」重复扫 N 倍（每张表多 2 次查询：本机实例有
+     3 个业务库 → 多 148 次查询/次站点删除）；
+  2. **隐患**：元素里的库名前缀是**跨库误删的引信**。只要有人直接把这个字符串
+     喂给 `DB::table(...)`，MySQL 会把它当作**合法的跨库限定名**，
+     去操作另一个数据库的同名表。当前两处恰好用裸名兜住了，但这是**巧合式安全**，
+     没有测试钉住，也没有文档说明。
+- **修法**：新增 `App\Support\Database\CurrentDatabaseTables`，
+  把口径收敛为「**当前库的裸表名 + 去重**」：
+  - `names()`：取 `Schema::getTables()` 每项自带的 `name` 字段（裸表名），
+    按名去重后排序，不做任何字符串拆分；
+  - `siteScoped()`：在 `names()` 基础上筛出确实有 `site_id` 列的表。
+  两处生产调用点与验证侧测试（`TemplateLivePreviewTest`）**共用同一 helper**，
+  保证「回收逻辑」与「验证残留」扫描的是同一批表。
+- **证据**：
+  - 变异测试：把 helper 改回返回 `schema_qualified_name` 且不去重 → **6 个用例中 3 个失败**
+    （限定名断言、去重断言、核心表识别断言），证明新测试咬得住。
+  - 修复后三库断言数收敛为 SQLite 157 / PostgreSQL 153 / MySQL 153
+    （MySQL 与 PostgreSQL **完全一致**）。
+  - 新增 `tests/Feature/CurrentDatabaseTablesTest.php`（6 个用例）：清单无 schema 限定名、
+    无重复、不遗漏、每个站点私有表都能在当前连接上直接查询、核心表被识别、
+    `sites` 表因无 `site_id` 列而不在私有表清单里。
+
+### 3.9 三库断言数差异的逐项归因（无不明差异）
+
+v17 三库全量用例数**完全一致（1755）**、零失败零错误；断言数
+SQLite 9365 / MySQL 9315 / PostgreSQL 9263。逐项归因，**全部有据可查**：
+
+| 差异来源 | 影响 | 性质 |
+| --- | --- | --- |
+| `SiteCreationProductionParityTest`（7 例）+ `UpgradeRollbackE2ETest`（2 例）在 PG / MySQL 上被 `markTestSkipped` | SQLite 多 100 个断言 | **设计使然**（依赖 SQLite 文件库备份与生产等价场景），非失败。覆盖缺口见 §7 第 10 项 |
+| `search_index` 是 **SQLite FTS5 虚拟表**，迁移 `2026_09_24_000016` 明确只在 SQLite 编译 FTS5 时创建 | SQLite 多 1 张表、多 1 张站点私有表 → 多 4 个断言 | **设计使然**，PG / MySQL 无 FTS5，由 `DatabaseLikeEngine` 兜底 |
+| `SearchProductization18HTest::test_default_engine_is_sqlite_fts5` 按驱动分支断言 | SQLite 2 个断言、PG / MySQL 1 个 | **设计使然**（断言引擎类型） |
+
+结论：**三库之间不存在「不明断言数差异」**。所有差异都能指到具体用例与具体成因，
+这是「跨库行为一致」的硬证据，而不是靠「大概差不多」。
 
 ---
 
