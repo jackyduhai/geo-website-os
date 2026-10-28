@@ -69,6 +69,13 @@
             <file>tests/Feature/SiteManagementTest.php</file>
             <file>tests/Feature/GeoflowApiTest.php</file>
             <file>tests/Feature/MigrationRollbackFidelityTest.php</file>
+            <!-- V1.4 本轮三个修复的守护类：不进 PgsqlCore 的话，CI 门禁守不住它们。
+                 RouteBindingGuardTest   整型主键的路由绑定守卫（PG 上 22P02 → 404）
+                 FactLocaleUpdateTest    事实编辑路径的语言语义 + 共享列广播
+                 CurrentDatabaseTablesTest 当前库表清单口径（MySQL 跨库返回） -->
+            <file>tests/Feature/RouteBindingGuardTest.php</file>
+            <file>tests/Feature/FactLocaleUpdateTest.php</file>
+            <file>tests/Feature/CurrentDatabaseTablesTest.php</file>
         </testsuite>
     </testsuites>
     <source>
