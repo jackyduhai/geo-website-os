@@ -255,6 +255,28 @@ SQLite 分支不改动结构，只做校验；若 SQLite 上的结构不是站�
 > `contents` 数据量大时请在停写窗口内执行，或按第 5 节先做备份。
 > 该迁移**不做数据搬迁**，只换约束，风险主要在锁表时长而非数据本身。
 
+> ⚠️ **MySQL 上 DDL 非事务性**（验收补充）：该迁移的顺序是
+> 「**先探测冲突 → 再删旧索引 → 再建新索引**」。PostgreSQL 的 DDL 在事务里，
+> 中途失败会整体回滚；**MySQL 的 DDL 是隐式提交的，不会回滚**。
+> 极端情况下（探测通过之后、创建新索引之前有并发写入导致建索引失败），
+> MySQL 上可能短暂处于「`contents` 没有 slot 唯一约束」的状态。
+> 迁移此时**必然报错退出**（不会静默通过），但**必须人工确认**：
+>
+> ```sql
+> -- MySQL：迁移异常后必查
+> SHOW INDEX FROM contents WHERE Key_name = 'contents_site_id_slot_unique';
+> SELECT migration FROM migrations
+> WHERE migration = '2026_10_27_000001_tighten_contents_slot_unique_to_site_scope';
+> ```
+>
+> 若新索引缺失且迁移未记账，清理冲突数据后重跑 `php artisan migrate --force` 即可
+> （旧索引仍在，重跑是幂等的）；若旧索引也已被删除，需先手工加回
+> `UNIQUE(site_id, slot, locale)` 再重跑。
+>
+> 该场景在 PostgreSQL 与 MySQL 上均已用**负向验证**确认过：存在存量冲突时，
+> 迁移在探测阶段就中止，**冲突数据行数不变（2 → 2）、新索引未被创建、
+> 旧约束完好、失败的迁移未记入账本**。
+
 ### 4.3 迁移失败怎么办
 
 迁移失败时：
@@ -322,6 +344,33 @@ php artisan migrate:status
 
 > 明确声明：本项目**没有**「数据库自动回滚」能力。
 > 任何声称某数据库支持自动回滚的说法都需要额外的测试证据，目前没有。
+
+### 5.5 恢复时必须落到空库（验收补充）
+
+演练脚本 `scripts/audit/verify-upgrade-rollback.php` 的原生恢复步骤是「**把备份恢复到
+目标库本身**」，因此恢复输出里会出现 `relation "xxx" already exists`
+（PostgreSQL）/ `Table 'xxx' already exists`（MySQL）这类 DDL 冲突信息。
+
+两点必须分清：
+
+1. **这些 DDL 冲突信息是预期噪声，不是恢复失败。** 恢复真正的判据是
+   **业务数据核对**（演练中的断言是 `backup.restore_recovered_data`：破坏后目标行计数为 0，
+   恢复后必须回到 1），而不是命令退出码。演练实测中 `psql` / `mysql` 在有 DDL 冲突时
+   仍可能返回退出码 0，因此**不可用退出码判断恢复成败**。
+2. **生产上的正确做法是恢复到空库**：先建空库，再把备份灌进去，避免「部分表是旧的、
+   部分表是新的」这种混合状态。若只能恢复到非空库，恢复后必须逐表核对
+   `migrate:status` 与关键业务行数。
+
+演练中使用的恢复命令（供参考，注意 `psql --file` 缺少 `ON_ERROR_STOP`）：
+
+```bash
+# PostgreSQL：恢复到空库（推荐）
+psql --host=... --dbname=<空库> --quiet --file=<dump.sql>
+# 若必须恢复到非空库：恢复后逐表核对，不要只看退出码
+
+# MySQL：恢复到空库（推荐）
+mysql --host=... --user=... --password=... <空库> < <dump.sql>
+```
 
 ---
 
