@@ -5,6 +5,11 @@
 > 边界：全程**未推送 / 未合并主分支 / 未打 tag / 未发布 / 未部署 / 未触碰真实业务数据库**
 > 相关文档：[跨库兼容性报告](./v14-cross-db-concurrency-recovery-report.md) · [数据库支持矩阵](../operations/database-support-and-recovery.md)
 
+> **状态更新（2026-10-28）**：本文写作时远端 CI 尚未执行，因此 §0、§5、§6.2、§9 中
+> 「远端 GitHub Actions 一次都没有跑过」「分支无 upstream」「B-1 阻断项未闭合」等表述
+> 反映的是当时状态。分支已于 2026-10-28 推送并建立 Draft PR，`test` 与 `pgsql`
+> 两个门禁作业已取得远端绿灯，相关处置与证据见 **§10**。原文保留不改写，便于对照追溯。
+
 ---
 
 ## 0. 最终判定
@@ -452,3 +457,51 @@ bash ci-equivalent-pgsql.sh
 # 收紧迁移的存量冲突守卫（负向验证）
 php verify-migration-conflict-guard.php <driver> <host> <port> <db> <user> [password]
 ```
+
+---
+
+## 10. 远端 CI 复验（2026-10-28）
+
+本节取代 §0 / §5 / §6.2 / §9 中「远端从未执行」的结论，是 B-1 阻断项的闭合记录。
+
+### 10.1 通道与身份
+
+| 项 | 值 |
+| --- | --- |
+| 远端分支 | `origin/feature/v1.4-db-compat` |
+| PR | [#1](https://github.com/jackyduhai/geo-website-os/pull/1)，Draft，未合并 |
+| 触发方式 | `pull_request` 事件（工作流只监听 main/master 推送、`v*` 标签、指向 main 的 PR，特性分支推送本身不触发） |
+| 检出对象 | `refs/pull/N/merge`，与候选提交的树对象一致（`2ab9184`），非同一提交 |
+
+### 10.2 四次运行
+
+| run | 提交 | 结论 | `test (8.4)` | `PostgreSQL 16` | `coverage` | `release` |
+| --- | --- | --- | --- | --- | --- | --- |
+| [40657668831](https://github.com/jackyduhai/geo-website-os/actions/runs/40657668831) | `fafe992` | success | success 8m23s | success 2m16s | failure 14s（配置解析 exit 2） | skipped |
+| [40659217487](https://github.com/jackyduhai/geo-website-os/actions/runs/40659217487) | `ebfa6c9` | cancelled | success 7m21s | success 1m57s | cancelled 45m18s（超时上限） | skipped |
+| [40666716782](https://github.com/jackyduhai/geo-website-os/actions/runs/40666716782) | `be506cd` | success | success 8m54s | success 2m13s | 已移出主链 | skipped |
+| [40685380109](https://github.com/jackyduhai/geo-website-os/actions/runs/40685380109) | `2c5745b` | success | success 8m47s | success 2m14s | 已移出主链 | skipped |
+
+`test` 的计数门禁是精确比对，通过即等价于远端实际执行 1761 tests / 9470 assertions /
+0 failures / 0 errors / 0 skipped，与 `scripts/audit/test-baseline.json` 完全一致。
+
+### 10.3 本轮修复的三个门禁缺陷
+
+1. **数值门禁假绿入口**：`pgsql` 只判 failures / errors / skipped 全为 0，空 JUnit 也能通过。
+   已给 `verify-test-baseline.php` 增加 `--min-tests`，阈值取实测清单 174
+   （`--list-tests` 输出 174 条，JUnit 用例数一致）。
+2. **发布未依赖 PostgreSQL**：`release.needs` 由 `[test]` 改为 `[test, pgsql]`，
+   依赖作业 failure / cancelled / skipped 时 `release` 均不执行。
+3. **覆盖率拖垮主链**：`coverage` 在 45 分钟上限处被终止时结论为 cancelled，
+   不被 `continue-on-error` 吸收，会把整条运行染成 cancelled。
+   已迁出为独立工作流 `coverage.yml`（手动 + 定时，180 分钟预算），
+   测量命令与范围不变，详见 [CI 与发布门禁口径](../operations/ci-release-gates.md)。
+
+### 10.4 结论修订
+
+- CI 门禁：`test` 与 `pgsql` 已在远端稳定通过（连续两轮 success），
+  PostgreSQL 支持矩阵中「CI 门禁尚未取得远端实测证据」的限制条件**解除**。
+- 覆盖率：仍是**已明确但未解决**的性能问题，非发布门禁，不得表述为通过。
+- 发布资格：仍不成立。理由不再是 CI，而是发布流程本身未走完
+  （未合并、未打 tag、未做发布评审）。
+
