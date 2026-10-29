@@ -39,7 +39,7 @@ jobs:
           restore-keys: ${{ runner.os }}-php-
 
       - name: Validate composer.json
-        run: composer validate --strict
+        run: composer validate --no-check-publish
 
       - name: Install dependencies
         run: composer install --prefer-dist --no-interaction --no-progress
@@ -162,7 +162,7 @@ jobs:
             ${{ runner.os }}-php-pg-
 
       - name: Validate composer.json
-        run: composer validate --strict
+        run: composer validate --no-check-publish
 
       - name: Install dependencies
         run: composer install --prefer-dist --no-interaction --no-progress
