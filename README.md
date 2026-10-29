@@ -59,7 +59,7 @@
 - **生命周期**：`php artisan geo:install` 一键安装；`geo:upgrade` 有序幂等迁移（62 个，up/down 均受测）；备份 / 恢复 / 回滚脚本化并有演练。
 - **性能**：整页静态化缓存（PageCache），匿名外壳 + 按会话回填 CSRF，后台变更自动失效。
 - **搜索**：`/search`（SQLite FTS5；PostgreSQL / MySQL 走普通索引）。
-- **GEOFlow**：上游内容同步 API（幂等指纹、字段契约、人工锁、kill switch、修订快照、同步日志）——预留集成面，默认关闭。
+- **GEOFlow 上游内容同步 API**：上游系统（ERP、爬虫、AI 内容流水线、另一个 CMS）通过 REST API 把文章、页面、产品内容直接推进系统，自动完成创建、更新、下架——不用人工复制粘贴。推送是**幂等的**（重复推同一篇不会产生重复内容），人工锁定的内容不会被上游覆盖，所有推送都走和后台相同的发布门禁，每次写入都有日志可审计。默认关闭（`GEOFLOW_SYNC_ENABLED=false`），配置 Bearer Token 后开启即可。
 
 ## GEO、SEO、CMS 之间的关系
 
@@ -166,7 +166,7 @@ php artisan db:seed
 | `SITE_DEFAULT_FALLBACK` | `true` | 单站/开发回落默认站；**多站生产设 `false`**（未知 Host 返回「站点不存在」） |
 | `APP_LOCALE` | `zh-CN` | 默认语言 |
 | `DB_CONNECTION` | `sqlite` | `sqlite` / `pgsql` / `mysql` |
-| `GEOFLOW_SYNC_ENABLED` | `false` | GEOFlow 上游同步开关（预留） |
+| `GEOFLOW_SYNC_ENABLED` | `false` | GEOFlow 上游内容同步 API 开关，配置 Bearer Token 后设为 `true` 开启 |
 
 完整配置说明见 [安装与部署教程](docs/installation.md) 第 3 节。
 

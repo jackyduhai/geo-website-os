@@ -60,7 +60,7 @@ php artisan db:seed
 | `DB_CONNECTION` | `sqlite` | `sqlite` / `pgsql` / `mysql` |
 | `CACHE_STORE` | `database` | 缓存存储（PageCache 固定 file store，不受此影响） |
 | `QUEUE_CONNECTION` | `database` | 队列（当前官网无异步任务，`sync` 亦可） |
-| `GEOFLOW_SYNC_ENABLED` | `false` | GEOFlow 上游同步开关（预留集成面，默认关闭） |
+| `GEOFLOW_SYNC_ENABLED` | `false` | GEOFlow 上游内容同步 API 开关，配置 Bearer Token 后设为 `true` 开启 |
 | `GEO_OS_VERSION` | `1.0.0` | 覆盖 `geo:version` 输出的应用版本号 |
 
 > 生产 `.env` 模板：`cp .env.production.example .env`（见 [DEPLOY.md](../DEPLOY.md)）。

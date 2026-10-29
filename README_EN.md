@@ -52,7 +52,7 @@ It is designed for the generative-search era: alongside traditional SEO (canonic
 - **Lifecycle tooling** — `php artisan geo:install` bootstraps a clean site; `geo:upgrade` runs 62 ordered, idempotent migrations (up/down tested); backup/restore/rollback are scripted and drilled.
 - **Performance** — full-page static cache (PageCache, anonymous shell + per-session CSRF refill), automatically invalidated by admin changes.
 - **Search** — `/search` (SQLite FTS5; plain indexes on PostgreSQL / MySQL).
-- **GEOFlow** — upstream content sync API (idempotency fingerprint, field contract, manual lock, kill switch, revision snapshots, sync logs) — a reserved integration surface, disabled by default.
+- **GEOFlow upstream content sync API** — external systems (ERP, crawlers, AI content pipelines, another CMS) push articles, pages, and products directly into the system via REST API: create, update, or unpublish — no manual copy-paste. Pushes are **idempotent** (re-delivery never duplicates content), manually locked entries are protected from upstream overwrites, every write passes through the same ContentGate as the admin UI, and every sync is logged for audit. Disabled by default (`GEOFLOW_SYNC_ENABLED=false`); configure a Bearer token to activate.
 
 ## GEO, SEO, and CMS — how they relate
 

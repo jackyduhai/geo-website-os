@@ -86,7 +86,7 @@ SEO（面向传统爬虫）            GEO（面向生成式引擎 / 大模型�
 | CMS | 内容（文章/页面）、实体、关系、分类、分组、媒体、导航、表单、询盘、治理 |
 | SEO | canonical、Open Graph、hreflang、JSON-LD、sitemap.xml、feed.xml、robots.txt |
 | GEO | geo.json、llms.txt、AI 爬虫白名单、发布门禁 |
-| GEOFlow | 上游内容同步 API（幂等指纹、字段契约、人工锁、kill switch、修订快照、同步日志）——默认关闭，属预留集成面 |
+| GEOFlow | 上游内容同步 REST API：article/page/product 创建、更新、下架、预检；幂等、人工锁保护、ContentGate 发布门禁、sync_logs 审计；108 项测试通过。配置 Bearer Token 后开启 |
 | 主题 / 模板 / 插件 | Theme（默认 + example）、声明式 Template 包（激活/停用/迁移/校验）、插件示例 `plugins/hello` |
 | 生命周期 | 安装（geo:install）、升级（62 个幂等迁移）、回滚、备份/恢复、内容回收站 |
 | 搜索 | `/search`（SQLite FTS5 / 其他库普通索引） |

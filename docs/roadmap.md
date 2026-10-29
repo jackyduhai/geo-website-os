@@ -11,7 +11,7 @@
 | CMS | 已实现 | 内容 / 实体 / 关系 / 媒体 / 导航 / 分类 / 表单 / 询盘 / 治理 |
 | SEO | 已实现 | canonical / OG / hreflang / JSON-LD / sitemap / feed / robots |
 | GEO | 已实现 | geo.json / llms.txt / AI 爬虫白名单 / 发布门禁 / 事实契约 |
-| GEOFlow | 预留 | 上游内容同步 API（幂等指纹、人工锁、kill switch），默认关闭 |
+| GEOFlow | 已实现（默认关闭） | 上游内容同步 REST API：article/page/product 的创建、更新、下架、预检；幂等（external_id + content_hash）、人工锁保护、ContentGate 发布门禁、sync_logs 审计；108 项测试通过。配置 Bearer Token 后设 `GEOFLOW_SYNC_ENABLED=true` 开启 |
 | 主题 / 模板 / 插件 | 已实现 | Theme + 声明式 Template 包（激活/预览/迁移）+ 插件 |
 | 生命周期 | 已实现 | 安装 / 升级（62 迁移）/ 回滚 / 备份恢复 / 内容回收站 |
 | 数据库 | SQLite + PG 正式支持；**MySQL 候选支持** | 见 [数据库矩阵](operations/database-support-and-recovery.md) |
