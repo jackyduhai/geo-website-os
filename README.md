@@ -1,5 +1,9 @@
 <div align="center">
 
+<a href="https://github.com/jackyduhai/geo-website-os">
+  <img src="public/img/logo.png" alt="GEO Website OS" width="420">
+</a>
+
 # GEO Website OS
 
 **多站点 · 多语言 · GEO/SEO 优先的企业内容与实体操作系统（基于 Laravel 12）**

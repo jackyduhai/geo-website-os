@@ -1,5 +1,9 @@
 <div align="center">
 
+<a href="https://github.com/jackyduhai/geo-website-os">
+  <img src="public/img/logo.png" alt="GEO Website OS" width="420">
+</a>
+
 # GEO Website OS
 
 **A multi-site, multilingual, GEO/SEO-first content and entity operating system built on Laravel 12**
