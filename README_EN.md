@@ -54,6 +54,29 @@ It is designed for the generative-search era: alongside traditional SEO (canonic
 - **Search** — `/search` (SQLite FTS5; plain indexes on PostgreSQL / MySQL).
 - **GEOFlow upstream content sync API** — external systems (ERP, crawlers, AI content pipelines, another CMS) push articles, pages, and products directly into the system via REST API: create, update, or unpublish — no manual copy-paste. Pushes are **idempotent** (re-delivery never duplicates content), manually locked entries are protected from upstream overwrites, every write passes through the same ContentGate as the admin UI, and every sync is logged for audit. Disabled by default (`GEOFLOW_SYNC_ENABLED=false`); configure a Bearer token to activate.
 
+### GEOFlow: content flows in automatically — no manual copy-paste
+
+Most CMS tools expect a human to write every page in the admin panel. GEO Website OS adds a channel: **upstream systems can push content directly in via API.**
+
+**Typical scenarios:**
+- Your ERP or product catalog launches a new product → a product page is generated on the site automatically;
+- A crawler or AI pipeline discovers industry news → it becomes a draft article automatically;
+- Another CMS updates content → it syncs over to stay consistent;
+- No admin panel, no copy-paste, no missed posts.
+
+**What happens after content arrives:**
+1. Field contract validation — wrong formats (title, body, dates, categories) are rejected before anything is written;
+2. Same **ContentGate** as manual publishing — content doesn't go live unless it passes the gate;
+3. Idempotent — push the same content 100 times, you still get one database record;
+4. Manually locked content (marked "locked" in admin) is never overwritten by upstream; conflicts are logged, not auto-resolved;
+5. Every push writes to sync_logs — who pushed what, what happened, always auditable.
+
+**Operations supported:** create, update, skip (no-op when content unchanged), unpublish.
+**Content types:** article, page, product.
+**Security:** Bearer token auth; when the master switch is off, all write endpoints are rejected outright (not just upsert).
+
+> This API is built and covered by **108 tests** in the current version. It's off by default because no upstream system is connected yet — set the token and flip the switch to start using it.
+
 ## GEO, SEO, and CMS — how they relate
 
 ```text
