@@ -1,5 +1,12 @@
 # GEO Web OS 1.x Product Roadmap
 
+> **状态更新（2026-10-29）**：v1.4.0 已于 2026-10-28 发布（tag `v1.4.0` = `2eb2b15`，
+> Release 与三项资产已公开）。v1.4.0 落地了跨数据库兼容性（SQLite / PostgreSQL 16
+> CI 门禁、MySQL 8.4 实测）、真实多进程并发套件、升级/回滚/备份恢复演练与多项安全修复。
+> 本文正文基于 v1.0.0（`504f71d`）盘点，规划结论仍作为后续版本基线，但「版本号建议」
+> （§九 v1.1.0/v1.2.0/v1.3.0）需按实际演进复核；面向用户的当前边界见
+> [`../roadmap.md`](../roadmap.md)。
+
 - **状态**：PROPOSED（2026-10-08，基于 v1.0.0 = `504f71d` 实测盘点）
 - **基线**：`v1.0.0` = 504f71d（immutable / released）· `main` = `f4d06a1`（post-release development baseline）
 - **前置文档**：`docs/product/engineering-acceptance-principles.md`（四条不等式，本文所有验收标准均引用它）

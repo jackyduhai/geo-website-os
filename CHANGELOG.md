@@ -6,6 +6,60 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 > Pre-productization development history (from the source business project) is archived under `docs/audit/history/` and is not distributed in release artifacts.
 
+## [1.4.0] - 2026-10-28
+
+跨数据库兼容性正式版本：SQLite / PostgreSQL / MySQL 同一迁移集，真实并发与升级/回滚演练落地，并包含多项安全修复与后台体验改善。
+
+### Added
+
+- **跨数据库兼容性（V1.4）**
+  - 三库（SQLite / PostgreSQL / MySQL）使用**同一迁移集（62 个）**与同一安装器（`geo:install`）。
+  - 新增 CI `PostgreSQL 16` job（`postgres:16` 服务容器，零失败 + 数量下限门禁）。
+  - MySQL 8.4 全量实测通过（迁移/安装/回归/并发/演练），维持**候选支持**（无 CI 门禁）。
+  - 真实多进程并发套件（独立进程 + 独立数据库连接）。
+  - 升级 / 故障恢复 / 回滚 / 原生备份恢复演练脚本 `scripts/audit/verify-upgrade-rollback.php`。
+- **`contents.slot` 唯一约束三库统一收紧为站点级**
+  - `2026_10_27_000001_tighten_contents_slot_unique_to_site_scope`：MySQL / PG 由
+    `UNIQUE(site_id, slot, locale)` 收紧为 `UNIQUE(site_id, slot)`，与 SQLite 现状及项目契约一致。
+  - 升级前探测存量冲突：存在「同站同 slot、不同 locale」行则**中止报错**，不自动删改数据。
+- **跨库 API 差异收敛**
+  - `GuardsNumericRouteBinding`（`BaseModel`）：非数字整型片段统一 404（修复 PG `22P02` → 500）。
+  - `CurrentDatabaseTables`：收敛「当前库表清单」跨驱动口径（MySQL 不再返回其他库表）。
+  - `MigrationPortability`：PG 外键开关改 no-op（`session_replication_role` 为 `PGC_SUSET`）。
+- **事实与 GEO**
+  - 事实编辑路径保持**行自身 locale** 并广播共享列（`FactLocaleUpdateTest`）。
+  - 事实值校验与 GEO 空输出过滤（`FactValidationTest`）。
+- **模板激活并发修复（W3）**：统一激活服务（站点行锁 + 整体事务 + 提交后可恢复缓存失效），
+  并发激活与中途异常恢复均有回归（`TemplateActivationConcurrencyW3NVTest`）。
+- **后台体验批次**：表单/实体/区块等术语中文化、初始化向导（6 步）、媒体选择器、图标网格、
+  select 输入层白名单加固（`BlockSelectWhitelistTest`）、站点切换 UX 等。
+- **安全**
+  - `symfony/http-foundation` 升级至 7.4.19（阻断 CVE-2026-108082）。
+  - `SafeUrl` 回环主机（localhost / 127.0.0.1 / ::1）降级为站内相对路径。
+  - JSON-LD 输出 `</script>` 转义（防存储型 XSS，20A P1 修复，v1.0.0 之后随本版本发布）。
+
+### Fixed
+
+- 修复 8 个被 SQLite 基线掩盖的真实跨库缺陷：唯一约束冲突后事务语义（PG 25P02）、
+  「取第一条」行序依赖、`getTableListing()` 口径、数值路由 500、事实编辑语言语义等，
+  每个修复均有变异测试证明新测试「咬得住」。
+- FTS5 清空后索引损坏的维护口径（`INSERT INTO <fts5表>(<fts5表>) VALUES('rebuild')`）。
+
+### Changed
+
+- 测试基线：v1.0.0（1410 tests / 7349 assertions）→ **v1.4.0（1761 tests / 9470 assertions）**，
+  0 failures / 0 errors / 0 skipped（SQLite 全量实测）。
+- 迁移数：56 → 62。
+
+### Known limitations
+
+- MySQL 为**候选支持**（实测通过，无 CI 门禁）；PostgreSQL / MySQL 全量回归不进 CI
+  （CI 只跑 `PgsqlCore` 子集，≥174 例）。
+- 9 个用例仅 SQLite 验证（站点创建生产等价 7 项 + 升级/回滚 E2E 2 项），PG / MySQL 上零证据。
+- `php artisan geo:version` 输出 `app.version=1.0.0`（`config/geo.php` 默认值），与 v1.4.0 标签
+  不一致，属已知版本口径待办。
+- Admin UI 仅中文；`settings` 同站跨语言共用 4 键；分类/分组为字段级 `name_en` 翻译。
+
 ## [1.0.0] - 2026-09
 
 v1.0 正式 release（架构冻结 + RB-1 修复）。在 rc1 基础上完成 Entity 扩展、产品能力补全、架构冻结与发布前审查。

@@ -1,5 +1,54 @@
 # GEO Website OS — Release Notes
 
+## v1.4.0
+
+跨数据库兼容性正式版本（2026-10-28 发布）。Release 资产：`geo-os-v1.4.0.zip` /
+`.zip.sha256` / `release-manifest.json`（CI 生成），SHA-256 实测比对一致。
+
+---
+
+### 范围
+
+| 能力 | 说明 |
+|---|---|
+| **跨数据库兼容性** | SQLite / PostgreSQL 16 / MySQL 8.4 同一迁移集（62 个）与同一安装器；PostgreSQL 16 有 CI 门禁（正式支持），MySQL 8.4 实测通过（**候选支持**，无 CI 门禁） |
+| **真实并发** | 多进程 + 独立连接并发套件，覆盖三库；模板激活为站点行锁 + 整体事务 |
+| **升级 / 回滚 / 备份恢复** | 演练脚本 `scripts/audit/verify-upgrade-rollback.php`；`contents.slot` 收紧迁移冲突即中止不删改 |
+| **安全** | symfony/http-foundation 7.4.19（CVE-2026-108082）；SafeUrl 回环降级；JSON-LD `</script>` 转义 |
+| **既有能力** | Multi-site · Multi-language · CMS · SEO · GEO · GEOFlow · 主题/模板/插件 · 搜索 · 整页缓存（同 v1.0.0 基线并延续） |
+
+### 升级注意（自 v1.0.0）
+
+```bash
+php artisan migrate --force
+php artisan page-cache:clear
+```
+
+- 迁移 56 → 62；其中 `contents.slot` 唯一约束在 MySQL / PG 上收紧为站点级，
+  升级前必须先执行冲突自查 SQL（见 [安装与部署](docs/installation.md) 第 5 节）：
+  存在「同站同 slot、不同 locale」存量行时迁移会**中止报错**，需人工确认后清理再升级。
+- MySQL / PG 上该迁移持有写锁，数据量大请安排停写窗口；MySQL DDL 非事务性，异常后须人工确认。
+
+### 质量证据
+
+| Gate | 结果 |
+|---|---|
+| CI run 40700940749（tag 触发） | test(8.4) / PostgreSQL 16 / release 全绿 |
+| SQLite 全量 | 1761 tests / 9470 assertions / 0 failures / 0 errors / 0 skipped |
+| PostgreSQL 16（CI PgsqlCore） | 零失败零跳过，≥174 例 |
+| PostgreSQL / MySQL 全量（本地实测） | 1761 tests / 9365 assertions / 0 failures / 0 errors / 9 skipped（与 SQLite 断言数差异已逐用例归因闭合） |
+| 升级 / 回滚 / 备份恢复演练 | 三库全部通过 |
+| 发布资产 SHA-256 | `ea9846b24449f2223ba9b60355414c2987c93b1882a2b643f73adfe614df0fe1`（复算一致） |
+
+### 已知限制
+
+- MySQL 为候选支持（无 CI 门禁）；PG / MySQL 全量回归不进 CI（CI 只跑 PgsqlCore 子集）。
+- 9 个用例仅 SQLite 验证（站点创建生产等价 7 + 升级/回滚 E2E 2），PG / MySQL 零证据。
+- `geo:version` 输出 `app.version=1.0.0`（config/geo.php 默认值），与 v1.4.0 标签不一致，待统一。
+- Admin UI 仅中文；`settings` 同站跨语言共用 4 键；分类/分组为字段级 `name_en`。
+
+---
+
 ## v1.0.0
 
 首个正式发布。架构冻结，全部工程 Gate 通过。
