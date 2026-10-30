@@ -37,7 +37,8 @@ docs/
 ├── html-standard.md     HTML 规范
 ├── css-standard.md      CSS 规范
 ├── localization-design.md  本地化 / 多语言设计
-└── audit/               工程审计与 Gate 证据（内部过程记录，不进发布制品）
+└── internal/            内部开发过程记录（审计、Gate、验收，仅供开发参考）
+    └── audit/           工程审计与 Gate 证据（内部过程记录）
 ```
 
 ## 阅读顺序建议
