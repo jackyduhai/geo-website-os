@@ -304,6 +304,6 @@ class FactsEntityMappingTest extends TestCase
 
     public function test_migration_matrix_document_exists(): void
     {
-        $this->assertTrue(file_exists(base_path('docs/audit/entity-architecture-matrix.md')));
+        $this->assertTrue(file_exists(base_path('docs/internal/audit/entity-architecture-matrix.md')));
     }
 }
